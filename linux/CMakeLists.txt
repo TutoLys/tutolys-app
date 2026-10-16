@@ -44,6 +44,18 @@ function(APPLY_STANDARD_SETTINGS TARGET)
   target_compile_options(${TARGET} PRIVATE -Wall -Werror)
   target_compile_options(${TARGET} PRIVATE "$<$<NOT:$<CONFIG:Debug>>:-O3>")
   target_compile_definitions(${TARGET} PRIVATE "$<$<NOT:$<CONFIG:Debug>>:NDEBUG>")
+
+  # Plugins call this function on their own targets, so -Werror above applies
+  # to third-party code we do not own. flutter_secure_storage_linux vendors an
+  # older nlohmann/json.hpp whose `operator "" _json` form clang 21 flags as
+  # -Wdeprecated-literal-operator, which -Werror then makes fatal.
+  #
+  # Downgraded to a warning rather than dropped, and scoped to Clang, so our
+  # own code keeps the full -Wall -Werror treatment. Remove once the plugin
+  # ships an updated json.hpp.
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(${TARGET} PRIVATE -Wno-error=deprecated-literal-operator)
+  endif()
 endfunction()
 
 # Flutter library and tool build rules.
