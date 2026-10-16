@@ -1,0 +1,39 @@
+name: tutolys_app
+description: >
+  TutoLys kid-facing app. One Flutter codebase for desktop, mobile and web.
+  Knows nothing about organizations, billing or tutors — a kid is a kid.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.13.3
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # Local packages. The engines depend on engine_sdk and design_system only,
+  # never on the app, the API client or the database (plan §6.3).
+  design_system:
+    path: packages/design_system
+  engine_sdk:
+    path: packages/engine_sdk
+  engines_core:
+    path: packages/engines_core
+
+  flutter_riverpod: ^3.0.3      # state
+  go_router: ^17.2.1            # routing
+  dio: ^5.9.0                   # HTTP
+  flutter_secure_storage: ^9.2.4 # device token, in the platform secure store
+  uuid: ^4.5.1
+  intl: ^0.20.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

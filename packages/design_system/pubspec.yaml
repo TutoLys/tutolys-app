@@ -1,0 +1,16 @@
+name: design_system
+description: TutoLys brand tokens, themes and shared widgets. Depends on Flutter only.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.13.3
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0

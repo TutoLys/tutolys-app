@@ -1,0 +1,20 @@
+name: engines_core
+description: The launch engines. One library per archetype, all built on engine_sdk.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.13.3
+
+dependencies:
+  flutter:
+    sdk: flutter
+  engine_sdk:
+    path: ../engine_sdk
+  design_system:
+    path: ../design_system
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
