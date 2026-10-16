@@ -22,11 +22,15 @@ flutter build web --dart-define=TUTOLYS_API_BASE=https://api.tutolys.ca
 
 ### Linux desktop prerequisites
 
-Not installed on this machine yet. Desktop builds need:
-
 ```bash
-sudo apt install clang ninja-build libgtk-3-dev
+sudo apt install clang ninja-build libgtk-3-dev libsecret-1-dev
 ```
+
+`libsecret-1-dev` is easy to miss: the Flutter toolchain check passes without
+it, and the build only fails at CMake time. It is needed because the device
+token is stored in the real system keyring via `flutter_secure_storage`, and
+libsecret *is* the Linux keyring. That is the point — a long-lived credential
+on a child's device does not belong in shared preferences.
 
 Web builds need nothing extra.
 
