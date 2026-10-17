@@ -76,6 +76,24 @@ class FakePairingApi extends PairingApi {
       refreshResult;
 }
 
+class CountingPairingApi extends FakePairingApi {
+  CountingPairingApi({
+    required super.exchangeResult,
+    required super.refreshResult,
+  });
+
+  int refreshCalls = 0;
+
+  @override
+  Future<RefreshResult> refresh({required String deviceToken}) async {
+    refreshCalls++;
+    // Yield, so concurrent callers genuinely overlap and the mutex is tested
+    // rather than accidentally satisfied by synchronous completion.
+    await Future<void>.delayed(Duration.zero);
+    return super.refresh(deviceToken: deviceToken);
+  }
+}
+
 final _unusedDio = Dio();
 
 const _success = PairingSucceeded(
@@ -95,6 +113,9 @@ ProviderContainer containerWith({
     overrides: [
       sessionStoreProvider.overrideWithValue(store),
       pairingApiProvider.overrideWithValue(api),
+      // No background timer in tests: an armed 12-minute timer fails the
+      // pending-timer check, and these tests drive refresh explicitly.
+      sessionAutoRefreshProvider.overrideWithValue(false),
     ],
   );
 }
@@ -496,6 +517,108 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(PairingScreen), findsOneWidget);
+    });
+  });
+
+  group('token refresh (review findings)', () {
+    test('concurrent refreshes coalesce into one request', () async {
+      /// The single-flight mutex. Two concurrent 401 retries both refreshing
+      /// means the loser presents an already-rotated token and the session is
+      /// dropped — the exact bug the client census found in the old app.
+      final api = CountingPairingApi(
+        exchangeResult: _success,
+        refreshResult: const RefreshSucceeded(accessToken: 'a', expiresIn: 900),
+      );
+      final container = containerWith(
+        store: FakeSessionStore(storedToken: 'stored'),
+        api: api,
+      );
+      addTearDown(container.dispose);
+
+      final controller = container.read(sessionControllerProvider.notifier);
+      await Future.wait([
+        controller.ensureFreshToken(),
+        controller.ensureFreshToken(),
+        controller.ensureFreshToken(),
+      ]);
+
+      expect(api.refreshCalls, 1, reason: 'refreshes did not coalesce');
+    });
+
+    test('a later refresh still works after the first completes', () async {
+      final api = CountingPairingApi(
+        exchangeResult: _success,
+        refreshResult: const RefreshSucceeded(accessToken: 'a', expiresIn: 900),
+      );
+      final container = containerWith(
+        store: FakeSessionStore(storedToken: 'stored'),
+        api: api,
+      );
+      addTearDown(container.dispose);
+
+      final controller = container.read(sessionControllerProvider.notifier);
+      await controller.ensureFreshToken();
+      await controller.ensureFreshToken();
+
+      expect(api.refreshCalls, 2, reason: 'the mutex must not latch');
+    });
+
+    test('a refresh updates the held access token', () async {
+      final container = containerWith(
+        store: FakeSessionStore(storedToken: 'stored'),
+        api: FakePairingApi(
+          exchangeResult: _success,
+          refreshResult: const RefreshSucceeded(
+            accessToken: 'second-token',
+            expiresIn: 900,
+          ),
+        ),
+      );
+      addTearDown(container.dispose);
+
+      await container.read(sessionControllerProvider.notifier).ensureFreshToken();
+
+      expect(
+        container.read(sessionControllerProvider).accessToken,
+        'second-token',
+      );
+    });
+
+    test('a rejected refresh unpairs and stops the timer', () async {
+      final store = FakeSessionStore(storedToken: 'stored');
+      final container = containerWith(
+        store: store,
+        api: FakePairingApi(
+          exchangeResult: _success,
+          refreshResult: const RefreshRejected(),
+        ),
+      );
+      addTearDown(container.dispose);
+
+      await container.read(sessionControllerProvider.notifier).ensureFreshToken();
+
+      expect(
+        container.read(sessionControllerProvider).status,
+        SessionStatus.unpaired,
+      );
+      expect(store.cleared, isTrue);
+    });
+
+    test('an offline refresh keeps the session', () async {
+      final store = FakeSessionStore(storedToken: 'stored');
+      final container = containerWith(
+        store: store,
+        api: FakePairingApi(
+          exchangeResult: _success,
+          refreshResult: const RefreshOffline(),
+        ),
+      );
+      addTearDown(container.dispose);
+
+      await container.read(sessionControllerProvider.notifier).ensureFreshToken();
+
+      expect(store.cleared, isFalse);
+      expect(store.storedToken, 'stored');
     });
   });
 }

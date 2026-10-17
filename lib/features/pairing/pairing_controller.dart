@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:math';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -78,13 +81,86 @@ class SessionController extends Notifier<SessionState> {
   late final SessionStore _store;
   late final PairingApi _api;
 
+  Timer? _refreshTimer;
+
+  /// The in-flight refresh, if any.
+  ///
+  /// This is the single-flight mutex the client census flagged as a hard
+  /// requirement. Without it, two concurrent 401 retries both refresh; the
+  /// loser presents an already-rotated token and the session is dropped. That
+  /// exact bug was in the previous app.
+  Future<void>? _inFlightRefresh;
+
+  /// Whether to arm a background timer after each successful refresh.
+  ///
+  /// Always on in the app. Tests that drive `ensureFreshToken` directly turn
+  /// it off, because a pending long-lived timer fails a widget test — and
+  /// rather than suppress that check, the schedule is made explicit.
+  late final bool _autoRefresh;
+
   @override
   SessionState build() {
     _store = ref.watch(sessionStoreProvider);
     _api = ref.watch(pairingApiProvider);
+    _autoRefresh = ref.watch(sessionAutoRefreshProvider);
+
+    ref.onDispose(() {
+      _refreshTimer?.cancel();
+      _refreshTimer = null;
+    });
+
     // Deliberately not awaited here: build must be synchronous. `restore()` is
     // kicked off by the app shell so the first frame can show a splash.
     return const SessionState.checking();
+  }
+
+  /// Keep the access token fresh for as long as the app is open.
+  ///
+  /// Access tokens live 15 minutes. Without this the app holds exactly one
+  /// token and every content call starts failing a quarter of an hour into a
+  /// session — which is to say, in the middle of a kid playing.
+  void _scheduleRefresh(int expiresInSeconds) {
+    _refreshTimer?.cancel();
+    if (!_autoRefresh) return;
+
+    // Refresh at ~80% of the lifetime, so a slow network has room to retry
+    // before anything expires. The floor stops a short or zero lifetime from
+    // turning into a busy loop.
+    final seconds = max(30, (expiresInSeconds * 0.8).round());
+    _refreshTimer = Timer(Duration(seconds: seconds), ensureFreshToken);
+  }
+
+  /// Refresh now, coalescing concurrent callers onto one request.
+  Future<void> ensureFreshToken() {
+    return _inFlightRefresh ??= _refreshOnce().whenComplete(() {
+      _inFlightRefresh = null;
+    });
+  }
+
+  Future<void> _refreshOnce() async {
+    final token = await _store.deviceToken();
+    if (token == null || token.isEmpty) {
+      state = const SessionState.unpaired();
+      return;
+    }
+
+    final result = await _api.refresh(deviceToken: token);
+    switch (result) {
+      case RefreshSucceeded(:final accessToken, :final expiresIn):
+        state = state.copyWith(
+          status: SessionStatus.paired,
+          accessToken: accessToken,
+        );
+        _scheduleRefresh(expiresIn);
+      case RefreshRejected():
+        await _store.clearPairing();
+        _refreshTimer?.cancel();
+        state = const SessionState.unpaired();
+      case RefreshOffline() || RefreshFailed():
+        // Stay paired and try again later. Offline play continues from the
+        // cache; dropping the credential here would be the wrong trade.
+        _scheduleRefresh(60);
+    }
   }
 
   /// On launch: if a device token exists, trade it for an access token.
@@ -100,12 +176,13 @@ class SessionController extends Notifier<SessionState> {
 
     final result = await _api.refresh(deviceToken: token);
     switch (result) {
-      case RefreshSucceeded(:final accessToken):
+      case RefreshSucceeded(:final accessToken, :final expiresIn):
         state = SessionState(
           status: SessionStatus.paired,
           kid: await _store.pairedKid(),
           accessToken: accessToken,
         );
+        _scheduleRefresh(expiresIn);
       case RefreshRejected():
         // Revoked or archived: forget the credential.
         await _store.clearPairing();
@@ -154,6 +231,7 @@ class SessionController extends Notifier<SessionState> {
           ),
           accessToken: result.accessToken,
         );
+        _scheduleRefresh(result.expiresIn);
         return null;
       case PairingCodeRejected():
         return PairingError.invalidCode;
@@ -168,6 +246,8 @@ class SessionController extends Notifier<SessionState> {
 
   /// Unpair on this device, at the kid's or a parent's request.
   Future<void> forget() async {
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
     await _store.clearPairing();
     state = const SessionState.unpaired();
   }
@@ -228,6 +308,12 @@ final dioProvider = Provider<Dio>((ref) {
 });
 
 final sessionStoreProvider = Provider<SessionStore>((ref) => SessionStore());
+
+/// Whether the session keeps itself refreshed with a background timer.
+///
+/// True in the app. Overridden to false in widget tests, where an armed
+/// 12-minute timer would (correctly) fail the pending-timer check.
+final sessionAutoRefreshProvider = Provider<bool>((ref) => true);
 
 final pairingApiProvider = Provider<PairingApi>(
   (ref) => PairingApi(dio: ref.watch(dioProvider)),
