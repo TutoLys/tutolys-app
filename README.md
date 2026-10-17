@@ -82,6 +82,37 @@ engine  ->  TelemetryClient  ->  EventOutbox (drift, on disk)
 - **A revoked credential pauses the flusher** rather than spinning against a
   token that cannot work.
 
+## Content sync
+
+```
+backend manifest  ->  diff by content_hash  ->  fetch only what changed
+                                                      |
+                                           verify checksum  ->  atomic swap
+                                                                     |
+                                                            exercise_cache
+```
+
+- **Diff by checksum.** Only exercises whose `content_hash` moved are
+  downloaded. The predecessor seeded its ETag from a *global* aggregate, so one
+  leaf edit anywhere re-downloaded the whole tree for every child on mobile
+  data.
+- **Verify before accepting.** Every envelope is re-hashed and compared with
+  the manifest. Content that does not match is refused, never cached — a kid
+  must never be shown content we cannot vouch for. The old backend had no
+  integrity guarantee on content at all.
+- **Atomic swap.** The cache moves forward in one transaction, so a sync that
+  dies halfway leaves the previous content intact and playable instead of a
+  half-written mixture.
+- **Offline is not an error.** An offline sync leaves the cache untouched and
+  cached content stays playable — that is the whole point of caching it. Only a
+  server rejection is treated as a problem.
+
+`content_hash` is a **cross-language contract**: Python computes it, Dart
+re-computes it to verify. The rules (sorted map keys, preserved list order, no
+whitespace, literal non-ASCII) are documented in `content_hash.dart` and pinned
+by a test against a hash produced by the real backend. If the two ever diverge
+every download looks corrupted and sync never converges.
+
 Timestamps are stored as ISO-8601 text (`build.yaml`), not drift's default unix
 seconds: second granularity would make the order of events logged in the same
 second undefined, and that order is what lets a report reconstruct the attempt

@@ -1,0 +1,459 @@
+import 'package:dio/dio.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:tutolys_app/data/api/content_api.dart';
+import 'package:tutolys_app/data/local_db/database.dart';
+import 'package:tutolys_app/data/sync/content_hash.dart';
+import 'package:tutolys_app/data/sync/content_sync.dart';
+
+/// A content server that can be taken offline and have its content edited,
+/// so the diff and the checksum path can both be driven.
+class FakeContentServer extends ContentApi {
+  FakeContentServer() : super(dio: Dio());
+
+  /// exercise_id -> envelope, as the server would serve it.
+  final Map<String, Map<String, Object?>> content = {};
+
+  bool offline = false;
+  bool unauthorized = false;
+
+  /// Ids the manifest advertises but the fetch refuses to serve.
+  final Set<String> withholdOnFetch = {};
+
+  /// Ids served with a deliberately wrong body, to simulate corruption or
+  /// tampering in transit.
+  final Set<String> corruptOnFetch = {};
+
+  /// Fail the fetch after this many exercises, to test a mid-sync failure.
+  int? failFetchAfter;
+
+  int manifestCalls = 0;
+  int fetchCalls = 0;
+  final List<String> requestedIds = [];
+
+  @override
+  Future<ManifestResult> fetchManifest({
+    required String accessToken,
+    String? subject,
+  }) async {
+    manifestCalls++;
+    if (offline) return const ManifestOffline();
+    if (unauthorized) return const ManifestUnauthorized();
+
+    final entries = content.values
+        .where((e) => subject == null || e['subject'] == subject)
+        .map(
+          (e) => ManifestEntry(
+            exerciseId: e['exercise_id'] as String,
+            version: e['version'] as int,
+            contentHash: contentSha256(e),
+            engineKey: e['engine_key'] as String,
+            engineMinVersion: e['engine_min_version'] as int,
+            skillNodeId: e['skill_node_id'] as String,
+            subject: e['subject'] as String,
+            grade: e['grade'] as int,
+            rank: e['rank'] as int,
+          ),
+        )
+        .toList();
+
+    return ManifestFetched(
+      ContentManifest(grade: 1, manifestHash: 'm', entries: entries),
+    );
+  }
+
+  @override
+  Future<ExercisesResult> fetchExercises({
+    required List<String> ids,
+    required String accessToken,
+  }) async {
+    fetchCalls++;
+    requestedIds.addAll(ids);
+    if (offline) return const ExercisesOffline();
+
+    if (failFetchAfter != null && requestedIds.length > failFetchAfter!) {
+      return const ExercisesFailed('server exploded');
+    }
+
+    final envelopes = <Map<String, Object?>>[];
+    final unavailable = <String>[];
+
+    for (final id in ids) {
+      if (withholdOnFetch.contains(id) || !content.containsKey(id)) {
+        unavailable.add(id);
+        continue;
+      }
+      final envelope = Map<String, Object?>.from(content[id]!);
+      if (corruptOnFetch.contains(id)) {
+        // Body does not match the hash the manifest advertised.
+        envelope['prompt'] = {'text': 'TAMPERED'};
+      }
+      envelopes.add(envelope);
+    }
+
+    return ExercisesFetched(envelopes: envelopes, unavailable: unavailable);
+  }
+}
+
+void main() {
+  late LocalDatabase db;
+  late FakeContentServer server;
+  late ContentSync sync;
+  late DateTime now;
+
+  Map<String, Object?> exercise(
+    String id, {
+    int version = 1,
+    int rank = 0,
+    String subject = 'MATH',
+    String prompt = 'Combien font 2 + 2 ?',
+  }) =>
+      {
+        'schema_version': 1,
+        'exercise_id': id,
+        'version': version,
+        'engine_key': 'mcq',
+        'engine_min_version': 1,
+        'skill_node_id': 'ad24bcba-93d0-5b4e-ab56-ec76e3409a53',
+        'subject': subject,
+        'grade': 1,
+        'rank': rank,
+        'locale': 'fr-CA',
+        'prompt': {'text': prompt, 'audio_ref': null, 'image_ref': null},
+        'config': {
+          'options': [
+            {'id': 'a', 'label': '4'},
+            {'id': 'b', 'label': '5'},
+          ],
+          'correct': 'a',
+        },
+        'assets': <Object?>[],
+      };
+
+  setUp(() {
+    now = DateTime.utc(2026, 10, 16, 12);
+    db = LocalDatabase.memory();
+    server = FakeContentServer();
+    sync = ContentSync(
+      db: db,
+      api: server,
+      accessToken: () => 'token',
+      clock: () => now,
+    );
+  });
+
+  tearDown(() => db.close());
+
+  group('first sync', () {
+    test('downloads and caches everything', () async {
+      for (var i = 0; i < 5; i++) {
+        final ex = exercise('ex$i', rank: i);
+        server.content[ex['exercise_id'] as String] = ex;
+      }
+
+      final report = await sync.sync();
+
+      expect(report.isOk, isTrue);
+      expect(report.downloaded, 5);
+      expect(report.upToDate, 0);
+      expect(await sync.cachedCount(), 5);
+    });
+
+    test('an empty manifest is not an error', () async {
+      final report = await sync.sync();
+
+      expect(report.isOk, isTrue);
+      expect(report.downloaded, 0);
+    });
+  });
+
+  group('diffing by checksum', () {
+    test('a second sync downloads nothing', () async {
+      server.content['ex1'] = exercise('ex1');
+      await sync.sync();
+      final fetchesAfterFirst = server.fetchCalls;
+
+      final report = await sync.sync();
+
+      expect(report.downloaded, 0);
+      expect(report.upToDate, 1);
+      expect(server.fetchCalls, fetchesAfterFirst,
+          reason: 'nothing changed, so nothing should have been fetched');
+    });
+
+    test('only the changed exercise is re-downloaded', () async {
+      // The fix for the predecessor's global ETag: editing one leaf used to
+      // re-download the entire tree for every child on mobile data.
+      for (var i = 0; i < 10; i++) {
+        server.content['ex$i'] = exercise('ex$i', rank: i);
+      }
+      await sync.sync();
+      server.requestedIds.clear();
+
+      server.content['ex7'] =
+          exercise('ex7', rank: 7, version: 2, prompt: 'Changed');
+
+      final report = await sync.sync();
+
+      expect(report.downloaded, 1);
+      expect(report.upToDate, 9);
+      expect(server.requestedIds, ['ex7'],
+          reason: 'untouched exercises must not be re-fetched');
+    });
+
+    test('content withdrawn from the manifest leaves the cache', () async {
+      server.content['keep'] = exercise('keep');
+      server.content['drop'] = exercise('drop', rank: 1);
+      await sync.sync();
+      expect(await sync.cachedCount(), 2);
+
+      server.content.remove('drop');
+      final report = await sync.sync();
+
+      expect(report.removed, 1);
+      expect(await sync.cachedExercise('drop'), isNull);
+      expect(await sync.cachedExercise('keep'), isNotNull);
+    });
+
+    test('a changed exercise updates in place rather than duplicating',
+        () async {
+      server.content['ex1'] = exercise('ex1', prompt: 'First');
+      await sync.sync();
+
+      server.content['ex1'] = exercise('ex1', version: 2, prompt: 'Second');
+      await sync.sync();
+
+      expect(await sync.cachedCount(), 1);
+      final cached = await sync.cachedExercise('ex1');
+      expect((cached!['prompt'] as Map)['text'], 'Second');
+      expect(cached['version'], 2);
+    });
+  });
+
+  group('checksum verification', () {
+    test('content that does not match its advertised hash is refused',
+        () async {
+      // The old backend had no integrity guarantee on content at all: a
+      // truncated or tampered download would simply have been played.
+      server.content['good'] = exercise('good');
+      server.content['bad'] = exercise('bad', rank: 1);
+      server.corruptOnFetch.add('bad');
+
+      final report = await sync.sync();
+
+      expect(report.rejected, ['bad']);
+      expect(report.downloaded, 1);
+      expect(await sync.cachedExercise('bad'), isNull,
+          reason: 'unverifiable content must never reach a kid');
+      expect(await sync.cachedExercise('good'), isNotNull);
+    });
+
+    test('a rejected exercise is retried on the next sync', () async {
+      server.content['ex1'] = exercise('ex1');
+      server.corruptOnFetch.add('ex1');
+      await sync.sync();
+      expect(await sync.cachedCount(), 0);
+
+      // Server fixed.
+      server.corruptOnFetch.clear();
+      final report = await sync.sync();
+
+      expect(report.downloaded, 1);
+      expect(await sync.cachedCount(), 1);
+    });
+
+    test('verifyCache detects on-disk corruption', () async {
+      server.content['ex1'] = exercise('ex1');
+      await sync.sync();
+
+      expect(await sync.verifyCache(), isEmpty);
+
+      // Simulate a flipped bit in SQLite: payload no longer matches its hash.
+      await db.customStatement(
+        "UPDATE exercise_cache SET payload = '{\"exercise_id\":\"ex1\"}' "
+        "WHERE exercise_id = 'ex1'",
+      );
+
+      expect(await sync.verifyCache(), ['ex1']);
+    });
+  });
+
+  group('atomic swap', () {
+    test('a mid-sync failure leaves previously cached content intact',
+        () async {
+      // Establish a good cache.
+      for (var i = 0; i < 3; i++) {
+        server.content['old$i'] = exercise('old$i', rank: i);
+      }
+      await sync.sync();
+      expect(await sync.cachedCount(), 3);
+
+      // New content arrives, but the server dies partway through.
+      for (var i = 0; i < 40; i++) {
+        server.content['new$i'] = exercise('new$i', rank: 10 + i);
+      }
+      server.failFetchAfter = 25; // fails on the second chunk
+
+      final report = await sync.sync();
+
+      expect(report.isOk, isFalse);
+      expect(report.error, isNotNull);
+
+      // The old content is still there and still playable — the kid is not
+      // left with a half-written cache.
+      for (var i = 0; i < 3; i++) {
+        expect(await sync.cachedExercise('old$i'), isNotNull,
+            reason: 'a failed sync must not damage what already worked');
+      }
+      // Nothing was removed, because the removal only happens on success.
+      expect(report.removed, 0);
+    });
+
+    test('whatever verified before a failure is still committed', () async {
+      for (var i = 0; i < 40; i++) {
+        server.content['ex$i'] = exercise('ex$i', rank: i);
+      }
+      server.failFetchAfter = 25;
+
+      final report = await sync.sync();
+
+      // The first chunk verified, so it is kept rather than thrown away; the
+      // next sync picks up the rest.
+      expect(report.downloaded, 25);
+      expect(await sync.cachedCount(), 25);
+    });
+
+    test('a resumed sync completes what was left', () async {
+      for (var i = 0; i < 40; i++) {
+        server.content['ex$i'] = exercise('ex$i', rank: i);
+      }
+      server.failFetchAfter = 25;
+      await sync.sync();
+
+      server.failFetchAfter = null;
+      final report = await sync.sync();
+
+      expect(report.downloaded, 15);
+      expect(await sync.cachedCount(), 40);
+    });
+  });
+
+  group('A5 acceptance: airplane-mode playthrough', () {
+    test('a full session plays from cache with no network', () async {
+      // Sync a grade-1 set while online.
+      for (var i = 0; i < 12; i++) {
+        server.content['ex$i'] = exercise('ex$i', rank: i);
+      }
+      final online = await sync.sync();
+      expect(online.downloaded, 12);
+
+      // Airplane mode.
+      server.offline = true;
+
+      // Sync is attempted and reports offline — but is NOT an error, and
+      // must not disturb the cache.
+      final offlineSync = await sync.sync();
+      expect(offlineSync.offline, isTrue);
+      expect(offlineSync.isOk, isFalse);
+      expect(await sync.cachedCount(), 12,
+          reason: 'an offline sync must leave the cache alone');
+
+      // The play screen reads cached content, in play order, touching no
+      // network at all.
+      final playable = await sync.cachedExercises(subject: 'MATH', grade: 1);
+
+      expect(playable, hasLength(12));
+      expect(
+        playable.map((e) => e['rank']).toList(),
+        List.generate(12, (i) => i),
+        reason: 'exercises must come back in the difficulty order a kid walks',
+      );
+
+      // Every one is complete enough to actually play.
+      for (final envelope in playable) {
+        expect(envelope['engine_key'], 'mcq');
+        expect(envelope['skill_node_id'], isNotNull);
+        expect((envelope['config'] as Map)['correct'], isNotNull);
+        expect(envelope['prompt'], isNotNull);
+      }
+
+      // And every one still verifies against its stored checksum.
+      expect(await sync.verifyCache(), isEmpty);
+    });
+
+    test('cached reads are filtered by subject', () async {
+      server.content['m1'] = exercise('m1', subject: 'MATH');
+      server.content['f1'] = exercise('f1', subject: 'FR', rank: 1);
+      await sync.sync();
+
+      expect(await sync.cachedExercises(subject: 'MATH'), hasLength(1));
+      expect(await sync.cachedExercises(subject: 'FR'), hasLength(1));
+      expect(await sync.cachedExercises(), hasLength(2));
+    });
+
+    test('an uncached exercise reads as null, not a crash', () async {
+      // The app shows a friendly "download needed" state; it must never throw
+      // in front of a kid.
+      expect(await sync.cachedExercise('never-downloaded'), isNull);
+    });
+  });
+
+  group('credentials and failure modes', () {
+    test('syncing while unpaired does not call the server', () async {
+      final unpaired = ContentSync(
+        db: db,
+        api: server,
+        accessToken: () => null,
+        clock: () => now,
+      );
+
+      final report = await unpaired.sync();
+
+      expect(report.unauthorized, isTrue);
+      expect(server.manifestCalls, 0);
+    });
+
+    test('a rejected credential is reported, not treated as empty content',
+        () async {
+      server.content['ex1'] = exercise('ex1');
+      await sync.sync();
+      server.unauthorized = true;
+
+      final report = await sync.sync();
+
+      expect(report.unauthorized, isTrue);
+      // Crucially the cache is untouched: a 401 must not look like "the
+      // server has no content for you" and wipe a working cache.
+      expect(await sync.cachedCount(), 1);
+    });
+
+    test('an exercise listed but not served is reported, not retried forever',
+        () async {
+      server.content['ex1'] = exercise('ex1');
+      server.content['ex2'] = exercise('ex2', rank: 1);
+      server.withholdOnFetch.add('ex2');
+
+      final report = await sync.sync();
+
+      expect(report.unavailable, ['ex2']);
+      expect(report.downloaded, 1);
+    });
+
+    test('mid-sync network loss keeps what verified and reports offline',
+        () async {
+      for (var i = 0; i < 3; i++) {
+        server.content['ex$i'] = exercise('ex$i', rank: i);
+      }
+      // Goes offline during the fetch, after the manifest succeeded.
+      server.content['ex0'] = exercise('ex0');
+
+      final manifest = await server.fetchManifest(accessToken: 'token');
+      expect(manifest, isA<ManifestFetched>());
+
+      server.offline = true;
+      final report = await sync.sync();
+
+      expect(report.offline, isTrue);
+      expect(await sync.cachedCount(), 0, reason: 'nothing verified yet');
+    });
+  });
+}
