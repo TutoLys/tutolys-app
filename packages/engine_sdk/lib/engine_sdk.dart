@@ -6,6 +6,7 @@
 library;
 
 export 'src/engine.dart';
+export 'src/exercise_runner.dart';
 export 'src/outbox.dart';
 export 'src/registry.dart';
 export 'src/result.dart';
