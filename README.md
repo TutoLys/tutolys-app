@@ -52,6 +52,44 @@ and `design_system` only — never on the app, the API client or the database.
 The Godot games had that property (they held no credentials and never talked to
 Django) and it is worth keeping.
 
+## Local data and sync
+
+The outbox is **not a cache — it is the write path**. An event counts as logged
+only once it is on disk, because buffering in memory and flushing on a timer
+loses the last minute of play on every kill, and the end of a session is
+exactly where the interesting signal is.
+
+```
+engine  ->  TelemetryClient  ->  EventOutbox (drift, on disk)
+                                      |
+                              OutboxFlusher  ->  telemetry service
+```
+
+- **Exactly once, not at least once.** Events carry a client-generated
+  `event_id`; the server dedupes on it and reports `duplicate` rather than an
+  error, so a retry after a lost acknowledgement is safe and clears the local
+  row instead of looping forever.
+- **50 events or 30 seconds**, one batch per flush. Draining everything in a
+  loop would mean a device returning from a week offline blocks startup.
+- **Backoff differs by cause.** Losing Wi-Fi is not the events' fault and fixes
+  itself, so it retries on a flat short window; a server error escalates
+  exponentially. Both are jittered, so a classroom that lost Wi-Fi together
+  does not retry in lockstep.
+- **Per-event backoff**, so one permanently-rejected event cannot hold up
+  everything queued behind it.
+- **Nothing is ever dropped silently.** An event the server will never accept
+  is surfaced through `stuck()`, not deleted. The product is the data.
+- **A revoked credential pauses the flusher** rather than spinning against a
+  token that cannot work.
+
+Timestamps are stored as ISO-8601 text (`build.yaml`), not drift's default unix
+seconds: second granularity would make the order of events logged in the same
+second undefined, and that order is what lets a report reconstruct the attempt
+sequence.
+
+Run `dart run build_runner build` after changing the schema. Generated files
+are committed, so a clean checkout builds without codegen.
+
 ## Things that are deliberate
 
 - **French first.** `fr-CA` is the default locale, not a fallback. A missing

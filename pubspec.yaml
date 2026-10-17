@@ -28,12 +28,21 @@ dependencies:
   dio: ^5.9.0                   # HTTP
   flutter_secure_storage: ^9.2.4 # device token, in the platform secure store
   uuid: ^4.5.1
+
+  # Local database. The outbox must be durable before an event is considered
+  # logged, so this is not a cache — it is the write path (plan §5.8).
+  drift: ^2.28.2
+  sqlite3_flutter_libs: ^0.5.42
+  path_provider: ^2.1.5
+  path: ^1.9.1
   intl: ^0.20.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  drift_dev: ^2.28.2
+  build_runner: ^2.7.1
 
 flutter:
   uses-material-design: true

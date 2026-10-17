@@ -1,0 +1,16 @@
+targets:
+  $default:
+    builders:
+      drift_dev:
+        options:
+          # Store timestamps as ISO-8601 text rather than drift's default
+          # unix seconds. Second granularity is not good enough here:
+          #
+          # 1. `queued_at` orders the outbox, and a kid easily produces several
+          #    events inside one second. Truncating makes their relative order
+          #    undefined — and that order is what lets a tutor report
+          #    reconstruct the attempt sequence.
+          # 2. Retry jitter is sub-second by design. Rounding it away collapses
+          #    a classroom of tablets onto ~30 possible retry instants, which
+          #    is the spike jitter exists to prevent.
+          store_date_time_values_as_text: true
