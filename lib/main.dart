@@ -7,13 +7,12 @@ import 'core/routing/app_shell.dart';
 import 'data/local_db/database.dart';
 import 'features/pairing/pairing_controller.dart';
 
-Future<void> main() async {
-  // Opening the database needs the platform's application-support
-  // directory, which is async — `runApp` isn't, so this is the one piece
-  // of real startup work that has to happen before it rather than inside
-  // a provider's `create`.
+void main() {
+  // `driftDatabase` (drift_flutter) opens lazily — resolving the real file
+  // path/IndexedDB name happens on first query, not here — so this no
+  // longer needs to be async ahead of `runApp`.
   WidgetsFlutterBinding.ensureInitialized();
-  final db = await openLocalDatabase();
+  final db = openLocalDatabase();
 
   runApp(
     ProviderScope(

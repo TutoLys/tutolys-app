@@ -1,7 +1,7 @@
 # ADR 0002 — A7 ships for Linux desktop only: web doesn't compile with the real database wired in
 
 Date: 2026-10-18
-Status: accepted
+Status: superseded by ADR 0003 (2026-10-19)
 
 ## Context
 

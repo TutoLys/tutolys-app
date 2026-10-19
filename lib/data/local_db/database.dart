@@ -1,9 +1,7 @@
-import 'dart:io';
-
 import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
+import 'package:drift_flutter/drift_flutter.dart';
+
+import 'memory_connection.dart';
 
 part 'database.g.dart';
 
@@ -147,7 +145,7 @@ class LocalDatabase extends _$LocalDatabase {
   LocalDatabase(super.e);
 
   /// In-memory instance for tests.
-  LocalDatabase.memory() : super(NativeDatabase.memory());
+  LocalDatabase.memory() : super(memoryExecutor());
 
   @override
   int get schemaVersion => 1;
@@ -179,9 +177,24 @@ class LocalDatabase extends _$LocalDatabase {
       );
 }
 
-/// Opens the on-disk database in the platform's application support directory.
-Future<LocalDatabase> openLocalDatabase() async {
-  final directory = await getApplicationSupportDirectory();
-  final file = File(p.join(directory.path, 'tutolys.sqlite'));
-  return LocalDatabase(NativeDatabase.createInBackground(file));
+/// Opens the real on-disk (or browser-persisted) database for the running
+/// app — `drift_flutter`'s `driftDatabase` picks the right backend per
+/// platform: `NativeDatabase` in the platform's application-support
+/// directory on Linux/desktop, `WasmDatabase` (IndexedDB/OPFS, picked by
+/// feature-detection) on web. ADR 0002 covers why this needs its own
+/// conditional backend at all — `database.dart` previously imported
+/// `drift/native.dart` (`dart:ffi`) unconditionally, which doesn't compile
+/// for web. `sqlite3.wasm` and `drift_worker.js` in `web/` (pinned to
+/// drift 2.35.2, the version in `pubspec.yaml`) are what the web backend
+/// actually loads.
+LocalDatabase openLocalDatabase() {
+  return LocalDatabase(
+    driftDatabase(
+      name: 'tutolys',
+      web: DriftWebOptions(
+        sqlite3Wasm: Uri.parse('sqlite3.wasm'),
+        driftWorker: Uri.parse('drift_worker.js'),
+      ),
+    ),
+  );
 }
