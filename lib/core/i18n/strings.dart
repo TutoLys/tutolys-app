@@ -38,12 +38,14 @@ abstract class Strings {
   String get pathEmpty;
   String get pathLocked;
 
+  // --- play --------------------------------------------------------------
+  String get playBack;
+
   static const Strings fr = _FrenchStrings();
   static const Strings en = _EnglishStrings();
 
   /// Resolve from a locale, defaulting to French.
-  static Strings of(Locale locale) =>
-      locale.languageCode == 'en' ? en : fr;
+  static Strings of(Locale locale) => locale.languageCode == 'en' ? en : fr;
 }
 
 class _FrenchStrings extends Strings {
@@ -99,11 +101,13 @@ class _FrenchStrings extends Strings {
   String get pathTitle => 'Mon parcours';
 
   @override
-  String get pathEmpty =>
-      "Il n'y a pas encore d'activités. Reviens bientôt !";
+  String get pathEmpty => "Il n'y a pas encore d'activités. Reviens bientôt !";
 
   @override
   String get pathLocked => 'Pas encore débloqué';
+
+  @override
+  String get playBack => 'Retour';
 }
 
 class _EnglishStrings extends Strings {
@@ -119,7 +123,8 @@ class _EnglishStrings extends Strings {
   String get pairingSubtitle => 'Enter your code to get started';
 
   @override
-  String get pairingHint => 'Ask a grown-up for your code. It has six characters.';
+  String get pairingHint =>
+      'Ask a grown-up for your code. It has six characters.';
 
   @override
   String get pairingConnect => 'Connect';
@@ -161,6 +166,9 @@ class _EnglishStrings extends Strings {
 
   @override
   String get pathLocked => 'Not unlocked yet';
+
+  @override
+  String get playBack => 'Back';
 }
 
 /// Lookup from the widget tree.
