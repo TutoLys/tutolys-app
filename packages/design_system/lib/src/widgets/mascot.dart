@@ -7,7 +7,7 @@ import '../tokens.dart';
 
 /// What the mascot is currently doing. Engines drive this through the feedback
 /// helpers so every engine reacts the same way to the same outcome.
-enum MascotMood { idle, thinking, correct, incorrect, celebrating }
+enum MascotMood { idle, thinking, correct, incorrect, celebrating, hint }
 
 /// Placeholder arctic fox.
 ///
@@ -91,7 +91,7 @@ class _TutolysMascotState extends State<TutolysMascot>
     final accent = switch (widget.mood) {
       MascotMood.correct || MascotMood.celebrating => extras.success,
       MascotMood.incorrect => extras.danger,
-      MascotMood.thinking => extras.gold,
+      MascotMood.thinking || MascotMood.hint => extras.gold,
       MascotMood.idle => context.colors.primary,
     };
 
@@ -101,6 +101,9 @@ class _TutolysMascotState extends State<TutolysMascot>
         final breath = math.sin(_controller.value * math.pi) * 0.02;
         final tilt = switch (widget.mood) {
           MascotMood.thinking => 0.12,
+          // Opposite lean from `thinking`: a glance toward something, not a
+          // ponder — the two should never read as the same pose.
+          MascotMood.hint => -0.18,
           MascotMood.incorrect => -0.08,
           MascotMood.celebrating => breath * 4,
           _ => 0.0,
