@@ -56,16 +56,32 @@ Wired `drift_flutter`'s `driftDatabase()` as the cross-platform entry point:
   regression from the dependency bump).
 - `flutter build web`: compiles clean, `sqlite3.wasm`/`drift_worker.js`
   present in `build/web/`.
-- Live boot check: served `build/web` statically (not `flutter run
-  -d web-server` — see pitfall below) and loaded it in a real browser tab.
-  Confirmed via console log and DOM inspection, not a screenshot (the
-  sandbox's compositor wasn't available this session): `flt-glass-pane`
-  mounted, tab title changed to "TutoLys" (set by the running app, proof
-  `main()` executed), zero console errors, and the
+- Live boot check (standalone, no backend): served `build/web` statically
+  (not `flutter run -d web-server` — see pitfall below) and loaded it in a
+  real browser tab. Confirmed via console log and DOM inspection, not a
+  screenshot (the sandbox's compositor wasn't available in that pass):
+  `flt-glass-pane` mounted, tab title changed to "TutoLys" (set by the
+  running app, proof `main()` executed), zero console errors, and the
   `WasmStorageImplementation.sharedIndexedDb` log line above confirms the
-  database opened successfully. Did not go further — no backend was
-  running, so the pairing → path → play flow wasn't exercised live this
-  round.
+  database opened successfully.
+- Live pairing → path → play, against a real backend (2026-10-19, separate
+  pass, real screenshots this time via a different browser surface):
+  started `dev-stack`, signed up an org, created a kid (grade 3), minted a
+  pairing code via the real API, typed it into the real pairing screen at
+  `http://localhost:8080` (served from `build/web`, port 8080 to satisfy
+  the backend's CORS allowlist) — landed on "Bienvenue, Yelhan !". Seeded
+  `mathematique` curriculum (none was loaded in the fresh dev-stack DB)
+  and one real `mcq` exercise, then confirmed in the browser: the path
+  screen rendered the real curriculum tree with locked/available states
+  (icon + text, not color-only), tapping the one available node opened
+  the real `ExerciseRunner` with the real `mcq` engine and real content,
+  answering correctly returned to the path screen. Backend access logs
+  confirm every step was a live round trip
+  (`/api/v1/pairing/exchange`, `/api/v1/curriculum/tree`,
+  `/api/v1/content/manifest`, `/api/v1/content/exercises`) — nothing
+  served from cache alone. Not checked: telemetry ingestion actually
+  landing (the event outbox is durable by design, so this isn't urgent,
+  but it wasn't observed in the telemetry service's logs in this pass).
 
 ### Pitfall: `flutter run -d web-server` hangs with no visible error
 
