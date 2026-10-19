@@ -1128,6 +1128,414 @@ class ExerciseCacheTableCompanion extends UpdateCompanion<CachedExercise> {
   }
 }
 
+class $SkillNodeTableTable extends SkillNodeTable
+    with TableInfo<$SkillNodeTableTable, CachedSkillNode> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SkillNodeTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _labelFrMeta = const VerificationMeta(
+    'labelFr',
+  );
+  @override
+  late final GeneratedColumn<String> labelFr = GeneratedColumn<String>(
+    'label_fr',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _labelEnMeta = const VerificationMeta(
+    'labelEn',
+  );
+  @override
+  late final GeneratedColumn<String> labelEn = GeneratedColumn<String>(
+    'label_en',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _stableKeyMeta = const VerificationMeta(
+    'stableKey',
+  );
+  @override
+  late final GeneratedColumn<String> stableKey = GeneratedColumn<String>(
+    'stable_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _subjectMeta = const VerificationMeta(
+    'subject',
+  );
+  @override
+  late final GeneratedColumn<String> subject = GeneratedColumn<String>(
+    'subject',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _gradeMeta = const VerificationMeta('grade');
+  @override
+  late final GeneratedColumn<int> grade = GeneratedColumn<int>(
+    'grade',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    labelFr,
+    labelEn,
+    stableKey,
+    subject,
+    grade,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'skill_node_cache';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CachedSkillNode> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('label_fr')) {
+      context.handle(
+        _labelFrMeta,
+        labelFr.isAcceptableOrUnknown(data['label_fr']!, _labelFrMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_labelFrMeta);
+    }
+    if (data.containsKey('label_en')) {
+      context.handle(
+        _labelEnMeta,
+        labelEn.isAcceptableOrUnknown(data['label_en']!, _labelEnMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_labelEnMeta);
+    }
+    if (data.containsKey('stable_key')) {
+      context.handle(
+        _stableKeyMeta,
+        stableKey.isAcceptableOrUnknown(data['stable_key']!, _stableKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_stableKeyMeta);
+    }
+    if (data.containsKey('subject')) {
+      context.handle(
+        _subjectMeta,
+        subject.isAcceptableOrUnknown(data['subject']!, _subjectMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_subjectMeta);
+    }
+    if (data.containsKey('grade')) {
+      context.handle(
+        _gradeMeta,
+        grade.isAcceptableOrUnknown(data['grade']!, _gradeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_gradeMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CachedSkillNode map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CachedSkillNode(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      labelFr: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}label_fr'],
+      )!,
+      labelEn: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}label_en'],
+      )!,
+      stableKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}stable_key'],
+      )!,
+      subject: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}subject'],
+      )!,
+      grade: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}grade'],
+      )!,
+    );
+  }
+
+  @override
+  $SkillNodeTableTable createAlias(String alias) {
+    return $SkillNodeTableTable(attachedDatabase, alias);
+  }
+}
+
+class CachedSkillNode extends DataClass implements Insertable<CachedSkillNode> {
+  final String id;
+  final String labelFr;
+  final String labelEn;
+  final String stableKey;
+  final String subject;
+  final int grade;
+  const CachedSkillNode({
+    required this.id,
+    required this.labelFr,
+    required this.labelEn,
+    required this.stableKey,
+    required this.subject,
+    required this.grade,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['label_fr'] = Variable<String>(labelFr);
+    map['label_en'] = Variable<String>(labelEn);
+    map['stable_key'] = Variable<String>(stableKey);
+    map['subject'] = Variable<String>(subject);
+    map['grade'] = Variable<int>(grade);
+    return map;
+  }
+
+  SkillNodeTableCompanion toCompanion(bool nullToAbsent) {
+    return SkillNodeTableCompanion(
+      id: Value(id),
+      labelFr: Value(labelFr),
+      labelEn: Value(labelEn),
+      stableKey: Value(stableKey),
+      subject: Value(subject),
+      grade: Value(grade),
+    );
+  }
+
+  factory CachedSkillNode.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CachedSkillNode(
+      id: serializer.fromJson<String>(json['id']),
+      labelFr: serializer.fromJson<String>(json['labelFr']),
+      labelEn: serializer.fromJson<String>(json['labelEn']),
+      stableKey: serializer.fromJson<String>(json['stableKey']),
+      subject: serializer.fromJson<String>(json['subject']),
+      grade: serializer.fromJson<int>(json['grade']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'labelFr': serializer.toJson<String>(labelFr),
+      'labelEn': serializer.toJson<String>(labelEn),
+      'stableKey': serializer.toJson<String>(stableKey),
+      'subject': serializer.toJson<String>(subject),
+      'grade': serializer.toJson<int>(grade),
+    };
+  }
+
+  CachedSkillNode copyWith({
+    String? id,
+    String? labelFr,
+    String? labelEn,
+    String? stableKey,
+    String? subject,
+    int? grade,
+  }) => CachedSkillNode(
+    id: id ?? this.id,
+    labelFr: labelFr ?? this.labelFr,
+    labelEn: labelEn ?? this.labelEn,
+    stableKey: stableKey ?? this.stableKey,
+    subject: subject ?? this.subject,
+    grade: grade ?? this.grade,
+  );
+  CachedSkillNode copyWithCompanion(SkillNodeTableCompanion data) {
+    return CachedSkillNode(
+      id: data.id.present ? data.id.value : this.id,
+      labelFr: data.labelFr.present ? data.labelFr.value : this.labelFr,
+      labelEn: data.labelEn.present ? data.labelEn.value : this.labelEn,
+      stableKey: data.stableKey.present ? data.stableKey.value : this.stableKey,
+      subject: data.subject.present ? data.subject.value : this.subject,
+      grade: data.grade.present ? data.grade.value : this.grade,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CachedSkillNode(')
+          ..write('id: $id, ')
+          ..write('labelFr: $labelFr, ')
+          ..write('labelEn: $labelEn, ')
+          ..write('stableKey: $stableKey, ')
+          ..write('subject: $subject, ')
+          ..write('grade: $grade')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, labelFr, labelEn, stableKey, subject, grade);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CachedSkillNode &&
+          other.id == this.id &&
+          other.labelFr == this.labelFr &&
+          other.labelEn == this.labelEn &&
+          other.stableKey == this.stableKey &&
+          other.subject == this.subject &&
+          other.grade == this.grade);
+}
+
+class SkillNodeTableCompanion extends UpdateCompanion<CachedSkillNode> {
+  final Value<String> id;
+  final Value<String> labelFr;
+  final Value<String> labelEn;
+  final Value<String> stableKey;
+  final Value<String> subject;
+  final Value<int> grade;
+  final Value<int> rowid;
+  const SkillNodeTableCompanion({
+    this.id = const Value.absent(),
+    this.labelFr = const Value.absent(),
+    this.labelEn = const Value.absent(),
+    this.stableKey = const Value.absent(),
+    this.subject = const Value.absent(),
+    this.grade = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SkillNodeTableCompanion.insert({
+    required String id,
+    required String labelFr,
+    required String labelEn,
+    required String stableKey,
+    required String subject,
+    required int grade,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       labelFr = Value(labelFr),
+       labelEn = Value(labelEn),
+       stableKey = Value(stableKey),
+       subject = Value(subject),
+       grade = Value(grade);
+  static Insertable<CachedSkillNode> custom({
+    Expression<String>? id,
+    Expression<String>? labelFr,
+    Expression<String>? labelEn,
+    Expression<String>? stableKey,
+    Expression<String>? subject,
+    Expression<int>? grade,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (labelFr != null) 'label_fr': labelFr,
+      if (labelEn != null) 'label_en': labelEn,
+      if (stableKey != null) 'stable_key': stableKey,
+      if (subject != null) 'subject': subject,
+      if (grade != null) 'grade': grade,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SkillNodeTableCompanion copyWith({
+    Value<String>? id,
+    Value<String>? labelFr,
+    Value<String>? labelEn,
+    Value<String>? stableKey,
+    Value<String>? subject,
+    Value<int>? grade,
+    Value<int>? rowid,
+  }) {
+    return SkillNodeTableCompanion(
+      id: id ?? this.id,
+      labelFr: labelFr ?? this.labelFr,
+      labelEn: labelEn ?? this.labelEn,
+      stableKey: stableKey ?? this.stableKey,
+      subject: subject ?? this.subject,
+      grade: grade ?? this.grade,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (labelFr.present) {
+      map['label_fr'] = Variable<String>(labelFr.value);
+    }
+    if (labelEn.present) {
+      map['label_en'] = Variable<String>(labelEn.value);
+    }
+    if (stableKey.present) {
+      map['stable_key'] = Variable<String>(stableKey.value);
+    }
+    if (subject.present) {
+      map['subject'] = Variable<String>(subject.value);
+    }
+    if (grade.present) {
+      map['grade'] = Variable<int>(grade.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SkillNodeTableCompanion(')
+          ..write('id: $id, ')
+          ..write('labelFr: $labelFr, ')
+          ..write('labelEn: $labelEn, ')
+          ..write('stableKey: $stableKey, ')
+          ..write('subject: $subject, ')
+          ..write('grade: $grade, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $EngineSettingsTableTable extends EngineSettingsTable
     with TableInfo<$EngineSettingsTableTable, EngineSettingRow> {
   @override
@@ -1671,6 +2079,7 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
   );
   late final $ExerciseCacheTableTable exerciseCacheTable =
       $ExerciseCacheTableTable(this);
+  late final $SkillNodeTableTable skillNodeTable = $SkillNodeTableTable(this);
   late final $EngineSettingsTableTable engineSettingsTable =
       $EngineSettingsTableTable(this);
   late final $AppStateTableTable appStateTable = $AppStateTableTable(this);
@@ -1681,6 +2090,7 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     eventOutboxTable,
     exerciseCacheTable,
+    skillNodeTable,
     engineSettingsTable,
     appStateTable,
   ];
@@ -2269,6 +2679,240 @@ typedef $$ExerciseCacheTableTableProcessedTableManager =
       CachedExercise,
       PrefetchHooks Function()
     >;
+typedef $$SkillNodeTableTableCreateCompanionBuilder =
+    SkillNodeTableCompanion Function({
+      required String id,
+      required String labelFr,
+      required String labelEn,
+      required String stableKey,
+      required String subject,
+      required int grade,
+      Value<int> rowid,
+    });
+typedef $$SkillNodeTableTableUpdateCompanionBuilder =
+    SkillNodeTableCompanion Function({
+      Value<String> id,
+      Value<String> labelFr,
+      Value<String> labelEn,
+      Value<String> stableKey,
+      Value<String> subject,
+      Value<int> grade,
+      Value<int> rowid,
+    });
+
+class $$SkillNodeTableTableFilterComposer
+    extends Composer<_$LocalDatabase, $SkillNodeTableTable> {
+  $$SkillNodeTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get labelFr => $composableBuilder(
+    column: $table.labelFr,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get labelEn => $composableBuilder(
+    column: $table.labelEn,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get stableKey => $composableBuilder(
+    column: $table.stableKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get subject => $composableBuilder(
+    column: $table.subject,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get grade => $composableBuilder(
+    column: $table.grade,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SkillNodeTableTableOrderingComposer
+    extends Composer<_$LocalDatabase, $SkillNodeTableTable> {
+  $$SkillNodeTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get labelFr => $composableBuilder(
+    column: $table.labelFr,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get labelEn => $composableBuilder(
+    column: $table.labelEn,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get stableKey => $composableBuilder(
+    column: $table.stableKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get subject => $composableBuilder(
+    column: $table.subject,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get grade => $composableBuilder(
+    column: $table.grade,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SkillNodeTableTableAnnotationComposer
+    extends Composer<_$LocalDatabase, $SkillNodeTableTable> {
+  $$SkillNodeTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get labelFr =>
+      $composableBuilder(column: $table.labelFr, builder: (column) => column);
+
+  GeneratedColumn<String> get labelEn =>
+      $composableBuilder(column: $table.labelEn, builder: (column) => column);
+
+  GeneratedColumn<String> get stableKey =>
+      $composableBuilder(column: $table.stableKey, builder: (column) => column);
+
+  GeneratedColumn<String> get subject =>
+      $composableBuilder(column: $table.subject, builder: (column) => column);
+
+  GeneratedColumn<int> get grade =>
+      $composableBuilder(column: $table.grade, builder: (column) => column);
+}
+
+class $$SkillNodeTableTableTableManager
+    extends
+        RootTableManager<
+          _$LocalDatabase,
+          $SkillNodeTableTable,
+          CachedSkillNode,
+          $$SkillNodeTableTableFilterComposer,
+          $$SkillNodeTableTableOrderingComposer,
+          $$SkillNodeTableTableAnnotationComposer,
+          $$SkillNodeTableTableCreateCompanionBuilder,
+          $$SkillNodeTableTableUpdateCompanionBuilder,
+          (
+            CachedSkillNode,
+            BaseReferences<
+              _$LocalDatabase,
+              $SkillNodeTableTable,
+              CachedSkillNode
+            >,
+          ),
+          CachedSkillNode,
+          PrefetchHooks Function()
+        > {
+  $$SkillNodeTableTableTableManager(
+    _$LocalDatabase db,
+    $SkillNodeTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SkillNodeTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SkillNodeTableTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SkillNodeTableTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> labelFr = const Value.absent(),
+                Value<String> labelEn = const Value.absent(),
+                Value<String> stableKey = const Value.absent(),
+                Value<String> subject = const Value.absent(),
+                Value<int> grade = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SkillNodeTableCompanion(
+                id: id,
+                labelFr: labelFr,
+                labelEn: labelEn,
+                stableKey: stableKey,
+                subject: subject,
+                grade: grade,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String labelFr,
+                required String labelEn,
+                required String stableKey,
+                required String subject,
+                required int grade,
+                Value<int> rowid = const Value.absent(),
+              }) => SkillNodeTableCompanion.insert(
+                id: id,
+                labelFr: labelFr,
+                labelEn: labelEn,
+                stableKey: stableKey,
+                subject: subject,
+                grade: grade,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$SkillNodeTableTable, CachedSkillNode>(table),
+                  BaseReferences<
+                    _$LocalDatabase,
+                    $SkillNodeTableTable,
+                    CachedSkillNode
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SkillNodeTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$LocalDatabase,
+      $SkillNodeTableTable,
+      CachedSkillNode,
+      $$SkillNodeTableTableFilterComposer,
+      $$SkillNodeTableTableOrderingComposer,
+      $$SkillNodeTableTableAnnotationComposer,
+      $$SkillNodeTableTableCreateCompanionBuilder,
+      $$SkillNodeTableTableUpdateCompanionBuilder,
+      (
+        CachedSkillNode,
+        BaseReferences<_$LocalDatabase, $SkillNodeTableTable, CachedSkillNode>,
+      ),
+      CachedSkillNode,
+      PrefetchHooks Function()
+    >;
 typedef $$EngineSettingsTableTableCreateCompanionBuilder =
     EngineSettingsTableCompanion Function({
       required String engineKey,
@@ -2641,6 +3285,8 @@ class $LocalDatabaseManager {
       $$EventOutboxTableTableTableManager(_db, _db.eventOutboxTable);
   $$ExerciseCacheTableTableTableManager get exerciseCacheTable =>
       $$ExerciseCacheTableTableTableManager(_db, _db.exerciseCacheTable);
+  $$SkillNodeTableTableTableManager get skillNodeTable =>
+      $$SkillNodeTableTableTableManager(_db, _db.skillNodeTable);
   $$EngineSettingsTableTableTableManager get engineSettingsTable =>
       $$EngineSettingsTableTableTableManager(_db, _db.engineSettingsTable);
   $$AppStateTableTableTableManager get appStateTable =>

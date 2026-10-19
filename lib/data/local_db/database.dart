@@ -79,6 +79,28 @@ class ExerciseCacheTable extends Table {
   Set<Column> get primaryKey => {exerciseId};
 }
 
+/// Cached curriculum leaves for the path screen (A7).
+///
+/// Flat, not a tree — no parent/child columns, matching the backend
+/// endpoint's own flat response. A7's path UI is a plain list, not a
+/// traversal; a richer tree cache is a later extension, not built ahead of
+/// a screen that would use it.
+@DataClassName('CachedSkillNode')
+class SkillNodeTable extends Table {
+  @override
+  String get tableName => 'skill_node_cache';
+
+  TextColumn get id => text()();
+  TextColumn get labelFr => text().named('label_fr')();
+  TextColumn get labelEn => text().named('label_en')();
+  TextColumn get stableKey => text().named('stable_key')();
+  TextColumn get subject => text()();
+  IntColumn get grade => integer()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// Local overrides for per-engine settings (plan §5.5: app-side, never server).
 @DataClassName('EngineSettingRow')
 class EngineSettingsTable extends Table {
@@ -114,6 +136,7 @@ class AppStateTable extends Table {
   tables: [
     EventOutboxTable,
     ExerciseCacheTable,
+    SkillNodeTable,
     EngineSettingsTable,
     AppStateTable,
   ],
@@ -147,6 +170,10 @@ class LocalDatabase extends _$LocalDatabase {
           await customStatement(
             'CREATE INDEX IF NOT EXISTS exercise_cache_lookup '
             'ON exercise_cache (grade, subject, rank)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS skill_node_cache_lookup '
+            'ON skill_node_cache (subject, grade)',
           );
         },
       );
