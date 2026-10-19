@@ -4,6 +4,17 @@ import '../../data/local_db/database.dart';
 import '../../features/path/path_screen.dart';
 import '../../features/play/play_screen.dart';
 
+/// What `/play` needs: the tapped node (for its title) and the exercise
+/// envelope already resolved for it — the path screen looks this up
+/// (it already has exercise-cache access to decide locked/available) rather
+/// than `PlayScreen` re-querying for itself.
+class PlayRequest {
+  const PlayRequest({required this.node, required this.envelope});
+
+  final CachedSkillNode node;
+  final Map<String, Object?> envelope;
+}
+
 /// The two routes inside the paired shell (A7): the path, and one exercise.
 ///
 /// Deliberately not the app's top-level router — `AppShell`'s own
@@ -20,11 +31,13 @@ GoRouter buildPairedRouter() {
       GoRoute(path: '/path', builder: (context, state) => const PathScreen()),
       GoRoute(
         path: '/play',
-        // `extra` carries the tapped node directly — this router is never
+        // `extra` carries the request directly — this router is never
         // deep-linked into from outside the app, so there is no need to
         // encode it into the URL and parse it back out.
-        builder: (context, state) =>
-            PlayScreen(node: state.extra! as CachedSkillNode),
+        builder: (context, state) {
+          final request = state.extra! as PlayRequest;
+          return PlayScreen(node: request.node, envelope: request.envelope);
+        },
       ),
     ],
   );

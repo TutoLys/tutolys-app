@@ -1,48 +1,85 @@
 import 'package:design_system/design_system.dart';
+import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
-import '../../core/i18n/strings.dart';
 import '../../data/local_db/database.dart';
+import '../../data/sync/drift_event_outbox.dart';
+import '../pairing/pairing_controller.dart';
+import 'engine_registry_provider.dart';
+import 'mascot_feedback.dart';
 
-/// Hosts one exercise, reached by tapping a node on the path.
+/// Hosts one exercise, reached by tapping an available node on the path.
 ///
-/// Placeholder until the real `EngineRegistry`/`EngineFeedback`
-/// implementations land (A7, piece 4) — at that point this wraps
-/// `ExerciseRunner` instead of showing a stand-in. Exists now so go_router
-/// has a real second destination to push to and pop back from.
-class PlayScreen extends StatelessWidget {
-  const PlayScreen({required this.node, super.key});
+/// The one place `TutolysEngine`/`EngineRegistry`/`EngineFeedback`/
+/// `TelemetryClient` all actually come together in the running app — every
+/// other app code before A7 only ever constructed test doubles for these
+/// (see `a7-skill-path-plan.md`'s own gap #4).
+class PlayScreen extends ConsumerStatefulWidget {
+  const PlayScreen({required this.node, required this.envelope, super.key});
 
   final CachedSkillNode node;
+  final Map<String, Object?> envelope;
+
+  @override
+  ConsumerState<PlayScreen> createState() => _PlayScreenState();
+}
+
+class _PlayScreenState extends ConsumerState<PlayScreen> {
+  final MascotEngineFeedback _feedback = MascotEngineFeedback();
+  late final TelemetryClient _telemetry;
+
+  @override
+  void initState() {
+    super.initState();
+    _telemetry = TelemetryClient(
+      outbox: DriftEventOutbox(ref.read(localDatabaseProvider)),
+      // One session id per visit to this screen, not one per app launch —
+      // there is no app-session lifecycle wired anywhere yet (a gap beyond
+      // A7's own scope: nothing calls `logSessionStart`/`logSessionEnd`
+      // outside this one screen today). Flagged, not silently assumed
+      // correct.
+      sessionId: const Uuid().v4(),
+      appVersion: appVersion,
+    );
+    _telemetry.logSessionStart();
+  }
+
+  @override
+  void dispose() {
+    _telemetry.logSessionEnd();
+    _feedback.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final s = context.s;
+    final registry = ref.watch(engineRegistryProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(node.labelFr)),
+      appBar: AppBar(title: Text(widget.node.labelFr)),
       body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(Space.lg),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const TutolysMascot(mood: MascotMood.thinking, size: 120),
-                const SizedBox(height: Space.lg),
-                Text(
-                  node.labelFr,
-                  style: context.text.headlineSmall,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: Space.xl),
-                OutlinedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text(s.playBack),
-                ),
-              ],
+        child: Column(
+          children: [
+            ValueListenableBuilder<MascotMood>(
+              valueListenable: _feedback.mood,
+              builder: (context, mood, _) => Padding(
+                padding: const EdgeInsets.all(Space.md),
+                child: TutolysMascot(mood: mood, size: 96),
+              ),
             ),
-          ),
+            Expanded(
+              child: ExerciseRunner(
+                envelope: widget.envelope,
+                registry: registry,
+                telemetry: _telemetry,
+                feedback: _feedback,
+                locale: Localizations.localeOf(context),
+                onFinished: (_) => Navigator.of(context).pop(),
+              ),
+            ),
+          ],
         ),
       ),
     );

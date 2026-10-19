@@ -4,9 +4,23 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/routing/app_shell.dart';
+import 'data/local_db/database.dart';
+import 'features/pairing/pairing_controller.dart';
 
-void main() {
-  runApp(const ProviderScope(child: TutolysApp()));
+Future<void> main() async {
+  // Opening the database needs the platform's application-support
+  // directory, which is async — `runApp` isn't, so this is the one piece
+  // of real startup work that has to happen before it rather than inside
+  // a provider's `create`.
+  WidgetsFlutterBinding.ensureInitialized();
+  final db = await openLocalDatabase();
+
+  runApp(
+    ProviderScope(
+      overrides: [localDatabaseProvider.overrideWithValue(db)],
+      child: const TutolysApp(),
+    ),
+  );
 }
 
 class TutolysApp extends StatelessWidget {

@@ -1,0 +1,249 @@
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:tutolys_app/data/api/content_api.dart';
+import 'package:tutolys_app/data/api/curriculum_api.dart';
+import 'package:tutolys_app/data/local_db/database.dart';
+import 'package:tutolys_app/data/local_db/session_store.dart';
+import 'package:tutolys_app/data/sync/content_hash.dart';
+import 'package:tutolys_app/features/pairing/pairing_controller.dart';
+import 'package:tutolys_app/features/path/path_controller.dart';
+
+class _FixedSessionController extends SessionController {
+  _FixedSessionController(this._state);
+  final SessionState _state;
+
+  @override
+  SessionState build() => _state;
+}
+
+class _FakeCurriculumApi extends CurriculumApi {
+  _FakeCurriculumApi() : super(dio: Dio());
+
+  List<CurriculumLeaf> leaves = const [];
+  bool offline = false;
+
+  @override
+  Future<CurriculumTreeResult> fetchTree({
+    required String accessToken,
+    required String subject,
+  }) async {
+    if (offline) return const CurriculumTreeOffline();
+    return CurriculumTreeFetched(leaves);
+  }
+}
+
+class _FakeContentApi extends ContentApi {
+  _FakeContentApi() : super(dio: Dio());
+
+  /// exercise_id -> envelope.
+  final Map<String, Map<String, Object?>> content = {};
+
+  @override
+  Future<ManifestResult> fetchManifest({
+    required String accessToken,
+    String? subject,
+  }) async {
+    final entries = content.values
+        .map(
+          (e) => ManifestEntry(
+            exerciseId: e['exercise_id'] as String,
+            version: e['version'] as int,
+            contentHash: contentSha256(e),
+            engineKey: e['engine_key'] as String,
+            engineMinVersion: e['engine_min_version'] as int,
+            skillNodeId: e['skill_node_id'] as String,
+            subject: e['subject'] as String,
+            grade: e['grade'] as int,
+            rank: e['rank'] as int,
+          ),
+        )
+        .toList();
+    return ManifestFetched(
+      ContentManifest(grade: 1, manifestHash: 'm', entries: entries),
+    );
+  }
+
+  @override
+  Future<ExercisesResult> fetchExercises({
+    required List<String> ids,
+    required String accessToken,
+  }) async {
+    return ExercisesFetched(
+      envelopes: ids.map((id) => content[id]!).toList(),
+      unavailable: ids.where((id) => !content.containsKey(id)).toList(),
+    );
+  }
+}
+
+Map<String, Object?> exercise({
+  required String id,
+  required String skillNodeId,
+  int rank = 0,
+}) {
+  return {
+    'exercise_id': id,
+    'version': 1,
+    'engine_key': 'mcq',
+    'engine_min_version': 1,
+    'skill_node_id': skillNodeId,
+    'subject': 'MATH',
+    'grade': 1,
+    'rank': rank,
+    'locale': 'fr-CA',
+    'prompt': {
+      'text': 'Combien font 2 + 2 ?',
+      'audio_ref': null,
+      'image_ref': null,
+    },
+    'config': const {
+      'options': [
+        {'id': 'a', 'label': '4'},
+      ],
+      'correct': 'a',
+    },
+    'assets': const <Object?>[],
+  };
+}
+
+void main() {
+  late ProviderContainer container;
+  late _FakeCurriculumApi curriculumApi;
+  late _FakeContentApi contentApi;
+
+  ProviderContainer build({SessionState? session}) {
+    curriculumApi = _FakeCurriculumApi();
+    contentApi = _FakeContentApi();
+    return ProviderContainer(
+      overrides: [
+        localDatabaseProvider.overrideWithValue(LocalDatabase.memory()),
+        curriculumApiProvider.overrideWithValue(curriculumApi),
+        contentApiProvider.overrideWithValue(contentApi),
+        sessionControllerProvider.overrideWith(
+          () => _FixedSessionController(
+            session ??
+                const SessionState(
+                  status: SessionStatus.paired,
+                  kid: PairedKid(
+                    id: 'k1',
+                    displayName: 'Yelhan',
+                    gradeLevel: 1,
+                  ),
+                  accessToken: 'token',
+                ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  tearDown(() async {
+    // `build()` itself kicks off a `_load` via an unawaited microtask (same
+    // fire-and-forget deferral `SessionController.build()` already uses) —
+    // on top of this test's own explicit, awaited `refresh()` call. Without
+    // draining the queue first, that first call can still be mid-flight
+    // when `dispose()` runs, which throws ("Cannot use the Ref... after it
+    // has been disposed") rather than a clean no-op.
+    await pumpEventQueue();
+    container.dispose();
+  });
+
+  test('an available leaf is one with a synced exercise', () async {
+    container = build();
+    curriculumApi.leaves = const [
+      CurriculumLeaf(
+        id: 'leaf-1',
+        labelFr: 'Compter',
+        labelEn: '',
+        stableKey: 'math/1',
+      ),
+      CurriculumLeaf(
+        id: 'leaf-2',
+        labelFr: 'Additionner',
+        labelEn: '',
+        stableKey: 'math/2',
+      ),
+    ];
+    final ex = exercise(id: 'ex-1', skillNodeId: 'leaf-1');
+    contentApi.content[ex['exercise_id'] as String] = ex;
+
+    await container.read(pathControllerProvider.notifier).refresh();
+
+    final state = container.read(pathControllerProvider);
+    expect(state.loading, isFalse);
+    expect(state.leaves.map((l) => l.id).toSet(), {'leaf-1', 'leaf-2'});
+    expect(
+      state.isAvailable(state.leaves.firstWhere((l) => l.id == 'leaf-1')),
+      isTrue,
+    );
+    expect(
+      state.isAvailable(state.leaves.firstWhere((l) => l.id == 'leaf-2')),
+      isFalse,
+    );
+  });
+
+  test(
+    'the resolved exercise for an available leaf is the lowest rank',
+    () async {
+      container = build();
+      curriculumApi.leaves = const [
+        CurriculumLeaf(
+          id: 'leaf-1',
+          labelFr: 'Compter',
+          labelEn: '',
+          stableKey: 'math/1',
+        ),
+      ];
+      contentApi.content['ex-2'] = exercise(
+        id: 'ex-2',
+        skillNodeId: 'leaf-1',
+        rank: 2,
+      );
+      contentApi.content['ex-1'] = exercise(
+        id: 'ex-1',
+        skillNodeId: 'leaf-1',
+        rank: 0,
+      );
+
+      await container.read(pathControllerProvider.notifier).refresh();
+
+      final state = container.read(pathControllerProvider);
+      expect(state.exerciseByNodeId['leaf-1']!['exercise_id'], 'ex-1');
+    },
+  );
+
+  test(
+    'no paired kid: stays non-loading with nothing to show, no network calls',
+    () async {
+      container = build(session: const SessionState.unpaired());
+
+      await container.read(pathControllerProvider.notifier).refresh();
+
+      final state = container.read(pathControllerProvider);
+      expect(state.loading, isFalse);
+      expect(state.leaves, isEmpty);
+    },
+  );
+
+  test('offline sync still surfaces whatever was cached before', () async {
+    container = build();
+    curriculumApi.leaves = const [
+      CurriculumLeaf(
+        id: 'leaf-1',
+        labelFr: 'Compter',
+        labelEn: '',
+        stableKey: 'math/1',
+      ),
+    ];
+    await container.read(pathControllerProvider.notifier).refresh();
+
+    curriculumApi.offline = true;
+    await container.read(pathControllerProvider.notifier).refresh();
+
+    final state = container.read(pathControllerProvider);
+    expect(state.offline, isTrue);
+    expect(state.leaves.map((l) => l.id), [
+      'leaf-1',
+    ], reason: 'offline must not clear the cache');
+  });
+}

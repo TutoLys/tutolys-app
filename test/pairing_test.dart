@@ -6,11 +6,39 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:design_system/design_system.dart';
 
 import 'package:tutolys_app/core/routing/app_shell.dart';
+import 'package:tutolys_app/data/api/content_api.dart';
+import 'package:tutolys_app/data/api/curriculum_api.dart';
 import 'package:tutolys_app/data/api/pairing_api.dart';
+import 'package:tutolys_app/data/local_db/database.dart';
 import 'package:tutolys_app/data/local_db/session_store.dart';
 import 'package:tutolys_app/features/pairing/pairing_controller.dart';
 import 'package:tutolys_app/features/pairing/pairing_screen.dart';
+import 'package:tutolys_app/features/path/path_controller.dart';
 import 'package:tutolys_app/features/path/path_screen.dart';
+
+/// Neither the path screen's own data needs a real network in these
+/// pairing-focused tests: both report offline immediately, so
+/// `PathController` settles into its empty/offline state instead of
+/// hanging on a real connection attempt to a dev-stack that isn't running.
+class _OfflineCurriculumApi extends CurriculumApi {
+  _OfflineCurriculumApi() : super(dio: Dio());
+
+  @override
+  Future<CurriculumTreeResult> fetchTree({
+    required String accessToken,
+    required String subject,
+  }) async => const CurriculumTreeOffline();
+}
+
+class _OfflineContentApi extends ContentApi {
+  _OfflineContentApi() : super(dio: Dio());
+
+  @override
+  Future<ManifestResult> fetchManifest({
+    required String accessToken,
+    String? subject,
+  }) async => const ManifestOffline();
+}
 
 /// In-memory stand-ins. Hand-written rather than generated: there are two of
 /// them and the behaviour under test is the state machine, not the transport.
@@ -51,10 +79,8 @@ class FakeSessionStore extends SessionStore {
 }
 
 class FakePairingApi extends PairingApi {
-  FakePairingApi({
-    required this.exchangeResult,
-    required this.refreshResult,
-  }) : super(dio: _unusedDio);
+  FakePairingApi({required this.exchangeResult, required this.refreshResult})
+    : super(dio: _unusedDio);
 
   final PairingResult exchangeResult;
   final RefreshResult refreshResult;
@@ -116,6 +142,9 @@ ProviderContainer containerWith({
       // No background timer in tests: an armed 12-minute timer fails the
       // pending-timer check, and these tests drive refresh explicitly.
       sessionAutoRefreshProvider.overrideWithValue(false),
+      localDatabaseProvider.overrideWithValue(LocalDatabase.memory()),
+      curriculumApiProvider.overrideWithValue(_OfflineCurriculumApi()),
+      contentApiProvider.overrideWithValue(_OfflineContentApi()),
     ],
   );
 }
@@ -129,13 +158,13 @@ Widget appUnder(ProviderContainer container, Widget child) {
       // is also the accessibility behaviour we want in production.
       data: const MediaQueryData(disableAnimations: true),
       child: MaterialApp(
-      locale: const Locale('fr', 'CA'),
-      supportedLocales: const [Locale('fr', 'CA'), Locale('en', 'CA')],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
+        locale: const Locale('fr', 'CA'),
+        supportedLocales: const [Locale('fr', 'CA'), Locale('en', 'CA')],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
         theme: TutolysTheme.learner(),
         home: child,
       ),
@@ -245,8 +274,9 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      final error =
-          await container.read(sessionControllerProvider.notifier).pair('ZF23XU');
+      final error = await container
+          .read(sessionControllerProvider.notifier)
+          .pair('ZF23XU');
 
       expect(error, isNull);
       expect(store.storedToken, 'device-token-1');
@@ -266,7 +296,9 @@ void main() {
           ),
         );
         addTearDown(container.dispose);
-        return container.read(sessionControllerProvider.notifier).pair('ZF23XU');
+        return container
+            .read(sessionControllerProvider.notifier)
+            .pair('ZF23XU');
       }
 
       expect(
@@ -274,8 +306,14 @@ void main() {
         PairingError.invalidCode,
       );
       expect(await attempt(const PairingOffline()), PairingError.offline);
-      expect(await attempt(const PairingRateLimited()), PairingError.rateLimited);
-      expect(await attempt(const PairingFailed('boom')), PairingError.unexpected);
+      expect(
+        await attempt(const PairingRateLimited()),
+        PairingError.rateLimited,
+      );
+      expect(
+        await attempt(const PairingFailed('boom')),
+        PairingError.unexpected,
+      );
     });
 
     test('forget unpairs on request', () async {
@@ -576,7 +614,9 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      await container.read(sessionControllerProvider.notifier).ensureFreshToken();
+      await container
+          .read(sessionControllerProvider.notifier)
+          .ensureFreshToken();
 
       expect(
         container.read(sessionControllerProvider).accessToken,
@@ -595,7 +635,9 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      await container.read(sessionControllerProvider.notifier).ensureFreshToken();
+      await container
+          .read(sessionControllerProvider.notifier)
+          .ensureFreshToken();
 
       expect(
         container.read(sessionControllerProvider).status,
@@ -615,7 +657,9 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      await container.read(sessionControllerProvider.notifier).ensureFreshToken();
+      await container
+          .read(sessionControllerProvider.notifier)
+          .ensureFreshToken();
 
       expect(store.cleared, isFalse);
       expect(store.storedToken, 'stored');

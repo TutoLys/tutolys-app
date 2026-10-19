@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/api/pairing_api.dart';
+import '../../data/local_db/database.dart';
 import '../../data/local_db/session_store.dart';
 
 /// Where the app is, credential-wise.
@@ -22,18 +23,12 @@ enum SessionStatus {
 
 @immutable
 class SessionState {
-  const SessionState({
-    required this.status,
-    this.kid,
-    this.accessToken,
-  });
+  const SessionState({required this.status, this.kid, this.accessToken});
 
   const SessionState.checking() : this._(SessionStatus.checking);
   const SessionState.unpaired() : this._(SessionStatus.unpaired);
 
-  const SessionState._(this.status)
-      : kid = null,
-        accessToken = null;
+  const SessionState._(this.status) : kid = null, accessToken = null;
 
   final SessionStatus status;
   final PairedKid? kid;
@@ -55,10 +50,7 @@ class SessionState {
 /// What the pairing screen is currently doing.
 @immutable
 class PairingUiState {
-  const PairingUiState({
-    this.isSubmitting = false,
-    this.error,
-  });
+  const PairingUiState({this.isSubmitting = false, this.error});
 
   final bool isSubmitting;
 
@@ -307,6 +299,18 @@ final dioProvider = Provider<Dio>((ref) {
   );
 });
 
+/// The on-disk database, opened once at app startup (`main.dart`) and
+/// provided from there via `overrideWithValue` — opening it needs an
+/// `await` (the platform's application-support directory), which a
+/// `Provider`'s synchronous `create` cannot do itself. Every test that
+/// touches a screen reading this overrides it with `LocalDatabase.memory()`.
+final localDatabaseProvider = Provider<LocalDatabase>((ref) {
+  throw UnimplementedError(
+    'localDatabaseProvider must be overridden — main.dart does this after '
+    'opening the real database; tests override it with LocalDatabase.memory().',
+  );
+});
+
 final sessionStoreProvider = Provider<SessionStore>((ref) => SessionStore());
 
 /// Whether the session keeps itself refreshed with a background timer.
@@ -324,5 +328,5 @@ final sessionControllerProvider =
 
 final pairingFormProvider =
     NotifierProvider<PairingFormController, PairingUiState>(
-  PairingFormController.new,
-);
+      PairingFormController.new,
+    );
