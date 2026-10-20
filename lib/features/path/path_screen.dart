@@ -84,17 +84,48 @@ class _Empty extends StatelessWidget {
 /// art and tokens (no Duolingo artwork, wording, or exact layout copied).
 /// Layout numbers are an original, screen-width-proportional derivation, not
 /// a port of any specific app's pixel grid.
-class _SkillPath extends ConsumerWidget {
+///
+/// Tapping a node opens an inline info card rather than navigating straight
+/// to `/play` — the general shape is a deliberate, observed pattern (tap a
+/// node, see what it is and why it's locked/unlocked, then a separate tap
+/// commits to playing), not any app's specific artwork or copy.
+class _SkillPath extends ConsumerStatefulWidget {
   const _SkillPath({required this.state});
 
   final PathState state;
+
+  @override
+  ConsumerState<_SkillPath> createState() => _SkillPathState();
+}
+
+class _SkillPathState extends ConsumerState<_SkillPath> {
+  int? _expandedIndex;
 
   static const _nodeDiameter = 68.0;
   static const _nodeSpacing = 132.0;
   static const _topPadding = Space.xl;
 
+  Future<void> _play(
+    CachedSkillNode leaf,
+    Map<String, Object?> envelope,
+  ) async {
+    setState(() => _expandedIndex = null);
+    // Home's stat tiles only load once and never rebuild on their own
+    // (IndexedStack keeps the tab alive) — refresh it too, not just this
+    // tab's own provider, since a kid can reach `/play` from here as
+    // easily as from Home.
+    await GoRouter.of(context).push(
+      '/play',
+      extra: PlayRequest(node: leaf, envelope: envelope),
+    );
+    if (mounted) {
+      ref.read(homeControllerProvider.notifier).refresh();
+    }
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    final state = widget.state;
     final leaves = state.leaves;
 
     return RefreshIndicator(
@@ -124,46 +155,149 @@ class _SkillPath extends ConsumerWidget {
             child: SizedBox(
               width: width,
               height: height,
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: CustomPaint(
-                      painter: _PathConnectorPainter(
-                        positions: positions,
-                        color: context.colors.primary,
+              // Tapping empty canvas collapses whatever card is open. Wraps
+              // the Stack rather than sitting *inside* it as a Positioned
+              // sibling — a plain background sibling never actually won
+              // the tap in testing; a GestureDetector that's an ancestor of
+              // the real node/card InkWells correctly only fires on a miss.
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => setState(() => _expandedIndex = null),
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: _PathConnectorPainter(
+                          positions: positions,
+                          color: context.colors.primary,
+                        ),
                       ),
                     ),
-                  ),
-                  for (var i = 0; i < leaves.length; i++)
-                    _PathNodePlaced(
-                      position: positions[i],
-                      diameter: _nodeDiameter,
-                      leaf: leaves[i],
-                      available: state.isAvailable(leaves[i]),
-                      onTap: state.isAvailable(leaves[i])
-                          ? () async {
-                              final leaf = leaves[i];
-                              final envelope = state.exerciseByNodeId[leaf.id]!;
-                              // Home's stat tiles only load once and never
-                              // rebuild on their own (IndexedStack keeps the
-                              // tab alive) — refresh it too, not just this
-                              // tab's own provider, since a kid can reach
-                              // `/play` from here as easily as from Home.
-                              await GoRouter.of(context).push(
-                                '/play',
-                                extra: PlayRequest(node: leaf, envelope: envelope),
-                              );
-                              if (context.mounted) {
-                                ref.read(homeControllerProvider.notifier).refresh();
-                              }
-                            }
-                          : null,
-                    ),
-                ],
+                    for (var i = 0; i < leaves.length; i++)
+                      _PathNodePlaced(
+                        position: positions[i],
+                        diameter: _nodeDiameter,
+                        leaf: leaves[i],
+                        available: state.isAvailable(leaves[i]),
+                        onTap: () => setState(
+                          () => _expandedIndex = _expandedIndex == i ? null : i,
+                        ),
+                      ),
+                    if (_expandedIndex != null)
+                      _QuestCard(
+                        pathWidth: width,
+                        nodeY: positions[_expandedIndex!].dy,
+                        nodeDiameter: _nodeDiameter,
+                        leaf: leaves[_expandedIndex!],
+                        available: state.isAvailable(leaves[_expandedIndex!]),
+                        onClose: () => setState(() => _expandedIndex = null),
+                        onPlay: () => _play(
+                          leaves[_expandedIndex!],
+                          state.exerciseByNodeId[leaves[_expandedIndex!].id]!,
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+/// The inline card a tapped node opens — title, status, and a CTA that's
+/// either disabled (locked) or a real "Jouer" button (available).
+class _QuestCard extends StatelessWidget {
+  const _QuestCard({
+    required this.pathWidth,
+    required this.nodeY,
+    required this.nodeDiameter,
+    required this.leaf,
+    required this.available,
+    required this.onClose,
+    required this.onPlay,
+  });
+
+  final double pathWidth;
+  final double nodeY;
+  final double nodeDiameter;
+  final CachedSkillNode leaf;
+  final bool available;
+  final VoidCallback onClose;
+  final VoidCallback onPlay;
+
+  static const _cardWidth = 260.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.s;
+    // Centered on the path, clamped so it never runs past either edge —
+    // simpler and safer than anchoring to the tapped node's own x, which
+    // would clip near-edge nodes on a narrow phone width.
+    final left = ((pathWidth - _cardWidth) / 2).clamp(
+      Space.md,
+      pathWidth - _cardWidth - Space.md,
+    );
+
+    return Positioned(
+      left: left,
+      top: nodeY + nodeDiameter / 2 + Space.sm,
+      width: _cardWidth,
+      child: Material(
+        color: context.colors.surfaceContainerHighest,
+        shadowColor: Shadows.cloud,
+        elevation: Shadows.cloudElevation,
+        borderRadius: Radii.cardMd,
+        child: Padding(
+          padding: const EdgeInsets.all(Space.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(leaf.labelFr, style: context.text.titleMedium),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 18),
+                    onPressed: onClose,
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: Space.xs),
+              if (!available)
+                Text(
+                  s.pathLocked,
+                  style: context.text.bodyMedium?.copyWith(
+                    color: context.extras.mutedText,
+                  ),
+                ),
+              const SizedBox(height: Space.sm),
+              SizedBox(
+                width: double.infinity,
+                child: available
+                    ? FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: context.colors.secondary,
+                          foregroundColor: context.colors.onSecondary,
+                        ),
+                        onPressed: onPlay,
+                        child: Text(s.homePlay),
+                      )
+                    : OutlinedButton(
+                        onPressed: null,
+                        child: Text(s.pathLocked),
+                      ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -210,7 +344,10 @@ class _PathConnectorPainter extends CustomPainter {
       var distance = 0.0;
       var drawing = true;
       while (distance < metric.length) {
-        final next = (distance + (drawing ? _dashOn : _dashOff)).clamp(0.0, metric.length);
+        final next = (distance + (drawing ? _dashOn : _dashOff)).clamp(
+          0.0,
+          metric.length,
+        );
         if (drawing) {
           canvas.drawPath(metric.extractPath(distance, next), paint);
         }
@@ -238,7 +375,7 @@ class _PathNodePlaced extends StatelessWidget {
   final double diameter;
   final CachedSkillNode leaf;
   final bool available;
-  final VoidCallback? onTap;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -252,7 +389,9 @@ class _PathNodePlaced extends StatelessWidget {
     final borderColor = available
         ? context.colors.primary
         : context.extras.mutedText.withValues(alpha: 0.4);
-    final iconColor = available ? context.colors.primary : context.extras.mutedText;
+    final iconColor = available
+        ? context.colors.primary
+        : context.extras.mutedText;
 
     return Positioned(
       left: position.dx - diameter / 2,
@@ -300,7 +439,9 @@ class _PathNodePlaced extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: context.text.labelSmall?.copyWith(
-                      color: available ? context.colors.onSurface : context.extras.mutedText,
+                      color: available
+                          ? context.colors.onSurface
+                          : context.extras.mutedText,
                     ),
                   ),
                   if (!available)

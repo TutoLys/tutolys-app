@@ -168,13 +168,19 @@ void main() {
     expect(find.text('Compter'), findsOneWidget);
     expect(find.byIcon(Icons.play_arrow_rounded), findsOneWidget);
 
+    // Tapping the node opens its quest card rather than navigating
+    // straight away — a second, explicit tap on "Jouer" commits to it.
     await tester.tap(find.text('Compter'));
+    await tester.pumpAndSettle();
+    expect(find.byType(PlayScreen), findsNothing);
+
+    await tester.tap(find.text('Jouer'));
     await tester.pumpAndSettle();
 
     expect(find.byType(PlayScreen), findsOneWidget);
   });
 
-  testWidgets('a locked node (no synced exercise) cannot be tapped', (
+  testWidgets('a locked node (no synced exercise) opens its card but never plays', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -196,9 +202,12 @@ void main() {
 
     expect(find.byIcon(Icons.lock_outline), findsOneWidget);
 
+    // The tap opens the quest card (same as an available node) — it just
+    // never offers a real "Jouer" button, only a disabled locked one.
     await tester.tap(find.text('Compter'));
     await tester.pumpAndSettle();
 
+    expect(find.text('Jouer'), findsNothing);
     expect(find.byType(PlayScreen), findsNothing);
     expect(find.byType(PathScreen), findsOneWidget);
   });
