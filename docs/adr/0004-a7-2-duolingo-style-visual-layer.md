@@ -103,7 +103,25 @@ didn't rely on the live check alone).
   remembering they exist and are clone-able, not just the mined spec.
 - Next visual gaps worth closing later, not done this round: the real
   app's "active"/"done" node states (need a progress signal this app
-  doesn't have yet), the fonts tradeoff above, and the inline
-  tap-to-expand quest-card interaction (this build still navigates
-  straight to `/play` on tap — simpler, a deliberate scope cut, not an
-  oversight).
+  doesn't have yet) and the fonts tradeoff above.
+
+## Update (2026-10-19): tap-to-expand quest card
+
+The deferred quest-card interaction above is now built — tapping any node
+opens an inline card (title, locked/available status, a real "Jouer" CTA
+or a disabled locked one) instead of navigating straight to `/play`.
+Pattern observed live on `duolingo.com/learn` (tap a node → see what it
+is → a separate tap commits), not any specific app's artwork or copy.
+
+Found a real Flutter-web gesture bug live-testing the dismiss-on-background-tap
+behavior: a `GestureDetector` placed as a `Positioned.fill` **sibling**
+inside the `Stack` (alongside the nodes) never won a background tap —
+confirmed by clicking well outside any node/card and watching the card
+stay open. Fixed by wrapping the whole `Stack` in an **ancestor**
+`GestureDetector` (`HitTestBehavior.opaque`) instead; the real node/card
+`InkWell`s still win on a real hit since they're descendants, and the
+wrapping detector only fires on an actual miss. Re-verified live after
+the fix: background tap now dismisses correctly, X button still does too.
+
+104 tests pass (`path_screen_test.dart` updated for the two-step
+tap-then-play flow).
