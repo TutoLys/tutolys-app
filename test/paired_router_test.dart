@@ -4,10 +4,12 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:tutolys_app/core/i18n/strings.dart';
+import 'package:tutolys_app/core/routing/home_shell.dart';
 import 'package:tutolys_app/core/routing/paired_router.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
+import 'package:tutolys_app/features/home/home_screen.dart';
 import 'package:tutolys_app/features/pairing/pairing_controller.dart';
-import 'package:tutolys_app/features/path/path_screen.dart';
 import 'package:tutolys_app/features/play/play_screen.dart';
 
 CachedSkillNode node({String id = 'leaf-1', String label = 'Lire un nombre'}) {
@@ -70,15 +72,19 @@ Widget appUnder(GoRouter router) {
 }
 
 void main() {
-  testWidgets('starts on the path screen', (tester) async {
+  testWidgets('starts on the home shell, home tab selected', (tester) async {
     final router = buildPairedRouter();
     addTearDown(router.dispose);
 
     await tester.pumpWidget(appUnder(router));
     await tester.pumpAndSettle();
 
-    expect(find.byType(PathScreen), findsOneWidget);
+    expect(find.byType(HomeShell), findsOneWidget);
+    expect(find.byType(HomeScreen), findsOneWidget);
     expect(find.byType(PlayScreen), findsNothing);
+    // IndexedStack keeps every tab built — selection means Home's own
+    // content is actually hit-testable, not just present in the tree.
+    expect(find.text(Strings.fr.homeContinueLearning), findsOneWidget);
   });
 
   testWidgets('pushing /play with a node shows that node on the play screen', (
@@ -103,7 +109,7 @@ void main() {
     expect(find.text('Compter jusqu’à 10'), findsWidgets);
   });
 
-  testWidgets('popping from play returns to the path screen', (tester) async {
+  testWidgets('popping from play returns to the home shell', (tester) async {
     final router = buildPairedRouter();
     addTearDown(router.dispose);
 
@@ -120,7 +126,7 @@ void main() {
     router.pop();
     await tester.pumpAndSettle();
 
-    expect(find.byType(PathScreen), findsOneWidget);
+    expect(find.byType(HomeShell), findsOneWidget);
     expect(find.byType(PlayScreen), findsNothing);
   });
 }

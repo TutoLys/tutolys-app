@@ -56,17 +56,29 @@ abstract final class Space {
 }
 
 /// Corner radii. Learner surfaces are rounder than adult ones — a deliberate
-/// part of the "playful vs calm" split the two shells use.
+/// part of the "playful vs calm" split the two shells use. `lg` matches the
+/// real desktop app's own `--radius-lg: 2rem` exactly (confirmed from its
+/// shipped `main.css`, not just the mined spec) — the learner register is
+/// where that app's actual rounding should read as familiar.
 abstract final class Radii {
   static const Radius sm = Radius.circular(8);
   static const Radius md = Radius.circular(14);
-  static const Radius lg = Radius.circular(22);
+  static const Radius lg = Radius.circular(32);
   static const Radius pill = Radius.circular(999);
 
   static const BorderRadius cardSm = BorderRadius.all(sm);
   static const BorderRadius cardMd = BorderRadius.all(md);
   static const BorderRadius cardLg = BorderRadius.all(lg);
   static const BorderRadius pillAll = BorderRadius.all(pill);
+}
+
+/// Ambient shadow. The real desktop app's signature "cloud shadow" is a
+/// navy-tinted, soft ambient shadow (`0 20px 40px rgba(31, 60, 136, 0.08)`
+/// in its `main.css`) — not a neutral grey drop shadow. `Card`'s
+/// `shadowColor` + a non-zero `elevation` renders the same effect natively.
+abstract final class Shadows {
+  static const Color cloud = Color(0x141F3C88); // #1F3C88 at 8% alpha
+  static const double cloudElevation = 6;
 }
 
 /// Motion. Durations are short enough to feel responsive and long enough for a

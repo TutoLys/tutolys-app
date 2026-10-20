@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:design_system/design_system.dart';
 
 import 'package:tutolys_app/core/routing/app_shell.dart';
+import 'package:tutolys_app/core/routing/home_shell.dart';
 import 'package:tutolys_app/data/api/content_api.dart';
 import 'package:tutolys_app/data/api/curriculum_api.dart';
 import 'package:tutolys_app/data/api/pairing_api.dart';
@@ -535,7 +536,7 @@ void main() {
       await tester.pumpWidget(appUnder(container, const AppShell()));
       await tester.pumpAndSettle();
 
-      expect(find.byType(PathScreen), findsOneWidget);
+      expect(find.byType(HomeShell), findsOneWidget);
       expect(find.byType(PairingScreen), findsNothing);
     });
 

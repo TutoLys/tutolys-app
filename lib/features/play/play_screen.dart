@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../data/local_db/database.dart';
+import '../../data/local_db/home_stats.dart';
 import '../../data/sync/drift_event_outbox.dart';
 import '../pairing/pairing_controller.dart';
 import 'engine_registry_provider.dart';
@@ -53,6 +54,16 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     super.dispose();
   }
 
+  void _handleFinished(ExerciseResult result) {
+    // Home's stat tiles are real counts, never a mastery judgment — an
+    // abandoned run taught nothing worth counting as "played today".
+    if (result.outcome == ExerciseOutcome.completed) {
+      HomeStats(ref.read(localDatabaseProvider))
+          .recordExerciseCompleted(elapsedMs: result.elapsedMs);
+    }
+    Navigator.of(context).pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final registry = ref.watch(engineRegistryProvider);
@@ -76,7 +87,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                 telemetry: _telemetry,
                 feedback: _feedback,
                 locale: Localizations.localeOf(context),
-                onFinished: (_) => Navigator.of(context).pop(),
+                onFinished: _handleFinished,
               ),
             ),
           ],

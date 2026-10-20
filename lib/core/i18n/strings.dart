@@ -33,10 +33,28 @@ abstract class Strings {
   String get continueLabel;
   String get loading;
 
+  // --- home --------------------------------------------------------------
+  String homeGreeting(String name);
+  String get homeContinueLearning;
+  String get homePlay;
+  String get homeStatExercises;
+  String get homeStatMinutes;
+
   // --- path --------------------------------------------------------------
   String get pathTitle;
   String get pathEmpty;
   String get pathLocked;
+
+  // --- profile -------------------------------------------------------------
+  String get profileTitle;
+  String profileGrade(int grade);
+  String get profileBadgesComingSoon;
+  String get profileSignOut;
+
+  // --- nav -----------------------------------------------------------------
+  String get navHome;
+  String get navPath;
+  String get navProfile;
 
   // --- play --------------------------------------------------------------
   String get playBack;
@@ -98,6 +116,21 @@ class _FrenchStrings extends Strings {
   String get loading => 'Un instant…';
 
   @override
+  String homeGreeting(String name) => 'Salut, $name !';
+
+  @override
+  String get homeContinueLearning => 'Continue ton apprentissage';
+
+  @override
+  String get homePlay => 'Jouer';
+
+  @override
+  String get homeStatExercises => "Exercices aujourd'hui";
+
+  @override
+  String get homeStatMinutes => "Minutes aujourd'hui";
+
+  @override
   String get pathTitle => 'Mon parcours';
 
   @override
@@ -105,6 +138,27 @@ class _FrenchStrings extends Strings {
 
   @override
   String get pathLocked => 'Pas encore débloqué';
+
+  @override
+  String get profileTitle => 'Mon profil';
+
+  @override
+  String profileGrade(int grade) => 'Année $grade';
+
+  @override
+  String get profileBadgesComingSoon => 'Les badges arrivent bientôt !';
+
+  @override
+  String get profileSignOut => 'Déconnecter cet appareil';
+
+  @override
+  String get navHome => 'Accueil';
+
+  @override
+  String get navPath => 'Parcours';
+
+  @override
+  String get navProfile => 'Profil';
 
   @override
   String get playBack => 'Retour';
@@ -159,6 +213,21 @@ class _EnglishStrings extends Strings {
   String get loading => 'One moment…';
 
   @override
+  String homeGreeting(String name) => 'Hi, $name!';
+
+  @override
+  String get homeContinueLearning => 'Continue learning';
+
+  @override
+  String get homePlay => 'Play';
+
+  @override
+  String get homeStatExercises => 'Exercises today';
+
+  @override
+  String get homeStatMinutes => 'Minutes today';
+
+  @override
   String get pathTitle => 'My path';
 
   @override
@@ -166,6 +235,27 @@ class _EnglishStrings extends Strings {
 
   @override
   String get pathLocked => 'Not unlocked yet';
+
+  @override
+  String get profileTitle => 'My profile';
+
+  @override
+  String profileGrade(int grade) => 'Grade $grade';
+
+  @override
+  String get profileBadgesComingSoon => 'Badges are coming soon!';
+
+  @override
+  String get profileSignOut => 'Sign out this device';
+
+  @override
+  String get navHome => 'Home';
+
+  @override
+  String get navPath => 'Path';
+
+  @override
+  String get navProfile => 'Profile';
 
   @override
   String get playBack => 'Back';

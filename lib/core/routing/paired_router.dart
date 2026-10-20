@@ -1,8 +1,8 @@
 import 'package:go_router/go_router.dart';
 
 import '../../data/local_db/database.dart';
-import '../../features/path/path_screen.dart';
 import '../../features/play/play_screen.dart';
+import 'home_shell.dart';
 
 /// What `/play` needs: the tapped node (for its title) and the exercise
 /// envelope already resolved for it — the path screen looks this up
@@ -15,7 +15,9 @@ class PlayRequest {
   final Map<String, Object?> envelope;
 }
 
-/// The two routes inside the paired shell (A7): the path, and one exercise.
+/// The two routes inside the paired shell (A7, A7.2): the learner's three
+/// tabs (home/path/profile, switched locally inside `HomeShell` — none of
+/// them need their own URL), and one exercise.
 ///
 /// Deliberately not the app's top-level router — `AppShell`'s own
 /// checking/unpaired/paired switch stays a plain Dart switch (its own doc
@@ -26,9 +28,9 @@ class PlayRequest {
 /// localizations instead of needing its own copy.
 GoRouter buildPairedRouter() {
   return GoRouter(
-    initialLocation: '/path',
+    initialLocation: '/home',
     routes: [
-      GoRoute(path: '/path', builder: (context, state) => const PathScreen()),
+      GoRoute(path: '/home', builder: (context, state) => const HomeShell()),
       GoRoute(
         path: '/play',
         // `extra` carries the request directly — this router is never

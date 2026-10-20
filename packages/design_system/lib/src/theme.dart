@@ -152,7 +152,10 @@ abstract final class TutolysTheme {
             horizontal: isLearner ? Space.lg : Space.md,
             vertical: isLearner ? Space.md : Space.sm,
           ),
-          shape: RoundedRectangleBorder(borderRadius: radius),
+          // Pill, not the card radius — the brand spec's own button rule
+          // (`border-radius: 9999px`) is unconditional, unlike cards/inputs
+          // which deliberately differ between the two registers.
+          shape: const RoundedRectangleBorder(borderRadius: Radii.pillAll),
           textStyle: TextStyle(
             fontSize: isLearner ? 18 : 15,
             fontWeight: FontWeight.w700,
@@ -163,13 +166,14 @@ abstract final class TutolysTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           minimumSize: Size(0, isLearner ? 56 : 44),
-          shape: RoundedRectangleBorder(borderRadius: radius),
+          shape: const RoundedRectangleBorder(borderRadius: Radii.pillAll),
           side: BorderSide(color: scheme.primary.withValues(alpha: 0.5), width: 1.5),
         ),
       ),
       cardTheme: CardThemeData(
         color: scheme.surfaceContainerHighest,
-        elevation: 0,
+        elevation: Shadows.cloudElevation,
+        shadowColor: Shadows.cloud,
         shape: RoundedRectangleBorder(borderRadius: radius),
         margin: EdgeInsets.zero,
       ),
