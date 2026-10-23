@@ -10,8 +10,12 @@ import 'package:tutolys_app/core/routing/home_shell.dart';
 import 'package:tutolys_app/data/api/content_api.dart';
 import 'package:tutolys_app/data/api/curriculum_api.dart';
 import 'package:tutolys_app/data/api/pairing_api.dart';
+import 'package:tutolys_app/data/api/telemetry_api.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
 import 'package:tutolys_app/data/local_db/session_store.dart';
+import 'package:tutolys_app/data/sync/drift_event_outbox.dart';
+import 'package:tutolys_app/data/sync/outbox_flusher.dart';
+import 'package:tutolys_app/data/sync/outbox_flusher_provider.dart';
 import 'package:tutolys_app/features/pairing/pairing_controller.dart';
 import 'package:tutolys_app/features/pairing/pairing_screen.dart';
 import 'package:tutolys_app/features/path/path_controller.dart';
@@ -123,6 +127,28 @@ class CountingPairingApi extends FakePairingApi {
 
 final _unusedDio = Dio();
 
+/// Records every batch it receives and accepts all of it — just enough to
+/// prove an upload actually happened, not a full fake of the real service
+/// (that's `FakeTelemetryServer` in `outbox_test.dart`, which already covers
+/// OutboxFlusher's own retry/pause/backoff behaviour in isolation).
+class _RecordingTelemetryServer extends TelemetryApi {
+  _RecordingTelemetryServer() : super(dio: Dio());
+
+  int uploadCalls = 0;
+  final List<String> delivered = [];
+
+  @override
+  Future<UploadResult> uploadBatch({
+    required List<Map<String, Object?>> events,
+    required String accessToken,
+  }) async {
+    uploadCalls++;
+    final ids = events.map((e) => e['event_id'] as String).toList();
+    delivered.addAll(ids);
+    return UploadProcessed(delivered: ids, rejected: const {});
+  }
+}
+
 const _success = PairingSucceeded(
   deviceToken: 'device-token-1',
   accessToken: 'access-token-1',
@@ -143,6 +169,9 @@ ProviderContainer containerWith({
       // No background timer in tests: an armed 12-minute timer fails the
       // pending-timer check, and these tests drive refresh explicitly.
       sessionAutoRefreshProvider.overrideWithValue(false),
+      // Same reasoning: OutboxFlusher's 30s periodic timer would otherwise
+      // fail the pending-timer check too.
+      outboxFlusherAutoStartProvider.overrideWithValue(false),
       localDatabaseProvider.overrideWithValue(LocalDatabase.memory()),
       curriculumApiProvider.overrideWithValue(_OfflineCurriculumApi()),
       contentApiProvider.overrideWithValue(_OfflineContentApi()),
@@ -557,6 +586,79 @@ void main() {
 
       expect(find.byType(PairingScreen), findsOneWidget);
     });
+  });
+
+  group('outbox flusher wiring', () {
+    // Unlike every other test in this file, `outboxFlusherAutoStartProvider`
+    // is deliberately left at its real default (true) here — proving AppShell
+    // actually starts the flusher is the entire point. A short interval
+    // override keeps the periodic tick inside a fast test.
+    testWidgets(
+      'AppShell boots a running flusher that uploads a queued event '
+      'with no manual intervention',
+      (tester) async {
+        final db = LocalDatabase.memory();
+        final outbox = DriftEventOutbox(db);
+        final server = _RecordingTelemetryServer();
+
+        final container = ProviderContainer(
+          overrides: [
+            sessionStoreProvider.overrideWithValue(
+              FakeSessionStore(storedToken: 'stored'),
+            ),
+            pairingApiProvider.overrideWithValue(
+              FakePairingApi(
+                exchangeResult: _success,
+                refreshResult: const RefreshSucceeded(
+                  accessToken: 'fresh',
+                  expiresIn: 900,
+                ),
+              ),
+            ),
+            sessionAutoRefreshProvider.overrideWithValue(false),
+            localDatabaseProvider.overrideWithValue(db),
+            curriculumApiProvider.overrideWithValue(_OfflineCurriculumApi()),
+            contentApiProvider.overrideWithValue(_OfflineContentApi()),
+            eventOutboxProvider.overrideWithValue(outbox),
+            outboxFlusherProvider.overrideWithValue(
+              OutboxFlusher(
+                outbox: outbox,
+                api: server,
+                accessToken: () => 'fresh',
+                interval: const Duration(seconds: 1),
+              ),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        // As if an exercise had already been played before this boot.
+        await outbox.add({
+          'schema_version': 1,
+          'event_id': 'evt-1',
+          'event_ts': DateTime.utc(2026, 10, 23).toIso8601String(),
+          'session_id': 'session-1',
+          'event_type': 'exercise_complete',
+          'app_version': '0.1.0',
+        });
+
+        await tester.pumpWidget(appUnder(container, const AppShell()));
+        // initState runs on the first frame, which is what starts the timer.
+        await tester.pump();
+        expect(
+          server.uploadCalls,
+          0,
+          reason: 'nothing should upload before the first tick',
+        );
+
+        // No pumpAndSettle: a live periodic timer would never let it settle.
+        await tester.pump(const Duration(seconds: 2));
+
+        expect(server.uploadCalls, greaterThan(0));
+        expect(server.delivered, contains('evt-1'));
+        expect(await outbox.pending(limit: 10), isEmpty);
+      },
+    );
   });
 
   group('token refresh (review findings)', () {

@@ -7,7 +7,7 @@ import 'package:uuid/uuid.dart';
 import '../../data/local_db/database.dart';
 import '../../data/local_db/home_stats.dart';
 import '../../data/local_db/streak_local.dart';
-import '../../data/sync/drift_event_outbox.dart';
+import '../../data/sync/outbox_flusher_provider.dart';
 import '../pairing/pairing_controller.dart';
 import 'engine_registry_provider.dart';
 import 'mascot_feedback.dart';
@@ -36,7 +36,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   void initState() {
     super.initState();
     _telemetry = TelemetryClient(
-      outbox: DriftEventOutbox(ref.read(localDatabaseProvider)),
+      outbox: ref.read(eventOutboxProvider),
       // One session id per visit to this screen, not one per app launch —
       // there is no app-session lifecycle wired anywhere yet (a gap beyond
       // A7's own scope: nothing calls `logSessionStart`/`logSessionEnd`
