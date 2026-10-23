@@ -39,6 +39,7 @@ abstract class Strings {
   String get homePlay;
   String get homeStatExercises;
   String get homeStatMinutes;
+  String get homeStatStreak;
 
   // --- path --------------------------------------------------------------
   String get pathTitle;
@@ -50,6 +51,8 @@ abstract class Strings {
   String profileGrade(int grade);
   String get profileBadgesComingSoon;
   String get profileSignOut;
+  String profileSkillsMastered(int count);
+  String profileStreakDays(int days);
 
   // --- nav -----------------------------------------------------------------
   String get navHome;
@@ -131,6 +134,9 @@ class _FrenchStrings extends Strings {
   String get homeStatMinutes => "Minutes aujourd'hui";
 
   @override
+  String get homeStatStreak => 'Jours de suite';
+
+  @override
   String get pathTitle => 'Mon parcours';
 
   @override
@@ -150,6 +156,14 @@ class _FrenchStrings extends Strings {
 
   @override
   String get profileSignOut => 'Déconnecter cet appareil';
+
+  @override
+  String profileSkillsMastered(int count) =>
+      count == 1 ? 'compétence maîtrisée' : 'compétences maîtrisées';
+
+  @override
+  String profileStreakDays(int days) =>
+      days == 1 ? 'jour de suite' : 'jours de suite';
 
   @override
   String get navHome => 'Accueil';
@@ -228,6 +242,9 @@ class _EnglishStrings extends Strings {
   String get homeStatMinutes => 'Minutes today';
 
   @override
+  String get homeStatStreak => 'Day streak';
+
+  @override
   String get pathTitle => 'My path';
 
   @override
@@ -247,6 +264,13 @@ class _EnglishStrings extends Strings {
 
   @override
   String get profileSignOut => 'Sign out this device';
+
+  @override
+  String profileSkillsMastered(int count) =>
+      count == 1 ? 'skill mastered' : 'skills mastered';
+
+  @override
+  String profileStreakDays(int days) => 'day streak';
 
   @override
   String get navHome => 'Home';

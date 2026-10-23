@@ -1,0 +1,62 @@
+import 'package:drift/drift.dart';
+
+import 'database.dart';
+
+/// Offline streak estimate, reconciled with the backend whenever a live
+/// read succeeds (plan §5.8: "streaks work offline and reconcile with the
+/// backend on sync — backend is source of truth").
+///
+/// The local estimate exists for exactly one reason: so a kid who opens the
+/// app with no network still sees *a* real streak number — computed from
+/// their own device's play history — rather than a dash. It is never
+/// written back to the backend and never overrides a successful live read;
+/// `ProgressController` only reaches for it when the live fetch fails.
+class StreakLocal {
+  const StreakLocal(this.db, {DateTime Function()? clock}) : _clock = clock ?? DateTime.now;
+
+  final LocalDatabase db;
+  final DateTime Function() _clock;
+
+  String _todayIso() => _clock().toIso8601String().substring(0, 10);
+
+  /// Call once per finished exercise (completed, not abandoned — same rule
+  /// `HomeStats.recordExerciseCompleted` already follows). Idempotent: a
+  /// second completion the same day is a no-op, not a second row.
+  Future<void> recordPlayedToday() async {
+    await db
+        .into(db.playedDateTable)
+        .insert(
+          PlayedDateTableCompanion.insert(date: _todayIso()),
+          mode: InsertMode.insertOrIgnore,
+        );
+  }
+
+  /// Consecutive local calendar days with at least one completed exercise,
+  /// counted back from today — the same algorithm and one-day grace as
+  /// telemetry's `kid_streak` (still-active as long as yesterday, not just
+  /// today, was played), so the estimate and the backend's own truth read
+  /// the same way to a kid even before they've reconciled.
+  Future<int> currentStreak() async {
+    final rows = await (db.select(db.playedDateTable)
+          ..orderBy([(t) => OrderingTerm.desc(t.date)]))
+        .get();
+    if (rows.isEmpty) return 0;
+
+    final playedDates = rows.map((r) => DateTime.parse(r.date)).toList();
+    final today = DateTime.parse(_todayIso());
+    final mostRecent = playedDates.first;
+
+    if (today.difference(mostRecent).inDays > 1) return 0;
+
+    var streak = 1;
+    for (var i = 0; i < playedDates.length - 1; i++) {
+      final gap = playedDates[i].difference(playedDates[i + 1]).inDays;
+      if (gap == 1) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+    return streak;
+  }
+}

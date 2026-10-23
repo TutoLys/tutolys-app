@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../data/local_db/database.dart';
 import '../../data/local_db/home_stats.dart';
+import '../../data/local_db/streak_local.dart';
 import '../../data/sync/drift_event_outbox.dart';
 import '../pairing/pairing_controller.dart';
 import 'engine_registry_provider.dart';
@@ -58,8 +59,9 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     // Home's stat tiles are real counts, never a mastery judgment — an
     // abandoned run taught nothing worth counting as "played today".
     if (result.outcome == ExerciseOutcome.completed) {
-      HomeStats(ref.read(localDatabaseProvider))
-          .recordExerciseCompleted(elapsedMs: result.elapsedMs);
+      final db = ref.read(localDatabaseProvider);
+      HomeStats(db).recordExerciseCompleted(elapsedMs: result.elapsedMs);
+      StreakLocal(db).recordPlayedToday();
     }
     Navigator.of(context).pop();
   }

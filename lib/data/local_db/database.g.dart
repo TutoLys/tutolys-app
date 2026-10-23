@@ -2071,6 +2071,166 @@ class AppStateTableCompanion extends UpdateCompanion<AppStateRow> {
   }
 }
 
+class $PlayedDateTableTable extends PlayedDateTable
+    with TableInfo<$PlayedDateTableTable, PlayedDateRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PlayedDateTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumn<String> date = GeneratedColumn<String>(
+    'date',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [date];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'played_date';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PlayedDateRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('date')) {
+      context.handle(
+        _dateMeta,
+        date.isAcceptableOrUnknown(data['date']!, _dateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dateMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {date};
+  @override
+  PlayedDateRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PlayedDateRow(
+      date: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}date'],
+      )!,
+    );
+  }
+
+  @override
+  $PlayedDateTableTable createAlias(String alias) {
+    return $PlayedDateTableTable(attachedDatabase, alias);
+  }
+}
+
+class PlayedDateRow extends DataClass implements Insertable<PlayedDateRow> {
+  /// ISO `yyyy-MM-dd`, local date — not a `DateTimeColumn`, so "the same
+  /// calendar day" never depends on a stored time-of-day or timezone.
+  final String date;
+  const PlayedDateRow({required this.date});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['date'] = Variable<String>(date);
+    return map;
+  }
+
+  PlayedDateTableCompanion toCompanion(bool nullToAbsent) {
+    return PlayedDateTableCompanion(date: Value(date));
+  }
+
+  factory PlayedDateRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PlayedDateRow(date: serializer.fromJson<String>(json['date']));
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{'date': serializer.toJson<String>(date)};
+  }
+
+  PlayedDateRow copyWith({String? date}) =>
+      PlayedDateRow(date: date ?? this.date);
+  PlayedDateRow copyWithCompanion(PlayedDateTableCompanion data) {
+    return PlayedDateRow(date: data.date.present ? data.date.value : this.date);
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PlayedDateRow(')
+          ..write('date: $date')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => date.hashCode;
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PlayedDateRow && other.date == this.date);
+}
+
+class PlayedDateTableCompanion extends UpdateCompanion<PlayedDateRow> {
+  final Value<String> date;
+  final Value<int> rowid;
+  const PlayedDateTableCompanion({
+    this.date = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PlayedDateTableCompanion.insert({
+    required String date,
+    this.rowid = const Value.absent(),
+  }) : date = Value(date);
+  static Insertable<PlayedDateRow> custom({
+    Expression<String>? date,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (date != null) 'date': date,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PlayedDateTableCompanion copyWith({Value<String>? date, Value<int>? rowid}) {
+    return PlayedDateTableCompanion(
+      date: date ?? this.date,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (date.present) {
+      map['date'] = Variable<String>(date.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PlayedDateTableCompanion(')
+          ..write('date: $date, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$LocalDatabase extends GeneratedDatabase {
   _$LocalDatabase(QueryExecutor e) : super(e);
   $LocalDatabaseManager get managers => $LocalDatabaseManager(this);
@@ -2083,6 +2243,9 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
   late final $EngineSettingsTableTable engineSettingsTable =
       $EngineSettingsTableTable(this);
   late final $AppStateTableTable appStateTable = $AppStateTableTable(this);
+  late final $PlayedDateTableTable playedDateTable = $PlayedDateTableTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2093,6 +2256,7 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
     skillNodeTable,
     engineSettingsTable,
     appStateTable,
+    playedDateTable,
   ];
   @override
   DriftDatabaseOptions get options =>
@@ -3277,6 +3441,131 @@ typedef $$AppStateTableTableProcessedTableManager =
       AppStateRow,
       PrefetchHooks Function()
     >;
+typedef $$PlayedDateTableTableCreateCompanionBuilder =
+    PlayedDateTableCompanion Function({required String date, Value<int> rowid});
+typedef $$PlayedDateTableTableUpdateCompanionBuilder =
+    PlayedDateTableCompanion Function({Value<String> date, Value<int> rowid});
+
+class $$PlayedDateTableTableFilterComposer
+    extends Composer<_$LocalDatabase, $PlayedDateTableTable> {
+  $$PlayedDateTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PlayedDateTableTableOrderingComposer
+    extends Composer<_$LocalDatabase, $PlayedDateTableTable> {
+  $$PlayedDateTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PlayedDateTableTableAnnotationComposer
+    extends Composer<_$LocalDatabase, $PlayedDateTableTable> {
+  $$PlayedDateTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get date =>
+      $composableBuilder(column: $table.date, builder: (column) => column);
+}
+
+class $$PlayedDateTableTableTableManager
+    extends
+        RootTableManager<
+          _$LocalDatabase,
+          $PlayedDateTableTable,
+          PlayedDateRow,
+          $$PlayedDateTableTableFilterComposer,
+          $$PlayedDateTableTableOrderingComposer,
+          $$PlayedDateTableTableAnnotationComposer,
+          $$PlayedDateTableTableCreateCompanionBuilder,
+          $$PlayedDateTableTableUpdateCompanionBuilder,
+          (
+            PlayedDateRow,
+            BaseReferences<
+              _$LocalDatabase,
+              $PlayedDateTableTable,
+              PlayedDateRow
+            >,
+          ),
+          PlayedDateRow,
+          PrefetchHooks Function()
+        > {
+  $$PlayedDateTableTableTableManager(
+    _$LocalDatabase db,
+    $PlayedDateTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PlayedDateTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PlayedDateTableTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PlayedDateTableTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> date = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) => PlayedDateTableCompanion(date: date, rowid: rowid),
+          createCompanionCallback: ({
+            required String date,
+            Value<int> rowid = const Value.absent(),
+          }) => PlayedDateTableCompanion.insert(date: date, rowid: rowid),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$PlayedDateTableTable, PlayedDateRow>(table),
+                  BaseReferences<
+                    _$LocalDatabase,
+                    $PlayedDateTableTable,
+                    PlayedDateRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PlayedDateTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$LocalDatabase,
+      $PlayedDateTableTable,
+      PlayedDateRow,
+      $$PlayedDateTableTableFilterComposer,
+      $$PlayedDateTableTableOrderingComposer,
+      $$PlayedDateTableTableAnnotationComposer,
+      $$PlayedDateTableTableCreateCompanionBuilder,
+      $$PlayedDateTableTableUpdateCompanionBuilder,
+      (
+        PlayedDateRow,
+        BaseReferences<_$LocalDatabase, $PlayedDateTableTable, PlayedDateRow>,
+      ),
+      PlayedDateRow,
+      PrefetchHooks Function()
+    >;
 
 class $LocalDatabaseManager {
   final _$LocalDatabase _db;
@@ -3291,4 +3580,6 @@ class $LocalDatabaseManager {
       $$EngineSettingsTableTableTableManager(_db, _db.engineSettingsTable);
   $$AppStateTableTableTableManager get appStateTable =>
       $$AppStateTableTableTableManager(_db, _db.appStateTable);
+  $$PlayedDateTableTableTableManager get playedDateTable =>
+      $$PlayedDateTableTableTableManager(_db, _db.playedDateTable);
 }

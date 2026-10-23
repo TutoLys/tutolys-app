@@ -130,6 +130,25 @@ class AppStateTable extends Table {
   Set<Column> get primaryKey => {key};
 }
 
+/// One row per local calendar date with at least one completed exercise —
+/// plan §5.8's own streak rule ("a day counts if at least one completed
+/// exercise has event_ts on that local date"), kept independently of
+/// `EventOutboxTable` so the streak survives that table's own 6-hour
+/// delivered-row pruning. Unlike the outbox this is permanent and tiny (one
+/// row per day ever played, not per event), so it is never pruned.
+@DataClassName('PlayedDateRow')
+class PlayedDateTable extends Table {
+  @override
+  String get tableName => 'played_date';
+
+  /// ISO `yyyy-MM-dd`, local date — not a `DateTimeColumn`, so "the same
+  /// calendar day" never depends on a stored time-of-day or timezone.
+  TextColumn get date => text()();
+
+  @override
+  Set<Column> get primaryKey => {date};
+}
+
 @DriftDatabase(
   tables: [
     EventOutboxTable,
@@ -137,6 +156,7 @@ class AppStateTable extends Table {
     SkillNodeTable,
     EngineSettingsTable,
     AppStateTable,
+    PlayedDateTable,
   ],
 )
 // Timestamp storage is configured in build.yaml
@@ -148,7 +168,7 @@ class LocalDatabase extends _$LocalDatabase {
   LocalDatabase.memory() : super(memoryExecutor());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -173,6 +193,11 @@ class LocalDatabase extends _$LocalDatabase {
             'CREATE INDEX IF NOT EXISTS skill_node_cache_lookup '
             'ON skill_node_cache (subject, grade)',
           );
+        },
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.createTable(playedDateTable);
+          }
         },
       );
 }

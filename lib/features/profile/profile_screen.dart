@@ -4,12 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/i18n/strings.dart';
 import '../pairing/pairing_controller.dart';
+import '../progress/progress_controller.dart';
 
-/// The profile tab (A7.2, visual-layer-only scope): the kid's name and
-/// grade, and where "sign out this device" now lives (moved off the path
-/// screen's app bar once there was a real home for it). Deliberately no
-/// avatar-unlock-by-mastery or real badge grid — both need the server-owned
-/// progression engine (#3/#10 on the open-items list), so this shows a
+/// The profile tab (A7.2, visual-layer-only scope + B9's follow-up): the
+/// kid's name and grade, their real mastered-skills count and day-streak
+/// (both now readable from the backend, see ADR 0009), and where "sign out
+/// this device" lives. Deliberately no avatar-unlock-by-mastery or real
+/// badge grid yet — that needs a product decision on what unlocks what,
+/// not just the data (#3 on the open-items list), so that stays a
 /// placeholder rather than a fabricated one.
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -18,6 +20,7 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final s = context.s;
     final kid = ref.watch(sessionControllerProvider).kid;
+    final progress = ref.watch(progressControllerProvider);
 
     return Scaffold(
       appBar: AppBar(title: Text(s.profileTitle)),
@@ -43,6 +46,8 @@ class ProfileScreen extends ConsumerWidget {
                 ],
               ),
             ),
+            const SizedBox(height: Space.xl),
+            if (!progress.loading) _ProgressSummary(progress: progress),
             const SizedBox(height: Space.xl),
             Card(
               child: Padding(
@@ -76,6 +81,83 @@ class ProfileScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ProgressSummary extends StatelessWidget {
+  const _ProgressSummary({required this.progress});
+
+  final ProgressState progress;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.s;
+    // A freshly-paired kid (or a read that couldn't reach telemetry) has
+    // nothing real to show yet — no card at all, rather than a fabricated
+    // "0 skills mastered" that reads as a judgement.
+    if (progress.totalSkills == 0 && progress.currentStreakDays == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(Space.lg),
+        child: Row(
+          children: [
+            Expanded(
+              child: _ProgressTile(
+                icon: Icons.local_fire_department_rounded,
+                value: progress.currentStreakDays == null
+                    ? '–'
+                    : '${progress.currentStreakDays}',
+                label: progress.currentStreakDays == null
+                    ? s.homeStatStreak
+                    : s.profileStreakDays(progress.currentStreakDays!),
+              ),
+            ),
+            const SizedBox(width: Space.md),
+            Expanded(
+              child: _ProgressTile(
+                icon: Icons.star_rounded,
+                value: '${progress.masteredCount}',
+                label: s.profileSkillsMastered(progress.masteredCount),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProgressTile extends StatelessWidget {
+  const _ProgressTile({required this.icon, required this.value, required this.label});
+
+  final IconData icon;
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: context.colors.primary, size: 20),
+            const SizedBox(width: Space.xs),
+            Text(value, style: context.text.titleLarge),
+          ],
+        ),
+        Text(
+          label,
+          style: context.text.labelSmall?.copyWith(
+            color: context.extras.mutedText,
+          ),
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
     );
   }
 }

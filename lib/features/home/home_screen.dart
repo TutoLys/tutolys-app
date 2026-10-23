@@ -8,12 +8,15 @@ import '../../core/routing/paired_router.dart';
 import '../../data/local_db/database.dart';
 import '../pairing/pairing_controller.dart';
 import '../path/path_controller.dart';
+import '../progress/progress_controller.dart';
 import 'home_controller.dart';
 
-/// The learner's landing tab (A7.2): a greeting, a "continue learning" card
-/// for the next real available skill, and today's real play stats — no XP,
-/// streak, or rank (those need the server-owned progression engine this
-/// pass deliberately defers, see ADR/plan notes on A7.2's scope).
+/// The learner's landing tab (A7.2 + B9's follow-up): a greeting, a
+/// "continue learning" card for the next real available skill, today's
+/// real play stats, and — now that the backend has somewhere to read it
+/// from — the kid's real current day-streak. Still no XP or rank: those
+/// need product decisions this pass doesn't make, but a streak is just a
+/// number telemetry already computes correctly.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -23,6 +26,7 @@ class HomeScreen extends ConsumerWidget {
     final kid = ref.watch(sessionControllerProvider).kid;
     final home = ref.watch(homeControllerProvider);
     final pathState = ref.watch(pathControllerProvider);
+    final progress = ref.watch(progressControllerProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -30,6 +34,7 @@ class HomeScreen extends ConsumerWidget {
           onRefresh: () async {
             await ref.read(homeControllerProvider.notifier).refresh();
             await ref.read(pathControllerProvider.notifier).refresh();
+            await ref.read(progressControllerProvider.notifier).refresh();
           },
           child: ListView(
             padding: const EdgeInsets.all(Space.md),
@@ -41,7 +46,7 @@ class HomeScreen extends ConsumerWidget {
               const SizedBox(height: Space.lg),
               _ContinueLearningCard(pathState: pathState),
               const SizedBox(height: Space.lg),
-              if (!home.loading) _StatsRow(home: home),
+              if (!home.loading) _StatsRow(home: home, progress: progress),
             ],
           ),
         ),
@@ -125,6 +130,7 @@ class _ContinueLearningCard extends ConsumerWidget {
                   );
                   if (context.mounted) {
                     ref.read(homeControllerProvider.notifier).refresh();
+                    ref.read(progressControllerProvider.notifier).refresh();
                   }
                 },
                 child: Text(s.homePlay),
@@ -138,14 +144,25 @@ class _ContinueLearningCard extends ConsumerWidget {
 }
 
 class _StatsRow extends StatelessWidget {
-  const _StatsRow({required this.home});
+  const _StatsRow({required this.home, required this.progress});
 
   final HomeState home;
+  final ProgressState progress;
 
   @override
   Widget build(BuildContext context) {
     final s = context.s;
     final minutes = (home.msPlayedToday / 60000).round();
+    // Null (not 0) means this read couldn't reach telemetry *and* there was
+    // no local play history to estimate from — shown as a dash rather than
+    // a fabricated streak. `isStreakEstimated` means it came from this
+    // device's own offline history (plan §5.8), not a live read — marked
+    // with a `~` so a kid never mistakes a guess for the backend's real
+    // count once it reconciles.
+    final streak = progress.currentStreakDays;
+    final streakValue = streak == null
+        ? '–'
+        : (progress.isStreakEstimated ? '~$streak' : '$streak');
 
     return Row(
       children: [
@@ -162,6 +179,14 @@ class _StatsRow extends StatelessWidget {
             icon: Icons.schedule_rounded,
             value: '$minutes',
             label: s.homeStatMinutes,
+          ),
+        ),
+        const SizedBox(width: Space.sm),
+        Expanded(
+          child: _StatTile(
+            icon: Icons.local_fire_department_rounded,
+            value: streakValue,
+            label: s.homeStatStreak,
           ),
         ),
       ],
