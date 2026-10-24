@@ -374,7 +374,12 @@ class LocalDatabase extends _$LocalDatabase {
 /// for web. `sqlite3.wasm` and `drift_worker.js` in `web/` (pinned to
 /// drift 2.35.2, the version in `pubspec.yaml`) are what the web backend
 /// actually loads.
-LocalDatabase openLocalDatabase() {
+///
+/// [migrationKidId] is the kid already paired on this device, needed only by
+/// the 3 → 4 upgrade — see [LocalDatabase.migrationKidId]. Passing null when
+/// a kid *is* paired silently discards their local streak and queued events,
+/// so `main` reads it from `SessionStore` before calling this.
+LocalDatabase openLocalDatabase({String? migrationKidId}) {
   return LocalDatabase(
     driftDatabase(
       name: 'tutolys',
@@ -383,5 +388,6 @@ LocalDatabase openLocalDatabase() {
         driftWorker: Uri.parse('drift_worker.js'),
       ),
     ),
+    migrationKidId: migrationKidId,
   );
 }
