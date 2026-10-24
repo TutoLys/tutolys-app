@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/path/path_screen.dart';
 import '../../features/profile/profile_screen.dart';
+import '../../features/settings/settings_screen.dart';
 import 'village_nav.dart';
 
 /// The paired learner's shell: the design's navigation chrome wrapped around
@@ -13,10 +14,9 @@ import 'village_nav.dart';
 /// locally rather than through go_router — none of them need their own URL,
 /// only `/play` does, and that is pushed on top of this whole shell.
 ///
-/// Three of the six destinations have real screens. Quêtes, Progrès and
-/// Réglages do not yet, and render an honest placeholder naming themselves
-/// rather than a blank or a fake. The chrome is worth seeing and judging
-/// before those pages exist; pretending they are built would not be.
+/// Four of the six destinations have real screens. Quêtes and Progrès do
+/// not yet, and render an honest placeholder naming themselves rather than
+/// a blank or a fake.
 class VillageShell extends StatefulWidget {
   const VillageShell({super.key});
 
@@ -36,7 +36,7 @@ class _VillageShellState extends State<VillageShell> {
     _NotBuiltYet(title: 'Quêtes'),
     _NotBuiltYet(title: 'Progrès'),
     ProfileScreen(),
-    _NotBuiltYet(title: 'Réglages'),
+    SettingsScreen(),
   ];
 
   @override
