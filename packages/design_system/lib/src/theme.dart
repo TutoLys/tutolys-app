@@ -147,6 +147,39 @@ abstract final class TutolysTheme {
     );
   }
 
+  /// The village in dark, from the design's own `[data-theme="dark"]`
+  /// block — copied, not derived.
+  static ThemeData villageDark() {
+    const scheme = ColorScheme.dark(
+      primary: VillageDarkColors.quebecBlueBright,
+      onPrimary: Colors.white,
+      primaryContainer: VillageDarkColors.bluePale,
+      onPrimaryContainer: VillageDarkColors.ink,
+      secondary: VillageDarkColors.gold,
+      onSecondary: VillageDarkColors.goldPale,
+      surface: VillageDarkColors.surface,
+      onSurface: VillageDarkColors.ink,
+      surfaceContainerHighest: VillageDarkColors.bluePale,
+      error: TutolysColors.danger,
+      onError: Colors.white,
+    );
+
+    return _base(scheme, TutolysRegister.learner).copyWith(
+      scaffoldBackgroundColor: VillageDarkColors.pageBackground,
+      extensions: const [
+        TutolysThemeExtras(
+          register: TutolysRegister.learner,
+          gold: VillageDarkColors.gold,
+          success: VillageDarkColors.success,
+          danger: TutolysColors.danger,
+          cardRadius: VillageMetrics.mdAll,
+          mutedText: VillageDarkColors.inkMuted,
+          progressTrack: VillageDarkColors.track,
+        ),
+      ],
+    );
+  }
+
   /// The adult's theme: light, denser, squarer. Calm, not playful.
   static ThemeData adult() {
     const scheme = ColorScheme.light(

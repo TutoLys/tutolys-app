@@ -208,3 +208,44 @@ abstract final class Breakpoints {
   /// Desktop and web are ~95% identical above this.
   static const double expanded = 1440;
 }
+
+/// The design's **dark** counterpart, added to
+/// `01-design-system-gallery.html` after the light work landed
+/// (`[data-theme="dark"]`). Copied, not derived.
+///
+/// Two of these invert rather than darken, which a mechanical light-to-dark
+/// mapping would have got backwards: `goldPale` and `retryPale` are
+/// *backgrounds* behind gold and amber text, so in dark they become deep
+/// browns rather than pale tints.
+abstract final class VillageDarkColors {
+  static const Color skyTop = Color(0xFF0B1222);
+  static const Color skyBottom = Color(0xFF101B33);
+  static const Color pageBackground = Color(0xFF0D1526);
+
+  static const Color surface = Color(0xFF182036);
+
+  static const Color quebecBlue = Color(0xFF2A4A9E);
+  static const Color quebecBlueBright = Color(0xFF5B8FFF);
+
+  static const Color gold = Color(0xFFE8C14F);
+  static const Color goldLight = Color(0xFFFFC94D);
+  static const Color goldPale = Color(0xFF3D3115);
+
+  static const Color ink = Color(0xFFE8EDF8);
+  static const Color inkMuted = Color(0xFF96A5CB);
+
+  static const Color line = Color(0xFF2A3655);
+  static const Color track = Color(0xFF243150);
+
+  static const Color success = Color(0xFF3FCB83);
+  static const Color successPale = Color(0xFF163828);
+  static const Color retry = Color(0xFFFFA75C);
+  static const Color retryPale = Color(0xFF3D2912);
+
+  static const Color bluePale = Color(0xFF1C2C52);
+
+  /// `0 16px 40px rgba(0,0,0,.45)` / `0 6px 16px rgba(0,0,0,.35)` — black,
+  /// not navy: on a dark ground a tinted shadow reads as a halo.
+  static const Color shadow = Color(0x73000000);
+  static const Color shadowSmall = Color(0x59000000);
+}

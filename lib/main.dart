@@ -64,6 +64,9 @@ class TutolysApp extends ConsumerWidget {
     final english = ref.watch(
       settingsControllerProvider.select((s) => s.english),
     );
+    final dark = ref.watch(
+      settingsControllerProvider.select((s) => s.darkTheme),
+    );
 
     return MaterialApp(
       title: 'TutoLys',
@@ -85,7 +88,7 @@ class TutolysApp extends ConsumerWidget {
       // until each one lands — the chrome is correct, the contents are
       // still the A7.2 layer. TutolysTheme.learner() goes when the last
       // page has moved across.
-      theme: TutolysTheme.village(),
+      theme: dark ? TutolysTheme.villageDark() : TutolysTheme.village(),
       home: const AppShell(),
     );
   }

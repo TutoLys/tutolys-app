@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../pairing/pairing_controller.dart';
 import '../progress/progress_controller.dart';
 import 'home_controller.dart';
+import 'subject_progress.dart';
 import 'village_scene.dart';
 
 /// Village — the learner's home.
@@ -26,6 +27,10 @@ class VillageScreen extends ConsumerWidget {
     final kid = ref.watch(sessionControllerProvider).kid;
     final home = ref.watch(homeControllerProvider);
     final progress = ref.watch(progressControllerProvider);
+    // Per-subject mastery, joined locally from the per-skill figures the
+    // backend already sends plus the cached curriculum's own subject per
+    // node — no extra endpoint, and it works offline.
+    final bySubject = ref.watch(subjectProgressProvider).value ?? const <String, double>{};
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -49,7 +54,10 @@ class VillageScreen extends ConsumerWidget {
                 final scene = SizedBox(
                   height: 580,
                   child: VillageScene(
-                    buildings: villageBuildings,
+                    buildings: [
+                      for (final b in villageBuildings)
+                        b.withProgress(bySubject[subjectCodeFor(b.label)]),
+                    ],
                     signTitle: '🍁 Village des Érables',
                     signSubtitle: kid?.gradeLevel == null
                         ? ''
@@ -87,6 +95,20 @@ class VillageScreen extends ConsumerWidget {
     );
   }
 }
+
+/// Maps a building's display label to the backend's subject code.
+///
+/// The codes are the backend's own `SubjectCode` set; `CCQ` is not among
+/// them (open item #13), so Culture québécoise has no code and will read as
+/// unmeasured until that curriculum round happens.
+String subjectCodeFor(String label) => switch (label) {
+      'Mathématiques' => 'MATH',
+      'Français' => 'FR',
+      'Anglais' => 'EN',
+      'Science et techno.' => 'SCI',
+      'Univers social' => 'SOC',
+      _ => '',
+    };
 
 /// What the fox says. Built from the real daily quest when there is one,
 /// so it is never a line of flavour text pretending to know something.

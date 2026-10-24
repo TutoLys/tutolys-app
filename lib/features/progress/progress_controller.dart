@@ -19,6 +19,7 @@ class ProgressState {
     this.freezesAvailable,
     this.dailyQuest,
     this.totalXp = 0,
+    this.masteries = const [],
   });
 
   final int? currentStreakDays;
@@ -45,6 +46,11 @@ class ProgressState {
   /// estimate has no opinion on freeze balance: XP has no local-estimate
   /// path, only a real server read.
   final int totalXp;
+
+  /// Per-skill mastery, exactly as the backend served it. Kept raw so a
+  /// caller can join it against the cached curriculum — which is how the
+  /// Village gets a per-subject figure without a new endpoint.
+  final List<SkillMasteryDto> masteries;
 }
 
 class ProgressController extends Notifier<ProgressState> {
@@ -76,6 +82,7 @@ class ProgressController extends Notifier<ProgressState> {
         freezesAvailable: snapshot.freezesAvailable,
         dailyQuest: snapshot.dailyQuest,
         totalXp: snapshot.totalXp,
+        masteries: snapshot.masteries,
       ),
       ProgressOffline() => ProgressState(
         loading: false,

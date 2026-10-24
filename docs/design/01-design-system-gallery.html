@@ -113,6 +113,20 @@
     background: rgba(255,255,255,.12); padding: 3px 10px; border-radius: 999px;
   }
 
+  .theme-float-toggle {
+    position: fixed; right: 20px; bottom: 20px; z-index: 999;
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 999px; padding: 10px 16px 10px 10px; box-shadow: var(--shadow);
+    font-family: var(--font-display); font-weight: 700; font-size: 12.5px; cursor: pointer;
+  }
+  .theme-float-toggle .tft-icon {
+    width: 28px; height: 28px; border-radius: 50%; background: var(--blue-pale); color: var(--quebec-blue-bright);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .theme-float-toggle .tft-icon svg { width: 15px; height: 15px; }
+  .theme-float-toggle:hover { border-color: var(--quebec-blue-bright); }
+
   .canvas-pad { padding: 28px; display: flex; flex-direction: column; gap: 22px; align-items: center; }
 
   .shell {
@@ -1295,6 +1309,11 @@
     <span>TutoLys · <b>Étape 10 — Moteur d'exercice</b> (habillage partagé, bureau + mobile) — + Progrès, Aide &amp; support</span>
     <span class="status">Brouillon</span>
   </div>
+
+  <button class="theme-float-toggle js-theme-float" type="button" aria-label="Changer de thème (clair/sombre)">
+    <span class="tft-icon"><svg viewBox="0 0 24 24"><use href="#i-sun" class="js-theme-float-use"/></svg></span>
+    <span class="js-theme-float-label">Clair</span>
+  </button>
 
   <div class="canvas-pad">
     <div class="device-label">Web / Bureau <span class="dim">— ≥1024px, sidebar complète (224px, icône + libellé)</span></div>
@@ -3511,11 +3530,20 @@
       (function () {
         var STORAGE_KEY = 'tutolys-theme';
         var root = document.documentElement;
+        var floatBtn = document.querySelector('.js-theme-float');
+        var floatUse = document.querySelector('.js-theme-float-use');
+        var floatLabel = document.querySelector('.js-theme-float-label');
         function applyTheme(theme) {
           root.setAttribute('data-theme', theme);
           document.querySelectorAll('.js-theme-toggle button').forEach(function (btn) {
             btn.classList.toggle('is-active', btn.getAttribute('data-theme-choice') === theme);
           });
+          if (floatUse) floatUse.setAttribute('href', theme === 'dark' ? '#i-moon' : '#i-sun');
+          if (floatLabel) floatLabel.textContent = theme === 'dark' ? 'Sombre' : 'Clair';
+        }
+        function setTheme(theme) {
+          applyTheme(theme);
+          try { localStorage.setItem(STORAGE_KEY, theme); } catch (e) {}
         }
         var saved = null;
         try { saved = localStorage.getItem(STORAGE_KEY); } catch (e) {}
@@ -3525,12 +3553,13 @@
         }
         applyTheme(saved);
         document.querySelectorAll('.js-theme-toggle button').forEach(function (btn) {
-          btn.addEventListener('click', function () {
-            var choice = btn.getAttribute('data-theme-choice');
-            applyTheme(choice);
-            try { localStorage.setItem(STORAGE_KEY, choice); } catch (e) {}
-          });
+          btn.addEventListener('click', function () { setTheme(btn.getAttribute('data-theme-choice')); });
         });
+        if (floatBtn) {
+          floatBtn.addEventListener('click', function () {
+            setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+          });
+        }
       })();
     })();
   </script>
