@@ -67,6 +67,9 @@ class TutolysApp extends ConsumerWidget {
     final dark = ref.watch(
       settingsControllerProvider.select((s) => s.darkTheme),
     );
+    final reduceMotion = ref.watch(
+      settingsControllerProvider.select((s) => s.reduceMotion),
+    );
 
     return MaterialApp(
       title: 'TutoLys',
@@ -89,6 +92,27 @@ class TutolysApp extends ConsumerWidget {
       // still the A7.2 layer. TutolysTheme.learner() goes when the last
       // page has moved across.
       theme: dark ? TutolysTheme.villageDark() : TutolysTheme.village(),
+
+      // "Réduire les animations" is applied here, as Flutter's own
+      // `MediaQuery.disableAnimations` rather than a flag each widget has to
+      // remember to check. Everything that already honours the platform's
+      // reduce-motion setting — implicit animations, route transitions,
+      // `AnimatedSwitcher`, and anything reading
+      // `MediaQuery.disableAnimationsOf` — follows for free.
+      //
+      // OR-ed with the platform's own value, never replacing it: a child
+      // whose OS is set to reduce motion must keep that even if this
+      // in-app toggle is off. The app may add a reason to disable
+      // animations; it may not take one away.
+      builder: (context, child) {
+        final media = MediaQuery.of(context);
+        return MediaQuery(
+          data: media.copyWith(
+            disableAnimations: media.disableAnimations || reduceMotion,
+          ),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       home: const AppShell(),
     );
   }
