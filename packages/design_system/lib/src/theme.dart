@@ -103,6 +103,49 @@ abstract final class TutolysTheme {
     );
   }
 
+  /// The learner's theme as the 2026-10-24 design draws it: light, pale-blue
+  /// ground, white cards, gold pill CTAs.
+  ///
+  /// Added alongside [learner] rather than replacing it, so the seven pages
+  /// can move across one at a time instead of every screen changing register
+  /// in a single commit. [learner] goes when the last page has moved.
+  ///
+  /// Note this reverses ADR 0004's explicit reasoning for a dark learner
+  /// register — see [VillageColors].
+  static ThemeData village() {
+    const scheme = ColorScheme.light(
+      primary: VillageColors.navy,
+      onPrimary: Colors.white,
+      primaryContainer: VillageColors.surface,
+      onPrimaryContainer: VillageColors.navy,
+      secondary: VillageColors.cta,
+      onSecondary: Color(0xFF3A2A00),
+      surface: VillageColors.card,
+      onSurface: VillageColors.textPrimary,
+      surfaceContainerHighest: VillageColors.surface,
+      error: TutolysColors.danger,
+      onError: Colors.white,
+    );
+
+    return _base(scheme, TutolysRegister.learner).copyWith(
+      // Flat here, not the gradient the design shows: a gradient ground is a
+      // widget the shell paints, not a scaffold colour, and the two must not
+      // both try to own the background.
+      scaffoldBackgroundColor: VillageColors.groundBottom,
+      extensions: const [
+        TutolysThemeExtras(
+          register: TutolysRegister.learner,
+          gold: VillageColors.cta,
+          success: TutolysColors.success,
+          danger: TutolysColors.danger,
+          cardRadius: Radii.cardLg,
+          mutedText: VillageColors.textMuted,
+          progressTrack: VillageColors.track,
+        ),
+      ],
+    );
+  }
+
   /// The adult's theme: light, denser, squarer. Calm, not playful.
   static ThemeData adult() {
     const scheme = ColorScheme.light(

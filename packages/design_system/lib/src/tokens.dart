@@ -42,6 +42,63 @@ abstract final class TutolysColors {
   static const Color textOnLightMuted = Color(0xFF5A6478);
 }
 
+/// The 2026-10-24 design's learner palette — "the village".
+///
+/// A third direction, superseding both of its predecessors: not the
+/// ink-outline sticker style of `Platforms/3-student-village.html`, and not
+/// ADR 0004's dark A7.2 layer. Pale blue grounds, white cards with a soft
+/// shadow, illustrated buildings per subject, gold pill CTAs, navy accents.
+///
+/// It also reverses a documented decision. ADR 0004 chose a **dark** learner
+/// register on the reasoning that "gold reads as reward against a deep blue
+/// rather than as a warning against white". The design says light, so light
+/// it is — but the old argument was a real one, and gold-on-white needs
+/// watching as the pages land.
+///
+/// Brand hues come from `Platforms/shared.css`, which `TutolysColors` above
+/// already treats as authoritative. The ground and card values are read from
+/// the design rather than from a stylesheet, so they are **approximate until
+/// confirmed against the artifact's own CSS** — flagged rather than passed
+/// off as exact.
+abstract final class VillageColors {
+  /// Page ground. A pale blue wash, lighter toward the bottom.
+  static const Color groundTop = Color(0xFFE3EFFB);
+  static const Color groundBottom = Color(0xFFF5FAFF);
+
+  /// Cards and panels sit on the ground in plain white.
+  static const Color card = Color(0xFFFFFFFF);
+
+  /// Rails, sidebars and inset wells.
+  static const Color surface = Color(0xFFF1F6FD);
+
+  /// Navy, for headings and the "activité recommandée" band.
+  static const Color navy = TutolysColors.blue;
+  static const Color navyLight = TutolysColors.blueLight;
+
+  /// The primary call to action is gold, always a pill.
+  static const Color cta = Color(0xFFF2B13B);
+  static const Color ctaDeep = Color(0xFFD99A22);
+
+  static const Color textPrimary = TutolysColors.textOnLight;
+  static const Color textMuted = Color(0xFF5B6475);
+
+  /// Per-subject accents, from `shared.css`'s own `--math`/`--fr`/… set.
+  /// Used on progress bars, pills and building labels.
+  static const Color math = Color(0xFFF2A93B);
+  static const Color francais = Color(0xFFE8667A);
+  static const Color anglais = Color(0xFF3BB3C3);
+  static const Color science = Color(0xFF52C97E);
+  static const Color universSocial = Color(0xFF9B7AE0);
+
+  /// Progress tracks, under every one of those accents.
+  static const Color track = Color(0xFFE2E8F2);
+
+  /// The card shadow. Softer and cooler than the learner-dark register's
+  /// navy "cloud" — on a pale ground a heavy shadow reads as grime.
+  static const Color shadow = Color(0x14334155);
+  static const double shadowElevation = 3;
+}
+
 /// Spacing scale. A 4pt base, so every gap is a multiple and layouts line up
 /// without eyeballed numbers.
 abstract final class Space {
