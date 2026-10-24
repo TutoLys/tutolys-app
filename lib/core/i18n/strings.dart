@@ -54,6 +54,19 @@ abstract class Strings {
   String profileSkillsMastered(int count);
   String profileStreakDays(int days);
 
+  // --- pin gate ------------------------------------------------------------
+  String get pinGateCreateTitle;
+  String get pinGateCreateSubtitle;
+  String get pinGateEnterTitle;
+  String get pinGateEnterSubtitle;
+  String get pinGatePinLabel;
+  String get pinGateConfirmPinLabel;
+  String get pinGateMismatch;
+  String get pinGateTooShort;
+  String get pinGateWrong;
+  String get pinGateCreate;
+  String get pinGateConfirmSignOut;
+
   // --- nav -----------------------------------------------------------------
   String get navHome;
   String get navPath;
@@ -166,6 +179,41 @@ class _FrenchStrings extends Strings {
       days == 1 ? 'jour de suite' : 'jours de suite';
 
   @override
+  String get pinGateCreateTitle => 'Créer un NIP parent';
+
+  @override
+  String get pinGateCreateSubtitle =>
+      'Crée un NIP à 4 chiffres pour que seul un adulte puisse déconnecter cet appareil.';
+
+  @override
+  String get pinGateEnterTitle => 'NIP parent';
+
+  @override
+  String get pinGateEnterSubtitle =>
+      'Demande à un adulte d\'entrer le NIP pour déconnecter cet appareil.';
+
+  @override
+  String get pinGatePinLabel => 'NIP (4 chiffres)';
+
+  @override
+  String get pinGateConfirmPinLabel => 'Confirme le NIP';
+
+  @override
+  String get pinGateMismatch => 'Les NIP ne correspondent pas.';
+
+  @override
+  String get pinGateTooShort => 'Le NIP doit avoir 4 chiffres.';
+
+  @override
+  String get pinGateWrong => 'NIP incorrect.';
+
+  @override
+  String get pinGateCreate => 'Créer';
+
+  @override
+  String get pinGateConfirmSignOut => 'Déconnecter';
+
+  @override
   String get navHome => 'Accueil';
 
   @override
@@ -271,6 +319,41 @@ class _EnglishStrings extends Strings {
 
   @override
   String profileStreakDays(int days) => 'day streak';
+
+  @override
+  String get pinGateCreateTitle => 'Create a parent PIN';
+
+  @override
+  String get pinGateCreateSubtitle =>
+      'Set a 4-digit PIN so only a grown-up can sign out this device.';
+
+  @override
+  String get pinGateEnterTitle => 'Parent PIN';
+
+  @override
+  String get pinGateEnterSubtitle =>
+      'Ask a grown-up to enter the PIN to sign out this device.';
+
+  @override
+  String get pinGatePinLabel => 'PIN (4 digits)';
+
+  @override
+  String get pinGateConfirmPinLabel => 'Confirm PIN';
+
+  @override
+  String get pinGateMismatch => "PINs don't match.";
+
+  @override
+  String get pinGateTooShort => 'PIN must be 4 digits.';
+
+  @override
+  String get pinGateWrong => 'Incorrect PIN.';
+
+  @override
+  String get pinGateCreate => 'Create';
+
+  @override
+  String get pinGateConfirmSignOut => 'Sign out';
 
   @override
   String get navHome => 'Home';

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/i18n/strings.dart';
 import '../pairing/pairing_controller.dart';
 import '../progress/progress_controller.dart';
+import 'pin_gate.dart';
 
 /// The profile tab (A7.2, visual-layer-only scope + B9's follow-up): the
 /// kid's name and grade, their real mastered-skills count and day-streak
@@ -73,8 +74,7 @@ class ProfileScreen extends ConsumerWidget {
             ),
             const SizedBox(height: Space.xl),
             OutlinedButton.icon(
-              onPressed: () =>
-                  ref.read(sessionControllerProvider.notifier).forget(),
+              onPressed: () => _signOut(context, ref),
               icon: const Icon(Icons.logout),
               label: Text(s.profileSignOut),
             ),
@@ -82,6 +82,15 @@ class ProfileScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// A PIN gate stands between this tap and a real sign-out — see
+  /// `pin_gate.dart`. Without it, a kid signing out by accident (or on a
+  /// whim) costs a guardian a full re-pair.
+  Future<void> _signOut(BuildContext context, WidgetRef ref) async {
+    final allowed = await requireGuardianPin(context, ref);
+    if (!allowed || !context.mounted) return;
+    ref.read(sessionControllerProvider.notifier).forget();
   }
 }
 
@@ -132,7 +141,11 @@ class _ProgressSummary extends StatelessWidget {
 }
 
 class _ProgressTile extends StatelessWidget {
-  const _ProgressTile({required this.icon, required this.value, required this.label});
+  const _ProgressTile({
+    required this.icon,
+    required this.value,
+    required this.label,
+  });
 
   final IconData icon;
   final String value;
