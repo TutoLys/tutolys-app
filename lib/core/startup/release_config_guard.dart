@@ -16,23 +16,44 @@ void assertReleaseConfigIsReal({
   required String apiBaseUrl,
   required String telemetryBaseUrl,
 }) {
-  if (!isReleaseMode) return;
+  final problem = releaseConfigError(
+    isReleaseMode: isReleaseMode,
+    apiBaseUrl: apiBaseUrl,
+    telemetryBaseUrl: telemetryBaseUrl,
+  );
+  if (problem != null) throw StateError(problem);
+}
+
+/// The same check, as a value rather than a throw.
+///
+/// `main` uses this one so it can *show* the problem instead of dying before
+/// `runApp`. Throwing turned out to be loud only where someone is reading a
+/// console: on web an uncaught error in `main` leaves the splash screen up
+/// forever, which is indistinguishable from a hang — and cost a real
+/// debugging session (2026-10-24) chasing the environment instead. A guard
+/// whose failure cannot be seen is not a guard.
+///
+/// Returns null when the configuration is fine.
+String? releaseConfigError({
+  required bool isReleaseMode,
+  required String apiBaseUrl,
+  required String telemetryBaseUrl,
+}) {
+  if (!isReleaseMode) return null;
 
   final misconfigured = <String, String>{
     if (_isLoopback(apiBaseUrl)) 'TUTOLYS_API_BASE': apiBaseUrl,
     if (_isLoopback(telemetryBaseUrl)) 'TUTOLYS_TELEMETRY_BASE': telemetryBaseUrl,
   };
 
-  if (misconfigured.isEmpty) return;
+  if (misconfigured.isEmpty) return null;
 
   final detail = misconfigured.entries
       .map((entry) => '${entry.key} (currently "${entry.value}")')
       .join(', ');
-  throw StateError(
-    'Release build still points at localhost: $detail. This would silently '
-    'fail for every real user — pass --dart-define for each at build time '
-    'rather than removing this check.',
-  );
+  return 'Release build still points at localhost: $detail. This would '
+      'silently fail for every real user — pass --dart-define for each at '
+      'build time rather than removing this check.';
 }
 
 final _loopbackHost = RegExp(r'^https?://(127\.0\.0\.1|localhost)(:\d+)?/?$');

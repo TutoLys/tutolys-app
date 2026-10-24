@@ -97,4 +97,53 @@ void main() {
       );
     });
   });
+
+  group('releaseConfigError (the form main() uses)', () {
+    test('returns null when the configuration is real', () {
+      expect(
+        releaseConfigError(
+          isReleaseMode: true,
+          apiBaseUrl: 'https://api.tutolys.ca',
+          telemetryBaseUrl: 'https://telemetry.tutolys.ca',
+        ),
+        isNull,
+      );
+    });
+
+    test('returns null outside release mode, whatever the urls', () {
+      expect(
+        releaseConfigError(
+          isReleaseMode: false,
+          apiBaseUrl: 'http://127.0.0.1:8000',
+          telemetryBaseUrl: 'http://127.0.0.1:8001',
+        ),
+        isNull,
+      );
+    });
+
+    test('names every misconfigured define, so one fix is not two builds', () {
+      final message = releaseConfigError(
+        isReleaseMode: true,
+        apiBaseUrl: 'http://127.0.0.1:8000',
+        telemetryBaseUrl: 'http://127.0.0.1:8001',
+      );
+
+      expect(message, isNotNull);
+      expect(message, contains('TUTOLYS_API_BASE'));
+      expect(message, contains('TUTOLYS_TELEMETRY_BASE'));
+    });
+
+    test('reports a value rather than throwing, so main can render it', () {
+      // The whole point: `main` cannot show a message it never receives,
+      // and on web a thrown error leaves the splash screen up forever.
+      expect(
+        () => releaseConfigError(
+          isReleaseMode: true,
+          apiBaseUrl: 'http://localhost:8000',
+          telemetryBaseUrl: 'http://localhost:8001',
+        ),
+        returnsNormally,
+      );
+    });
+  });
 }

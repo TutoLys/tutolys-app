@@ -12,18 +12,25 @@ import 'data/sync/outbox_flusher_provider.dart' show telemetryBaseUrl;
 import 'features/pairing/pairing_controller.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+
   // Before anything else: a release build still pointed at localhost must
-  // crash loudly here, not silently ship broken to a real user.
-  assertReleaseConfigIsReal(
+  // fail visibly, not silently ship broken to a real user.
+  //
+  // Shown on screen rather than thrown. Throwing here is invisible on web —
+  // an uncaught error in `main` just leaves the splash up forever, which
+  // reads as a hang and cost a real session chasing the environment
+  // instead (2026-10-24). `assertReleaseConfigIsReal` still throws, for
+  // tests and for anything that wants the hard failure.
+  final configError = releaseConfigError(
     isReleaseMode: kReleaseMode,
     apiBaseUrl: apiBaseUrl,
     telemetryBaseUrl: telemetryBaseUrl,
   );
-
-  // `driftDatabase` (drift_flutter) opens lazily — resolving the real file
-  // path/IndexedDB name happens on first query, not here — so this no
-  // longer needs to be async ahead of `runApp`.
-  WidgetsFlutterBinding.ensureInitialized();
+  if (configError != null) {
+    runApp(MisconfiguredApp(message: configError));
+    return;
+  }
 
   // Whose rows are already on disk. Needed only by the 3 -> 4 migration
   // (ADR 0014), which has to give pre-v4 rows an owner.
@@ -67,6 +74,52 @@ class TutolysApp extends StatelessWidget {
       // The kid-facing register. The adult shell uses TutolysTheme.adult().
       theme: TutolysTheme.learner(),
       home: const AppShell(),
+    );
+  }
+}
+
+/// What a developer sees instead of a splash screen that never clears.
+///
+/// Deliberately plain: no theme, no localisation, no provider scope. It has
+/// to render even when the thing that is misconfigured is the app itself,
+/// and it is never reachable by a kid — a real release build with real
+/// `--dart-define` values never constructs it.
+class MisconfiguredApp extends StatelessWidget {
+  const MisconfiguredApp({required this.message, super.key});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: const Color(0xFF7F1D1D),
+        body: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Build misconfigured',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SelectableText(
+                  message,
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
