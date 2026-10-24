@@ -54,6 +54,29 @@ static void my_application_activate(GApplication* application) {
 
   gtk_window_set_default_size(window, 1280, 720);
 
+  // Window icon. "assets/icon/" is a declared Flutter asset (pubspec.yaml),
+  // so it ships inside the bundle at data/flutter_assets/assets/icon/ next
+  // to this executable — resolved via /proc/self/exe rather than a bare
+  // relative path, since GTK resolves relative paths against the process's
+  // current working directory, not the executable's location, and a
+  // launcher (e.g. a .desktop file) is not guaranteed to set that to the
+  // bundle root. Best-effort: a missing/unreadable icon just leaves GTK's
+  // own default, never a hard failure to start.
+  {
+    g_autofree gchar* exe_path = g_file_read_link("/proc/self/exe", nullptr);
+    if (exe_path != nullptr) {
+      g_autofree gchar* exe_dir = g_path_get_dirname(exe_path);
+      g_autofree gchar* icon_path = g_build_filename(
+          exe_dir, "data", "flutter_assets", "assets", "icon", "icon.png",
+          nullptr);
+      g_autoptr(GError) icon_error = nullptr;
+      if (!gtk_window_set_icon_from_file(window, icon_path, &icon_error)) {
+        g_warning("Could not load window icon from %s: %s", icon_path,
+                  icon_error->message);
+      }
+    }
+  }
+
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   fl_dart_project_set_dart_entrypoint_arguments(
       project, self->dart_entrypoint_arguments);
