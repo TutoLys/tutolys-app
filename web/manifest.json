@@ -1,11 +1,11 @@
 {
-    "name": "tutolys_app",
-    "short_name": "tutolys_app",
+    "name": "TutoLys",
+    "short_name": "TutoLys",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#1F3C88",
+    "theme_color": "#1F3C88",
+    "description": "Apprends en jouant, selon le programme du Québec.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

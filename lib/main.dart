@@ -1,13 +1,24 @@
 import 'package:design_system/design_system.dart';
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/routing/app_shell.dart';
+import 'core/startup/release_config_guard.dart';
 import 'data/local_db/database.dart';
+import 'data/sync/outbox_flusher_provider.dart' show telemetryBaseUrl;
 import 'features/pairing/pairing_controller.dart';
 
 void main() {
+  // Before anything else: a release build still pointed at localhost must
+  // crash loudly here, not silently ship broken to a real user.
+  assertReleaseConfigIsReal(
+    isReleaseMode: kReleaseMode,
+    apiBaseUrl: apiBaseUrl,
+    telemetryBaseUrl: telemetryBaseUrl,
+  );
+
   // `driftDatabase` (drift_flutter) opens lazily — resolving the real file
   // path/IndexedDB name happens on first query, not here — so this no
   // longer needs to be async ahead of `runApp`.

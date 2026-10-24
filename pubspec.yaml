@@ -43,6 +43,32 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   drift_dev: ^2.35.1
   build_runner: ^2.7.1
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.6
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/icon/
+
+# `dart run flutter_launcher_icons` regenerates web/icons/*.png from these.
+# Scoped to web only: Linux desktop has no Flutter-tooling icon pipeline (its
+# window icon is set directly in linux/runner/my_application.cc), and mobile
+# isn't a build target yet (open item — Hafid's call to defer, not this
+# config's to assume either way).
+flutter_launcher_icons:
+  image_path: "assets/icon/icon.png"
+  web:
+    generate: true
+    image_path: "assets/icon/icon.png"
+    background_color: "#1F3C88"
+    theme_color: "#1F3C88"
+
+# `dart run flutter_native_splash:create` regenerates the web loading splash
+# from these. Same web-only scope as flutter_launcher_icons above.
+flutter_native_splash:
+  color: "#1F3C88"
+  image: "assets/icon/icon_maskable.png"
+  web: true
+  android: false
+  ios: false
