@@ -1,6 +1,8 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/i18n/strings.dart';
+
 /// One subject's building in the village.
 class VillageBuilding {
   const VillageBuilding({
@@ -47,46 +49,49 @@ class VillageBuilding {
 }
 
 /// The six subject buildings, at the exact positions the design places them.
-const villageBuildings = <VillageBuilding>[
+///
+/// A function of [Strings] rather than a const list: these labels sit on the
+/// most-looked-at screen in the app and must follow the language toggle.
+List<VillageBuilding> villageBuildings(Strings s) => [
   VillageBuilding(
-    label: 'Mathématiques',
+    label: s.subjectMath,
     asset: 'asset-bldg-math.webp',
     left: 0.17,
     top: 0.40,
   ),
   VillageBuilding(
-    label: 'Français',
+    label: s.subjectFrancais,
     asset: 'asset-bldg-francais.webp',
     left: 0.50,
     top: 0.22,
   ),
   VillageBuilding(
-    label: 'Univers social',
+    label: s.subjectUniversSocial,
     asset: 'asset-bldg-univers-social.webp',
     left: 0.83,
     top: 0.32,
   ),
   VillageBuilding(
-    label: 'Anglais',
+    label: s.subjectAnglais,
     asset: 'asset-bldg-anglais.webp',
     left: 0.12,
     top: 0.76,
   ),
   VillageBuilding(
-    label: 'Science et techno.',
+    label: s.subjectScience,
     asset: 'asset-bldg-science.webp',
     left: 0.84,
     top: 0.82,
   ),
   VillageBuilding(
-    label: 'Culture québécoise',
+    label: s.subjectCulture,
     asset: 'asset-bldg-ccq.webp',
     left: 0.37,
     top: 0.72,
     accent: VillageColors.gold,
     small: true,
   ),
-];
+    ];
 
 /// The village itself: a sky-and-grass scene with the subject buildings
 /// placed on it, the wooden sign, and the mascot greeting.

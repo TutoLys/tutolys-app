@@ -31,14 +31,14 @@ class _VillageShellState extends State<VillageShell> {
   /// `IndexedStack`, not a rebuilt child per tab: switching must not
   /// re-trigger each screen's one-shot `build()` load — Home's and Path's
   /// controllers fetch once and expect to stay mounted.
-  static const _pages = <Widget>[
-    VillageScreen(),
-    PathScreen(),
-    _NotBuiltYet(title: 'Quêtes'),
-    _NotBuiltYet(title: 'Progrès'),
-    ProfileScreen(),
-    SettingsScreen(),
-  ];
+  static List<Widget> _pages(Strings s) => [
+        const VillageScreen(),
+        const PathScreen(),
+        _NotBuiltYet(title: s.navQuetes),
+        _NotBuiltYet(title: s.navProgres),
+        const ProfileScreen(),
+        const SettingsScreen(),
+      ];
 
   /// Built from [Strings] rather than held as a const list: these labels are
   /// the most visible text in the app, so they follow Réglages' language
@@ -75,14 +75,14 @@ class _VillageShellState extends State<VillageShell> {
         ),
         helpLabel: t.navHelp,
         onHelp: () => _showNotBuiltYet(context, t.navHelp),
-        child: IndexedStack(index: _index, children: _pages),
+        child: IndexedStack(index: _index, children: _pages(t)),
       ),
     );
   }
 
   void _showNotBuiltYet(BuildContext context, String title) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$title — pas encore construit')),
+      SnackBar(content: Text('$title — ${context.s.notBuiltYetSuffix}')),
     );
   }
 }

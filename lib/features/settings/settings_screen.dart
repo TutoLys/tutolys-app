@@ -136,7 +136,7 @@ class SettingsScreen extends ConsumerWidget {
               _LinkRow(
                 icon: Icons.info_outline,
                 label: t.settingsAbout,
-                onTap: () => _notBuilt(context, 'À propos'),
+                onTap: () => _notBuilt(context, t.settingsAbout),
               ),
 
               const SizedBox(height: Space.lg),
@@ -162,7 +162,7 @@ class SettingsScreen extends ConsumerWidget {
 
   static void _notBuilt(BuildContext context, String what) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$what — pas encore construit')),
+      SnackBar(content: Text('$what — ${context.s.notBuiltYetSuffix}')),
     );
   }
 }
@@ -509,7 +509,7 @@ class _ParentZone extends StatelessWidget {
               // site is Track F and unbuilt, so this says where it will go
               // rather than opening nothing.
               onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('${t.settingsParentZoneCta} — bientôt')),
+                SnackBar(content: Text('${t.settingsParentZoneCta} — ${t.comingSoonShort}')),
               ),
               child: Text(t.settingsParentZoneCta),
             ),
@@ -583,7 +583,7 @@ class _SignOutButton extends ConsumerWidget {
       ),
       icon: Icon(Icons.logout, size: 19),
       label: Text(
-        'Se déconnecter',
+        context.s.settingsSignOut,
         style: TextStyle(
           fontFamily: VillageType.display,
           fontSize: 14.5,

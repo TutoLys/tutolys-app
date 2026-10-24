@@ -118,6 +118,35 @@ abstract class Strings {
   String get settingsSignOut;
   String get comingSoonTitle;
 
+  String get subjectMath;
+  String get subjectFrancais;
+  String get subjectAnglais;
+  String get subjectScience;
+  String get subjectUniversSocial;
+  String get subjectCulture;
+  String get villageSignTitle;
+  String get villageRecommendedLabel;
+  String get villageContinuePath;
+  String get villageContinueCta;
+  String get villageQuestsTitle;
+  String get villageNoQuests;
+  String get villageGreetingReady;
+  String get villageGreetingQuest;
+  String get notBuiltYetSuffix;
+  String get comingSoonShort;
+
+  /// `Salut <name> !` — the name is interpolated, so the punctuation and
+  /// spacing stay inside the locale that owns them (French puts a space
+  /// before "!", English does not).
+  String greeting(String name);
+
+  /// "3e année" / "Grade 3". Ordinals differ per language, so the whole
+  /// phrase belongs to the locale rather than a shared format string.
+  String gradeLabel(int grade);
+
+  /// "3 bonnes réponses de suite".
+  String streakQuestTitle(int target);
+
   static const Strings fr = _FrenchStrings();
   static const Strings en = _EnglishStrings();
 
@@ -391,6 +420,62 @@ class _FrenchStrings extends Strings {
   @override
   String get comingSoonTitle => 'Cette page arrive bientôt.';
 
+  @override
+  String get subjectMath => 'Mathématiques';
+
+  @override
+  String get subjectFrancais => 'Français';
+
+  @override
+  String get subjectAnglais => 'Anglais';
+
+  @override
+  String get subjectScience => 'Science et techno.';
+
+  @override
+  String get subjectUniversSocial => 'Univers social';
+
+  @override
+  String get subjectCulture => 'Culture québécoise';
+
+  @override
+  String get villageSignTitle => '🍁 Village des Érables';
+
+  @override
+  String get villageRecommendedLabel => 'ACTIVITÉ RECOMMANDÉE';
+
+  @override
+  String get villageContinuePath => 'Continue ton parcours';
+
+  @override
+  String get villageContinueCta => 'Continuer →';
+
+  @override
+  String get villageQuestsTitle => 'Quêtes du jour';
+
+  @override
+  String get villageNoQuests => 'Aucune quête aujourd\'hui.';
+
+  @override
+  String get villageGreetingReady => 'Prêt à jouer ? 🎯';
+
+  @override
+  String get villageGreetingQuest => 'Ton défi du jour t\'attend 🎯';
+
+  @override
+  String get notBuiltYetSuffix => 'pas encore construit';
+
+  @override
+  String get comingSoonShort => 'bientôt';
+  @override
+  String greeting(String name) => name.isEmpty ? 'Salut !' : 'Salut $name !';
+
+  @override
+  String gradeLabel(int grade) => '${grade}e année';
+
+  @override
+  String streakQuestTitle(int target) => '$target bonnes réponses de suite';
+
 }
 
 class _EnglishStrings extends Strings {
@@ -656,6 +741,62 @@ class _EnglishStrings extends Strings {
 
   @override
   String get comingSoonTitle => 'This page is coming soon.';
+
+  @override
+  String get subjectMath => 'Mathematics';
+
+  @override
+  String get subjectFrancais => 'French';
+
+  @override
+  String get subjectAnglais => 'English';
+
+  @override
+  String get subjectScience => 'Science & tech';
+
+  @override
+  String get subjectUniversSocial => 'Social studies';
+
+  @override
+  String get subjectCulture => 'Quebec culture';
+
+  @override
+  String get villageSignTitle => '🍁 Maple Village';
+
+  @override
+  String get villageRecommendedLabel => 'RECOMMENDED ACTIVITY';
+
+  @override
+  String get villageContinuePath => 'Keep going on your path';
+
+  @override
+  String get villageContinueCta => 'Continue →';
+
+  @override
+  String get villageQuestsTitle => 'Today\'s quests';
+
+  @override
+  String get villageNoQuests => 'No quests today.';
+
+  @override
+  String get villageGreetingReady => 'Ready to play? 🎯';
+
+  @override
+  String get villageGreetingQuest => 'Your daily challenge is waiting 🎯';
+
+  @override
+  String get notBuiltYetSuffix => 'not built yet';
+
+  @override
+  String get comingSoonShort => 'soon';
+  @override
+  String greeting(String name) => name.isEmpty ? 'Hi!' : 'Hi $name!';
+
+  @override
+  String gradeLabel(int grade) => 'Grade $grade';
+
+  @override
+  String streakQuestTitle(int target) => '$target correct answers in a row';
 
 }
 

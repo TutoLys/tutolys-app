@@ -2,6 +2,8 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/i18n/strings.dart';
+
 import '../pairing/pairing_controller.dart';
 import '../progress/progress_controller.dart';
 import 'home_controller.dart';
@@ -30,6 +32,7 @@ class VillageScreen extends ConsumerWidget {
     // Per-subject mastery, joined locally from the per-skill figures the
     // backend already sends plus the cached curriculum's own subject per
     // node — no extra endpoint, and it works offline.
+    final t = context.s;
     final bySubject = ref.watch(subjectProgressProvider).value ?? <String, double>{};
 
     return SafeArea(
@@ -55,14 +58,14 @@ class VillageScreen extends ConsumerWidget {
                   height: 580,
                   child: VillageScene(
                     buildings: [
-                      for (final b in villageBuildings)
-                        b.withProgress(bySubject[subjectCodeFor(b.label)]),
+                      for (final b in villageBuildings(t))
+                        b.withProgress(bySubject[subjectCodeFor(b.asset)]),
                     ],
-                    signTitle: '🍁 Village des Érables',
+                    signTitle: t.villageSignTitle,
                     signSubtitle: kid?.gradeLevel == null
                         ? ''
-                        : '${kid!.gradeLevel}e année',
-                    greeting: _greetingFor(kid?.displayName, progress),
+                        : t.gradeLabel(kid!.gradeLevel),
+                    greeting: _greetingFor(t, kid?.displayName, progress),
                   ),
                 );
                 final panel = _QuestPanel(progress: progress);
@@ -101,22 +104,26 @@ class VillageScreen extends ConsumerWidget {
 /// The codes are the backend's own `SubjectCode` set; `CCQ` is not among
 /// them (open item #13), so Culture québécoise has no code and will read as
 /// unmeasured until that curriculum round happens.
-String subjectCodeFor(String label) => switch (label) {
-      'Mathématiques' => 'MATH',
-      'Français' => 'FR',
-      'Anglais' => 'EN',
-      'Science et techno.' => 'SCI',
-      'Univers social' => 'SOC',
+/// Keyed on the asset rather than the label: labels are localised now, and
+/// matching on translated display text is how a feature silently breaks the
+/// moment someone switches language.
+String subjectCodeFor(String asset) => switch (asset) {
+      'asset-bldg-math.webp' => 'MATH',
+      'asset-bldg-francais.webp' => 'FR',
+      'asset-bldg-anglais.webp' => 'EN',
+      'asset-bldg-science.webp' => 'SCI',
+      'asset-bldg-univers-social.webp' => 'SOC',
       _ => '',
     };
 
 /// What the fox says. Built from the real daily quest when there is one,
 /// so it is never a line of flavour text pretending to know something.
-String _greetingFor(String? name, ProgressState progress) {
-  final who = (name == null || name.isEmpty) ? '' : ' $name';
-  final quest = progress.dailyQuest;
-  if (quest == null) return 'Salut$who ! Prêt à jouer ? 🎯';
-  return 'Salut$who ! Ton défi du jour t\'attend 🎯';
+String _greetingFor(Strings t, String? name, ProgressState progress) {
+  final hello = t.greeting(name ?? '');
+  final line = progress.dailyQuest == null
+      ? t.villageGreetingReady
+      : t.villageGreetingQuest;
+  return '$hello $line';
 }
 
 class _Greeting extends StatelessWidget {
@@ -153,7 +160,7 @@ class _Greeting extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                name.isEmpty ? 'Salut !' : 'Salut $name !',
+                context.s.greeting(name),
                 style: TextStyle(
                   fontFamily: VillageType.display,
                   fontWeight: FontWeight.w700,
@@ -165,7 +172,7 @@ class _Greeting extends StatelessWidget {
                 Padding(
                   padding: EdgeInsets.only(top: 3),
                   child: Text(
-                    '${grade}e année',
+                    context.s.gradeLabel(grade!),
                     style: TextStyle(
                       fontSize: 13,
                       color: p.inkMuted,
@@ -195,7 +202,7 @@ class _Greeting extends StatelessWidget {
             ),
             _StatPill(
               asset: 'asset-target.webp',
-              label: '$exercisesToday aujourd\'hui',
+              label: '$exercisesToday',
             ),
           ],
         ),
@@ -275,12 +282,12 @@ class _RecommendBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'ACTIVITÉ RECOMMANDÉE',
+                  context.s.villageRecommendedLabel,
                   style: TextStyle(
                     fontSize: 11,
                     letterSpacing: 0.66,
@@ -290,7 +297,7 @@ class _RecommendBar extends StatelessWidget {
                 ),
                 SizedBox(height: 3),
                 Text(
-                  'Continue ton parcours',
+                  context.s.villageContinuePath,
                   style: TextStyle(
                     fontFamily: VillageType.display,
                     fontWeight: FontWeight.w700,
@@ -323,7 +330,7 @@ class _RecommendBar extends StatelessWidget {
                 vertical: 11,
               ),
               child: Text(
-                'Continuer →',
+                context.s.villageContinueCta,
                 style: TextStyle(
                   fontFamily: VillageType.display,
                   fontWeight: FontWeight.w700,
@@ -379,7 +386,7 @@ class _QuestPanel extends StatelessWidget {
               const SizedBox(width: 7),
               Expanded(
                 child: Text(
-                  'Quêtes du jour',
+                  context.s.villageQuestsTitle,
                   style: TextStyle(
                     fontFamily: VillageType.display,
                     fontWeight: FontWeight.w700,
@@ -395,7 +402,7 @@ class _QuestPanel extends StatelessWidget {
             Padding(
               padding: EdgeInsets.symmetric(vertical: Space.sm),
               child: Text(
-                'Aucune quête aujourd\'hui.',
+                context.s.villageNoQuests,
                 style: TextStyle(
                   fontSize: 12.5,
                   color: p.inkMuted,
@@ -407,7 +414,7 @@ class _QuestPanel extends StatelessWidget {
               // `DailyQuestDto` carries no title — the daily challenge is
               // one fixed quest type ("N correct in a row, today", backend
               // ADR 0019), so its name is derived rather than transported.
-              title: '${quest.target} bonnes réponses de suite',
+              title: context.s.streakQuestTitle(quest.target),
               done: quest.completed,
               current: quest.progress,
               target: quest.target,
