@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:design_system/design_system.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tutolys_app/core/i18n/strings.dart';
 import 'package:tutolys_app/data/local_db/app_settings.dart';
@@ -166,6 +167,29 @@ void main() {
         Strings.of(const Locale('es')).navCarte,
         'Carte',
         reason: 'French is the default, never English',
+      );
+    });
+  });
+
+  group('palette', () {
+    test('resolves from the theme, not from a compiled-in constant', () {
+      // The bug this replaced: every `Switch` hardcoded its ON colour while
+      // its OFF colour came from the theme, so flipping to dark changed
+      // exactly one control on the page — the one that had not been
+      // hardcoded.
+      expect(VillagePalette.light.isDark, isFalse);
+      expect(VillagePalette.dark.isDark, isTrue);
+      expect(VillagePalette.dark.surface, isNot(VillagePalette.light.surface));
+      expect(VillagePalette.dark.ink, isNot(VillagePalette.light.ink));
+      expect(VillagePalette.dark.skyTop, isNot(VillagePalette.light.skyTop));
+    });
+
+    test('dark ink is light and light ink is dark', () {
+      // Cheap sanity on the direction of the mapping: text on a dark
+      // surface has to be the brighter of the two.
+      expect(
+        VillagePalette.dark.ink.computeLuminance(),
+        greaterThan(VillagePalette.light.ink.computeLuminance()),
       );
     });
   });

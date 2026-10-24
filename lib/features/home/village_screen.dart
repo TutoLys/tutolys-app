@@ -30,11 +30,11 @@ class VillageScreen extends ConsumerWidget {
     // Per-subject mastery, joined locally from the per-skill figures the
     // backend already sends plus the cached curriculum's own subject per
     // node — no extra endpoint, and it works offline.
-    final bySubject = ref.watch(subjectProgressProvider).value ?? const <String, double>{};
+    final bySubject = ref.watch(subjectProgressProvider).value ?? <String, double>{};
 
     return SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(Space.lg),
+        padding: EdgeInsets.all(Space.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -138,6 +138,7 @@ class _Greeting extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -153,21 +154,21 @@ class _Greeting extends StatelessWidget {
             children: [
               Text(
                 name.isEmpty ? 'Salut !' : 'Salut $name !',
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: VillageType.display,
                   fontWeight: FontWeight.w700,
                   fontSize: 22,
-                  color: VillageColors.ink,
+                  color: p.ink,
                 ),
               ),
               if (grade != null)
                 Padding(
-                  padding: const EdgeInsets.only(top: 3),
+                  padding: EdgeInsets.only(top: 3),
                   child: Text(
                     '${grade}e année',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
-                      color: VillageColors.inkMuted,
+                      color: p.inkMuted,
                     ),
                   ),
                 ),
@@ -211,15 +212,16 @@ class _StatPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 7),
       decoration: BoxDecoration(
-        color: VillageColors.surface,
-        border: Border.all(color: VillageColors.line),
+        color: p.surface,
+        border: Border.all(color: p.line),
         borderRadius: BorderRadius.circular(999),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: VillageColors.shadowSmall,
+            color: p.shadowSmall,
             blurRadius: 16,
             offset: Offset(0, 6),
           ),
@@ -232,11 +234,11 @@ class _StatPill extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: VillageType.display,
               fontWeight: FontWeight.w700,
               fontSize: 13,
-              color: VillageColors.ink,
+              color: p.ink,
             ),
           ),
         ],
@@ -253,18 +255,19 @@ class _RecommendBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+      padding: EdgeInsets.symmetric(horizontal: 22, vertical: 18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [VillageColors.quebecBlue, Color(0xFF16285E)],
+          colors: [p.quebecBlue, Color(0xFF16285E)],
         ),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: VillageColors.shadow,
+            color: p.shadow,
             blurRadius: 40,
             offset: Offset(0, 16),
           ),
@@ -300,28 +303,28 @@ class _RecommendBar extends StatelessWidget {
           ),
           DecoratedBox(
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [VillageColors.goldLight, VillageColors.gold],
+                colors: [p.goldLight, p.gold],
               ),
               borderRadius: BorderRadius.circular(999),
               boxShadow: [
                 BoxShadow(
-                  color: VillageColors.gold.withValues(alpha: 0.35),
+                  color: p.gold.withValues(alpha: 0.35),
                   blurRadius: 18,
-                  offset: const Offset(0, 8),
+                  offset: Offset(0, 8),
                 ),
               ],
             ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(
+              padding: EdgeInsets.symmetric(
                 horizontal: 22,
                 vertical: 11,
               ),
               child: Text(
                 'Continuer →',
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: VillageType.display,
                   fontWeight: FontWeight.w700,
                   fontSize: 13.5,
@@ -350,16 +353,17 @@ class _QuestPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
     final quest = progress.dailyQuest;
 
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: VillageColors.surface,
+        color: p.surface,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: VillageColors.shadow,
+            color: p.shadow,
             blurRadius: 40,
             offset: Offset(0, 16),
           ),
@@ -373,14 +377,14 @@ class _QuestPanel extends StatelessWidget {
             children: [
               Image.asset('assets/images/asset-target.webp', width: 18),
               const SizedBox(width: 7),
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Quêtes du jour',
                   style: TextStyle(
                     fontFamily: VillageType.display,
                     fontWeight: FontWeight.w700,
                     fontSize: 14.5,
-                    color: VillageColors.ink,
+                    color: p.ink,
                   ),
                 ),
               ),
@@ -388,13 +392,13 @@ class _QuestPanel extends StatelessWidget {
           ),
           const SizedBox(height: Space.sm),
           if (quest == null)
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: Space.sm),
               child: Text(
                 'Aucune quête aujourd\'hui.',
                 style: TextStyle(
                   fontSize: 12.5,
-                  color: VillageColors.inkMuted,
+                  color: p.inkMuted,
                 ),
               ),
             )
@@ -429,8 +433,9 @@ class _QuestRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 11),
+      padding: EdgeInsets.symmetric(vertical: 11),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -440,21 +445,21 @@ class _QuestRow extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: VillageType.display,
                     fontWeight: FontWeight.w700,
                     fontSize: 12.5,
                     height: 1.3,
-                    color: VillageColors.ink,
+                    color: p.ink,
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   '$current/$target',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
-                    color: VillageColors.inkMuted,
+                    color: p.inkMuted,
                   ),
                 ),
                 const SizedBox(height: 3),
@@ -463,9 +468,9 @@ class _QuestRow extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: target == 0 ? 0 : current / target,
                     minHeight: 6,
-                    backgroundColor: VillageColors.track,
-                    valueColor: const AlwaysStoppedAnimation(
-                      VillageColors.quebecBlueBright,
+                    backgroundColor: p.track,
+                    valueColor: AlwaysStoppedAnimation(
+                      p.quebecBlueBright,
                     ),
                   ),
                 ),
@@ -478,8 +483,8 @@ class _QuestRow extends StatelessWidget {
             height: 24,
             decoration: BoxDecoration(
               color: done
-                  ? const Color(0xFF3DBE7A)
-                  : VillageColors.quebecBlueBright,
+                  ? Color(0xFF3DBE7A)
+                  : p.quebecBlueBright,
               shape: BoxShape.circle,
             ),
             child: Icon(

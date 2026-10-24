@@ -120,7 +120,7 @@ class VillageScene extends StatelessWidget {
         decoration: BoxDecoration(
           // `linear-gradient(180deg, #CFE8FF, #E4F3FF 38%, #DCEEDD 68%,
           // #CFE6D2)` — sky into grass.
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
@@ -158,7 +158,7 @@ class VillageScene extends StatelessWidget {
                     top: h * b.top,
                     child: FractionalTranslation(
                       // `transform: translate(-50%, -50%)`.
-                      translation: const Offset(-0.5, -0.5),
+                      translation: Offset(-0.5, -0.5),
                       child: _Building(
                         building: b,
                         onTap: onTapBuilding == null
@@ -184,21 +184,22 @@ class _Sign extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
     return Transform.rotate(
       angle: -0.035, // `rotate(-2deg)`
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
+        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 9),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [Color(0xFFC9904F), Color(0xFFA66B33)],
           ),
-          border: Border.all(color: const Color(0xFF8B5A2B), width: 3),
+          border: Border.all(color: Color(0xFF8B5A2B), width: 3),
           borderRadius: BorderRadius.circular(10),
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
-              color: VillageColors.shadow,
+              color: p.shadow,
               blurRadius: 40,
               offset: Offset(0, 16),
             ),
@@ -210,7 +211,7 @@ class _Sign extends StatelessWidget {
           children: [
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: VillageType.display,
                 fontWeight: FontWeight.w700,
                 fontSize: 15,
@@ -218,10 +219,10 @@ class _Sign extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.only(top: 1),
+              padding: EdgeInsets.only(top: 1),
               child: Text(
                 subtitle,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 10.5,
                   color: Color(0xFFF3E3CF),
                 ),
@@ -254,7 +255,7 @@ class _Building extends StatelessWidget {
           ),
           // `margin-top: -16px` — the pill overlaps the building's base.
           Transform.translate(
-            offset: const Offset(0, -16),
+            offset: Offset(0, -16),
             child: _Pill(building: building),
           ),
         ],
@@ -270,14 +271,15 @@ class _Pill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
     return Container(
-      padding: const EdgeInsets.fromLTRB(11, 6, 14, 6),
+      padding: EdgeInsets.fromLTRB(11, 6, 14, 6),
       decoration: BoxDecoration(
-        color: VillageColors.surface,
+        color: p.surface,
         borderRadius: BorderRadius.circular(999),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: VillageColors.shadowSmall,
+            color: p.shadowSmall,
             blurRadius: 16,
             offset: Offset(0, 6),
           ),
@@ -288,11 +290,11 @@ class _Pill extends StatelessWidget {
         children: [
           Text(
             building.label,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: VillageType.display,
               fontWeight: FontWeight.w700,
               fontSize: 12,
-              color: VillageColors.ink,
+              color: p.ink,
             ),
           ),
           const SizedBox(width: 8),
@@ -304,7 +306,7 @@ class _Pill extends StatelessWidget {
                 borderRadius: BorderRadius.circular(999),
                 child: LinearProgressIndicator(
                   value: building.progress ?? 0,
-                  backgroundColor: VillageColors.track,
+                  backgroundColor: p.track,
                   valueColor: AlwaysStoppedAnimation(building.accent),
                 ),
               ),
@@ -312,11 +314,11 @@ class _Pill extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               '${((building.progress ?? 0) * 100).round()}/100',
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: VillageType.display,
                 fontWeight: FontWeight.w700,
                 fontSize: 11,
-                color: VillageColors.inkMuted,
+                color: p.inkMuted,
               ),
             ),
           ],
@@ -334,18 +336,19 @@ class _MascotGreeting extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: VillageColors.surface,
+            color: p.surface,
             borderRadius: BorderRadius.circular(16),
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
-                color: VillageColors.shadowSmall,
+                color: p.shadowSmall,
                 blurRadius: 16,
                 offset: Offset(0, 6),
               ),
@@ -353,16 +356,16 @@ class _MascotGreeting extends StatelessWidget {
           ),
           child: Text(
             text,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: VillageType.display,
               fontWeight: FontWeight.w700,
               fontSize: 13.5,
-              color: VillageColors.ink,
+              color: p.ink,
             ),
           ),
         ),
         Padding(
-          padding: const EdgeInsets.only(left: 24, top: 4),
+          padding: EdgeInsets.only(left: 24, top: 4),
           child: Image.asset(
             'assets/images/asset-mascot-welcome.webp',
             height: 120,

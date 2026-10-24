@@ -29,15 +29,16 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final p = VillagePalette.of(context);
     final settings = ref.watch(settingsControllerProvider);
     final controller = ref.read(settingsControllerProvider.notifier);
     final t = context.s;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(Space.lg),
+      padding: EdgeInsets.all(Space.lg),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 680),
+          constraints: BoxConstraints(maxWidth: 680),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -92,7 +93,7 @@ class SettingsScreen extends ConsumerWidget {
                 children: [
                   _SegmentedRow(
                     label: t.settingsLanguage,
-                    options: const ['Français', 'English'],
+                    options: ['Français', 'English'],
                     selected: settings.english ? 1 : 0,
                     onSelect: (i) => controller.setEnglish(i == 1),
                   ),
@@ -141,14 +142,14 @@ class SettingsScreen extends ConsumerWidget {
               const SizedBox(height: Space.lg),
               const _SignOutButton(),
               const SizedBox(height: Space.md),
-              const Text(
+              Text(
                 'TutoLys · v$appVersion',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: VillageType.display,
                   fontSize: 11.5,
                   fontWeight: FontWeight.w600,
-                  color: VillageColors.inkMuted,
+                  color: p.inkMuted,
                 ),
               ),
               const SizedBox(height: Space.xl),
@@ -174,27 +175,28 @@ class _PageTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           eyebrow.toUpperCase(),
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: VillageType.display,
             fontSize: 11,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.1,
-            color: VillageColors.inkMuted,
+            color: p.inkMuted,
           ),
         ),
         const SizedBox(height: 2),
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: VillageType.display,
             fontSize: 26,
             fontWeight: FontWeight.w800,
-            color: VillageColors.ink,
+            color: p.ink,
           ),
         ),
       ],
@@ -216,15 +218,16 @@ class _Group extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
     return Padding(
-      padding: const EdgeInsets.only(bottom: Space.md),
+      padding: EdgeInsets.only(bottom: Space.md),
       child: Material(
-        color: VillageColors.surface,
+        color: p.surface,
         borderRadius: VillageMetrics.mdAll,
         elevation: VillageColors.elevationSmall,
-        shadowColor: VillageColors.shadowSmall,
+        shadowColor: p.shadowSmall,
         child: Padding(
-          padding: const EdgeInsets.symmetric(
+          padding: EdgeInsets.symmetric(
             horizontal: Space.md,
             vertical: Space.sm,
           ),
@@ -232,18 +235,18 @@ class _Group extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: Space.xs),
+                padding: EdgeInsets.symmetric(vertical: Space.xs),
                 child: Row(
                   children: [
-                    Icon(icon, size: 18, color: VillageColors.quebecBlue),
+                    Icon(icon, size: 18, color: p.quebecBlue),
                     const SizedBox(width: Space.xs),
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: VillageType.display,
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
-                        color: VillageColors.ink,
+                        color: p.ink,
                       ),
                     ),
                   ],
@@ -251,7 +254,7 @@ class _Group extends StatelessWidget {
               ),
               for (var i = 0; i < children.length; i++) ...[
                 if (i > 0)
-                  const Divider(height: 1, color: VillageColors.line),
+                  Divider(height: 1, color: p.line),
                 children[i],
               ],
             ],
@@ -270,29 +273,30 @@ class _RowLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: VillageType.display,
             fontSize: 14.5,
             fontWeight: FontWeight.w600,
-            color: VillageColors.ink,
+            color: p.ink,
           ),
         ),
         if (sublabel != null)
           Padding(
-            padding: const EdgeInsets.only(top: 1),
+            padding: EdgeInsets.only(top: 1),
             child: Text(
               sublabel!,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: VillageType.display,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: VillageColors.inkMuted,
+                color: p.inkMuted,
               ),
             ),
           ),
@@ -316,8 +320,9 @@ class _ToggleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: Space.xs),
+      padding: EdgeInsets.symmetric(vertical: Space.xs),
       child: Row(
         children: [
           Expanded(child: _RowLabel(label: label, sublabel: sublabel)),
@@ -325,7 +330,7 @@ class _ToggleRow extends StatelessWidget {
             value: value,
             onChanged: onChanged,
             activeThumbColor: Colors.white,
-            activeTrackColor: VillageColors.quebecBlueBright,
+            activeTrackColor: p.quebecBlueBright,
           ),
         ],
       ),
@@ -350,14 +355,15 @@ class _SegmentedRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: Space.xs),
+      padding: EdgeInsets.symmetric(vertical: Space.xs),
       child: Row(
         children: [
           Expanded(child: _RowLabel(label: label, sublabel: sublabel)),
           DecoratedBox(
             decoration: BoxDecoration(
-              color: VillageColors.track,
+              color: p.track,
               borderRadius: BorderRadius.circular(999),
             ),
             child: Row(
@@ -367,13 +373,13 @@ class _SegmentedRow extends StatelessWidget {
                   GestureDetector(
                     onTap: () => onSelect(i),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
+                      padding: EdgeInsets.symmetric(
                         horizontal: 14,
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
                         color: i == selected
-                            ? VillageColors.surface
+                            ? p.surface
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(999),
                       ),
@@ -385,8 +391,8 @@ class _SegmentedRow extends StatelessWidget {
                           fontWeight:
                               i == selected ? FontWeight.w800 : FontWeight.w600,
                           color: i == selected
-                              ? VillageColors.quebecBlueBright
-                              : VillageColors.inkMuted,
+                              ? p.quebecBlueBright
+                              : p.inkMuted,
                         ),
                       ),
                     ),
@@ -413,8 +419,9 @@ class _SliderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: Space.xs),
+      padding: EdgeInsets.symmetric(vertical: Space.xs),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -423,11 +430,11 @@ class _SliderRow extends StatelessWidget {
               Expanded(child: _RowLabel(label: label)),
               Text(
                 '$value %',
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: VillageType.display,
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: VillageColors.inkMuted,
+                  color: p.inkMuted,
                 ),
               ),
             ],
@@ -436,8 +443,8 @@ class _SliderRow extends StatelessWidget {
             value: value.toDouble(),
             max: 100,
             divisions: 20,
-            activeColor: VillageColors.quebecBlueBright,
-            inactiveColor: VillageColors.track,
+            activeColor: p.quebecBlueBright,
+            inactiveColor: p.track,
             onChanged: (v) => onChanged(v.round()),
           ),
         ],
@@ -453,12 +460,13 @@ class _ParentZone extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
     final t = context.s;
     return Material(
-      color: VillageColors.quebecBlue,
+      color: p.quebecBlue,
       borderRadius: VillageMetrics.mdAll,
       child: Padding(
-        padding: const EdgeInsets.all(Space.md),
+        padding: EdgeInsets.all(Space.md),
         child: Row(
           children: [
             const Icon(Icons.open_in_new, color: Colors.white, size: 22),
@@ -469,7 +477,7 @@ class _ParentZone extends StatelessWidget {
                 children: [
                   Text(
                     t.settingsParentZone,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: VillageType.display,
                       fontSize: 14.5,
                       fontWeight: FontWeight.w800,
@@ -479,7 +487,7 @@ class _ParentZone extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     t.settingsParentZoneBody,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: VillageType.display,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -493,8 +501,8 @@ class _ParentZone extends StatelessWidget {
             FilledButton(
               style: FilledButton.styleFrom(
                 backgroundColor: Colors.white,
-                foregroundColor: VillageColors.quebecBlue,
-                minimumSize: const Size(0, 40),
+                foregroundColor: p.quebecBlue,
+                minimumSize: Size(0, 40),
               ),
               // Account, subscription and privacy live on the website, not
               // in here — the app is for playing (Hafid, 2026-10-24). The
@@ -525,25 +533,26 @@ class _LinkRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
     return Material(
-      color: VillageColors.surface,
+      color: p.surface,
       borderRadius: VillageMetrics.mdAll,
       elevation: VillageColors.elevationSmall,
-      shadowColor: VillageColors.shadowSmall,
+      shadowColor: p.shadowSmall,
       child: InkWell(
         onTap: onTap,
         borderRadius: VillageMetrics.mdAll,
         child: Padding(
-          padding: const EdgeInsets.all(Space.md),
+          padding: EdgeInsets.all(Space.md),
           child: Row(
             children: [
-              Icon(icon, size: 19, color: VillageColors.quebecBlue),
+              Icon(icon, size: 19, color: p.quebecBlue),
               const SizedBox(width: Space.sm),
               Expanded(child: _RowLabel(label: label)),
-              const Icon(
+              Icon(
                 Icons.chevron_right,
                 size: 20,
-                color: VillageColors.inkMuted,
+                color: p.inkMuted,
               ),
             ],
           ),
@@ -566,14 +575,14 @@ class _SignOutButton extends ConsumerWidget {
     return TextButton.icon(
       style: TextButton.styleFrom(
         foregroundColor: TutolysColors.danger,
-        backgroundColor: const Color(0xFFFFF1F1),
-        minimumSize: const Size(0, 52),
-        shape: const RoundedRectangleBorder(
+        backgroundColor: Color(0xFFFFF1F1),
+        minimumSize: Size(0, 52),
+        shape: RoundedRectangleBorder(
           borderRadius: VillageMetrics.mdAll,
         ),
       ),
-      icon: const Icon(Icons.logout, size: 19),
-      label: const Text(
+      icon: Icon(Icons.logout, size: 19),
+      label: Text(
         'Se déconnecter',
         style: TextStyle(
           fontFamily: VillageType.display,

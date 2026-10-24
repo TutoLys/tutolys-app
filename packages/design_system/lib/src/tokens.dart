@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
 /// Brand tokens.
 ///
@@ -248,4 +248,98 @@ abstract final class VillageDarkColors {
   /// not navy: on a dark ground a tinted shadow reads as a halo.
   static const Color shadow = Color(0x73000000);
   static const Color shadowSmall = Color(0x59000000);
+}
+
+/// The village palette as an *instance*, so a widget can ask the theme which
+/// one it is rather than compiling one in.
+///
+/// [VillageColors] and [VillageDarkColors] stay as the literal transcription
+/// of the design's two `:root` blocks — this is the thing widgets actually
+/// read. Resolved from `Theme.of(context).brightness`, so it follows the
+/// Réglages toggle with no extra plumbing.
+class VillagePalette {
+  const VillagePalette({
+    required this.skyTop,
+    required this.skyBottom,
+    required this.surface,
+    required this.quebecBlue,
+    required this.quebecBlueBright,
+    required this.gold,
+    required this.goldLight,
+    required this.ink,
+    required this.inkMuted,
+    required this.line,
+    required this.track,
+    required this.success,
+    required this.retry,
+    required this.shadow,
+    required this.shadowSmall,
+    required this.navActiveFill,
+    required this.navHoverFill,
+    required this.isDark,
+  });
+
+  static const light = VillagePalette(
+    skyTop: VillageColors.skyTop,
+    skyBottom: VillageColors.skyBottom,
+    surface: VillageColors.surface,
+    quebecBlue: VillageColors.quebecBlue,
+    quebecBlueBright: VillageColors.quebecBlueBright,
+    gold: VillageColors.gold,
+    goldLight: VillageColors.goldLight,
+    ink: VillageColors.ink,
+    inkMuted: VillageColors.inkMuted,
+    line: VillageColors.line,
+    track: VillageColors.track,
+    success: VillageColors.success,
+    retry: VillageColors.retry,
+    shadow: VillageColors.shadow,
+    shadowSmall: VillageColors.shadowSmall,
+    navActiveFill: Color(0xFFE8F0FF),
+    navHoverFill: Color(0xFFF4F8FF),
+    isDark: false,
+  );
+
+  static const dark = VillagePalette(
+    skyTop: VillageDarkColors.skyTop,
+    skyBottom: VillageDarkColors.skyBottom,
+    surface: VillageDarkColors.surface,
+    quebecBlue: VillageDarkColors.quebecBlue,
+    quebecBlueBright: VillageDarkColors.quebecBlueBright,
+    gold: VillageDarkColors.gold,
+    goldLight: VillageDarkColors.goldLight,
+    ink: VillageDarkColors.ink,
+    inkMuted: VillageDarkColors.inkMuted,
+    line: VillageDarkColors.line,
+    track: VillageDarkColors.track,
+    success: VillageDarkColors.success,
+    retry: VillageDarkColors.retry,
+    shadow: VillageDarkColors.shadow,
+    shadowSmall: VillageDarkColors.shadowSmall,
+    navActiveFill: VillageDarkColors.bluePale,
+    navHoverFill: VillageDarkColors.bluePale,
+    isDark: true,
+  );
+
+  final Color skyTop;
+  final Color skyBottom;
+  final Color surface;
+  final Color quebecBlue;
+  final Color quebecBlueBright;
+  final Color gold;
+  final Color goldLight;
+  final Color ink;
+  final Color inkMuted;
+  final Color line;
+  final Color track;
+  final Color success;
+  final Color retry;
+  final Color shadow;
+  final Color shadowSmall;
+  final Color navActiveFill;
+  final Color navHoverFill;
+  final bool isDark;
+
+  static VillagePalette of(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark ? dark : light;
 }

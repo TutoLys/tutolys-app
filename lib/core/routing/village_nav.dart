@@ -81,28 +81,29 @@ class VillageNavShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
     final width = MediaQuery.sizeOf(context).width;
 
     if (width >= Breakpoints.medium) {
-      return _withSky(Row(children: [_sidebar(expanded: true), _content()]));
+      return _withSky(p, Row(children: [_sidebar(p, expanded: true), _content()]));
     }
     if (width >= Breakpoints.compact) {
-      return _withSky(Row(children: [_sidebar(expanded: false), _content()]));
+      return _withSky(p, Row(children: [_sidebar(p, expanded: false), _content()]));
     }
-    return _withSky(
-      Column(children: [Expanded(child: child), _tabBar()]),
+    return _withSky(p, 
+      Column(children: [Expanded(child: child), _tabBar(p)]),
     );
   }
 
   /// `--sky-top` to `--sky-bottom`. Painted here rather than by the theme so
   /// one widget owns the background and the scaffold never competes with it.
-  Widget _withSky(Widget body) {
+  Widget _withSky(VillagePalette p, Widget body) {
     return DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [VillageColors.skyTop, VillageColors.skyBottom],
+          colors: [p.skyTop, p.skyBottom],
         ),
       ),
       child: body,
@@ -111,28 +112,29 @@ class VillageNavShell extends StatelessWidget {
 
   Widget _content() => Expanded(child: child);
 
-  Widget _sidebar({required bool expanded}) {
+  Widget _sidebar(VillagePalette p, {required bool expanded}) {
     return Container(
       width: expanded
           ? VillageMetrics.sidebarWidth
           : VillageMetrics.railWidth,
       padding: expanded
-          ? const EdgeInsets.fromLTRB(14, 22, 14, 16)
-          : const EdgeInsets.fromLTRB(0, 22, 0, 16),
-      decoration: const BoxDecoration(
-        color: VillageColors.surface,
-        border: Border(right: BorderSide(color: VillageColors.line)),
+          ? EdgeInsets.fromLTRB(14, 22, 14, 16)
+          : EdgeInsets.fromLTRB(0, 22, 0, 16),
+      decoration: BoxDecoration(
+        color: p.surface,
+        border: Border(right: BorderSide(color: p.line)),
       ),
       child: Column(
         crossAxisAlignment:
             expanded ? CrossAxisAlignment.stretch : CrossAxisAlignment.center,
         children: [
-          _brand(expanded: expanded),
+          _brand(p, expanded: expanded),
           for (var i = 0; i < destinations.length; i++)
             Padding(
               // `gap: 3px` between rows.
               padding: EdgeInsets.only(top: i == 0 ? 0 : 3),
               child: _navRow(
+                p,
                 destinations[i],
                 expanded: expanded,
                 active: currentIndex == i,
@@ -140,14 +142,15 @@ class VillageNavShell extends StatelessWidget {
               ),
             ),
           if (_hasSecondary) ...[
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-              child: Divider(height: 1, color: VillageColors.line),
+              child: Divider(height: 1, color: p.line),
             ),
             for (var i = 0; i < secondary!.length; i++)
               Padding(
                 padding: EdgeInsets.only(top: i == 0 ? 0 : 3),
                 child: _navRow(
+                  p,
                   secondary![i],
                   expanded: expanded,
                   active: currentIndex == destinations.length + i,
@@ -156,13 +159,13 @@ class VillageNavShell extends StatelessWidget {
               ),
           ],
           const Spacer(),
-          if (onHelp != null) _helpFooter(expanded: expanded),
+          if (onHelp != null) _helpFooter(p, expanded: expanded),
         ],
       ),
     );
   }
 
-  Widget _brand({required bool expanded}) {
+  Widget _brand(VillagePalette p, {required bool expanded}) {
     final mark = Image.asset(
       'assets/images/asset-logo.webp',
       width: 19,
@@ -172,24 +175,24 @@ class VillageNavShell extends StatelessWidget {
 
     if (!expanded) {
       return Padding(
-        padding: const EdgeInsets.only(bottom: 22),
+        padding: EdgeInsets.only(bottom: 22),
         child: mark,
       );
     }
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 2, 8, 22),
+      padding: EdgeInsets.fromLTRB(8, 2, 8, 22),
       child: Row(
         children: [
           mark,
           const SizedBox(width: 9),
-          const Text(
+          Text(
             'TutoLys',
             style: TextStyle(
               fontFamily: VillageType.display,
               fontWeight: FontWeight.w700,
               fontSize: 20,
               letterSpacing: -0.2,
-              color: VillageColors.quebecBlue,
+              color: p.quebecBlue,
             ),
           ),
         ],
@@ -198,6 +201,7 @@ class VillageNavShell extends StatelessWidget {
   }
 
   Widget _navRow(
+    VillagePalette p,
     VillageDestination destination, {
     required bool expanded,
     required bool active,
@@ -219,8 +223,8 @@ class VillageNavShell extends StatelessWidget {
         hoverColor: _hoverFill,
         child: Padding(
           padding: expanded
-              ? const EdgeInsets.fromLTRB(17, 11, 14, 11)
-              : const EdgeInsets.all(12),
+              ? EdgeInsets.fromLTRB(17, 11, 14, 11)
+              : EdgeInsets.all(12),
           child: Row(
             mainAxisAlignment:
                 expanded ? MainAxisAlignment.start : MainAxisAlignment.center,
@@ -236,12 +240,12 @@ class VillageNavShell extends StatelessWidget {
                       fontWeight: active ? FontWeight.w700 : FontWeight.w600,
                       fontSize: 14.5,
                       color: active
-                          ? VillageColors.quebecBlueBright
-                          : VillageColors.inkMuted,
+                          ? p.quebecBlueBright
+                          : p.inkMuted,
                     ),
                   ),
                 ),
-                if ((destination.badge ?? 0) > 0) _badge(destination.badge!),
+                if ((destination.badge ?? 0) > 0) _badge(p, destination.badge!),
               ],
             ],
           ),
@@ -259,7 +263,7 @@ class VillageNavShell extends StatelessWidget {
         children: [
           row,
           if (active && expanded)
-            const Positioned(
+            Positioned(
               left: -14,
               top: 0,
               bottom: 0,
@@ -269,7 +273,7 @@ class VillageNavShell extends StatelessWidget {
                   height: 22,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: VillageColors.quebecBlueBright,
+                      color: p.quebecBlueBright,
                       borderRadius: BorderRadius.only(
                         topRight: Radius.circular(4),
                         bottomRight: Radius.circular(4),
@@ -280,25 +284,25 @@ class VillageNavShell extends StatelessWidget {
               ),
             ),
           if (!expanded && (destination.badge ?? 0) > 0)
-            Positioned(top: 2, right: 2, child: _badge(destination.badge!)),
+            Positioned(top: 2, right: 2, child: _badge(p, destination.badge!)),
         ],
       ),
     );
   }
 
-  Widget _badge(int count) {
+  Widget _badge(VillagePalette p, int count) {
     return Container(
-      constraints: const BoxConstraints(minWidth: 18),
+      constraints: BoxConstraints(minWidth: 18),
       height: 18,
-      padding: const EdgeInsets.symmetric(horizontal: 5),
+      padding: EdgeInsets.symmetric(horizontal: 5),
       alignment: Alignment.center,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _badgeFill,
         borderRadius: BorderRadius.all(Radius.circular(999)),
       ),
       child: Text(
         '$count',
-        style: const TextStyle(
+        style: TextStyle(
           fontFamily: VillageType.display,
           fontSize: 10.5,
           fontWeight: FontWeight.w800,
@@ -309,11 +313,11 @@ class VillageNavShell extends StatelessWidget {
     );
   }
 
-  Widget _helpFooter({required bool expanded}) {
+  Widget _helpFooter(VillagePalette p, {required bool expanded}) {
     return Container(
-      padding: const EdgeInsets.only(top: 14),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: VillageColors.line)),
+      padding: EdgeInsets.only(top: 14),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: p.line)),
       ),
       child: Material(
         color: Colors.transparent,
@@ -324,18 +328,18 @@ class VillageNavShell extends StatelessWidget {
           hoverColor: _hoverFill,
           child: Padding(
             padding: expanded
-                ? const EdgeInsets.symmetric(horizontal: 14, vertical: 10)
-                : const EdgeInsets.all(10),
+                ? EdgeInsets.symmetric(horizontal: 14, vertical: 10)
+                : EdgeInsets.all(10),
             child: Row(
               mainAxisSize: expanded ? MainAxisSize.max : MainAxisSize.min,
               mainAxisAlignment: expanded
                   ? MainAxisAlignment.start
                   : MainAxisAlignment.center,
               children: [
-                const Icon(
+                Icon(
                   Icons.help_outline,
                   size: 17,
-                  color: VillageColors.inkMuted,
+                  color: p.inkMuted,
                 ),
                 if (expanded) ...[
                   const SizedBox(width: 10),
@@ -352,7 +356,7 @@ class VillageNavShell extends StatelessWidget {
                         fontFamily: VillageType.display,
                         fontSize: 12.5,
                         fontWeight: FontWeight.w600,
-                        color: VillageColors.inkMuted,
+                        color: p.inkMuted,
                       ),
                     ),
                   ),
@@ -365,25 +369,26 @@ class VillageNavShell extends StatelessWidget {
     );
   }
 
-  Widget _tabBar() {
+  Widget _tabBar(VillagePalette p) {
     return Container(
       height: 78,
-      padding: const EdgeInsets.only(bottom: 8),
-      decoration: const BoxDecoration(
-        color: VillageColors.surface,
-        border: Border(top: BorderSide(color: VillageColors.line)),
+      padding: EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: p.surface,
+        border: Border(top: BorderSide(color: p.line)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           for (var i = 0; i < destinations.length; i++)
-            _tabItem(destinations[i], active: currentIndex == i, index: i),
+            _tabItem(p, destinations[i], active: currentIndex == i, index: i),
         ],
       ),
     );
   }
 
   Widget _tabItem(
+    VillagePalette p,
     VillageDestination destination, {
     required bool active,
     required int index,
@@ -430,14 +435,14 @@ class VillageNavShell extends StatelessWidget {
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
                     color: active
-                        ? VillageColors.quebecBlueBright
-                        : VillageColors.inkMuted,
+                        ? p.quebecBlueBright
+                        : p.inkMuted,
                   ),
                 ),
               ],
             ),
             if ((destination.badge ?? 0) > 0)
-              Positioned(top: -6, right: 4, child: _badge(destination.badge!)),
+              Positioned(top: -6, right: 4, child: _badge(p, destination.badge!)),
           ],
         ),
       ),
