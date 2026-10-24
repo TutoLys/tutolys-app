@@ -77,6 +77,39 @@ class ExerciseCacheTable extends Table {
   Set<Column> get primaryKey => {exerciseId};
 }
 
+/// Cached exercise audio — the "read the question aloud" button plays
+/// straight from this, never the network, so it works offline the same
+/// way the exercise content itself already does.
+///
+/// A separate table from [ExerciseCacheTable], not a column on it: one
+/// exercise can have several questions, each with its own audio, and a
+/// blob column on the exercise row would mean re-downloading every
+/// question's audio whenever any one of them changed.
+@DataClassName('CachedAudio')
+class AudioCacheTable extends Table {
+  @override
+  String get tableName => 'audio_cache';
+
+  TextColumn get exerciseId => text().named('exercise_id')();
+
+  /// Matches a `prompt.audio_ref` value — `"audio"` for a single-question
+  /// exercise, `"q0_audio"`/`"q1_audio"`/... for a multi-question one.
+  TextColumn get ref => text()();
+
+  BlobColumn get bytes => blob()();
+
+  /// The server's checksum, verified again on every read via
+  /// [ContentSync.verifyCache]'s same reasoning for exercise content:
+  /// a flipped bit in SQLite must surface as "play it safe and
+  /// re-download", not a corrupted clip played to a kid.
+  TextColumn get sha256 => text()();
+
+  DateTimeColumn get cachedAt => dateTime().named('cached_at')();
+
+  @override
+  Set<Column> get primaryKey => {exerciseId, ref};
+}
+
 /// Cached curriculum leaves for the path screen (A7).
 ///
 /// Flat, not a tree — no parent/child columns, matching the backend
@@ -157,6 +190,7 @@ class PlayedDateTable extends Table {
     EngineSettingsTable,
     AppStateTable,
     PlayedDateTable,
+    AudioCacheTable,
   ],
 )
 // Timestamp storage is configured in build.yaml
@@ -168,38 +202,41 @@ class LocalDatabase extends _$LocalDatabase {
   LocalDatabase.memory() : super(memoryExecutor());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        beforeOpen: (details) async {
-          // Foreign keys are off by default in SQLite, which silently turns
-          // a constraint into a suggestion.
-          await customStatement('PRAGMA foreign_keys = ON');
-        },
-        onCreate: (m) async {
-          await m.createAll();
-          // Pending events, oldest first — the query the flusher runs every
-          // time it wakes up.
-          await customStatement(
-            'CREATE INDEX IF NOT EXISTS event_outbox_pending '
-            'ON event_outbox (delivered_at, queued_at)',
-          );
-          await customStatement(
-            'CREATE INDEX IF NOT EXISTS exercise_cache_lookup '
-            'ON exercise_cache (grade, subject, rank)',
-          );
-          await customStatement(
-            'CREATE INDEX IF NOT EXISTS skill_node_cache_lookup '
-            'ON skill_node_cache (subject, grade)',
-          );
-        },
-        onUpgrade: (m, from, to) async {
-          if (from < 2) {
-            await m.createTable(playedDateTable);
-          }
-        },
+    beforeOpen: (details) async {
+      // Foreign keys are off by default in SQLite, which silently turns
+      // a constraint into a suggestion.
+      await customStatement('PRAGMA foreign_keys = ON');
+    },
+    onCreate: (m) async {
+      await m.createAll();
+      // Pending events, oldest first — the query the flusher runs every
+      // time it wakes up.
+      await customStatement(
+        'CREATE INDEX IF NOT EXISTS event_outbox_pending '
+        'ON event_outbox (delivered_at, queued_at)',
       );
+      await customStatement(
+        'CREATE INDEX IF NOT EXISTS exercise_cache_lookup '
+        'ON exercise_cache (grade, subject, rank)',
+      );
+      await customStatement(
+        'CREATE INDEX IF NOT EXISTS skill_node_cache_lookup '
+        'ON skill_node_cache (subject, grade)',
+      );
+    },
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.createTable(playedDateTable);
+      }
+      if (from < 3) {
+        await m.createTable(audioCacheTable);
+      }
+    },
+  );
 }
 
 /// Opens the real on-disk (or browser-persisted) database for the running

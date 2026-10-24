@@ -217,6 +217,38 @@ void main() {
     expect(find.text(Strings.fr.profileFreezesAvailable(0)), findsNothing);
   });
 
+  testWidgets('shows the real XP total from the backend ledger', (
+    tester,
+  ) async {
+    final progressApi = _FakeProgressApi()
+      ..result = const ProgressFetched(
+        ProgressSnapshot(masteries: [], currentStreakDays: 5, totalXp: 135),
+      );
+
+    await tester.pumpWidget(appUnder(progressApi: progressApi));
+    await tester.pumpAndSettle();
+
+    expect(find.text('135'), findsOneWidget);
+    expect(find.text(Strings.fr.profileTotalXp), findsOneWidget);
+  });
+
+  testWidgets(
+    'a freshly-paired kid with zero XP but a real streak still shows the card',
+    (tester) async {
+      final progressApi = _FakeProgressApi()
+        ..result = const ProgressFetched(
+          ProgressSnapshot(masteries: [], currentStreakDays: 1, totalXp: 0),
+        );
+
+      await tester.pumpWidget(appUnder(progressApi: progressApi));
+      await tester.pumpAndSettle();
+
+      // Mastered-count also reads "0" here (no masteries), so assert on
+      // the XP label instead of the bare digit to avoid ambiguity.
+      expect(find.text(Strings.fr.profileTotalXp), findsOneWidget);
+    },
+  );
+
   group('PIN gate', () {
     testWidgets('with no PIN set yet, sign-out prompts to create one first', (
       tester,

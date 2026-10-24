@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 
 /// One manifest entry: enough to decide whether the cached copy is stale,
@@ -75,6 +77,23 @@ class ManifestUnauthorized extends ManifestResult {
 class ManifestFailed extends ManifestResult {
   const ManifestFailed(this.detail);
   final String detail;
+}
+
+sealed class AudioResult {
+  const AudioResult();
+}
+
+class AudioFetched extends AudioResult {
+  const AudioFetched(this.bytes);
+  final Uint8List bytes;
+}
+
+/// Covers both "no network" and "any other failure" — unlike exercise
+/// content, a missing audio clip is never fatal to anything (the text
+/// prompt is always there too), so the caller doesn't need to tell these
+/// apart the way it does for `ExercisesFailed`/`ExercisesOffline`.
+class AudioUnavailable extends AudioResult {
+  const AudioUnavailable();
 }
 
 sealed class ExercisesResult {
@@ -173,6 +192,23 @@ class ContentApi {
     }
   }
 
+  /// `url` is one exercise's `assets[].url` — server-relative (e.g.
+  /// `/media/exercise_audio/<id>/<ref>.wav`), resolved against [dio]'s own
+  /// `baseUrl` exactly like every other call here. No auth header: the
+  /// backend serves this publicly (ADR 0021 in tutolys-backend), the same
+  /// way a CDN-served asset would be.
+  Future<AudioResult> fetchAudio(String url) async {
+    try {
+      final response = await dio.get<List<int>>(
+        url,
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return AudioFetched(Uint8List.fromList(response.data!));
+    } on DioException {
+      return const AudioUnavailable();
+    }
+  }
+
   /// `dart:io` is unavailable on web, so this reads the Dio type rather than
   /// catching `SocketException`.
   bool _isOffline(DioException error) {
@@ -180,8 +216,7 @@ class ContentApi {
       DioExceptionType.connectionError ||
       DioExceptionType.connectionTimeout ||
       DioExceptionType.sendTimeout ||
-      DioExceptionType.receiveTimeout =>
-        true,
+      DioExceptionType.receiveTimeout => true,
       _ => false,
     };
   }

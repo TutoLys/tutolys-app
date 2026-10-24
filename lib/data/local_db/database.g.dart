@@ -2231,6 +2231,383 @@ class PlayedDateTableCompanion extends UpdateCompanion<PlayedDateRow> {
   }
 }
 
+class $AudioCacheTableTable extends AudioCacheTable
+    with TableInfo<$AudioCacheTableTable, CachedAudio> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AudioCacheTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _exerciseIdMeta = const VerificationMeta(
+    'exerciseId',
+  );
+  @override
+  late final GeneratedColumn<String> exerciseId = GeneratedColumn<String>(
+    'exercise_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _refMeta = const VerificationMeta('ref');
+  @override
+  late final GeneratedColumn<String> ref = GeneratedColumn<String>(
+    'ref',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _bytesMeta = const VerificationMeta('bytes');
+  @override
+  late final GeneratedColumn<Uint8List> bytes = GeneratedColumn<Uint8List>(
+    'bytes',
+    aliasedName,
+    false,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sha256Meta = const VerificationMeta('sha256');
+  @override
+  late final GeneratedColumn<String> sha256 = GeneratedColumn<String>(
+    'sha256',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _cachedAtMeta = const VerificationMeta(
+    'cachedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> cachedAt = GeneratedColumn<DateTime>(
+    'cached_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    exerciseId,
+    ref,
+    bytes,
+    sha256,
+    cachedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'audio_cache';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CachedAudio> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('exercise_id')) {
+      context.handle(
+        _exerciseIdMeta,
+        exerciseId.isAcceptableOrUnknown(data['exercise_id']!, _exerciseIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_exerciseIdMeta);
+    }
+    if (data.containsKey('ref')) {
+      context.handle(
+        _refMeta,
+        ref.isAcceptableOrUnknown(data['ref']!, _refMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_refMeta);
+    }
+    if (data.containsKey('bytes')) {
+      context.handle(
+        _bytesMeta,
+        bytes.isAcceptableOrUnknown(data['bytes']!, _bytesMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bytesMeta);
+    }
+    if (data.containsKey('sha256')) {
+      context.handle(
+        _sha256Meta,
+        sha256.isAcceptableOrUnknown(data['sha256']!, _sha256Meta),
+      );
+    } else if (isInserting) {
+      context.missing(_sha256Meta);
+    }
+    if (data.containsKey('cached_at')) {
+      context.handle(
+        _cachedAtMeta,
+        cachedAt.isAcceptableOrUnknown(data['cached_at']!, _cachedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cachedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {exerciseId, ref};
+  @override
+  CachedAudio map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CachedAudio(
+      exerciseId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}exercise_id'],
+      )!,
+      ref: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}ref'],
+      )!,
+      bytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}bytes'],
+      )!,
+      sha256: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sha256'],
+      )!,
+      cachedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cached_at'],
+      )!,
+    );
+  }
+
+  @override
+  $AudioCacheTableTable createAlias(String alias) {
+    return $AudioCacheTableTable(attachedDatabase, alias);
+  }
+}
+
+class CachedAudio extends DataClass implements Insertable<CachedAudio> {
+  final String exerciseId;
+
+  /// Matches a `prompt.audio_ref` value — `"audio"` for a single-question
+  /// exercise, `"q0_audio"`/`"q1_audio"`/... for a multi-question one.
+  final String ref;
+  final Uint8List bytes;
+
+  /// The server's checksum, verified again on every read via
+  /// [ContentSync.verifyCache]'s same reasoning for exercise content:
+  /// a flipped bit in SQLite must surface as "play it safe and
+  /// re-download", not a corrupted clip played to a kid.
+  final String sha256;
+  final DateTime cachedAt;
+  const CachedAudio({
+    required this.exerciseId,
+    required this.ref,
+    required this.bytes,
+    required this.sha256,
+    required this.cachedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['exercise_id'] = Variable<String>(exerciseId);
+    map['ref'] = Variable<String>(ref);
+    map['bytes'] = Variable<Uint8List>(bytes);
+    map['sha256'] = Variable<String>(sha256);
+    map['cached_at'] = Variable<DateTime>(cachedAt);
+    return map;
+  }
+
+  AudioCacheTableCompanion toCompanion(bool nullToAbsent) {
+    return AudioCacheTableCompanion(
+      exerciseId: Value(exerciseId),
+      ref: Value(ref),
+      bytes: Value(bytes),
+      sha256: Value(sha256),
+      cachedAt: Value(cachedAt),
+    );
+  }
+
+  factory CachedAudio.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CachedAudio(
+      exerciseId: serializer.fromJson<String>(json['exerciseId']),
+      ref: serializer.fromJson<String>(json['ref']),
+      bytes: serializer.fromJson<Uint8List>(json['bytes']),
+      sha256: serializer.fromJson<String>(json['sha256']),
+      cachedAt: serializer.fromJson<DateTime>(json['cachedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'exerciseId': serializer.toJson<String>(exerciseId),
+      'ref': serializer.toJson<String>(ref),
+      'bytes': serializer.toJson<Uint8List>(bytes),
+      'sha256': serializer.toJson<String>(sha256),
+      'cachedAt': serializer.toJson<DateTime>(cachedAt),
+    };
+  }
+
+  CachedAudio copyWith({
+    String? exerciseId,
+    String? ref,
+    Uint8List? bytes,
+    String? sha256,
+    DateTime? cachedAt,
+  }) => CachedAudio(
+    exerciseId: exerciseId ?? this.exerciseId,
+    ref: ref ?? this.ref,
+    bytes: bytes ?? this.bytes,
+    sha256: sha256 ?? this.sha256,
+    cachedAt: cachedAt ?? this.cachedAt,
+  );
+  CachedAudio copyWithCompanion(AudioCacheTableCompanion data) {
+    return CachedAudio(
+      exerciseId: data.exerciseId.present
+          ? data.exerciseId.value
+          : this.exerciseId,
+      ref: data.ref.present ? data.ref.value : this.ref,
+      bytes: data.bytes.present ? data.bytes.value : this.bytes,
+      sha256: data.sha256.present ? data.sha256.value : this.sha256,
+      cachedAt: data.cachedAt.present ? data.cachedAt.value : this.cachedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CachedAudio(')
+          ..write('exerciseId: $exerciseId, ')
+          ..write('ref: $ref, ')
+          ..write('bytes: $bytes, ')
+          ..write('sha256: $sha256, ')
+          ..write('cachedAt: $cachedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    exerciseId,
+    ref,
+    $driftBlobEquality.hash(bytes),
+    sha256,
+    cachedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CachedAudio &&
+          other.exerciseId == this.exerciseId &&
+          other.ref == this.ref &&
+          $driftBlobEquality.equals(other.bytes, this.bytes) &&
+          other.sha256 == this.sha256 &&
+          other.cachedAt == this.cachedAt);
+}
+
+class AudioCacheTableCompanion extends UpdateCompanion<CachedAudio> {
+  final Value<String> exerciseId;
+  final Value<String> ref;
+  final Value<Uint8List> bytes;
+  final Value<String> sha256;
+  final Value<DateTime> cachedAt;
+  final Value<int> rowid;
+  const AudioCacheTableCompanion({
+    this.exerciseId = const Value.absent(),
+    this.ref = const Value.absent(),
+    this.bytes = const Value.absent(),
+    this.sha256 = const Value.absent(),
+    this.cachedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  AudioCacheTableCompanion.insert({
+    required String exerciseId,
+    required String ref,
+    required Uint8List bytes,
+    required String sha256,
+    required DateTime cachedAt,
+    this.rowid = const Value.absent(),
+  }) : exerciseId = Value(exerciseId),
+       ref = Value(ref),
+       bytes = Value(bytes),
+       sha256 = Value(sha256),
+       cachedAt = Value(cachedAt);
+  static Insertable<CachedAudio> custom({
+    Expression<String>? exerciseId,
+    Expression<String>? ref,
+    Expression<Uint8List>? bytes,
+    Expression<String>? sha256,
+    Expression<DateTime>? cachedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (exerciseId != null) 'exercise_id': exerciseId,
+      if (ref != null) 'ref': ref,
+      if (bytes != null) 'bytes': bytes,
+      if (sha256 != null) 'sha256': sha256,
+      if (cachedAt != null) 'cached_at': cachedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  AudioCacheTableCompanion copyWith({
+    Value<String>? exerciseId,
+    Value<String>? ref,
+    Value<Uint8List>? bytes,
+    Value<String>? sha256,
+    Value<DateTime>? cachedAt,
+    Value<int>? rowid,
+  }) {
+    return AudioCacheTableCompanion(
+      exerciseId: exerciseId ?? this.exerciseId,
+      ref: ref ?? this.ref,
+      bytes: bytes ?? this.bytes,
+      sha256: sha256 ?? this.sha256,
+      cachedAt: cachedAt ?? this.cachedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (exerciseId.present) {
+      map['exercise_id'] = Variable<String>(exerciseId.value);
+    }
+    if (ref.present) {
+      map['ref'] = Variable<String>(ref.value);
+    }
+    if (bytes.present) {
+      map['bytes'] = Variable<Uint8List>(bytes.value);
+    }
+    if (sha256.present) {
+      map['sha256'] = Variable<String>(sha256.value);
+    }
+    if (cachedAt.present) {
+      map['cached_at'] = Variable<DateTime>(cachedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AudioCacheTableCompanion(')
+          ..write('exerciseId: $exerciseId, ')
+          ..write('ref: $ref, ')
+          ..write('bytes: $bytes, ')
+          ..write('sha256: $sha256, ')
+          ..write('cachedAt: $cachedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$LocalDatabase extends GeneratedDatabase {
   _$LocalDatabase(QueryExecutor e) : super(e);
   $LocalDatabaseManager get managers => $LocalDatabaseManager(this);
@@ -2246,6 +2623,9 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
   late final $PlayedDateTableTable playedDateTable = $PlayedDateTableTable(
     this,
   );
+  late final $AudioCacheTableTable audioCacheTable = $AudioCacheTableTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2257,6 +2637,7 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
     engineSettingsTable,
     appStateTable,
     playedDateTable,
+    audioCacheTable,
   ];
   @override
   DriftDatabaseOptions get options =>
@@ -3566,6 +3947,219 @@ typedef $$PlayedDateTableTableProcessedTableManager =
       PlayedDateRow,
       PrefetchHooks Function()
     >;
+typedef $$AudioCacheTableTableCreateCompanionBuilder =
+    AudioCacheTableCompanion Function({
+      required String exerciseId,
+      required String ref,
+      required Uint8List bytes,
+      required String sha256,
+      required DateTime cachedAt,
+      Value<int> rowid,
+    });
+typedef $$AudioCacheTableTableUpdateCompanionBuilder =
+    AudioCacheTableCompanion Function({
+      Value<String> exerciseId,
+      Value<String> ref,
+      Value<Uint8List> bytes,
+      Value<String> sha256,
+      Value<DateTime> cachedAt,
+      Value<int> rowid,
+    });
+
+class $$AudioCacheTableTableFilterComposer
+    extends Composer<_$LocalDatabase, $AudioCacheTableTable> {
+  $$AudioCacheTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get exerciseId => $composableBuilder(
+    column: $table.exerciseId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get ref => $composableBuilder(
+    column: $table.ref,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get bytes => $composableBuilder(
+    column: $table.bytes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sha256 => $composableBuilder(
+    column: $table.sha256,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$AudioCacheTableTableOrderingComposer
+    extends Composer<_$LocalDatabase, $AudioCacheTableTable> {
+  $$AudioCacheTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get exerciseId => $composableBuilder(
+    column: $table.exerciseId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get ref => $composableBuilder(
+    column: $table.ref,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get bytes => $composableBuilder(
+    column: $table.bytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sha256 => $composableBuilder(
+    column: $table.sha256,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$AudioCacheTableTableAnnotationComposer
+    extends Composer<_$LocalDatabase, $AudioCacheTableTable> {
+  $$AudioCacheTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get exerciseId => $composableBuilder(
+    column: $table.exerciseId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get ref =>
+      $composableBuilder(column: $table.ref, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get bytes =>
+      $composableBuilder(column: $table.bytes, builder: (column) => column);
+
+  GeneratedColumn<String> get sha256 =>
+      $composableBuilder(column: $table.sha256, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get cachedAt =>
+      $composableBuilder(column: $table.cachedAt, builder: (column) => column);
+}
+
+class $$AudioCacheTableTableTableManager
+    extends
+        RootTableManager<
+          _$LocalDatabase,
+          $AudioCacheTableTable,
+          CachedAudio,
+          $$AudioCacheTableTableFilterComposer,
+          $$AudioCacheTableTableOrderingComposer,
+          $$AudioCacheTableTableAnnotationComposer,
+          $$AudioCacheTableTableCreateCompanionBuilder,
+          $$AudioCacheTableTableUpdateCompanionBuilder,
+          (
+            CachedAudio,
+            BaseReferences<_$LocalDatabase, $AudioCacheTableTable, CachedAudio>,
+          ),
+          CachedAudio,
+          PrefetchHooks Function()
+        > {
+  $$AudioCacheTableTableTableManager(
+    _$LocalDatabase db,
+    $AudioCacheTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AudioCacheTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AudioCacheTableTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AudioCacheTableTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> exerciseId = const Value.absent(),
+                Value<String> ref = const Value.absent(),
+                Value<Uint8List> bytes = const Value.absent(),
+                Value<String> sha256 = const Value.absent(),
+                Value<DateTime> cachedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AudioCacheTableCompanion(
+                exerciseId: exerciseId,
+                ref: ref,
+                bytes: bytes,
+                sha256: sha256,
+                cachedAt: cachedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String exerciseId,
+                required String ref,
+                required Uint8List bytes,
+                required String sha256,
+                required DateTime cachedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => AudioCacheTableCompanion.insert(
+                exerciseId: exerciseId,
+                ref: ref,
+                bytes: bytes,
+                sha256: sha256,
+                cachedAt: cachedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$AudioCacheTableTable, CachedAudio>(table),
+                  BaseReferences<
+                    _$LocalDatabase,
+                    $AudioCacheTableTable,
+                    CachedAudio
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$AudioCacheTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$LocalDatabase,
+      $AudioCacheTableTable,
+      CachedAudio,
+      $$AudioCacheTableTableFilterComposer,
+      $$AudioCacheTableTableOrderingComposer,
+      $$AudioCacheTableTableAnnotationComposer,
+      $$AudioCacheTableTableCreateCompanionBuilder,
+      $$AudioCacheTableTableUpdateCompanionBuilder,
+      (
+        CachedAudio,
+        BaseReferences<_$LocalDatabase, $AudioCacheTableTable, CachedAudio>,
+      ),
+      CachedAudio,
+      PrefetchHooks Function()
+    >;
 
 class $LocalDatabaseManager {
   final _$LocalDatabase _db;
@@ -3582,4 +4176,6 @@ class $LocalDatabaseManager {
       $$AppStateTableTableTableManager(_db, _db.appStateTable);
   $$PlayedDateTableTableTableManager get playedDateTable =>
       $$PlayedDateTableTableTableManager(_db, _db.playedDateTable);
+  $$AudioCacheTableTableTableManager get audioCacheTable =>
+      $$AudioCacheTableTableTableManager(_db, _db.audioCacheTable);
 }

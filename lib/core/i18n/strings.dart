@@ -57,6 +57,7 @@ abstract class Strings {
   String profileSkillsMastered(int count);
   String profileStreakDays(int days);
   String profileFreezesAvailable(int count);
+  String get profileTotalXp;
 
   // --- pin gate ------------------------------------------------------------
   String get pinGateCreateTitle;
@@ -78,6 +79,7 @@ abstract class Strings {
 
   // --- play --------------------------------------------------------------
   String get playBack;
+  String playXpEarned(int xp);
 
   static const Strings fr = _FrenchStrings();
   static const Strings en = _EnglishStrings();
@@ -198,6 +200,9 @@ class _FrenchStrings extends Strings {
       : '$count gels de série disponibles';
 
   @override
+  String get profileTotalXp => 'points XP';
+
+  @override
   String get pinGateCreateTitle => 'Créer un NIP parent';
 
   @override
@@ -243,6 +248,9 @@ class _FrenchStrings extends Strings {
 
   @override
   String get playBack => 'Retour';
+
+  @override
+  String playXpEarned(int xp) => '+$xp XP !';
 }
 
 class _EnglishStrings extends Strings {
@@ -355,6 +363,9 @@ class _EnglishStrings extends Strings {
       : '$count streak freezes available';
 
   @override
+  String get profileTotalXp => 'XP';
+
+  @override
   String get pinGateCreateTitle => 'Create a parent PIN';
 
   @override
@@ -400,6 +411,9 @@ class _EnglishStrings extends Strings {
 
   @override
   String get playBack => 'Back';
+
+  @override
+  String playXpEarned(int xp) => '+$xp XP!';
 }
 
 /// Lookup from the widget tree.

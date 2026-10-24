@@ -104,8 +104,12 @@ class _ProgressSummary extends StatelessWidget {
     final s = context.s;
     // A freshly-paired kid (or a read that couldn't reach telemetry) has
     // nothing real to show yet — no card at all, rather than a fabricated
-    // "0 skills mastered" that reads as a judgement.
-    if (progress.totalSkills == 0 && progress.currentStreakDays == null) {
+    // "0 skills mastered" that reads as a judgement. XP included: it's a
+    // real ledger total, not "unknown", so a kid who's earned some stays
+    // worth showing even if streak/mastery happen to be unavailable.
+    if (progress.totalSkills == 0 &&
+        progress.currentStreakDays == null &&
+        progress.totalXp == 0) {
       return const SizedBox.shrink();
     }
 
@@ -134,6 +138,14 @@ class _ProgressSummary extends StatelessWidget {
                     icon: Icons.star_rounded,
                     value: '${progress.masteredCount}',
                     label: s.profileSkillsMastered(progress.masteredCount),
+                  ),
+                ),
+                const SizedBox(width: Space.md),
+                Expanded(
+                  child: _ProgressTile(
+                    icon: Icons.bolt_rounded,
+                    value: '${progress.totalXp}',
+                    label: s.profileTotalXp,
                   ),
                 ),
               ],

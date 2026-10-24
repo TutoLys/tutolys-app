@@ -18,6 +18,7 @@ class ProgressState {
     this.isStreakEstimated = false,
     this.freezesAvailable,
     this.dailyQuest,
+    this.totalXp = 0,
   });
 
   final int? currentStreakDays;
@@ -38,6 +39,12 @@ class ProgressState {
 
   /// Null for the same reasons, or for a kid who's never played.
   final DailyQuestDto? dailyQuest;
+
+  /// Always a real number, even offline — see `ProgressSnapshot.totalXp`.
+  /// Stays `0` (the default) while offline, same as the local streak
+  /// estimate has no opinion on freeze balance: XP has no local-estimate
+  /// path, only a real server read.
+  final int totalXp;
 }
 
 class ProgressController extends Notifier<ProgressState> {
@@ -68,6 +75,7 @@ class ProgressController extends Notifier<ProgressState> {
         loading: false,
         freezesAvailable: snapshot.freezesAvailable,
         dailyQuest: snapshot.dailyQuest,
+        totalXp: snapshot.totalXp,
       ),
       ProgressOffline() => ProgressState(
         loading: false,

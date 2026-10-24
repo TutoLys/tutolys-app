@@ -16,6 +16,13 @@ dependencies:
     path: ../design_system
   uuid: ^4.5.1
   crypto: ^3.0.6
+  # The "read the question aloud" button: a grade-1 reader can't read it
+  # yet. Native platforms play from a temp file (DeviceFileSource, the
+  # best-supported source type everywhere dart:io exists); web plays
+  # straight from bytes (BytesSource, which audioplayers_web backs with a
+  # standard Blob URL — the well-supported direction for that platform).
+  audioplayers: ^6.5.1
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:

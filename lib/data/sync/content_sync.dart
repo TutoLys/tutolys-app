@@ -20,33 +20,33 @@ class SyncReport {
   });
 
   const SyncReport.offline()
-      : upToDate = 0,
-        downloaded = 0,
-        removed = 0,
-        rejected = const [],
-        unavailable = const [],
-        offline = true,
-        unauthorized = false,
-        error = null;
+    : upToDate = 0,
+      downloaded = 0,
+      removed = 0,
+      rejected = const [],
+      unavailable = const [],
+      offline = true,
+      unauthorized = false,
+      error = null;
 
   const SyncReport.unauthorized()
-      : upToDate = 0,
-        downloaded = 0,
-        removed = 0,
-        rejected = const [],
-        unavailable = const [],
-        offline = false,
-        unauthorized = true,
-        error = null;
+    : upToDate = 0,
+      downloaded = 0,
+      removed = 0,
+      rejected = const [],
+      unavailable = const [],
+      offline = false,
+      unauthorized = true,
+      error = null;
 
   const SyncReport.failed(String this.error)
-      : upToDate = 0,
-        downloaded = 0,
-        removed = 0,
-        rejected = const [],
-        unavailable = const [],
-        offline = false,
-        unauthorized = false;
+    : upToDate = 0,
+      downloaded = 0,
+      removed = 0,
+      rejected = const [],
+      unavailable = const [],
+      offline = false,
+      unauthorized = false;
 
   /// Already cached with a matching checksum — not downloaded again.
   final int upToDate;
@@ -106,8 +106,10 @@ class ContentSync {
       return const SyncReport.unauthorized();
     }
 
-    final manifestResult =
-        await api.fetchManifest(accessToken: token, subject: subject);
+    final manifestResult = await api.fetchManifest(
+      accessToken: token,
+      subject: subject,
+    );
 
     return switch (manifestResult) {
       ManifestFetched(:final manifest) => _applyManifest(manifest, token),
@@ -137,8 +139,9 @@ class ContentSync {
         .toList();
 
     // Cached but no longer offered: retired, or outside this kid's grade now.
-    final toRemove =
-        cached.keys.where((id) => !wanted.containsKey(id)).toList();
+    final toRemove = cached.keys
+        .where((id) => !wanted.containsKey(id))
+        .toList();
 
     final upToDate = manifest.entries.length - toFetch.length;
 
@@ -178,6 +181,7 @@ class ContentSync {
           // commit it rather than throwing the work away — the next sync picks
           // up the rest.
           await _commit(verified, const []);
+          await _syncAudio(verified);
           return SyncReport(
             upToDate: upToDate,
             downloaded: verified.length,
@@ -188,6 +192,7 @@ class ContentSync {
           );
         case ExercisesFailed(:final detail):
           await _commit(verified, const []);
+          await _syncAudio(verified);
           return SyncReport(
             upToDate: upToDate,
             downloaded: verified.length,
@@ -200,6 +205,7 @@ class ContentSync {
     }
 
     await _commit(verified, toRemove);
+    await _syncAudio(verified);
 
     return SyncReport(
       upToDate: upToDate,
@@ -208,6 +214,58 @@ class ContentSync {
       rejected: rejected,
       unavailable: unavailable,
     );
+  }
+
+  /// Download and cache every audio asset referenced by newly-verified
+  /// envelopes (`assets[]`, `{ref, url, sha256}`).
+  ///
+  /// Best-effort, on purpose: a missing or failed audio download is never
+  /// fatal to a sync the way a bad exercise checksum is — the text prompt
+  /// still works, and the next sync simply tries again for whatever's
+  /// still missing (nothing here marks an asset "tried and gave up").
+  Future<void> _syncAudio(List<Map<String, Object?>> envelopes) async {
+    if (envelopes.isEmpty) return;
+
+    final cached = {
+      for (final row in await db.select(db.audioCacheTable).get())
+        (row.exerciseId, row.ref): row.sha256,
+    };
+
+    for (final envelope in envelopes) {
+      final exerciseId = envelope['exercise_id'] as String?;
+      final assets = envelope['assets'] as List?;
+      if (exerciseId == null || assets == null) continue;
+
+      for (final asset in assets.cast<Map<String, Object?>>()) {
+        final ref = asset['ref'] as String?;
+        final url = asset['url'] as String?;
+        final sha256 = asset['sha256'] as String?;
+        if (ref == null || url == null || sha256 == null) continue;
+        if (cached[(exerciseId, ref)] == sha256) continue; // already have it
+
+        final result = await api.fetchAudio(url);
+        if (result is! AudioFetched) continue; // offline or a server error
+
+        final actualHash = bytesSha256(result.bytes);
+        if (actualHash != sha256) {
+          // Truncated or tampered with — the exact same refusal
+          // `_applyManifest` already gives a bad exercise checksum.
+          continue;
+        }
+
+        await db
+            .into(db.audioCacheTable)
+            .insertOnConflictUpdate(
+              AudioCacheTableCompanion.insert(
+                exerciseId: exerciseId,
+                ref: ref,
+                bytes: result.bytes,
+                sha256: actualHash,
+                cachedAt: _now(),
+              ),
+            );
+      }
+    }
   }
 
   /// Write verified content and drop withdrawn content in one transaction.
@@ -224,7 +282,9 @@ class ContentSync {
 
     await db.transaction(() async {
       for (final envelope in verified) {
-        await db.into(db.exerciseCacheTable).insertOnConflictUpdate(
+        await db
+            .into(db.exerciseCacheTable)
+            .insertOnConflictUpdate(
               ExerciseCacheTableCompanion.insert(
                 exerciseId: envelope['exercise_id'] as String,
                 version: envelope['version'] as int,
@@ -241,9 +301,9 @@ class ContentSync {
       }
 
       if (removeIds.isNotEmpty) {
-        await (db.delete(db.exerciseCacheTable)
-              ..where((t) => t.exerciseId.isIn(removeIds)))
-            .go();
+        await (db.delete(
+          db.exerciseCacheTable,
+        )..where((t) => t.exerciseId.isIn(removeIds))).go();
       }
     });
   }
@@ -275,9 +335,9 @@ class ContentSync {
 
   /// One cached exercise, or null if it was never downloaded.
   Future<Map<String, Object?>?> cachedExercise(String exerciseId) async {
-    final row = await (db.select(db.exerciseCacheTable)
-          ..where((t) => t.exerciseId.equals(exerciseId)))
-        .getSingleOrNull();
+    final row = await (db.select(
+      db.exerciseCacheTable,
+    )..where((t) => t.exerciseId.equals(exerciseId))).getSingleOrNull();
     if (row == null) return null;
     return jsonDecode(row.payload) as Map<String, Object?>;
   }

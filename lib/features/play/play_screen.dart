@@ -4,13 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/i18n/strings.dart';
 import '../../data/local_db/database.dart';
 import '../../data/local_db/home_stats.dart';
 import '../../data/local_db/streak_local.dart';
+import '../../data/sync/drift_audio_resolver.dart';
 import '../../data/sync/outbox_flusher_provider.dart';
 import '../pairing/pairing_controller.dart';
 import 'engine_registry_provider.dart';
 import 'mascot_feedback.dart';
+import 'xp_estimate.dart';
 
 /// Hosts one exercise, reached by tapping an available node on the path.
 ///
@@ -31,10 +34,12 @@ class PlayScreen extends ConsumerStatefulWidget {
 class _PlayScreenState extends ConsumerState<PlayScreen> {
   final MascotEngineFeedback _feedback = MascotEngineFeedback();
   late final TelemetryClient _telemetry;
+  late final DriftAudioResolver _audio;
 
   @override
   void initState() {
     super.initState();
+    _audio = DriftAudioResolver(ref.read(localDatabaseProvider));
     _telemetry = TelemetryClient(
       outbox: ref.read(eventOutboxProvider),
       // One session id per visit to this screen, not one per app launch —
@@ -62,6 +67,21 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       final db = ref.read(localDatabaseProvider);
       HomeStats(db).recordExerciseCompleted(elapsedMs: result.elapsedMs);
       StreakLocal(db).recordPlayedToday();
+
+      // A client-side estimate, shown immediately — `manage.py award_xp`
+      // hasn't run yet at this instant, so there's no real total to show
+      // without waiting for the next scheduled refresh (same reasoning
+      // `StreakLocal`'s own offline estimate already established). The
+      // authoritative total still comes from `ProgressState.totalXp`.
+      final xp = estimateXp(result);
+      if (xp > 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.s.playXpEarned(xp)),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
     }
     Navigator.of(context).pop();
   }
@@ -88,6 +108,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                 registry: registry,
                 telemetry: _telemetry,
                 feedback: _feedback,
+                audio: _audio,
                 locale: Localizations.localeOf(context),
                 onFinished: _handleFinished,
               ),

@@ -44,3 +44,8 @@ String canonicalJson(Object? payload) => jsonEncode(canonicalize(payload));
 String contentSha256(Object? payload) {
   return sha256.convert(utf8.encode(canonicalJson(payload))).toString();
 }
+
+/// Checksum of raw bytes (an audio file, say) — comparable with an
+/// `assets[].sha256` entry, which the backend computes over the file's
+/// actual bytes, not a canonical-JSON encoding of anything.
+String bytesSha256(List<int> bytes) => sha256.convert(bytes).toString();

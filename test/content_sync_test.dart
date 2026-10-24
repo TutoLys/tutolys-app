@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tutolys_app/data/api/content_api.dart';
@@ -29,6 +31,19 @@ class FakeContentServer extends ContentApi {
   int manifestCalls = 0;
   int fetchCalls = 0;
   final List<String> requestedIds = [];
+
+  /// url -> bytes, as the server would serve audio.
+  final Map<String, Uint8List> audio = {};
+  bool audioOffline = false;
+  final List<String> audioRequestedUrls = [];
+
+  @override
+  Future<AudioResult> fetchAudio(String url) async {
+    audioRequestedUrls.add(url);
+    if (audioOffline) return const AudioUnavailable();
+    final bytes = audio[url];
+    return bytes == null ? const AudioUnavailable() : AudioFetched(bytes);
+  }
 
   @override
   Future<ManifestResult> fetchManifest({
@@ -106,28 +121,29 @@ void main() {
     int rank = 0,
     String subject = 'MATH',
     String prompt = 'Combien font 2 + 2 ?',
-  }) =>
-      {
-        'schema_version': 1,
-        'exercise_id': id,
-        'version': version,
-        'engine_key': 'mcq',
-        'engine_min_version': 1,
-        'skill_node_id': 'ad24bcba-93d0-5b4e-ab56-ec76e3409a53',
-        'subject': subject,
-        'grade': 1,
-        'rank': rank,
-        'locale': 'fr-CA',
-        'prompt': {'text': prompt, 'audio_ref': null, 'image_ref': null},
-        'config': {
-          'options': [
-            {'id': 'a', 'label': '4'},
-            {'id': 'b', 'label': '5'},
-          ],
-          'correct': 'a',
-        },
-        'assets': <Object?>[],
-      };
+    String? audioRef,
+    List<Object?> assets = const [],
+  }) => {
+    'schema_version': 1,
+    'exercise_id': id,
+    'version': version,
+    'engine_key': 'mcq',
+    'engine_min_version': 1,
+    'skill_node_id': 'ad24bcba-93d0-5b4e-ab56-ec76e3409a53',
+    'subject': subject,
+    'grade': 1,
+    'rank': rank,
+    'locale': 'fr-CA',
+    'prompt': {'text': prompt, 'audio_ref': audioRef, 'image_ref': null},
+    'config': {
+      'options': [
+        {'id': 'a', 'label': '4'},
+        {'id': 'b', 'label': '5'},
+      ],
+      'correct': 'a',
+    },
+    'assets': assets,
+  };
 
   setUp(() {
     now = DateTime.utc(2026, 10, 16, 12);
@@ -176,8 +192,11 @@ void main() {
 
       expect(report.downloaded, 0);
       expect(report.upToDate, 1);
-      expect(server.fetchCalls, fetchesAfterFirst,
-          reason: 'nothing changed, so nothing should have been fetched');
+      expect(
+        server.fetchCalls,
+        fetchesAfterFirst,
+        reason: 'nothing changed, so nothing should have been fetched',
+      );
     });
 
     test('only the changed exercise is re-downloaded', () async {
@@ -189,15 +208,20 @@ void main() {
       await sync.sync();
       server.requestedIds.clear();
 
-      server.content['ex7'] =
-          exercise('ex7', rank: 7, version: 2, prompt: 'Changed');
+      server.content['ex7'] = exercise(
+        'ex7',
+        rank: 7,
+        version: 2,
+        prompt: 'Changed',
+      );
 
       final report = await sync.sync();
 
       expect(report.downloaded, 1);
       expect(report.upToDate, 9);
-      expect(server.requestedIds, ['ex7'],
-          reason: 'untouched exercises must not be re-fetched');
+      expect(server.requestedIds, [
+        'ex7',
+      ], reason: 'untouched exercises must not be re-fetched');
     });
 
     test('content withdrawn from the manifest leaves the cache', () async {
@@ -214,38 +238,45 @@ void main() {
       expect(await sync.cachedExercise('keep'), isNotNull);
     });
 
-    test('a changed exercise updates in place rather than duplicating',
-        () async {
-      server.content['ex1'] = exercise('ex1', prompt: 'First');
-      await sync.sync();
+    test(
+      'a changed exercise updates in place rather than duplicating',
+      () async {
+        server.content['ex1'] = exercise('ex1', prompt: 'First');
+        await sync.sync();
 
-      server.content['ex1'] = exercise('ex1', version: 2, prompt: 'Second');
-      await sync.sync();
+        server.content['ex1'] = exercise('ex1', version: 2, prompt: 'Second');
+        await sync.sync();
 
-      expect(await sync.cachedCount(), 1);
-      final cached = await sync.cachedExercise('ex1');
-      expect((cached!['prompt'] as Map)['text'], 'Second');
-      expect(cached['version'], 2);
-    });
+        expect(await sync.cachedCount(), 1);
+        final cached = await sync.cachedExercise('ex1');
+        expect((cached!['prompt'] as Map)['text'], 'Second');
+        expect(cached['version'], 2);
+      },
+    );
   });
 
   group('checksum verification', () {
-    test('content that does not match its advertised hash is refused',
-        () async {
-      // The old backend had no integrity guarantee on content at all: a
-      // truncated or tampered download would simply have been played.
-      server.content['good'] = exercise('good');
-      server.content['bad'] = exercise('bad', rank: 1);
-      server.corruptOnFetch.add('bad');
+    test(
+      'content that does not match its advertised hash is refused',
+      () async {
+        // The old backend had no integrity guarantee on content at all: a
+        // truncated or tampered download would simply have been played.
+        server.content['good'] = exercise('good');
+        server.content['bad'] = exercise('bad', rank: 1);
+        server.corruptOnFetch.add('bad');
 
-      final report = await sync.sync();
+        final report = await sync.sync();
 
-      expect(report.rejected, ['bad']);
-      expect(report.downloaded, 1);
-      expect(await sync.cachedExercise('bad'), isNull,
-          reason: 'unverifiable content must never reach a kid');
-      expect(await sync.cachedExercise('good'), isNotNull);
-    });
+        expect(report.rejected, ['bad']);
+        expect(report.downloaded, 1);
+        expect(
+          await sync.cachedExercise('bad'),
+          isNull,
+          reason: 'unverifiable content must never reach a kid',
+        );
+        expect(await sync.cachedExercise('good'), isNotNull);
+      },
+    );
 
     test('a rejected exercise is retried on the next sync', () async {
       server.content['ex1'] = exercise('ex1');
@@ -278,35 +309,40 @@ void main() {
   });
 
   group('atomic swap', () {
-    test('a mid-sync failure leaves previously cached content intact',
-        () async {
-      // Establish a good cache.
-      for (var i = 0; i < 3; i++) {
-        server.content['old$i'] = exercise('old$i', rank: i);
-      }
-      await sync.sync();
-      expect(await sync.cachedCount(), 3);
+    test(
+      'a mid-sync failure leaves previously cached content intact',
+      () async {
+        // Establish a good cache.
+        for (var i = 0; i < 3; i++) {
+          server.content['old$i'] = exercise('old$i', rank: i);
+        }
+        await sync.sync();
+        expect(await sync.cachedCount(), 3);
 
-      // New content arrives, but the server dies partway through.
-      for (var i = 0; i < 40; i++) {
-        server.content['new$i'] = exercise('new$i', rank: 10 + i);
-      }
-      server.failFetchAfter = 25; // fails on the second chunk
+        // New content arrives, but the server dies partway through.
+        for (var i = 0; i < 40; i++) {
+          server.content['new$i'] = exercise('new$i', rank: 10 + i);
+        }
+        server.failFetchAfter = 25; // fails on the second chunk
 
-      final report = await sync.sync();
+        final report = await sync.sync();
 
-      expect(report.isOk, isFalse);
-      expect(report.error, isNotNull);
+        expect(report.isOk, isFalse);
+        expect(report.error, isNotNull);
 
-      // The old content is still there and still playable — the kid is not
-      // left with a half-written cache.
-      for (var i = 0; i < 3; i++) {
-        expect(await sync.cachedExercise('old$i'), isNotNull,
-            reason: 'a failed sync must not damage what already worked');
-      }
-      // Nothing was removed, because the removal only happens on success.
-      expect(report.removed, 0);
-    });
+        // The old content is still there and still playable — the kid is not
+        // left with a half-written cache.
+        for (var i = 0; i < 3; i++) {
+          expect(
+            await sync.cachedExercise('old$i'),
+            isNotNull,
+            reason: 'a failed sync must not damage what already worked',
+          );
+        }
+        // Nothing was removed, because the removal only happens on success.
+        expect(report.removed, 0);
+      },
+    );
 
     test('whatever verified before a failure is still committed', () async {
       for (var i = 0; i < 40; i++) {
@@ -354,8 +390,11 @@ void main() {
       final offlineSync = await sync.sync();
       expect(offlineSync.offline, isTrue);
       expect(offlineSync.isOk, isFalse);
-      expect(await sync.cachedCount(), 12,
-          reason: 'an offline sync must leave the cache alone');
+      expect(
+        await sync.cachedCount(),
+        12,
+        reason: 'an offline sync must leave the cache alone',
+      );
 
       // The play screen reads cached content, in play order, touching no
       // network at all.
@@ -412,48 +451,200 @@ void main() {
       expect(server.manifestCalls, 0);
     });
 
-    test('a rejected credential is reported, not treated as empty content',
-        () async {
-      server.content['ex1'] = exercise('ex1');
+    test(
+      'a rejected credential is reported, not treated as empty content',
+      () async {
+        server.content['ex1'] = exercise('ex1');
+        await sync.sync();
+        server.unauthorized = true;
+
+        final report = await sync.sync();
+
+        expect(report.unauthorized, isTrue);
+        // Crucially the cache is untouched: a 401 must not look like "the
+        // server has no content for you" and wipe a working cache.
+        expect(await sync.cachedCount(), 1);
+      },
+    );
+
+    test(
+      'an exercise listed but not served is reported, not retried forever',
+      () async {
+        server.content['ex1'] = exercise('ex1');
+        server.content['ex2'] = exercise('ex2', rank: 1);
+        server.withholdOnFetch.add('ex2');
+
+        final report = await sync.sync();
+
+        expect(report.unavailable, ['ex2']);
+        expect(report.downloaded, 1);
+      },
+    );
+
+    test(
+      'mid-sync network loss keeps what verified and reports offline',
+      () async {
+        for (var i = 0; i < 3; i++) {
+          server.content['ex$i'] = exercise('ex$i', rank: i);
+        }
+        // Goes offline during the fetch, after the manifest succeeded.
+        server.content['ex0'] = exercise('ex0');
+
+        final manifest = await server.fetchManifest(accessToken: 'token');
+        expect(manifest, isA<ManifestFetched>());
+
+        server.offline = true;
+        final report = await sync.sync();
+
+        expect(report.offline, isTrue);
+        expect(await sync.cachedCount(), 0, reason: 'nothing verified yet');
+      },
+    );
+  });
+
+  group('audio sync', () {
+    Future<Uint8List?> cachedAudio(String exerciseId, String ref) async {
+      final row =
+          await (db.select(db.audioCacheTable)
+                ..where((t) => t.exerciseId.equals(exerciseId))
+                ..where((t) => t.ref.equals(ref)))
+              .getSingleOrNull();
+      return row?.bytes;
+    }
+
+    test('downloads and caches an exercise\'s audio asset', () async {
+      final bytes = Uint8List.fromList([1, 2, 3, 4]);
+      final url = '/media/exercise_audio/ex1/audio.wav';
+      server.audio[url] = bytes;
+      server.content['ex1'] = exercise(
+        'ex1',
+        audioRef: 'audio',
+        assets: [
+          {'ref': 'audio', 'url': url, 'sha256': bytesSha256(bytes)},
+        ],
+      );
+
       await sync.sync();
-      server.unauthorized = true;
 
-      final report = await sync.sync();
-
-      expect(report.unauthorized, isTrue);
-      // Crucially the cache is untouched: a 401 must not look like "the
-      // server has no content for you" and wipe a working cache.
-      expect(await sync.cachedCount(), 1);
+      expect(await cachedAudio('ex1', 'audio'), bytes);
     });
 
-    test('an exercise listed but not served is reported, not retried forever',
-        () async {
-      server.content['ex1'] = exercise('ex1');
-      server.content['ex2'] = exercise('ex2', rank: 1);
-      server.withholdOnFetch.add('ex2');
+    test('a bad checksum is refused, same as a tampered exercise', () async {
+      final bytes = Uint8List.fromList([1, 2, 3, 4]);
+      final url = '/media/exercise_audio/ex1/audio.wav';
+      server.audio[url] = bytes;
+      server.content['ex1'] = exercise(
+        'ex1',
+        audioRef: 'audio',
+        assets: [
+          {'ref': 'audio', 'url': url, 'sha256': 'not-the-real-hash'},
+        ],
+      );
 
-      final report = await sync.sync();
+      await sync.sync();
 
-      expect(report.unavailable, ['ex2']);
-      expect(report.downloaded, 1);
+      expect(await cachedAudio('ex1', 'audio'), isNull);
     });
 
-    test('mid-sync network loss keeps what verified and reports offline',
-        () async {
-      for (var i = 0; i < 3; i++) {
-        server.content['ex$i'] = exercise('ex$i', rank: i);
-      }
-      // Goes offline during the fetch, after the manifest succeeded.
-      server.content['ex0'] = exercise('ex0');
+    test('a sync with no audio assets never calls fetchAudio', () async {
+      server.content['ex1'] = exercise('ex1'); // default: assets == []
 
-      final manifest = await server.fetchManifest(accessToken: 'token');
-      expect(manifest, isA<ManifestFetched>());
+      await sync.sync();
 
-      server.offline = true;
-      final report = await sync.sync();
+      expect(server.audioRequestedUrls, isEmpty);
+    });
 
-      expect(report.offline, isTrue);
-      expect(await sync.cachedCount(), 0, reason: 'nothing verified yet');
+    test('an already-cached, unchanged asset is not re-downloaded', () async {
+      final bytes = Uint8List.fromList([1, 2, 3, 4]);
+      final url = '/media/exercise_audio/ex1/audio.wav';
+      final hash = bytesSha256(bytes);
+      server.audio[url] = bytes;
+      server.content['ex1'] = exercise(
+        'ex1',
+        audioRef: 'audio',
+        assets: [
+          {'ref': 'audio', 'url': url, 'sha256': hash},
+        ],
+      );
+
+      await sync.sync();
+      expect(server.audioRequestedUrls, [url]);
+
+      // A second sync re-verifies the (unchanged) exercise itself but
+      // must not re-download audio it already has with a matching hash.
+      server.content['ex1'] = {
+        ...server.content['ex1']!,
+        'version': 1, // unchanged on purpose — this exercises the "same
+        // content, audio already cached" path, not a re-fetch-on-edit one.
+      };
+      await sync.sync();
+
+      expect(server.audioRequestedUrls, [url], reason: 'not fetched twice');
+    });
+
+    test(
+      'audio being offline does not fail the exercise sync itself',
+      () async {
+        final url = '/media/exercise_audio/ex1/audio.wav';
+        server.audio[url] = Uint8List.fromList([1, 2, 3]);
+        server.audioOffline = true;
+        server.content['ex1'] = exercise(
+          'ex1',
+          audioRef: 'audio',
+          assets: [
+            {'ref': 'audio', 'url': url, 'sha256': 'irrelevant-while-offline'},
+          ],
+        );
+
+        final report = await sync.sync();
+
+        expect(report.isOk, isTrue);
+        expect(report.downloaded, 1, reason: 'the exercise itself synced fine');
+        expect(await cachedAudio('ex1', 'audio'), isNull);
+      },
+    );
+
+    test('a multi-question exercise caches every question\'s audio', () async {
+      final bytes0 = Uint8List.fromList([1]);
+      final bytes1 = Uint8List.fromList([2]);
+      final url0 = '/media/exercise_audio/ex1/q0_audio.wav';
+      final url1 = '/media/exercise_audio/ex1/q1_audio.wav';
+      server.audio[url0] = bytes0;
+      server.audio[url1] = bytes1;
+      server.content['ex1'] = {
+        ...exercise('ex1'),
+        'config': {
+          'questions': [
+            {
+              'prompt': {'text': 'Un ?', 'audio_ref': 'q0_audio'},
+              'config': {
+                'options': [
+                  {'id': 'a', 'label': '1'},
+                ],
+                'correct': 'a',
+              },
+            },
+            {
+              'prompt': {'text': 'Deux ?', 'audio_ref': 'q1_audio'},
+              'config': {
+                'options': [
+                  {'id': 'a', 'label': '2'},
+                ],
+                'correct': 'a',
+              },
+            },
+          ],
+        },
+        'assets': [
+          {'ref': 'q0_audio', 'url': url0, 'sha256': bytesSha256(bytes0)},
+          {'ref': 'q1_audio', 'url': url1, 'sha256': bytesSha256(bytes1)},
+        ],
+      };
+
+      await sync.sync();
+
+      expect(await cachedAudio('ex1', 'q0_audio'), bytes0);
+      expect(await cachedAudio('ex1', 'q1_audio'), bytes1);
     });
   });
 }

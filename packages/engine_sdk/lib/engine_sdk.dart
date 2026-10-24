@@ -5,6 +5,7 @@
 /// isolation and keeps credentials out of game code.
 library;
 
+export 'src/audio.dart';
 export 'src/engine.dart';
 export 'src/exercise_runner.dart';
 export 'src/outbox.dart';

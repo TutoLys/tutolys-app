@@ -55,6 +55,7 @@ class ProgressSnapshot {
     required this.currentStreakDays,
     this.freezesAvailable,
     this.dailyQuest,
+    this.totalXp = 0,
   });
 
   factory ProgressSnapshot.fromJson(Map<String, Object?> json) {
@@ -69,6 +70,11 @@ class ProgressSnapshot {
       dailyQuest: dailyQuestJson == null
           ? null
           : DailyQuestDto.fromJson(dailyQuestJson),
+      // Unlike streak/daily-quest, this is never null-means-unknown — the
+      // backend reads it from its own local XPAward ledger, not live
+      // telemetry, so it's always a real number (0 for a kid who hasn't
+      // earned any yet), even when the rest of the payload degrades.
+      totalXp: json['total_xp'] as int? ?? 0,
     );
   }
 
@@ -86,6 +92,11 @@ class ProgressSnapshot {
   /// telemetry still answers "0 correct so far", but a never-paired read
   /// has nothing to show yet either way.
   final DailyQuestDto? dailyQuest;
+
+  /// From `manage.py award_xp`'s ledger — see backend ADR 0022. Earned per
+  /// question completed, so a multi-question exercise naturally earns
+  /// more than a single-question one with no special handling needed here.
+  final int totalXp;
 
   int get masteredCount => masteries.where((m) => m.isMastered).length;
 }
