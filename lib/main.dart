@@ -10,6 +10,7 @@ import 'data/local_db/database.dart';
 import 'data/local_db/session_store.dart';
 import 'data/sync/outbox_flusher_provider.dart' show telemetryBaseUrl;
 import 'features/pairing/pairing_controller.dart';
+import 'features/settings/settings_controller.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,18 +53,26 @@ void main() {
   );
 }
 
-class TutolysApp extends StatelessWidget {
+class TutolysApp extends ConsumerWidget {
   const TutolysApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Réglages' language choice, applied here because `Strings.of` resolves
+    // from `Localizations.localeOf` — setting the locale on MaterialApp is
+    // the whole mechanism, and every `context.s` below it follows.
+    final english = ref.watch(
+      settingsControllerProvider.select((s) => s.english),
+    );
+
     return MaterialApp(
       title: 'TutoLys',
       debugShowCheckedModeBanner: false,
 
       // French first: the product launches in Quebec. English is second, not
-      // the fallback-by-default that most scaffolds give you.
-      locale: const Locale('fr', 'CA'),
+      // the fallback-by-default that most scaffolds give you — a kid has to
+      // choose English in Réglages to get it.
+      locale: english ? const Locale('en', 'CA') : const Locale('fr', 'CA'),
       supportedLocales: const [Locale('fr', 'CA'), Locale('en', 'CA')],
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,

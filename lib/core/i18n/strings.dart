@@ -81,6 +81,43 @@ abstract class Strings {
   String get playBack;
   String playXpEarned(int xp);
 
+
+  // --- navigation & settings ---------------------------------------------
+  String get navVillage;
+  String get navCarte;
+  String get navQuetes;
+  String get navProgres;
+  String get navProfil;
+  String get navReglages;
+  String get navHelp;
+  String get settingsEyebrow;
+  String get settingsTitle;
+  String get settingsAppearance;
+  String get settingsTheme;
+  String get settingsThemeSub;
+  String get settingsThemeLight;
+  String get settingsThemeDark;
+  String get settingsSound;
+  String get settingsVolume;
+  String get settingsMusic;
+  String get settingsSfx;
+  String get settingsReadAloud;
+  String get settingsReadAloudSub;
+  String get settingsExperience;
+  String get settingsLanguage;
+  String get settingsReduceMotion;
+  String get settingsReduceMotionSub;
+  String get settingsNotifications;
+  String get settingsDailyReminders;
+  String get settingsDailyRemindersSub;
+  String get settingsQuestNotifications;
+  String get settingsParentZone;
+  String get settingsParentZoneBody;
+  String get settingsParentZoneCta;
+  String get settingsAbout;
+  String get settingsSignOut;
+  String get comingSoonTitle;
+
   static const Strings fr = _FrenchStrings();
   static const Strings en = _EnglishStrings();
 
@@ -251,6 +288,109 @@ class _FrenchStrings extends Strings {
 
   @override
   String playXpEarned(int xp) => '+$xp XP !';
+
+  @override
+  String get navVillage => 'Village';
+
+  @override
+  String get navCarte => 'Carte';
+
+  @override
+  String get navQuetes => 'Quêtes';
+
+  @override
+  String get navProgres => 'Progrès';
+
+  @override
+  String get navProfil => 'Profil';
+
+  @override
+  String get navReglages => 'Réglages';
+
+  @override
+  String get navHelp => 'Aide & support';
+
+  @override
+  String get settingsEyebrow => 'Ton espace';
+
+  @override
+  String get settingsTitle => 'Réglages';
+
+  @override
+  String get settingsAppearance => 'Apparence';
+
+  @override
+  String get settingsTheme => 'Thème';
+
+  @override
+  String get settingsThemeSub => 'Clair ou sombre';
+
+  @override
+  String get settingsThemeLight => 'Clair';
+
+  @override
+  String get settingsThemeDark => 'Sombre';
+
+  @override
+  String get settingsSound => 'Son et musique';
+
+  @override
+  String get settingsVolume => 'Volume général';
+
+  @override
+  String get settingsMusic => 'Musique de fond';
+
+  @override
+  String get settingsSfx => 'Effets sonores';
+
+  @override
+  String get settingsReadAloud => 'Lire les questions à voix haute';
+
+  @override
+  String get settingsReadAloudSub => 'Recommandé pour les débuts en lecture';
+
+  @override
+  String get settingsExperience => 'Expérience';
+
+  @override
+  String get settingsLanguage => 'Langue';
+
+  @override
+  String get settingsReduceMotion => 'Réduire les animations';
+
+  @override
+  String get settingsReduceMotionSub => 'Pour un affichage plus calme';
+
+  @override
+  String get settingsNotifications => 'Notifications';
+
+  @override
+  String get settingsDailyReminders => 'Rappels quotidiens';
+
+  @override
+  String get settingsDailyRemindersSub => 'Un petit coucou si tu n\'as pas joué';
+
+  @override
+  String get settingsQuestNotifications => 'Nouvelles quêtes';
+
+  @override
+  String get settingsParentZone => 'Zone parent';
+
+  @override
+  String get settingsParentZoneBody => 'Certains réglages (compte, abonnement, confidentialité) se font sur le site web, avec un parent.';
+
+  @override
+  String get settingsParentZoneCta => 'Ouvrir le site';
+
+  @override
+  String get settingsAbout => 'À propos de TutoLys';
+
+  @override
+  String get settingsSignOut => 'Se déconnecter';
+
+  @override
+  String get comingSoonTitle => 'Cette page arrive bientôt.';
+
 }
 
 class _EnglishStrings extends Strings {
@@ -414,6 +554,109 @@ class _EnglishStrings extends Strings {
 
   @override
   String playXpEarned(int xp) => '+$xp XP!';
+
+  @override
+  String get navVillage => 'Village';
+
+  @override
+  String get navCarte => 'Map';
+
+  @override
+  String get navQuetes => 'Quests';
+
+  @override
+  String get navProgres => 'Progress';
+
+  @override
+  String get navProfil => 'Profile';
+
+  @override
+  String get navReglages => 'Settings';
+
+  @override
+  String get navHelp => 'Help & support';
+
+  @override
+  String get settingsEyebrow => 'Your space';
+
+  @override
+  String get settingsTitle => 'Settings';
+
+  @override
+  String get settingsAppearance => 'Appearance';
+
+  @override
+  String get settingsTheme => 'Theme';
+
+  @override
+  String get settingsThemeSub => 'Light or dark';
+
+  @override
+  String get settingsThemeLight => 'Light';
+
+  @override
+  String get settingsThemeDark => 'Dark';
+
+  @override
+  String get settingsSound => 'Sound and music';
+
+  @override
+  String get settingsVolume => 'Overall volume';
+
+  @override
+  String get settingsMusic => 'Background music';
+
+  @override
+  String get settingsSfx => 'Sound effects';
+
+  @override
+  String get settingsReadAloud => 'Read questions aloud';
+
+  @override
+  String get settingsReadAloudSub => 'Recommended for early readers';
+
+  @override
+  String get settingsExperience => 'Experience';
+
+  @override
+  String get settingsLanguage => 'Language';
+
+  @override
+  String get settingsReduceMotion => 'Reduce animations';
+
+  @override
+  String get settingsReduceMotionSub => 'For a calmer display';
+
+  @override
+  String get settingsNotifications => 'Notifications';
+
+  @override
+  String get settingsDailyReminders => 'Daily reminders';
+
+  @override
+  String get settingsDailyRemindersSub => 'A little hello if you haven\'t played';
+
+  @override
+  String get settingsQuestNotifications => 'New quests';
+
+  @override
+  String get settingsParentZone => 'Parent zone';
+
+  @override
+  String get settingsParentZoneBody => 'Some settings (account, subscription, privacy) are handled on the website, with a parent.';
+
+  @override
+  String get settingsParentZoneCta => 'Open the website';
+
+  @override
+  String get settingsAbout => 'About TutoLys';
+
+  @override
+  String get settingsSignOut => 'Sign out';
+
+  @override
+  String get comingSoonTitle => 'This page is coming soon.';
+
 }
 
 /// Lookup from the widget tree.

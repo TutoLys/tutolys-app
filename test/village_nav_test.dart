@@ -3,6 +3,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tutolys_app/core/routing/village_nav.dart';
 
+/// The shell is pure presentation, so these tests supply their own
+/// destinations rather than reaching for the app's localised list.
+const _primary = <VillageDestination>[
+  VillageDestination(label: 'Village', asset: 'asset-village.png'),
+  VillageDestination(label: 'Carte', asset: 'asset-carte.png'),
+  VillageDestination(label: 'Quêtes', asset: 'asset-quetes.png'),
+  VillageDestination(label: 'Progrès', asset: 'asset-progres.png'),
+  VillageDestination(label: 'Profil', asset: 'asset-profil.png'),
+];
+
+const _secondary = <VillageDestination>[
+  VillageDestination(label: 'Réglages', asset: 'asset-reglages.png'),
+];
+
 /// The shell's whole job is being three different things at three widths,
 /// so that is what these assert — not that it renders at all.
 void main() {
@@ -20,11 +34,12 @@ void main() {
         theme: TutolysTheme.village(),
         home: Scaffold(
           body: VillageNavShell(
-            destinations: destinations ?? villageDestinations,
-            secondary: villageSecondaryDestinations,
+            destinations: destinations ?? _primary,
+            secondary: _secondary,
             currentIndex: currentIndex,
             onSelect: onSelect ?? (_) {},
             onSecondarySelect: onSecondarySelect,
+            helpLabel: 'Aide & support',
             onHelp: onHelp ?? () {},
             child: const Text('page content'),
           ),
@@ -43,7 +58,7 @@ void main() {
       await tester.pumpWidget(harness(size: desktop));
 
       expect(find.text('TutoLys'), findsOneWidget);
-      for (final d in villageDestinations) {
+      for (final d in _primary) {
         expect(find.text(d.label), findsOneWidget);
       }
       expect(find.text('Réglages'), findsOneWidget);
@@ -134,7 +149,7 @@ void main() {
         (tester) async {
       await tester.pumpWidget(harness(size: phone));
 
-      for (final d in villageDestinations) {
+      for (final d in _primary) {
         expect(find.text(d.label), findsOneWidget);
       }
       expect(

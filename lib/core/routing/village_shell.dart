@@ -5,6 +5,7 @@ import '../../features/home/home_screen.dart';
 import '../../features/path/path_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/settings/settings_screen.dart';
+import '../i18n/strings.dart';
 import 'village_nav.dart';
 
 /// The paired learner's shell: the design's navigation chrome wrapped around
@@ -39,21 +40,41 @@ class _VillageShellState extends State<VillageShell> {
     SettingsScreen(),
   ];
 
+  /// Built from [Strings] rather than held as a const list: these labels are
+  /// the most visible text in the app, so they follow Réglages' language
+  /// choice like everything else.
+  ///
+  /// Réglages is deliberately not among the primary five — it is the
+  /// secondary section on desktop and tablet, and a header icon on mobile.
+  static List<VillageDestination> _primary(Strings s) => [
+        VillageDestination(label: s.navVillage, asset: 'asset-village.png'),
+        VillageDestination(label: s.navCarte, asset: 'asset-carte.png'),
+        VillageDestination(label: s.navQuetes, asset: 'asset-quetes.png'),
+        VillageDestination(label: s.navProgres, asset: 'asset-progres.png'),
+        VillageDestination(label: s.navProfil, asset: 'asset-profil.png'),
+      ];
+
+  static List<VillageDestination> _secondary(Strings s) => [
+        VillageDestination(label: s.navReglages, asset: 'asset-reglages.png'),
+      ];
+
   @override
   Widget build(BuildContext context) {
+    final t = context.s;
     return Scaffold(
       // Transparent: the shell paints the sky gradient, and a scaffold
       // colour underneath it would only show through at the edges.
       backgroundColor: Colors.transparent,
       body: VillageNavShell(
-        destinations: villageDestinations,
-        secondary: villageSecondaryDestinations,
+        destinations: _primary(t),
+        secondary: _secondary(t),
         currentIndex: _index,
         onSelect: (i) => setState(() => _index = i),
         onSecondarySelect: (i) => setState(
-          () => _index = villageDestinations.length + i,
+          () => _index = _primary(t).length + i,
         ),
-        onHelp: () => _showNotBuiltYet(context, 'Aide & support'),
+        helpLabel: t.navHelp,
+        onHelp: () => _showNotBuiltYet(context, t.navHelp),
         child: IndexedStack(index: _index, children: _pages),
       ),
     );
@@ -94,8 +115,8 @@ class _NotBuiltYet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: Space.xs),
-          const Text(
-            'Cette page arrive bientôt.',
+          Text(
+            context.s.comingSoonTitle,
             style: TextStyle(
               fontFamily: VillageType.display,
               fontSize: 14,

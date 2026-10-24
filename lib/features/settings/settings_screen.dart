@@ -2,6 +2,7 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/i18n/strings.dart';
 import '../pairing/pairing_controller.dart';
 import '../profile/pin_gate.dart';
 import 'settings_controller.dart';
@@ -30,6 +31,7 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsControllerProvider);
     final controller = ref.read(settingsControllerProvider.notifier);
+    final t = context.s;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(Space.lg),
@@ -39,17 +41,17 @@ class SettingsScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const _PageTitle(eyebrow: 'Ton espace', title: 'Réglages'),
+              _PageTitle(eyebrow: t.settingsEyebrow, title: t.settingsTitle),
               const SizedBox(height: Space.lg),
 
               _Group(
                 icon: Icons.light_mode_outlined,
-                title: 'Apparence',
+                title: t.settingsAppearance,
                 children: [
                   _SegmentedRow(
-                    label: 'Thème',
-                    sublabel: 'Clair ou sombre',
-                    options: const ['Clair', 'Sombre'],
+                    label: t.settingsTheme,
+                    sublabel: t.settingsThemeSub,
+                    options: [t.settingsThemeLight, t.settingsThemeDark],
                     selected: settings.darkTheme ? 1 : 0,
                     onSelect: (i) => controller.setDarkTheme(i == 1),
                   ),
@@ -58,26 +60,26 @@ class SettingsScreen extends ConsumerWidget {
 
               _Group(
                 icon: Icons.volume_up_outlined,
-                title: 'Son et musique',
+                title: t.settingsSound,
                 children: [
                   _SliderRow(
-                    label: 'Volume général',
+                    label: t.settingsVolume,
                     value: settings.volume,
                     onChanged: controller.setVolume,
                   ),
                   _ToggleRow(
-                    label: 'Musique de fond',
+                    label: t.settingsMusic,
                     value: settings.music,
                     onChanged: controller.setMusic,
                   ),
                   _ToggleRow(
-                    label: 'Effets sonores',
+                    label: t.settingsSfx,
                     value: settings.soundEffects,
                     onChanged: controller.setSoundEffects,
                   ),
                   _ToggleRow(
-                    label: 'Lire les questions à voix haute',
-                    sublabel: 'Recommandé pour les débuts en lecture',
+                    label: t.settingsReadAloud,
+                    sublabel: t.settingsReadAloudSub,
                     value: settings.readAloud,
                     onChanged: controller.setReadAloud,
                   ),
@@ -86,17 +88,17 @@ class SettingsScreen extends ConsumerWidget {
 
               _Group(
                 icon: Icons.language_outlined,
-                title: 'Expérience',
+                title: t.settingsExperience,
                 children: [
                   _SegmentedRow(
-                    label: 'Langue',
+                    label: t.settingsLanguage,
                     options: const ['Français', 'English'],
                     selected: settings.english ? 1 : 0,
                     onSelect: (i) => controller.setEnglish(i == 1),
                   ),
                   _ToggleRow(
-                    label: 'Réduire les animations',
-                    sublabel: 'Pour un affichage plus calme',
+                    label: t.settingsReduceMotion,
+                    sublabel: t.settingsReduceMotionSub,
                     value: settings.reduceMotion,
                     onChanged: controller.setReduceMotion,
                   ),
@@ -105,16 +107,16 @@ class SettingsScreen extends ConsumerWidget {
 
               _Group(
                 icon: Icons.notifications_none,
-                title: 'Notifications',
+                title: t.settingsNotifications,
                 children: [
                   _ToggleRow(
-                    label: 'Rappels quotidiens',
-                    sublabel: "Un petit coucou si tu n'as pas joué",
+                    label: t.settingsDailyReminders,
+                    sublabel: t.settingsDailyRemindersSub,
                     value: settings.dailyReminders,
                     onChanged: controller.setDailyReminders,
                   ),
                   _ToggleRow(
-                    label: 'Nouvelles quêtes',
+                    label: t.settingsQuestNotifications,
                     value: settings.questNotifications,
                     onChanged: controller.setQuestNotifications,
                   ),
@@ -126,13 +128,13 @@ class SettingsScreen extends ConsumerWidget {
 
               _LinkRow(
                 icon: Icons.help_outline,
-                label: 'Aide & support',
+                label: t.navHelp,
                 onTap: () => _notBuilt(context, 'Aide & support'),
               ),
               const SizedBox(height: Space.xs),
               _LinkRow(
                 icon: Icons.info_outline,
-                label: 'À propos de TutoLys',
+                label: t.settingsAbout,
                 onTap: () => _notBuilt(context, 'À propos'),
               ),
 
@@ -451,6 +453,7 @@ class _ParentZone extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.s;
     return Material(
       color: VillageColors.quebecBlue,
       borderRadius: VillageMetrics.mdAll,
@@ -458,26 +461,25 @@ class _ParentZone extends StatelessWidget {
         padding: const EdgeInsets.all(Space.md),
         child: Row(
           children: [
-            const Icon(Icons.shield_outlined, color: Colors.white, size: 22),
+            const Icon(Icons.open_in_new, color: Colors.white, size: 22),
             const SizedBox(width: Space.sm),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Zone parent',
-                    style: TextStyle(
+                    t.settingsParentZone,
+                    style: const TextStyle(
                       fontFamily: VillageType.display,
                       fontSize: 14.5,
                       fontWeight: FontWeight.w800,
                       color: Colors.white,
                     ),
                   ),
-                  SizedBox(height: 2),
+                  const SizedBox(height: 2),
                   Text(
-                    'Certains réglages (compte, abonnement, '
-                    "confidentialité) nécessitent l'autorisation d'un parent.",
-                    style: TextStyle(
+                    t.settingsParentZoneBody,
+                    style: const TextStyle(
                       fontFamily: VillageType.display,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -494,15 +496,14 @@ class _ParentZone extends StatelessWidget {
                 foregroundColor: VillageColors.quebecBlue,
                 minimumSize: const Size(0, 40),
               ),
+              // Account, subscription and privacy live on the website, not
+              // in here — the app is for playing (Hafid, 2026-10-24). The
+              // site is Track F and unbuilt, so this says where it will go
+              // rather than opening nothing.
               onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Le portail parent n’existe pas encore — '
-                    'rien à déverrouiller pour l’instant.',
-                  ),
-                ),
+                SnackBar(content: Text('${t.settingsParentZoneCta} — bientôt')),
               ),
-              child: const Text('Déverrouiller'),
+              child: Text(t.settingsParentZoneCta),
             ),
           ],
         ),

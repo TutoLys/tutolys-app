@@ -47,6 +47,7 @@ class VillageNavShell extends StatelessWidget {
     this.secondary,
     this.onSecondarySelect,
     this.onHelp,
+    this.helpLabel = '',
     super.key,
   });
 
@@ -65,6 +66,10 @@ class VillageNavShell extends StatelessWidget {
 
   /// "Aide & support", pinned to the sidebar's foot above a hairline.
   final VoidCallback? onHelp;
+
+  /// Its label. Passed in rather than read from `Strings`, so this widget
+  /// stays pure presentation and has no opinion about the app's i18n.
+  final String helpLabel;
 
   final Widget child;
 
@@ -338,9 +343,9 @@ class VillageNavShell extends StatelessWidget {
                   // enough that a longer translation of this label would
                   // overflow rather than wrap. Ellipsis beats a yellow
                   // stripe in front of a child.
-                  const Flexible(
+                  Flexible(
                     child: Text(
-                      'Aide & support',
+                      helpLabel,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -439,19 +444,3 @@ class VillageNavShell extends StatelessWidget {
     );
   }
 }
-
-/// The five primary destinations, in the design's order, with its own icons.
-///
-/// Réglages is deliberately not here — it is [VillageNavShell.secondary] on
-/// desktop and tablet, and a header icon on mobile.
-const villageDestinations = <VillageDestination>[
-  VillageDestination(label: 'Village', asset: 'asset-village.png'),
-  VillageDestination(label: 'Carte', asset: 'asset-carte.png'),
-  VillageDestination(label: 'Quêtes', asset: 'asset-quetes.png'),
-  VillageDestination(label: 'Progrès', asset: 'asset-progres.png'),
-  VillageDestination(label: 'Profil', asset: 'asset-profil.png'),
-];
-
-const villageSecondaryDestinations = <VillageDestination>[
-  VillageDestination(label: 'Réglages', asset: 'asset-reglages.png'),
-];

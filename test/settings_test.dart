@@ -1,4 +1,6 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tutolys_app/core/i18n/strings.dart';
 import 'package:tutolys_app/data/local_db/app_settings.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
 
@@ -116,6 +118,55 @@ void main() {
       expect(next.volume, 7);
       expect(next.readAloud, isFalse);
       expect(next.music, original.music);
+    });
+  });
+
+  group('language', () {
+    test('every settings string exists in both locales', () {
+      // The whole point of the sealed-class-per-locale shape: a missing
+      // French string is a bug, not a fallback. This catches an English
+      // getter added without its French twin at test time rather than
+      // leaving a kid staring at an empty row.
+      const fr = Strings.fr;
+      const en = Strings.en;
+
+      final pairs = <String, List<String>>{
+        'settingsTitle': [fr.settingsTitle, en.settingsTitle],
+        'settingsSound': [fr.settingsSound, en.settingsSound],
+        'settingsReadAloud': [fr.settingsReadAloud, en.settingsReadAloud],
+        'settingsReadAloudSub': [
+          fr.settingsReadAloudSub,
+          en.settingsReadAloudSub,
+        ],
+        'settingsParentZoneBody': [
+          fr.settingsParentZoneBody,
+          en.settingsParentZoneBody,
+        ],
+        'navCarte': [fr.navCarte, en.navCarte],
+        'navQuetes': [fr.navQuetes, en.navQuetes],
+      };
+
+      pairs.forEach((key, values) {
+        expect(values[0], isNotEmpty, reason: '$key has no French');
+        expect(values[1], isNotEmpty, reason: '$key has no English');
+      });
+    });
+
+    test('English is genuinely translated, not French echoed back', () {
+      expect(Strings.en.navCarte, isNot(Strings.fr.navCarte));
+      expect(Strings.en.settingsTitle, isNot(Strings.fr.settingsTitle));
+      expect(Strings.en.settingsSound, isNot(Strings.fr.settingsSound));
+    });
+
+    test('resolution is French-first: anything not English falls to French',
+        () {
+      expect(Strings.of(const Locale('fr', 'CA')).navCarte, 'Carte');
+      expect(Strings.of(const Locale('en', 'CA')).navCarte, 'Map');
+      expect(
+        Strings.of(const Locale('es')).navCarte,
+        'Carte',
+        reason: 'French is the default, never English',
+      );
     });
   });
 }
