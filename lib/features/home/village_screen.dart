@@ -42,15 +42,42 @@ class VillageScreen extends ConsumerWidget {
               exercisesToday: home.exercisesCompletedToday,
             ),
             const SizedBox(height: Space.md),
-            SizedBox(
-              height: 580,
-              child: VillageScene(
-                buildings: villageBuildings,
-                signTitle: '🍁 Village des Érables',
-                signSubtitle: kid?.gradeLevel == null
-                    ? ''
-                    : '${kid!.gradeLevel}e année',
-              ),
+            // `grid-template-columns: 1fr 300px` above the mobile
+            // breakpoint; the panel drops under the scene below it.
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final scene = SizedBox(
+                  height: 580,
+                  child: VillageScene(
+                    buildings: villageBuildings,
+                    signTitle: '🍁 Village des Érables',
+                    signSubtitle: kid?.gradeLevel == null
+                        ? ''
+                        : '${kid!.gradeLevel}e année',
+                    greeting: _greetingFor(kid?.displayName, progress),
+                  ),
+                );
+                final panel = _QuestPanel(progress: progress);
+
+                if (constraints.maxWidth < 760) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      scene,
+                      const SizedBox(height: Space.md),
+                      panel,
+                    ],
+                  );
+                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: scene),
+                    const SizedBox(width: Space.lg),
+                    SizedBox(width: 300, child: panel),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: Space.lg),
             const _RecommendBar(),
@@ -59,6 +86,15 @@ class VillageScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// What the fox says. Built from the real daily quest when there is one,
+/// so it is never a line of flavour text pretending to know something.
+String _greetingFor(String? name, ProgressState progress) {
+  final who = (name == null || name.isEmpty) ? '' : ' $name';
+  final quest = progress.dailyQuest;
+  if (quest == null) return 'Salut$who ! Prêt à jouer ? 🎯';
+  return 'Salut$who ! Ton défi du jour t\'attend 🎯';
 }
 
 class _Greeting extends StatelessWidget {
@@ -270,6 +306,164 @@ class _RecommendBar extends StatelessWidget {
                   color: Color(0xFF241A04),
                 ),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Quêtes du jour" — the design's right-hand panel.
+///
+/// The design mocks three quests. Exactly one real quest type exists (the
+/// daily challenge, `tutolys-backend` ADR 0019); teacher-assigned and
+/// bonus-review quests need school plumbing and are open item #11. So this
+/// renders the real one and says plainly that it is the only one, rather
+/// than padding the list to three.
+class _QuestPanel extends StatelessWidget {
+  const _QuestPanel({required this.progress});
+
+  final ProgressState progress;
+
+  @override
+  Widget build(BuildContext context) {
+    final quest = progress.dailyQuest;
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: VillageColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(
+            color: VillageColors.shadow,
+            blurRadius: 40,
+            offset: Offset(0, 16),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Image.asset('assets/images/asset-target.webp', width: 18),
+              const SizedBox(width: 7),
+              const Expanded(
+                child: Text(
+                  'Quêtes du jour',
+                  style: TextStyle(
+                    fontFamily: VillageType.display,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14.5,
+                    color: VillageColors.ink,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Space.sm),
+          if (quest == null)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: Space.sm),
+              child: Text(
+                'Aucune quête aujourd\'hui.',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: VillageColors.inkMuted,
+                ),
+              ),
+            )
+          else
+            _QuestRow(
+              // `DailyQuestDto` carries no title — the daily challenge is
+              // one fixed quest type ("N correct in a row, today", backend
+              // ADR 0019), so its name is derived rather than transported.
+              title: '${quest.target} bonnes réponses de suite',
+              done: quest.completed,
+              current: quest.progress,
+              target: quest.target,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuestRow extends StatelessWidget {
+  const _QuestRow({
+    required this.title,
+    required this.done,
+    required this.current,
+    required this.target,
+  });
+
+  final String title;
+  final bool done;
+  final int current;
+  final int target;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 11),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontFamily: VillageType.display,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12.5,
+                    height: 1.3,
+                    color: VillageColors.ink,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '$current/$target',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: VillageColors.inkMuted,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    value: target == 0 ? 0 : current / target,
+                    minHeight: 6,
+                    backgroundColor: VillageColors.track,
+                    valueColor: const AlwaysStoppedAnimation(
+                      VillageColors.quebecBlueBright,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 11),
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: done
+                  ? const Color(0xFF3DBE7A)
+                  : VillageColors.quebecBlueBright,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              done ? Icons.check : Icons.play_arrow,
+              size: 14,
+              color: Colors.white,
             ),
           ),
         ],

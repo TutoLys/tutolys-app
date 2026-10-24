@@ -131,6 +131,18 @@ source of truth this whole session used.
   never ends a lesson early, so a Duolingo-style heart counter would
   contradict the actual mechanic. The "almost" state uses amber + a
   target icon instead of red + an X.
+- **Dark theme is real, in `01-design-system-gallery.html` only.** Every
+  token above has a dark counterpart, switched via `@media
+  (prefers-color-scheme: dark)` as the fallback and `[data-theme="dark"]`
+  on `<html>` as the explicit, always-winning override — wired to the
+  real Clair/Sombre toggle in Réglages (desktop + mobile, kept in sync,
+  persisted via `localStorage`). A few bespoke non-token backgrounds
+  (Village's sky-to-grass gradient, the streak-modal gold hero gradient,
+  the logout button, `.path-card`'s translucency) got their own explicit
+  dark variant rather than an automatic inversion — grep `data-theme` in
+  that file to find all of them. **Not yet ported** to
+  `02-clickable-prototype.html` or `03-exercise-engines.html` — those two
+  are still light-only.
 - **Real brand asset**: the Arctic Fox mascot (`asset-mascot-welcome`,
   extracted to `assets/raw/asset-mascot-welcome.webp` below) is the one
   mascot pose embedded across all three files. The real `assets/icon/`

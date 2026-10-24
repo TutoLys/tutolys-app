@@ -28,6 +28,8 @@
     --success-pale: #DFF5E8;
     --retry: #F2994A;
     --retry-pale: #FFF1E0;
+    --blue-pale: var(--blue-pale);
+    --page-bg: #DCE9F7;
     --shadow: 0 16px 40px rgba(31, 60, 136, 0.12);
     --shadow-sm: 0 6px 16px rgba(31, 60, 136, 0.08);
     --radius-shell: 28px;
@@ -36,19 +38,72 @@
     --header-h: 92px;
   }
 
+  /* ---- Thème sombre ----
+     Système de préférence (prefers-color-scheme) comme valeur par défaut,
+     choix explicite (data-theme sur <html>, piloté par le bouton Clair/
+     Sombre de Réglages) qui gagne toujours sur la préférence système. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --sky-top: #0B1222;
+      --sky-bottom: #101B33;
+      --quebec-blue: #2A4A9E;
+      --quebec-blue-bright: #5B8FFF;
+      --gold: #E8C14F;
+      --gold-light: #FFC94D;
+      --gold-pale: #3D3115;
+      --ink: #E8EDF8;
+      --ink-muted: #96A5CB;
+      --surface: #182036;
+      --line: #2A3655;
+      --track: #243150;
+      --success: #3FCB83;
+      --success-pale: #163828;
+      --retry: #FFA75C;
+      --retry-pale: #3D2912;
+      --blue-pale: #1C2C52;
+      --page-bg: #0D1526;
+      --shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+      --shadow-sm: 0 6px 16px rgba(0, 0, 0, 0.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --sky-top: #0B1222;
+    --sky-bottom: #101B33;
+    --quebec-blue: #2A4A9E;
+    --quebec-blue-bright: #5B8FFF;
+    --gold: #E8C14F;
+    --gold-light: #FFC94D;
+    --gold-pale: #3D3115;
+    --ink: #E8EDF8;
+    --ink-muted: #96A5CB;
+    --surface: #182036;
+    --line: #2A3655;
+    --track: #243150;
+    --success: #3FCB83;
+    --success-pale: #163828;
+    --retry: #FFA75C;
+    --retry-pale: #3D2912;
+    --blue-pale: #1C2C52;
+    --page-bg: #0D1526;
+    --shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+    --shadow-sm: 0 6px 16px rgba(0, 0, 0, 0.35);
+  }
+
   * { box-sizing: border-box; }
   html, body { height: 100%; }
   body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background: #DCE9F7;
+    background: var(--page-bg);
     color: var(--ink);
     overflow-x: hidden;
   }
 
   .stage-banner {
     position: sticky; top: 0; z-index: 20;
-    background: var(--ink); color: #fff;
+    /* fixed dark regardless of theme — this is design-doc chrome (tooling), not app UI,
+       and must not flip to a light bg just because --ink flips light in dark mode */
+    background: #223047; color: #fff;
     font-size: 12.5px; font-weight: 600; letter-spacing: .02em;
     padding: 9px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px;
   }
@@ -127,10 +182,10 @@
     cursor: pointer; position: relative; user-select: none;
   }
   .nav-item svg { width: 22px; height: 22px; flex-shrink: 0; }
-  .nav-item:hover { background: #F4F8FF; }
+  .nav-item:hover { background: var(--blue-pale); }
   .nav-item:active { transform: scale(.98); }
   .nav-item.is-active {
-    background: #E8F0FF;
+    background: var(--blue-pale);
     color: var(--quebec-blue-bright);
     font-weight: 700;
   }
@@ -157,7 +212,7 @@
     color: var(--ink-muted); text-decoration: none; font-size: 12.5px; font-weight: 600;
   }
   .sidebar-footer a svg { width: 17px; height: 17px; flex-shrink: 0; }
-  .sidebar-footer a:hover { background: #F4F8FF; color: var(--quebec-blue); }
+  .sidebar-footer a:hover { background: var(--blue-pale); color: var(--quebec-blue); }
 
   /* header */
   .header {
@@ -215,7 +270,7 @@
   /* main content */
   .content {
     grid-column: 2;
-    background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-bottom) 72%, #F6FBFF 100%);
+    background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-bottom) 72%, var(--surface) 100%);
     border-top-left-radius: 32px;
     align-items: flex-start;
     display: block;
@@ -315,6 +370,20 @@
       linear-gradient(180deg, #CFE8FF 0%, #E4F3FF 38%, #DCEEDD 68%, #CFE6D2 100%);
     border: 1px solid rgba(255,255,255,.6);
   }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .village-scene {
+      background:
+        radial-gradient(ellipse 60% 40% at 50% 100%, rgba(255,255,255,.08), transparent 70%),
+        linear-gradient(180deg, #0B1530 0%, #122047 38%, #0F2A22 68%, #0B2018 100%);
+      border-color: rgba(255,255,255,.08);
+    }
+  }
+  :root[data-theme="dark"] .village-scene {
+    background:
+      radial-gradient(ellipse 60% 40% at 50% 100%, rgba(255,255,255,.08), transparent 70%),
+      linear-gradient(180deg, #0B1530 0%, #122047 38%, #0F2A22 68%, #0B2018 100%);
+    border-color: rgba(255,255,255,.08);
+  }
   .village-scene .scene-path {
     position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0;
   }
@@ -384,7 +453,7 @@
     transition: background .15s ease, color .15s ease;
   }
   .subject-tab .t-img { width: 30px; height: 30px; flex-shrink: 0; }
-  .subject-tab.is-active { background: #E8F0FF; color: var(--quebec-blue-bright); border-color: transparent; }
+  .subject-tab.is-active { background: var(--blue-pale); color: var(--quebec-blue-bright); border-color: transparent; }
 
   .carte-breadcrumb { margin-bottom: 18px; }
   .carte-breadcrumb .eyebrow {
@@ -396,6 +465,10 @@
     background: rgba(255,255,255,.4); border: 1px solid rgba(255,255,255,.6); border-radius: 24px;
     padding: 10px 10px 30px;
   }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .path-card { background: rgba(8,13,26,.35); border-color: rgba(255,255,255,.08); }
+  }
+  :root[data-theme="dark"] .path-card { background: rgba(8,13,26,.35); border-color: rgba(255,255,255,.08); }
   .path-wrap { position: relative; max-width: 380px; margin: 0 auto; padding-top: 16px; }
   .path-wrap svg.connectors { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; z-index: 0; }
   .path-node-row { position: relative; height: 104px; }
@@ -516,6 +589,10 @@
   /* ---- streak detail (expanded calendar view) ---- */
   .streak-modal { background: var(--surface); border-radius: 24px; overflow: hidden; box-shadow: var(--shadow); }
   .sm-hero { background: linear-gradient(180deg, var(--gold-pale), #FBEFC7); padding: 20px 20px 26px; position: relative; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .sm-hero { background: linear-gradient(180deg, var(--gold-pale), #241C0A); }
+  }
+  :root[data-theme="dark"] .sm-hero { background: linear-gradient(180deg, var(--gold-pale), #241C0A); }
   .sm-close {
     position: absolute; top: 14px; left: 14px; width: 32px; height: 32px; border-radius: 50%;
     background: rgba(255,255,255,.75); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer;
@@ -578,7 +655,7 @@
   .sm-reward-tag { font-size: 9.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
   .sm-reward-tag.ok { color: #2E9E5B; }
   .sm-reward-tag.pending b { color: var(--quebec-blue-bright); }
-  .sm-reward-tag.active { background: #DFF3E6; color: #2E9E5B; padding: 3px 9px; border-radius: 999px; display: inline-block; }
+  .sm-reward-tag.active { background: var(--success-pale); color: #2E9E5B; padding: 3px 9px; border-radius: 999px; display: inline-block; }
 
   .streak-backdrop {
     position: relative; display: flex; align-items: center; justify-content: center;
@@ -658,7 +735,7 @@
   .setting-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
   .setting-row:last-child { border-bottom: none; }
   .setting-row .sr-icon {
-    width: 36px; height: 36px; border-radius: 10px; background: #EEF4FF; display: flex;
+    width: 36px; height: 36px; border-radius: 10px; background: var(--blue-pale); display: flex;
     align-items: center; justify-content: center; flex-shrink: 0; color: var(--quebec-blue-bright);
   }
   .setting-row .sr-icon svg { width: 18px; height: 18px; }
@@ -715,7 +792,7 @@
 
   .link-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); text-decoration: none; cursor: pointer; }
   .link-row:last-child { border-bottom: none; }
-  .link-row .sr-icon { width: 36px; height: 36px; border-radius: 10px; background: #EEF4FF; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--quebec-blue-bright); }
+  .link-row .sr-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--blue-pale); display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--quebec-blue-bright); }
   .link-row .sr-icon svg { width: 18px; height: 18px; }
   .link-row .sr-title { font-weight: 700; font-size: 12.5px; color: var(--ink); flex: 1; }
   .link-row .sr-chev { width: 16px; height: 16px; color: var(--ink-muted); flex-shrink: 0; }
@@ -725,6 +802,10 @@
     background: #FFF3F3; color: #D64545; font-family: var(--font-display); font-weight: 700; font-size: 13px;
     cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
   }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .logout-btn { border-color: #5C2A2A; background: #2E1616; color: #FF8080; }
+  }
+  :root[data-theme="dark"] .logout-btn { border-color: #5C2A2A; background: #2E1616; color: #FF8080; }
   .logout-btn svg { width: 17px; height: 17px; }
   .app-version { text-align: center; font-size: 11px; color: var(--ink-muted); margin-top: 6px; }
 
@@ -739,7 +820,7 @@
     text-transform: uppercase; letter-spacing: .02em; white-space: nowrap;
   }
   .status-pill.mastered { background: var(--gold-pale); color: #8A6A1B; }
-  .status-pill.learning { background: #E8F0FF; color: var(--quebec-blue-bright); }
+  .status-pill.learning { background: var(--blue-pale); color: var(--quebec-blue-bright); }
   .status-pill.new { background: var(--track); color: var(--ink-muted); }
 
   .progress-summary { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
@@ -815,7 +896,7 @@
   .exo-listen-btn:hover { background: var(--quebec-blue); }
   .exo-engine-tag {
     display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
-    color: var(--quebec-blue-bright); background: #E8F0FF; padding: 3px 10px; border-radius: 999px; margin-bottom: 12px;
+    color: var(--quebec-blue-bright); background: var(--blue-pale); padding: 3px 10px; border-radius: 999px; margin-bottom: 12px;
   }
   .exo-character-row { display: flex; align-items: center; gap: 14px; margin-bottom: 26px; }
   .exo-character-row .mascot-real { height: 76px; }
@@ -828,7 +909,7 @@
     cursor: pointer; transition: border-color .12s ease, background .12s ease; position: relative;
   }
   .exo-option:hover { border-color: var(--quebec-blue-bright); }
-  .exo-option.is-picked { border-color: var(--quebec-blue-bright); background: #F3F7FF; }
+  .exo-option.is-picked { border-color: var(--quebec-blue-bright); background: var(--blue-pale); }
   .exo-option.is-retry-pick { border-color: var(--retry); background: var(--retry-pale); color: #9A4A0C; }
 
   .exo-answer-line {
@@ -962,7 +1043,7 @@
   .phone-header .pill-label, .phone-header .xp-track { display: none; }
   .phone-content {
     position: absolute; top: 72px; bottom: 78px; left: 0; right: 0;
-    background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-bottom) 72%, #F6FBFF 100%);
+    background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-bottom) 72%, var(--surface) 100%);
     padding: 16px; overflow-y: auto; box-sizing: border-box;
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -1025,7 +1106,7 @@
   .tab-item.is-active { color: var(--quebec-blue-bright); }
   .tab-pill {
     position: absolute; top: -7px; left: 50%; transform: translateX(-50%);
-    width: 34px; height: 32px; background: #E8F0FF; border-radius: 13px; z-index: 0;
+    width: 34px; height: 32px; background: var(--blue-pale); border-radius: 13px; z-index: 0;
   }
   .tab-item svg, .tab-item span { position: relative; z-index: 1; }
   .tab-item .nav-badge { position: absolute; top: -6px; right: 4px; margin: 0; z-index: 2; }
@@ -1050,6 +1131,11 @@
     max-width: 1360px; width: 100%; font-size: 13px; color: var(--ink-muted); line-height: 1.6;
     padding: 0 4px;
   }
+  .note-warning { border: 1.5px solid #EF4444; background: #FFF5F5; padding: 10px 14px; border-radius: 10px; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .note-warning { background: #2E1616; border-color: #B33A3A; }
+  }
+  :root[data-theme="dark"] .note-warning { background: #2E1616; border-color: #B33A3A; }
   .note strong { color: var(--ink); }
 
   .log {
@@ -2349,9 +2435,9 @@
               <span class="sr-icon"><svg viewBox="0 0 24 24"><use href="#i-sun"/></svg></span>
               <div class="sr-meta"><div class="sr-title">Thème</div><div class="sr-sub">Clair ou sombre</div></div>
               <div class="sr-control">
-                <div class="seg-toggle">
-                  <button class="is-active"><svg viewBox="0 0 24 24"><use href="#i-sun"/></svg>Clair</button>
-                  <button><svg viewBox="0 0 24 24"><use href="#i-moon"/></svg>Sombre</button>
+                <div class="seg-toggle js-theme-toggle">
+                  <button class="is-active" data-theme-choice="light"><svg viewBox="0 0 24 24"><use href="#i-sun"/></svg>Clair</button>
+                  <button data-theme-choice="dark"><svg viewBox="0 0 24 24"><use href="#i-moon"/></svg>Sombre</button>
                 </div>
               </div>
             </div>
@@ -2472,9 +2558,9 @@
             <div class="setting-row">
               <div class="sr-meta"><div class="sr-title">Thème</div></div>
               <div class="sr-control">
-                <div class="seg-toggle">
-                  <button class="is-active"><svg viewBox="0 0 24 24"><use href="#i-sun"/></svg></button>
-                  <button><svg viewBox="0 0 24 24"><use href="#i-moon"/></svg></button>
+                <div class="seg-toggle js-theme-toggle">
+                  <button class="is-active" data-theme-choice="light"><svg viewBox="0 0 24 24"><use href="#i-sun"/></svg></button>
+                  <button data-theme-choice="dark"><svg viewBox="0 0 24 24"><use href="#i-moon"/></svg></button>
                 </div>
               </div>
             </div>
@@ -3257,7 +3343,7 @@
       nav.
     </p>
 
-    <p class="note" style="border: 1.5px solid #EF4444; background: #FFF5F5;">
+    <p class="note note-warning">
       <strong>⚠ Correctif majeur, tout le document :</strong> en construisant Réglages, j'ai remarqué que les interrupteurs
       "off" étaient transparents au lieu d'être gris. En creusant : <code>--track</code> et <code>--gold-pale</code>
       n'avaient <strong>jamais été déclarés dans <code>:root</code></strong>, alors qu'ils étaient utilisés à 14 endroits
@@ -3341,6 +3427,24 @@
       contenu (clips audio par item curriculaire vs. moteur TTS générique).
     </p>
 
+    <p class="note">
+      <strong>Thème sombre, pour de vrai :</strong> demandé dans le tout premier brief ("Light and dark"), resté un
+      interrupteur purement cosmétique dans Réglages pendant toute la session jusqu'ici. Tous les jetons de couleur
+      (<code>--surface</code>, <code>--ink</code>, <code>--line</code>, <code>--track</code>, les variantes "pâles"
+      gold/success/retry/blue, les ombres) ont maintenant une vraie valeur sombre, via <code>@media
+      (prefers-color-scheme: dark)</code> en secours et <code>[data-theme]</code> sur <code>&lt;html&gt;</code> en
+      choix explicite qui gagne toujours — piloté par le même bouton Clair/Sombre de Réglages (desktop + mobile),
+      synchronisés entre eux, persistés via <code>localStorage</code>. Le dégradé nuit de la scène Village, le
+      dégradé or du header "Série", et les quelques couleurs codées en dur restantes (bouton Déconnexion,
+      <code>.path-card</code>) ont chacun leur propre variante sombre plutôt qu'une inversion automatique.
+      <strong>Bug trouvé en vérifiant :</strong> <code>.stage-banner</code> utilisait <code>var(--ink)</code> comme
+      couleur de fond — correct tant que <code>--ink</code> est toujours sombre, cassé dès que le thème sombre
+      l'inverse en clair. Corrigé avec une couleur fixe, puisque ce bandeau est un outil de la maquette elle-même,
+      pas une vraie partie de l'appli. <strong>Pas verifié ici :</strong> ce thème sombre n'a été porté que dans ce
+      fichier (galerie) — le prototype cliquable et les moteurs d'exercice (fichiers 02 et 03) n'ont pas encore
+      leurs jetons sombres.
+    </p>
+
     <div class="log">
       <span class="log-label">Journal des décisions</span>
       <div class="log-row"><span class="dot locked"></span>Étape 1 — Cadre extérieur <em>verrouillé</em></div>
@@ -3355,6 +3459,7 @@
       <div class="log-row"><span class="dot draft"></span>Progrès (bureau + mobile) <em>brouillon — tablette à venir</em></div>
       <div class="log-row"><span class="dot draft"></span>Aide &amp; support (bureau + mobile) <em>brouillon — tablette à venir</em></div>
       <div class="log-row"><span class="dot draft"></span>Étape 10 — Moteur d'exercice, habillage partagé (bureau + mobile) <em>brouillon — sans cœurs/vies (décision Hafid) — pair_match/speed_tap à démontrer</em></div>
+      <div class="log-row"><span class="dot locked"></span>Thème sombre (tous les jetons, ce fichier) <em>verrouillé — pas encore porté aux fichiers 02/03</em></div>
     </div>
   </div>
 
@@ -3401,6 +3506,32 @@
           q.closest('.faq-item').classList.toggle('open');
         });
       });
+
+      // ---- thème clair/sombre ----
+      (function () {
+        var STORAGE_KEY = 'tutolys-theme';
+        var root = document.documentElement;
+        function applyTheme(theme) {
+          root.setAttribute('data-theme', theme);
+          document.querySelectorAll('.js-theme-toggle button').forEach(function (btn) {
+            btn.classList.toggle('is-active', btn.getAttribute('data-theme-choice') === theme);
+          });
+        }
+        var saved = null;
+        try { saved = localStorage.getItem(STORAGE_KEY); } catch (e) {}
+        if (saved !== 'dark' && saved !== 'light') {
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          saved = prefersDark ? 'dark' : 'light';
+        }
+        applyTheme(saved);
+        document.querySelectorAll('.js-theme-toggle button').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var choice = btn.getAttribute('data-theme-choice');
+            applyTheme(choice);
+            try { localStorage.setItem(STORAGE_KEY, choice); } catch (e) {}
+          });
+        });
+      })();
     })();
   </script>
 </body>

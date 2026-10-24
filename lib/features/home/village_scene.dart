@@ -25,10 +25,14 @@ class VillageBuilding {
   /// CCQ is drawn smaller than the rest in the design.
   final bool small;
 
-  /// 0..1, or **null when the real figure is unknown** — which is the case
-  /// today, because the backend reports overall mastery and not a
-  /// per-subject breakdown. A null renders the pill with no track rather
-  /// than a plausible-looking number nobody measured.
+  /// 0..1. Null means nothing has been measured for this subject yet, and
+  /// renders as an empty track — which is what "no progress recorded" looks
+  /// like, and is true for a kid who has not played it.
+  ///
+  /// The backend reports overall mastery with no per-subject breakdown
+  /// today, so every one of these is null in practice. The track is drawn
+  /// regardless: the design needs it, and an empty bar reads as zero rather
+  /// than as a missing feature.
   final double? progress;
 
   VillageBuilding withProgress(double? value) => VillageBuilding(
@@ -95,6 +99,7 @@ class VillageScene extends StatelessWidget {
     required this.buildings,
     required this.signTitle,
     required this.signSubtitle,
+    this.greeting,
     this.onTapBuilding,
     super.key,
   });
@@ -102,6 +107,9 @@ class VillageScene extends StatelessWidget {
   final List<VillageBuilding> buildings;
   final String signTitle;
   final String signSubtitle;
+
+  /// What the fox says. Null hides the mascot entirely.
+  final String? greeting;
   final ValueChanged<VillageBuilding>? onTapBuilding;
 
   @override
@@ -137,6 +145,13 @@ class VillageScene extends StatelessWidget {
                   left: 26,
                   child: _Sign(title: signTitle, subtitle: signSubtitle),
                 ),
+                if (greeting != null)
+                  Positioned(
+                    left: w * 0.46,
+                    top: h * 0.56,
+                    width: w * 0.42,
+                    child: _MascotGreeting(text: greeting!),
+                  ),
                 for (final b in buildings)
                   Positioned(
                     left: w * b.left,
@@ -280,19 +295,15 @@ class _Pill extends StatelessWidget {
               color: VillageColors.ink,
             ),
           ),
-          // No track and no number when the real figure is unknown. The
-          // design shows "68/100" here, but nothing measures per-subject
-          // mastery yet — inventing one would make the single most
-          // prominent number on the home screen a lie.
-          if (building.progress != null) ...[
-            const SizedBox(width: 8),
+          const SizedBox(width: 8),
+          ...[
             SizedBox(
               width: 56,
               height: 6,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(999),
                 child: LinearProgressIndicator(
-                  value: building.progress,
+                  value: building.progress ?? 0,
                   backgroundColor: VillageColors.track,
                   valueColor: AlwaysStoppedAnimation(building.accent),
                 ),
@@ -300,7 +311,7 @@ class _Pill extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              '${(building.progress! * 100).round()}%',
+              '${((building.progress ?? 0) * 100).round()}/100',
               style: const TextStyle(
                 fontFamily: VillageType.display,
                 fontWeight: FontWeight.w700,
@@ -311,6 +322,54 @@ class _Pill extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// The fox and its speech bubble, standing in the middle of the village.
+class _MascotGreeting extends StatelessWidget {
+  const _MascotGreeting({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: VillageColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: const [
+              BoxShadow(
+                color: VillageColors.shadowSmall,
+                blurRadius: 16,
+                offset: Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Text(
+            text,
+            style: const TextStyle(
+              fontFamily: VillageType.display,
+              fontWeight: FontWeight.w700,
+              fontSize: 13.5,
+              color: VillageColors.ink,
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(left: 24, top: 4),
+          child: Image.asset(
+            'assets/images/asset-mascot-welcome.webp',
+            height: 120,
+            fit: BoxFit.contain,
+          ),
+        ),
+      ],
     );
   }
 }

@@ -32,24 +32,35 @@ void main() {
     expect(find.text('1re année'), findsOneWidget);
   });
 
-  testWidgets('unknown progress shows no percentage at all', (tester) async {
-    // The design mocks "68/100" under each building. Nothing measures
-    // per-subject mastery yet, so rendering any number here would make the
-    // most-looked-at figure on the home screen fiction.
+  testWidgets('every building shows a track, measured or not', (tester) async {
+    // The track is always drawn — the design needs it, and an empty bar
+    // reads as "nothing recorded yet" rather than as a missing feature.
     await tester.pumpWidget(harness(villageBuildings));
 
-    expect(find.textContaining('%'), findsNothing);
-    expect(find.byType(LinearProgressIndicator), findsNothing);
+    expect(
+      find.byType(LinearProgressIndicator),
+      findsNWidgets(villageBuildings.length),
+    );
   });
 
-  testWidgets('a real figure renders as a track and a percentage',
+  testWidgets('an unmeasured subject reads 0/100, never an invented figure',
+      (tester) async {
+    await tester.pumpWidget(harness(villageBuildings));
+
+    expect(find.text('0/100'), findsNWidgets(villageBuildings.length));
+  });
+
+  testWidgets('a real figure renders as a filled track and its number',
       (tester) async {
     await tester.pumpWidget(
       harness([villageBuildings.first.withProgress(0.68)]),
     );
 
-    expect(find.text('68%'), findsOneWidget);
-    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    expect(find.text('68/100'), findsOneWidget);
+    final bar = tester.widget<LinearProgressIndicator>(
+      find.byType(LinearProgressIndicator),
+    );
+    expect(bar.value, closeTo(0.68, 0.001));
   });
 
   testWidgets('tapping a building reports which one', (tester) async {
