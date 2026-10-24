@@ -11,7 +11,7 @@ import 'data/local_db/session_store.dart';
 import 'data/sync/outbox_flusher_provider.dart' show telemetryBaseUrl;
 import 'features/pairing/pairing_controller.dart';
 
-Future<void> main() async {
+void main() {
   // Before anything else: a release build still pointed at localhost must
   // crash loudly here, not silently ship broken to a real user.
   assertReleaseConfigIsReal(
@@ -26,14 +26,16 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Whose rows are already on disk. Needed only by the 3 -> 4 migration
-  // (ADR 0014), which has to give pre-v4 rows an owner — and which runs on
-  // the database's first query, i.e. as soon as the first screen builds.
-  // Reading it here, before the database is opened, is what keeps an
-  // existing kid's streak and queued events from being discarded on
-  // upgrade. It lives in the platform secure store, so it cannot be read
-  // from inside the migration itself.
-  final pairedKid = await SessionStore().pairedKid();
-  final db = openLocalDatabase(migrationKidId: pairedKid?.id);
+  // (ADR 0014), which has to give pre-v4 rows an owner.
+  //
+  // Passed as a callback, never awaited here: blocking `runApp` on the
+  // platform secure store would hold the app on its splash screen if that
+  // read were ever slow, with nothing on screen to say why. drift opens
+  // lazily and runs the migration on the first query, so the read happens
+  // there instead — and only on the one boot that actually upgrades.
+  final db = openLocalDatabase(
+    migrationKidId: () async => (await SessionStore().pairedKid())?.id,
+  );
 
   runApp(
     ProviderScope(

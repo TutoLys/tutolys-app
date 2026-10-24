@@ -236,6 +236,8 @@ class LocalDatabase extends _$LocalDatabase {
   /// In-memory instance for tests.
   LocalDatabase.memory({this.migrationKidId}) : super(memoryExecutor());
 
+  /// Resolves the owner lazily, when the migration actually needs it.
+
   /// The kid whose data is already on disk, for the 3 → 4 upgrade.
   ///
   /// Before v4 a device meant exactly one kid, so every existing row is
@@ -248,7 +250,20 @@ class LocalDatabase extends _$LocalDatabase {
   /// Null means the device was never paired — there is nothing worth
   /// keeping, and the pre-v4 rows are dropped instead of being backfilled
   /// to an owner that does not exist.
+  ///
+  /// Prefer [migrationKidIdLoader] in the running app: resolving this value
+  /// eagerly would mean awaiting the platform secure store *before*
+  /// `runApp`, so a slow or stalled read would hold the app on its splash
+  /// screen with nothing on screen to explain why. The migration is already
+  /// async, so it can just as well await the value itself — and only on the
+  /// one boot that actually upgrades.
   final String? migrationKidId;
+
+  /// Async form of [migrationKidId], awaited inside the migration.
+  ///
+  /// Set by `openLocalDatabase`; tests use [migrationKidId] directly. When
+  /// both are set this one wins.
+  Future<String?> Function()? migrationKidIdLoader;
 
   @override
   int get schemaVersion => 4;
@@ -300,7 +315,9 @@ class LocalDatabase extends _$LocalDatabase {
   /// their primary key, so SQLite has to rebuild them — `alterTable` does
   /// that. `event_outbox` only gains a plain column.
   Future<void> _addKidScope(Migrator m) async {
-    final owner = migrationKidId;
+    final owner = migrationKidIdLoader != null
+        ? await migrationKidIdLoader!()
+        : migrationKidId;
 
     if (owner == null) {
       // Never paired: the rows belong to nobody. Backfilling them to an
@@ -375,11 +392,16 @@ class LocalDatabase extends _$LocalDatabase {
 /// drift 2.35.2, the version in `pubspec.yaml`) are what the web backend
 /// actually loads.
 ///
-/// [migrationKidId] is the kid already paired on this device, needed only by
-/// the 3 → 4 upgrade — see [LocalDatabase.migrationKidId]. Passing null when
-/// a kid *is* paired silently discards their local streak and queued events,
-/// so `main` reads it from `SessionStore` before calling this.
-LocalDatabase openLocalDatabase({String? migrationKidId}) {
+/// [migrationKidId] resolves the kid already paired on this device, needed
+/// only by the 3 → 4 upgrade — see [LocalDatabase.migrationKidId]. It is a
+/// callback rather than a value so that boot never waits on the platform
+/// secure store: drift opens lazily and runs the migration on the first
+/// query, so the read happens there, off the path to `runApp`.
+///
+/// Resolving to null when a kid *is* paired silently discards their local
+/// streak and queued events, so the callback must read `SessionStore`, not
+/// guess.
+LocalDatabase openLocalDatabase({Future<String?> Function()? migrationKidId}) {
   return LocalDatabase(
     driftDatabase(
       name: 'tutolys',
@@ -388,6 +410,5 @@ LocalDatabase openLocalDatabase({String? migrationKidId}) {
         driftWorker: Uri.parse('drift_worker.js'),
       ),
     ),
-    migrationKidId: migrationKidId,
-  );
+  )..migrationKidIdLoader = migrationKidId;
 }

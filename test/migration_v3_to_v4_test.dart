@@ -145,6 +145,52 @@ void main() {
     });
   });
 
+  group('the lazy owner loader (the path production actually uses)', () {
+    test('the owner is resolved from the callback, during the migration',
+        () async {
+      var called = 0;
+      final schema = await verifier.schemaAt(3);
+
+      final oldDb = v3.DatabaseAtV3(schema.newConnection());
+      await seedV3(oldDb);
+      await oldDb.close();
+
+      final db = LocalDatabase(schema.newConnection())
+        ..migrationKidIdLoader = () async {
+          called++;
+          return lea;
+        };
+
+      expect(
+        called,
+        0,
+        reason: 'constructing the database must not read the secure store',
+      );
+
+      await verifier.migrateAndValidate(db, 4);
+      addTearDown(db.close);
+
+      expect(called, 1);
+      final rows = await db.select(db.playedDateTable).get();
+      expect(rows.every((r) => r.kidId == lea), isTrue);
+    });
+
+    test('a loader returning null drops rows, same as the eager form',
+        () async {
+      final schema = await verifier.schemaAt(3);
+      final oldDb = v3.DatabaseAtV3(schema.newConnection());
+      await seedV3(oldDb);
+      await oldDb.close();
+
+      final db = LocalDatabase(schema.newConnection())
+        ..migrationKidIdLoader = () async => null;
+      await verifier.migrateAndValidate(db, 4);
+      addTearDown(db.close);
+
+      expect(await db.select(db.playedDateTable).get(), isEmpty);
+    });
+  });
+
   group('a device that was never paired', () {
     test('pre-v4 rows are dropped rather than given a stranger an owner',
         () async {
