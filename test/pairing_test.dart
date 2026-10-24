@@ -598,7 +598,7 @@ void main() {
       'with no manual intervention',
       (tester) async {
         final db = LocalDatabase.memory();
-        final outbox = DriftEventOutbox(db);
+        final outbox = DriftEventOutbox(db, kidId: 'kid-1');
         final server = _RecordingTelemetryServer();
 
         final container = ProviderContainer(

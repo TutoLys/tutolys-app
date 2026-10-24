@@ -78,7 +78,7 @@ void main() {
   setUp(() {
     now = DateTime.utc(2026, 10, 16, 12);
     db = LocalDatabase.memory();
-    outbox = DriftEventOutbox(db, clock: () => now);
+    outbox = DriftEventOutbox(db, kidId: 'kid-1', clock: () => now);
     server = FakeTelemetryServer();
     flusher = OutboxFlusher(
       outbox: outbox,
@@ -285,7 +285,7 @@ void main() {
 
       for (var device = 0; device < 30; device++) {
         final deviceDb = LocalDatabase.memory();
-        final deviceOutbox = DriftEventOutbox(deviceDb, clock: () => now);
+        final deviceOutbox = DriftEventOutbox(deviceDb, kidId: 'kid-1', clock: () => now);
         final deviceFlusher = OutboxFlusher(
           outbox: deviceOutbox,
           api: FakeTelemetryServer()..offline = true,

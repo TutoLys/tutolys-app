@@ -65,8 +65,11 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     // abandoned run taught nothing worth counting as "played today".
     if (result.outcome == ExerciseOutcome.completed) {
       final db = ref.read(localDatabaseProvider);
-      HomeStats(db).recordExerciseCompleted(elapsedMs: result.elapsedMs);
-      StreakLocal(db).recordPlayedToday();
+      final kidId = ref.read(activeKidIdProvider) ?? unpairedKidId;
+      HomeStats(db, kidId: kidId).recordExerciseCompleted(
+        elapsedMs: result.elapsedMs,
+      );
+      StreakLocal(db, kidId: kidId).recordPlayedToday();
 
       // A client-side estimate, shown immediately — `manage.py award_xp`
       // hasn't run yet at this instant, so there's no real total to show

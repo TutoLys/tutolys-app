@@ -20,6 +20,15 @@ class $EventOutboxTableTable extends EventOutboxTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _kidIdMeta = const VerificationMeta('kidId');
+  @override
+  late final GeneratedColumn<String> kidId = GeneratedColumn<String>(
+    'kid_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _payloadMeta = const VerificationMeta(
     'payload',
   );
@@ -90,6 +99,7 @@ class $EventOutboxTableTable extends EventOutboxTable
   @override
   List<GeneratedColumn> get $columns => [
     eventId,
+    kidId,
     payload,
     queuedAt,
     attempts,
@@ -116,6 +126,14 @@ class $EventOutboxTableTable extends EventOutboxTable
       );
     } else if (isInserting) {
       context.missing(_eventIdMeta);
+    }
+    if (data.containsKey('kid_id')) {
+      context.handle(
+        _kidIdMeta,
+        kidId.isAcceptableOrUnknown(data['kid_id']!, _kidIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kidIdMeta);
     }
     if (data.containsKey('payload')) {
       context.handle(
@@ -176,6 +194,10 @@ class $EventOutboxTableTable extends EventOutboxTable
         DriftSqlType.string,
         data['${effectivePrefix}event_id'],
       )!,
+      kidId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kid_id'],
+      )!,
       payload: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}payload'],
@@ -214,6 +236,15 @@ class OutboxEvent extends DataClass implements Insertable<OutboxEvent> {
   /// key here too, so an in-app retry cannot enqueue the same event twice.
   final String eventId;
 
+  /// Which kid played this. The flusher uploads each event with *that kid's*
+  /// device token, so without this column an event queued by one child on a
+  /// shared tablet could be uploaded as another — silently corrupting the
+  /// per-kid mastery data the whole product exists to produce (ADR 0014).
+  ///
+  /// Not part of the primary key: `event_id` is a UUID and the server's own
+  /// idempotency key, so it is already globally unique on its own.
+  final String kidId;
+
   /// The full event as JSON. Stored opaquely on purpose: the outbox must not
   /// need to understand the schema it carries, so a schema bump needs no
   /// migration here.
@@ -238,6 +269,7 @@ class OutboxEvent extends DataClass implements Insertable<OutboxEvent> {
   final String? lastError;
   const OutboxEvent({
     required this.eventId,
+    required this.kidId,
     required this.payload,
     required this.queuedAt,
     required this.attempts,
@@ -249,6 +281,7 @@ class OutboxEvent extends DataClass implements Insertable<OutboxEvent> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['event_id'] = Variable<String>(eventId);
+    map['kid_id'] = Variable<String>(kidId);
     map['payload'] = Variable<String>(payload);
     map['queued_at'] = Variable<DateTime>(queuedAt);
     map['attempts'] = Variable<int>(attempts);
@@ -267,6 +300,7 @@ class OutboxEvent extends DataClass implements Insertable<OutboxEvent> {
   EventOutboxTableCompanion toCompanion(bool nullToAbsent) {
     return EventOutboxTableCompanion(
       eventId: Value(eventId),
+      kidId: Value(kidId),
       payload: Value(payload),
       queuedAt: Value(queuedAt),
       attempts: Value(attempts),
@@ -289,6 +323,7 @@ class OutboxEvent extends DataClass implements Insertable<OutboxEvent> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return OutboxEvent(
       eventId: serializer.fromJson<String>(json['eventId']),
+      kidId: serializer.fromJson<String>(json['kidId']),
       payload: serializer.fromJson<String>(json['payload']),
       queuedAt: serializer.fromJson<DateTime>(json['queuedAt']),
       attempts: serializer.fromJson<int>(json['attempts']),
@@ -302,6 +337,7 @@ class OutboxEvent extends DataClass implements Insertable<OutboxEvent> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'eventId': serializer.toJson<String>(eventId),
+      'kidId': serializer.toJson<String>(kidId),
       'payload': serializer.toJson<String>(payload),
       'queuedAt': serializer.toJson<DateTime>(queuedAt),
       'attempts': serializer.toJson<int>(attempts),
@@ -313,6 +349,7 @@ class OutboxEvent extends DataClass implements Insertable<OutboxEvent> {
 
   OutboxEvent copyWith({
     String? eventId,
+    String? kidId,
     String? payload,
     DateTime? queuedAt,
     int? attempts,
@@ -321,6 +358,7 @@ class OutboxEvent extends DataClass implements Insertable<OutboxEvent> {
     Value<String?> lastError = const Value.absent(),
   }) => OutboxEvent(
     eventId: eventId ?? this.eventId,
+    kidId: kidId ?? this.kidId,
     payload: payload ?? this.payload,
     queuedAt: queuedAt ?? this.queuedAt,
     attempts: attempts ?? this.attempts,
@@ -331,6 +369,7 @@ class OutboxEvent extends DataClass implements Insertable<OutboxEvent> {
   OutboxEvent copyWithCompanion(EventOutboxTableCompanion data) {
     return OutboxEvent(
       eventId: data.eventId.present ? data.eventId.value : this.eventId,
+      kidId: data.kidId.present ? data.kidId.value : this.kidId,
       payload: data.payload.present ? data.payload.value : this.payload,
       queuedAt: data.queuedAt.present ? data.queuedAt.value : this.queuedAt,
       attempts: data.attempts.present ? data.attempts.value : this.attempts,
@@ -348,6 +387,7 @@ class OutboxEvent extends DataClass implements Insertable<OutboxEvent> {
   String toString() {
     return (StringBuffer('OutboxEvent(')
           ..write('eventId: $eventId, ')
+          ..write('kidId: $kidId, ')
           ..write('payload: $payload, ')
           ..write('queuedAt: $queuedAt, ')
           ..write('attempts: $attempts, ')
@@ -361,6 +401,7 @@ class OutboxEvent extends DataClass implements Insertable<OutboxEvent> {
   @override
   int get hashCode => Object.hash(
     eventId,
+    kidId,
     payload,
     queuedAt,
     attempts,
@@ -373,6 +414,7 @@ class OutboxEvent extends DataClass implements Insertable<OutboxEvent> {
       identical(this, other) ||
       (other is OutboxEvent &&
           other.eventId == this.eventId &&
+          other.kidId == this.kidId &&
           other.payload == this.payload &&
           other.queuedAt == this.queuedAt &&
           other.attempts == this.attempts &&
@@ -383,6 +425,7 @@ class OutboxEvent extends DataClass implements Insertable<OutboxEvent> {
 
 class EventOutboxTableCompanion extends UpdateCompanion<OutboxEvent> {
   final Value<String> eventId;
+  final Value<String> kidId;
   final Value<String> payload;
   final Value<DateTime> queuedAt;
   final Value<int> attempts;
@@ -392,6 +435,7 @@ class EventOutboxTableCompanion extends UpdateCompanion<OutboxEvent> {
   final Value<int> rowid;
   const EventOutboxTableCompanion({
     this.eventId = const Value.absent(),
+    this.kidId = const Value.absent(),
     this.payload = const Value.absent(),
     this.queuedAt = const Value.absent(),
     this.attempts = const Value.absent(),
@@ -402,6 +446,7 @@ class EventOutboxTableCompanion extends UpdateCompanion<OutboxEvent> {
   });
   EventOutboxTableCompanion.insert({
     required String eventId,
+    required String kidId,
     required String payload,
     required DateTime queuedAt,
     this.attempts = const Value.absent(),
@@ -410,10 +455,12 @@ class EventOutboxTableCompanion extends UpdateCompanion<OutboxEvent> {
     this.lastError = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : eventId = Value(eventId),
+       kidId = Value(kidId),
        payload = Value(payload),
        queuedAt = Value(queuedAt);
   static Insertable<OutboxEvent> custom({
     Expression<String>? eventId,
+    Expression<String>? kidId,
     Expression<String>? payload,
     Expression<DateTime>? queuedAt,
     Expression<int>? attempts,
@@ -424,6 +471,7 @@ class EventOutboxTableCompanion extends UpdateCompanion<OutboxEvent> {
   }) {
     return RawValuesInsertable({
       if (eventId != null) 'event_id': eventId,
+      if (kidId != null) 'kid_id': kidId,
       if (payload != null) 'payload': payload,
       if (queuedAt != null) 'queued_at': queuedAt,
       if (attempts != null) 'attempts': attempts,
@@ -436,6 +484,7 @@ class EventOutboxTableCompanion extends UpdateCompanion<OutboxEvent> {
 
   EventOutboxTableCompanion copyWith({
     Value<String>? eventId,
+    Value<String>? kidId,
     Value<String>? payload,
     Value<DateTime>? queuedAt,
     Value<int>? attempts,
@@ -446,6 +495,7 @@ class EventOutboxTableCompanion extends UpdateCompanion<OutboxEvent> {
   }) {
     return EventOutboxTableCompanion(
       eventId: eventId ?? this.eventId,
+      kidId: kidId ?? this.kidId,
       payload: payload ?? this.payload,
       queuedAt: queuedAt ?? this.queuedAt,
       attempts: attempts ?? this.attempts,
@@ -461,6 +511,9 @@ class EventOutboxTableCompanion extends UpdateCompanion<OutboxEvent> {
     final map = <String, Expression>{};
     if (eventId.present) {
       map['event_id'] = Variable<String>(eventId.value);
+    }
+    if (kidId.present) {
+      map['kid_id'] = Variable<String>(kidId.value);
     }
     if (payload.present) {
       map['payload'] = Variable<String>(payload.value);
@@ -490,6 +543,7 @@ class EventOutboxTableCompanion extends UpdateCompanion<OutboxEvent> {
   String toString() {
     return (StringBuffer('EventOutboxTableCompanion(')
           ..write('eventId: $eventId, ')
+          ..write('kidId: $kidId, ')
           ..write('payload: $payload, ')
           ..write('queuedAt: $queuedAt, ')
           ..write('attempts: $attempts, ')
@@ -1542,6 +1596,15 @@ class $EngineSettingsTableTable extends EngineSettingsTable
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $EngineSettingsTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _kidIdMeta = const VerificationMeta('kidId');
+  @override
+  late final GeneratedColumn<String> kidId = GeneratedColumn<String>(
+    'kid_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _engineKeyMeta = const VerificationMeta(
     'engineKey',
   );
@@ -1574,7 +1637,7 @@ class $EngineSettingsTableTable extends EngineSettingsTable
     requiredDuringInsert: true,
   );
   @override
-  List<GeneratedColumn> get $columns => [engineKey, settingKey, value];
+  List<GeneratedColumn> get $columns => [kidId, engineKey, settingKey, value];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1587,6 +1650,14 @@ class $EngineSettingsTableTable extends EngineSettingsTable
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
+    if (data.containsKey('kid_id')) {
+      context.handle(
+        _kidIdMeta,
+        kidId.isAcceptableOrUnknown(data['kid_id']!, _kidIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kidIdMeta);
+    }
     if (data.containsKey('engine_key')) {
       context.handle(
         _engineKeyMeta,
@@ -1615,11 +1686,15 @@ class $EngineSettingsTableTable extends EngineSettingsTable
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {engineKey, settingKey};
+  Set<GeneratedColumn> get $primaryKey => {kidId, engineKey, settingKey};
   @override
   EngineSettingRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return EngineSettingRow(
+      kidId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kid_id'],
+      )!,
       engineKey: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}engine_key'],
@@ -1643,6 +1718,9 @@ class $EngineSettingsTableTable extends EngineSettingsTable
 
 class EngineSettingRow extends DataClass
     implements Insertable<EngineSettingRow> {
+  /// One kid wants hints on and the next does not, so a setting belongs to a
+  /// kid rather than to the device (ADR 0014).
+  final String kidId;
   final String engineKey;
   final String settingKey;
 
@@ -1650,6 +1728,7 @@ class EngineSettingRow extends DataClass
   /// per-type column or a migration when a new setting type appears.
   final String value;
   const EngineSettingRow({
+    required this.kidId,
     required this.engineKey,
     required this.settingKey,
     required this.value,
@@ -1657,6 +1736,7 @@ class EngineSettingRow extends DataClass
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    map['kid_id'] = Variable<String>(kidId);
     map['engine_key'] = Variable<String>(engineKey);
     map['setting_key'] = Variable<String>(settingKey);
     map['value'] = Variable<String>(value);
@@ -1665,6 +1745,7 @@ class EngineSettingRow extends DataClass
 
   EngineSettingsTableCompanion toCompanion(bool nullToAbsent) {
     return EngineSettingsTableCompanion(
+      kidId: Value(kidId),
       engineKey: Value(engineKey),
       settingKey: Value(settingKey),
       value: Value(value),
@@ -1677,6 +1758,7 @@ class EngineSettingRow extends DataClass
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return EngineSettingRow(
+      kidId: serializer.fromJson<String>(json['kidId']),
       engineKey: serializer.fromJson<String>(json['engineKey']),
       settingKey: serializer.fromJson<String>(json['settingKey']),
       value: serializer.fromJson<String>(json['value']),
@@ -1686,6 +1768,7 @@ class EngineSettingRow extends DataClass
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
+      'kidId': serializer.toJson<String>(kidId),
       'engineKey': serializer.toJson<String>(engineKey),
       'settingKey': serializer.toJson<String>(settingKey),
       'value': serializer.toJson<String>(value),
@@ -1693,16 +1776,19 @@ class EngineSettingRow extends DataClass
   }
 
   EngineSettingRow copyWith({
+    String? kidId,
     String? engineKey,
     String? settingKey,
     String? value,
   }) => EngineSettingRow(
+    kidId: kidId ?? this.kidId,
     engineKey: engineKey ?? this.engineKey,
     settingKey: settingKey ?? this.settingKey,
     value: value ?? this.value,
   );
   EngineSettingRow copyWithCompanion(EngineSettingsTableCompanion data) {
     return EngineSettingRow(
+      kidId: data.kidId.present ? data.kidId.value : this.kidId,
       engineKey: data.engineKey.present ? data.engineKey.value : this.engineKey,
       settingKey: data.settingKey.present
           ? data.settingKey.value
@@ -1714,6 +1800,7 @@ class EngineSettingRow extends DataClass
   @override
   String toString() {
     return (StringBuffer('EngineSettingRow(')
+          ..write('kidId: $kidId, ')
           ..write('engineKey: $engineKey, ')
           ..write('settingKey: $settingKey, ')
           ..write('value: $value')
@@ -1722,42 +1809,49 @@ class EngineSettingRow extends DataClass
   }
 
   @override
-  int get hashCode => Object.hash(engineKey, settingKey, value);
+  int get hashCode => Object.hash(kidId, engineKey, settingKey, value);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is EngineSettingRow &&
+          other.kidId == this.kidId &&
           other.engineKey == this.engineKey &&
           other.settingKey == this.settingKey &&
           other.value == this.value);
 }
 
 class EngineSettingsTableCompanion extends UpdateCompanion<EngineSettingRow> {
+  final Value<String> kidId;
   final Value<String> engineKey;
   final Value<String> settingKey;
   final Value<String> value;
   final Value<int> rowid;
   const EngineSettingsTableCompanion({
+    this.kidId = const Value.absent(),
     this.engineKey = const Value.absent(),
     this.settingKey = const Value.absent(),
     this.value = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   EngineSettingsTableCompanion.insert({
+    required String kidId,
     required String engineKey,
     required String settingKey,
     required String value,
     this.rowid = const Value.absent(),
-  }) : engineKey = Value(engineKey),
+  }) : kidId = Value(kidId),
+       engineKey = Value(engineKey),
        settingKey = Value(settingKey),
        value = Value(value);
   static Insertable<EngineSettingRow> custom({
+    Expression<String>? kidId,
     Expression<String>? engineKey,
     Expression<String>? settingKey,
     Expression<String>? value,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
+      if (kidId != null) 'kid_id': kidId,
       if (engineKey != null) 'engine_key': engineKey,
       if (settingKey != null) 'setting_key': settingKey,
       if (value != null) 'value': value,
@@ -1766,12 +1860,14 @@ class EngineSettingsTableCompanion extends UpdateCompanion<EngineSettingRow> {
   }
 
   EngineSettingsTableCompanion copyWith({
+    Value<String>? kidId,
     Value<String>? engineKey,
     Value<String>? settingKey,
     Value<String>? value,
     Value<int>? rowid,
   }) {
     return EngineSettingsTableCompanion(
+      kidId: kidId ?? this.kidId,
       engineKey: engineKey ?? this.engineKey,
       settingKey: settingKey ?? this.settingKey,
       value: value ?? this.value,
@@ -1782,6 +1878,9 @@ class EngineSettingsTableCompanion extends UpdateCompanion<EngineSettingRow> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (kidId.present) {
+      map['kid_id'] = Variable<String>(kidId.value);
+    }
     if (engineKey.present) {
       map['engine_key'] = Variable<String>(engineKey.value);
     }
@@ -1800,6 +1899,7 @@ class EngineSettingsTableCompanion extends UpdateCompanion<EngineSettingRow> {
   @override
   String toString() {
     return (StringBuffer('EngineSettingsTableCompanion(')
+          ..write('kidId: $kidId, ')
           ..write('engineKey: $engineKey, ')
           ..write('settingKey: $settingKey, ')
           ..write('value: $value, ')
@@ -1815,6 +1915,15 @@ class $AppStateTableTable extends AppStateTable
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $AppStateTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _kidIdMeta = const VerificationMeta('kidId');
+  @override
+  late final GeneratedColumn<String> kidId = GeneratedColumn<String>(
+    'kid_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _keyMeta = const VerificationMeta('key');
   @override
   late final GeneratedColumn<String> key = GeneratedColumn<String>(
@@ -1845,7 +1954,7 @@ class $AppStateTableTable extends AppStateTable
     requiredDuringInsert: true,
   );
   @override
-  List<GeneratedColumn> get $columns => [key, value, updatedAt];
+  List<GeneratedColumn> get $columns => [kidId, key, value, updatedAt];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1858,6 +1967,14 @@ class $AppStateTableTable extends AppStateTable
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
+    if (data.containsKey('kid_id')) {
+      context.handle(
+        _kidIdMeta,
+        kidId.isAcceptableOrUnknown(data['kid_id']!, _kidIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kidIdMeta);
+    }
     if (data.containsKey('key')) {
       context.handle(
         _keyMeta,
@@ -1886,11 +2003,15 @@ class $AppStateTableTable extends AppStateTable
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {key};
+  Set<GeneratedColumn> get $primaryKey => {kidId, key};
   @override
   AppStateRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return AppStateRow(
+      kidId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kid_id'],
+      )!,
       key: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}key'],
@@ -1913,10 +2034,20 @@ class $AppStateTableTable extends AppStateTable
 }
 
 class AppStateRow extends DataClass implements Insertable<AppStateRow> {
+  /// Which kid owns this key, or [deviceScope] for device-level bookkeeping.
+  ///
+  /// This table holds both kinds: `home_stats.*` is a per-kid daily counter,
+  /// while `outbox_capacity.*` counts evictions for the device's whole
+  /// outbox. A sentinel rather than a nullable column on purpose — SQLite
+  /// permits NULL in any primary-key column that is not `INTEGER PRIMARY
+  /// KEY`, and NULLs compare distinct, so a nullable owner here would
+  /// silently allow unlimited duplicate device-level rows (ADR 0014).
+  final String kidId;
   final String key;
   final String value;
   final DateTime updatedAt;
   const AppStateRow({
+    required this.kidId,
     required this.key,
     required this.value,
     required this.updatedAt,
@@ -1924,6 +2055,7 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    map['kid_id'] = Variable<String>(kidId);
     map['key'] = Variable<String>(key);
     map['value'] = Variable<String>(value);
     map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -1932,6 +2064,7 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
 
   AppStateTableCompanion toCompanion(bool nullToAbsent) {
     return AppStateTableCompanion(
+      kidId: Value(kidId),
       key: Value(key),
       value: Value(value),
       updatedAt: Value(updatedAt),
@@ -1944,6 +2077,7 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return AppStateRow(
+      kidId: serializer.fromJson<String>(json['kidId']),
       key: serializer.fromJson<String>(json['key']),
       value: serializer.fromJson<String>(json['value']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
@@ -1953,20 +2087,27 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
+      'kidId': serializer.toJson<String>(kidId),
       'key': serializer.toJson<String>(key),
       'value': serializer.toJson<String>(value),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
   }
 
-  AppStateRow copyWith({String? key, String? value, DateTime? updatedAt}) =>
-      AppStateRow(
-        key: key ?? this.key,
-        value: value ?? this.value,
-        updatedAt: updatedAt ?? this.updatedAt,
-      );
+  AppStateRow copyWith({
+    String? kidId,
+    String? key,
+    String? value,
+    DateTime? updatedAt,
+  }) => AppStateRow(
+    kidId: kidId ?? this.kidId,
+    key: key ?? this.key,
+    value: value ?? this.value,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
   AppStateRow copyWithCompanion(AppStateTableCompanion data) {
     return AppStateRow(
+      kidId: data.kidId.present ? data.kidId.value : this.kidId,
       key: data.key.present ? data.key.value : this.key,
       value: data.value.present ? data.value.value : this.value,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
@@ -1976,6 +2117,7 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
   @override
   String toString() {
     return (StringBuffer('AppStateRow(')
+          ..write('kidId: $kidId, ')
           ..write('key: $key, ')
           ..write('value: $value, ')
           ..write('updatedAt: $updatedAt')
@@ -1984,42 +2126,49 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
   }
 
   @override
-  int get hashCode => Object.hash(key, value, updatedAt);
+  int get hashCode => Object.hash(kidId, key, value, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is AppStateRow &&
+          other.kidId == this.kidId &&
           other.key == this.key &&
           other.value == this.value &&
           other.updatedAt == this.updatedAt);
 }
 
 class AppStateTableCompanion extends UpdateCompanion<AppStateRow> {
+  final Value<String> kidId;
   final Value<String> key;
   final Value<String> value;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
   const AppStateTableCompanion({
+    this.kidId = const Value.absent(),
     this.key = const Value.absent(),
     this.value = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   AppStateTableCompanion.insert({
+    required String kidId,
     required String key,
     required String value,
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
-  }) : key = Value(key),
+  }) : kidId = Value(kidId),
+       key = Value(key),
        value = Value(value),
        updatedAt = Value(updatedAt);
   static Insertable<AppStateRow> custom({
+    Expression<String>? kidId,
     Expression<String>? key,
     Expression<String>? value,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
+      if (kidId != null) 'kid_id': kidId,
       if (key != null) 'key': key,
       if (value != null) 'value': value,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -2028,12 +2177,14 @@ class AppStateTableCompanion extends UpdateCompanion<AppStateRow> {
   }
 
   AppStateTableCompanion copyWith({
+    Value<String>? kidId,
     Value<String>? key,
     Value<String>? value,
     Value<DateTime>? updatedAt,
     Value<int>? rowid,
   }) {
     return AppStateTableCompanion(
+      kidId: kidId ?? this.kidId,
       key: key ?? this.key,
       value: value ?? this.value,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -2044,6 +2195,9 @@ class AppStateTableCompanion extends UpdateCompanion<AppStateRow> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (kidId.present) {
+      map['kid_id'] = Variable<String>(kidId.value);
+    }
     if (key.present) {
       map['key'] = Variable<String>(key.value);
     }
@@ -2062,6 +2216,7 @@ class AppStateTableCompanion extends UpdateCompanion<AppStateRow> {
   @override
   String toString() {
     return (StringBuffer('AppStateTableCompanion(')
+          ..write('kidId: $kidId, ')
           ..write('key: $key, ')
           ..write('value: $value, ')
           ..write('updatedAt: $updatedAt, ')
@@ -2077,6 +2232,15 @@ class $PlayedDateTableTable extends PlayedDateTable
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $PlayedDateTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _kidIdMeta = const VerificationMeta('kidId');
+  @override
+  late final GeneratedColumn<String> kidId = GeneratedColumn<String>(
+    'kid_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _dateMeta = const VerificationMeta('date');
   @override
   late final GeneratedColumn<String> date = GeneratedColumn<String>(
@@ -2087,7 +2251,7 @@ class $PlayedDateTableTable extends PlayedDateTable
     requiredDuringInsert: true,
   );
   @override
-  List<GeneratedColumn> get $columns => [date];
+  List<GeneratedColumn> get $columns => [kidId, date];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -2100,6 +2264,14 @@ class $PlayedDateTableTable extends PlayedDateTable
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
+    if (data.containsKey('kid_id')) {
+      context.handle(
+        _kidIdMeta,
+        kidId.isAcceptableOrUnknown(data['kid_id']!, _kidIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kidIdMeta);
+    }
     if (data.containsKey('date')) {
       context.handle(
         _dateMeta,
@@ -2112,11 +2284,15 @@ class $PlayedDateTableTable extends PlayedDateTable
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {date};
+  Set<GeneratedColumn> get $primaryKey => {kidId, date};
   @override
   PlayedDateRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return PlayedDateRow(
+      kidId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kid_id'],
+      )!,
       date: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}date'],
@@ -2131,19 +2307,24 @@ class $PlayedDateTableTable extends PlayedDateTable
 }
 
 class PlayedDateRow extends DataClass implements Insertable<PlayedDateRow> {
+  /// Whose streak this is (ADR 0014). Two siblings on one tablet keep
+  /// separate streaks; without this, either child playing would extend both.
+  final String kidId;
+
   /// ISO `yyyy-MM-dd`, local date — not a `DateTimeColumn`, so "the same
   /// calendar day" never depends on a stored time-of-day or timezone.
   final String date;
-  const PlayedDateRow({required this.date});
+  const PlayedDateRow({required this.kidId, required this.date});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    map['kid_id'] = Variable<String>(kidId);
     map['date'] = Variable<String>(date);
     return map;
   }
 
   PlayedDateTableCompanion toCompanion(bool nullToAbsent) {
-    return PlayedDateTableCompanion(date: Value(date));
+    return PlayedDateTableCompanion(kidId: Value(kidId), date: Value(date));
   }
 
   factory PlayedDateRow.fromJson(
@@ -2151,59 +2332,82 @@ class PlayedDateRow extends DataClass implements Insertable<PlayedDateRow> {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return PlayedDateRow(date: serializer.fromJson<String>(json['date']));
+    return PlayedDateRow(
+      kidId: serializer.fromJson<String>(json['kidId']),
+      date: serializer.fromJson<String>(json['date']),
+    );
   }
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{'date': serializer.toJson<String>(date)};
+    return <String, dynamic>{
+      'kidId': serializer.toJson<String>(kidId),
+      'date': serializer.toJson<String>(date),
+    };
   }
 
-  PlayedDateRow copyWith({String? date}) =>
-      PlayedDateRow(date: date ?? this.date);
+  PlayedDateRow copyWith({String? kidId, String? date}) =>
+      PlayedDateRow(kidId: kidId ?? this.kidId, date: date ?? this.date);
   PlayedDateRow copyWithCompanion(PlayedDateTableCompanion data) {
-    return PlayedDateRow(date: data.date.present ? data.date.value : this.date);
+    return PlayedDateRow(
+      kidId: data.kidId.present ? data.kidId.value : this.kidId,
+      date: data.date.present ? data.date.value : this.date,
+    );
   }
 
   @override
   String toString() {
     return (StringBuffer('PlayedDateRow(')
+          ..write('kidId: $kidId, ')
           ..write('date: $date')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => date.hashCode;
+  int get hashCode => Object.hash(kidId, date);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is PlayedDateRow && other.date == this.date);
+      (other is PlayedDateRow &&
+          other.kidId == this.kidId &&
+          other.date == this.date);
 }
 
 class PlayedDateTableCompanion extends UpdateCompanion<PlayedDateRow> {
+  final Value<String> kidId;
   final Value<String> date;
   final Value<int> rowid;
   const PlayedDateTableCompanion({
+    this.kidId = const Value.absent(),
     this.date = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   PlayedDateTableCompanion.insert({
+    required String kidId,
     required String date,
     this.rowid = const Value.absent(),
-  }) : date = Value(date);
+  }) : kidId = Value(kidId),
+       date = Value(date);
   static Insertable<PlayedDateRow> custom({
+    Expression<String>? kidId,
     Expression<String>? date,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
+      if (kidId != null) 'kid_id': kidId,
       if (date != null) 'date': date,
       if (rowid != null) 'rowid': rowid,
     });
   }
 
-  PlayedDateTableCompanion copyWith({Value<String>? date, Value<int>? rowid}) {
+  PlayedDateTableCompanion copyWith({
+    Value<String>? kidId,
+    Value<String>? date,
+    Value<int>? rowid,
+  }) {
     return PlayedDateTableCompanion(
+      kidId: kidId ?? this.kidId,
       date: date ?? this.date,
       rowid: rowid ?? this.rowid,
     );
@@ -2212,6 +2416,9 @@ class PlayedDateTableCompanion extends UpdateCompanion<PlayedDateRow> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (kidId.present) {
+      map['kid_id'] = Variable<String>(kidId.value);
+    }
     if (date.present) {
       map['date'] = Variable<String>(date.value);
     }
@@ -2224,6 +2431,7 @@ class PlayedDateTableCompanion extends UpdateCompanion<PlayedDateRow> {
   @override
   String toString() {
     return (StringBuffer('PlayedDateTableCompanion(')
+          ..write('kidId: $kidId, ')
           ..write('date: $date, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -2647,6 +2855,7 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
 typedef $$EventOutboxTableTableCreateCompanionBuilder =
     EventOutboxTableCompanion Function({
       required String eventId,
+      required String kidId,
       required String payload,
       required DateTime queuedAt,
       Value<int> attempts,
@@ -2658,6 +2867,7 @@ typedef $$EventOutboxTableTableCreateCompanionBuilder =
 typedef $$EventOutboxTableTableUpdateCompanionBuilder =
     EventOutboxTableCompanion Function({
       Value<String> eventId,
+      Value<String> kidId,
       Value<String> payload,
       Value<DateTime> queuedAt,
       Value<int> attempts,
@@ -2678,6 +2888,11 @@ class $$EventOutboxTableTableFilterComposer
   });
   ColumnFilters<String> get eventId => $composableBuilder(
     column: $table.eventId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kidId => $composableBuilder(
+    column: $table.kidId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2726,6 +2941,11 @@ class $$EventOutboxTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get kidId => $composableBuilder(
+    column: $table.kidId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get payload => $composableBuilder(
     column: $table.payload,
     builder: (column) => ColumnOrderings(column),
@@ -2768,6 +2988,9 @@ class $$EventOutboxTableTableAnnotationComposer
   });
   GeneratedColumn<String> get eventId =>
       $composableBuilder(column: $table.eventId, builder: (column) => column);
+
+  GeneratedColumn<String> get kidId =>
+      $composableBuilder(column: $table.kidId, builder: (column) => column);
 
   GeneratedColumn<String> get payload =>
       $composableBuilder(column: $table.payload, builder: (column) => column);
@@ -2830,6 +3053,7 @@ class $$EventOutboxTableTableTableManager
           updateCompanionCallback:
               ({
                 Value<String> eventId = const Value.absent(),
+                Value<String> kidId = const Value.absent(),
                 Value<String> payload = const Value.absent(),
                 Value<DateTime> queuedAt = const Value.absent(),
                 Value<int> attempts = const Value.absent(),
@@ -2839,6 +3063,7 @@ class $$EventOutboxTableTableTableManager
                 Value<int> rowid = const Value.absent(),
               }) => EventOutboxTableCompanion(
                 eventId: eventId,
+                kidId: kidId,
                 payload: payload,
                 queuedAt: queuedAt,
                 attempts: attempts,
@@ -2850,6 +3075,7 @@ class $$EventOutboxTableTableTableManager
           createCompanionCallback:
               ({
                 required String eventId,
+                required String kidId,
                 required String payload,
                 required DateTime queuedAt,
                 Value<int> attempts = const Value.absent(),
@@ -2859,6 +3085,7 @@ class $$EventOutboxTableTableTableManager
                 Value<int> rowid = const Value.absent(),
               }) => EventOutboxTableCompanion.insert(
                 eventId: eventId,
+                kidId: kidId,
                 payload: payload,
                 queuedAt: queuedAt,
                 attempts: attempts,
@@ -3460,6 +3687,7 @@ typedef $$SkillNodeTableTableProcessedTableManager =
     >;
 typedef $$EngineSettingsTableTableCreateCompanionBuilder =
     EngineSettingsTableCompanion Function({
+      required String kidId,
       required String engineKey,
       required String settingKey,
       required String value,
@@ -3467,6 +3695,7 @@ typedef $$EngineSettingsTableTableCreateCompanionBuilder =
     });
 typedef $$EngineSettingsTableTableUpdateCompanionBuilder =
     EngineSettingsTableCompanion Function({
+      Value<String> kidId,
       Value<String> engineKey,
       Value<String> settingKey,
       Value<String> value,
@@ -3482,6 +3711,11 @@ class $$EngineSettingsTableTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<String> get kidId => $composableBuilder(
+    column: $table.kidId,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get engineKey => $composableBuilder(
     column: $table.engineKey,
     builder: (column) => ColumnFilters(column),
@@ -3507,6 +3741,11 @@ class $$EngineSettingsTableTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<String> get kidId => $composableBuilder(
+    column: $table.kidId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get engineKey => $composableBuilder(
     column: $table.engineKey,
     builder: (column) => ColumnOrderings(column),
@@ -3532,6 +3771,9 @@ class $$EngineSettingsTableTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<String> get kidId =>
+      $composableBuilder(column: $table.kidId, builder: (column) => column);
+
   GeneratedColumn<String> get engineKey =>
       $composableBuilder(column: $table.engineKey, builder: (column) => column);
 
@@ -3587,11 +3829,13 @@ class $$EngineSettingsTableTableTableManager
               ),
           updateCompanionCallback:
               ({
+                Value<String> kidId = const Value.absent(),
                 Value<String> engineKey = const Value.absent(),
                 Value<String> settingKey = const Value.absent(),
                 Value<String> value = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => EngineSettingsTableCompanion(
+                kidId: kidId,
                 engineKey: engineKey,
                 settingKey: settingKey,
                 value: value,
@@ -3599,11 +3843,13 @@ class $$EngineSettingsTableTableTableManager
               ),
           createCompanionCallback:
               ({
+                required String kidId,
                 required String engineKey,
                 required String settingKey,
                 required String value,
                 Value<int> rowid = const Value.absent(),
               }) => EngineSettingsTableCompanion.insert(
+                kidId: kidId,
                 engineKey: engineKey,
                 settingKey: settingKey,
                 value: value,
@@ -3651,6 +3897,7 @@ typedef $$EngineSettingsTableTableProcessedTableManager =
     >;
 typedef $$AppStateTableTableCreateCompanionBuilder =
     AppStateTableCompanion Function({
+      required String kidId,
       required String key,
       required String value,
       required DateTime updatedAt,
@@ -3658,6 +3905,7 @@ typedef $$AppStateTableTableCreateCompanionBuilder =
     });
 typedef $$AppStateTableTableUpdateCompanionBuilder =
     AppStateTableCompanion Function({
+      Value<String> kidId,
       Value<String> key,
       Value<String> value,
       Value<DateTime> updatedAt,
@@ -3673,6 +3921,11 @@ class $$AppStateTableTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<String> get kidId => $composableBuilder(
+    column: $table.kidId,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get key => $composableBuilder(
     column: $table.key,
     builder: (column) => ColumnFilters(column),
@@ -3698,6 +3951,11 @@ class $$AppStateTableTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<String> get kidId => $composableBuilder(
+    column: $table.kidId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get key => $composableBuilder(
     column: $table.key,
     builder: (column) => ColumnOrderings(column),
@@ -3723,6 +3981,9 @@ class $$AppStateTableTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<String> get kidId =>
+      $composableBuilder(column: $table.kidId, builder: (column) => column);
+
   GeneratedColumn<String> get key =>
       $composableBuilder(column: $table.key, builder: (column) => column);
 
@@ -3766,11 +4027,13 @@ class $$AppStateTableTableTableManager
               $$AppStateTableTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
+                Value<String> kidId = const Value.absent(),
                 Value<String> key = const Value.absent(),
                 Value<String> value = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AppStateTableCompanion(
+                kidId: kidId,
                 key: key,
                 value: value,
                 updatedAt: updatedAt,
@@ -3778,11 +4041,13 @@ class $$AppStateTableTableTableManager
               ),
           createCompanionCallback:
               ({
+                required String kidId,
                 required String key,
                 required String value,
                 required DateTime updatedAt,
                 Value<int> rowid = const Value.absent(),
               }) => AppStateTableCompanion.insert(
+                kidId: kidId,
                 key: key,
                 value: value,
                 updatedAt: updatedAt,
@@ -3823,9 +4088,17 @@ typedef $$AppStateTableTableProcessedTableManager =
       PrefetchHooks Function()
     >;
 typedef $$PlayedDateTableTableCreateCompanionBuilder =
-    PlayedDateTableCompanion Function({required String date, Value<int> rowid});
+    PlayedDateTableCompanion Function({
+      required String kidId,
+      required String date,
+      Value<int> rowid,
+    });
 typedef $$PlayedDateTableTableUpdateCompanionBuilder =
-    PlayedDateTableCompanion Function({Value<String> date, Value<int> rowid});
+    PlayedDateTableCompanion Function({
+      Value<String> kidId,
+      Value<String> date,
+      Value<int> rowid,
+    });
 
 class $$PlayedDateTableTableFilterComposer
     extends Composer<_$LocalDatabase, $PlayedDateTableTable> {
@@ -3836,6 +4109,11 @@ class $$PlayedDateTableTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<String> get kidId => $composableBuilder(
+    column: $table.kidId,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get date => $composableBuilder(
     column: $table.date,
     builder: (column) => ColumnFilters(column),
@@ -3851,6 +4129,11 @@ class $$PlayedDateTableTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<String> get kidId => $composableBuilder(
+    column: $table.kidId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get date => $composableBuilder(
     column: $table.date,
     builder: (column) => ColumnOrderings(column),
@@ -3866,6 +4149,9 @@ class $$PlayedDateTableTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<String> get kidId =>
+      $composableBuilder(column: $table.kidId, builder: (column) => column);
+
   GeneratedColumn<String> get date =>
       $composableBuilder(column: $table.date, builder: (column) => column);
 }
@@ -3905,14 +4191,26 @@ class $$PlayedDateTableTableTableManager
               $$PlayedDateTableTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
               $$PlayedDateTableTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<String> date = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) => PlayedDateTableCompanion(date: date, rowid: rowid),
-          createCompanionCallback: ({
-            required String date,
-            Value<int> rowid = const Value.absent(),
-          }) => PlayedDateTableCompanion.insert(date: date, rowid: rowid),
+          updateCompanionCallback:
+              ({
+                Value<String> kidId = const Value.absent(),
+                Value<String> date = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PlayedDateTableCompanion(
+                kidId: kidId,
+                date: date,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String kidId,
+                required String date,
+                Value<int> rowid = const Value.absent(),
+              }) => PlayedDateTableCompanion.insert(
+                kidId: kidId,
+                date: date,
+                rowid: rowid,
+              ),
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (

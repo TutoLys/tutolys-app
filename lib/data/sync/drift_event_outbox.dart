@@ -11,10 +11,26 @@ import '../local_db/database.dart';
 /// client never learn that storage exists. Swapping the in-memory
 /// implementation for this one changes nothing above it.
 class DriftEventOutbox implements EventOutbox {
-  DriftEventOutbox(this.db, {DateTime Function()? clock})
+  DriftEventOutbox(this.db, {required this.kidId, DateTime Function()? clock})
       : _now = clock ?? DateTime.now;
 
   final LocalDatabase db;
+
+  /// Whose events this instance reads and writes (ADR 0014).
+  ///
+  /// The flusher uploads each event with *that kid's* device token, so an
+  /// unscoped outbox on a shared tablet would post one child's play as
+  /// another's — the quietest way to corrupt exactly the per-kid data this
+  /// product exists to produce.
+  ///
+  /// Scoped: [add], [pending], [depth], [stuck]. Deliberately **not**
+  /// scoped: [pruneDelivered] and [enforceCapacityCap], which manage the
+  /// device's disk rather than a kid's events — a per-kid 10,000-row cap
+  /// would let three children hold 30,000. [markDelivered] and
+  /// [recordFailure] take event ids that only ever come from [pending], so
+  /// they are already scoped by construction.
+  final String kidId;
+
   final DateTime Function() _now;
 
   @override
@@ -24,6 +40,7 @@ class DriftEventOutbox implements EventOutbox {
     await db.into(db.eventOutboxTable).insert(
           EventOutboxTableCompanion.insert(
             eventId: eventId,
+            kidId: kidId,
             payload: jsonEncode(event),
             queuedAt: _now(),
           ),
@@ -39,6 +56,7 @@ class DriftEventOutbox implements EventOutbox {
     final now = _now();
 
     final rows = await (db.select(db.eventOutboxTable)
+          ..where((t) => t.kidId.equals(kidId))
           ..where((t) => t.deliveredAt.isNull())
           // Respect backoff: an event that failed recently is not retried
           // until its window opens, or one bad event would be hammered.
@@ -70,6 +88,7 @@ class DriftEventOutbox implements EventOutbox {
     final count = db.eventOutboxTable.eventId.count();
     final query = db.selectOnly(db.eventOutboxTable)
       ..addColumns([count])
+      ..where(db.eventOutboxTable.kidId.equals(kidId))
       ..where(db.eventOutboxTable.deliveredAt.isNull());
 
     final row = await query.getSingle();
@@ -126,9 +145,22 @@ class DriftEventOutbox implements EventOutbox {
   /// reported rather than discarded (plan §8).
   Future<List<OutboxEvent>> stuck({int afterAttempts = 10}) {
     return (db.select(db.eventOutboxTable)
+          ..where((t) => t.kidId.equals(kidId))
           ..where((t) => t.deliveredAt.isNull())
           ..where((t) => t.attempts.isBiggerOrEqualValue(afterAttempts)))
         .get();
+  }
+
+  /// Undelivered rows across every kid on this device — the number the
+  /// capacity ceiling is measured against.
+  Future<int> _totalUndelivered() async {
+    final count = db.eventOutboxTable.eventId.count();
+    final query = db.selectOnly(db.eventOutboxTable)
+      ..addColumns([count])
+      ..where(db.eventOutboxTable.deliveredAt.isNull());
+
+    final row = await query.getSingle();
+    return row.read(count) ?? 0;
   }
 
   static const _droppedCountKey = 'outbox_capacity.dropped_total';
@@ -152,7 +184,11 @@ class DriftEventOutbox implements EventOutbox {
   ///
   /// Returns the number of rows evicted (0 if under the cap).
   Future<int> enforceCapacityCap({int maxRows = 10000}) async {
-    final total = await depth();
+    // Deliberately *not* [depth], which is scoped to this kid: the ceiling
+    // is a disk budget for the device, so three children at 4,000 rows each
+    // must read as 12,000 and trip it, not as 4,000 three times over
+    // (ADR 0014).
+    final total = await _totalUndelivered();
     if (total <= maxRows) return 0;
 
     final overflow = total - maxRows;
@@ -176,6 +212,7 @@ class DriftEventOutbox implements EventOutbox {
         batch.insert(
           db.appStateTable,
           AppStateTableCompanion.insert(
+            kidId: deviceScope,
             key: _droppedCountKey,
             value: '${stats.totalDropped + toEvict.length}',
             updatedAt: now,
@@ -185,6 +222,7 @@ class DriftEventOutbox implements EventOutbox {
         batch.insert(
           db.appStateTable,
           AppStateTableCompanion.insert(
+            kidId: deviceScope,
             key: _lastDropAtKey,
             value: now.toIso8601String(),
             updatedAt: now,
@@ -202,6 +240,7 @@ class DriftEventOutbox implements EventOutbox {
   /// triggered — the overwhelmingly common case.
   Future<({int totalDropped, DateTime? lastDroppedAt})> capacityDropStats() async {
     final rows = await (db.select(db.appStateTable)
+          ..where((t) => t.kidId.equals(deviceScope))
           ..where((t) => t.key.isIn([_droppedCountKey, _lastDropAtKey])))
         .get();
     final byKey = {for (final row in rows) row.key: row.value};

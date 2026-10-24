@@ -12,9 +12,15 @@ import 'database.dart';
 /// written back to the backend and never overrides a successful live read;
 /// `ProgressController` only reaches for it when the live fetch fails.
 class StreakLocal {
-  const StreakLocal(this.db, {DateTime Function()? clock}) : _clock = clock ?? DateTime.now;
+  const StreakLocal(this.db, {required this.kidId, DateTime Function()? clock})
+      : _clock = clock ?? DateTime.now;
 
   final LocalDatabase db;
+
+  /// Whose streak. Required rather than defaulted so a shared tablet cannot
+  /// extend one sibling's streak because the other played (ADR 0014).
+  final String kidId;
+
   final DateTime Function() _clock;
 
   String _todayIso() => _clock().toIso8601String().substring(0, 10);
@@ -26,7 +32,7 @@ class StreakLocal {
     await db
         .into(db.playedDateTable)
         .insert(
-          PlayedDateTableCompanion.insert(date: _todayIso()),
+          PlayedDateTableCompanion.insert(kidId: kidId, date: _todayIso()),
           mode: InsertMode.insertOrIgnore,
         );
   }
@@ -38,6 +44,7 @@ class StreakLocal {
   /// the same way to a kid even before they've reconciled.
   Future<int> currentStreak() async {
     final rows = await (db.select(db.playedDateTable)
+          ..where((t) => t.kidId.equals(kidId))
           ..orderBy([(t) => OrderingTerm.desc(t.date)]))
         .get();
     if (rows.isEmpty) return 0;

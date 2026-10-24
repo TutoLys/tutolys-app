@@ -9,7 +9,7 @@ void main() {
   tearDown(() => db.close());
 
   test('a fresh install has zero counts', () async {
-    final stats = HomeStats(db, clock: () => DateTime(2026, 10, 19));
+    final stats = HomeStats(db, kidId: 'kid-1', clock: () => DateTime(2026, 10, 19));
 
     final today = await stats.today();
 
@@ -18,7 +18,7 @@ void main() {
   });
 
   test('recording a completion accumulates count and time', () async {
-    final stats = HomeStats(db, clock: () => DateTime(2026, 10, 19, 14));
+    final stats = HomeStats(db, kidId: 'kid-1', clock: () => DateTime(2026, 10, 19, 14));
 
     await stats.recordExerciseCompleted(elapsedMs: 5000);
     await stats.recordExerciseCompleted(elapsedMs: 3000);
@@ -29,25 +29,25 @@ void main() {
   });
 
   test('a pure read never resets state, even on a new day', () async {
-    final stats = HomeStats(db, clock: () => DateTime(2026, 10, 19));
+    final stats = HomeStats(db, kidId: 'kid-1', clock: () => DateTime(2026, 10, 19));
     await stats.recordExerciseCompleted(elapsedMs: 1000);
 
-    final tomorrow = HomeStats(db, clock: () => DateTime(2026, 10, 20));
+    final tomorrow = HomeStats(db, kidId: 'kid-1', clock: () => DateTime(2026, 10, 20));
     final readBack = await tomorrow.today();
     expect(readBack.exercisesCompleted, 0, reason: 'yesterday does not count as today');
 
     // The stored counters from yesterday must still be there — a read alone
     // must not have overwritten them.
-    final sameDayAgain = HomeStats(db, clock: () => DateTime(2026, 10, 19));
+    final sameDayAgain = HomeStats(db, kidId: 'kid-1', clock: () => DateTime(2026, 10, 19));
     final stillThere = await sameDayAgain.today();
     expect(stillThere.exercisesCompleted, 1);
   });
 
   test('the day rolling over resets counters on the next write', () async {
-    final day1 = HomeStats(db, clock: () => DateTime(2026, 10, 19));
+    final day1 = HomeStats(db, kidId: 'kid-1', clock: () => DateTime(2026, 10, 19));
     await day1.recordExerciseCompleted(elapsedMs: 9000);
 
-    final day2 = HomeStats(db, clock: () => DateTime(2026, 10, 20));
+    final day2 = HomeStats(db, kidId: 'kid-1', clock: () => DateTime(2026, 10, 20));
     await day2.recordExerciseCompleted(elapsedMs: 1000);
 
     final today = await day2.today();

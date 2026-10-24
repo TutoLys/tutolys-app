@@ -13,10 +13,16 @@ import 'database.dart';
 /// counter that survives independently of outbox delivery, reset only by
 /// the date actually rolling over.
 class HomeStats {
-  const HomeStats(this.db, {DateTime Function()? clock})
+  const HomeStats(this.db, {required this.kidId, DateTime Function()? clock})
       : _clock = clock ?? DateTime.now;
 
   final LocalDatabase db;
+
+  /// Whose counters. `app_state` holds both per-kid and device-level keys,
+  /// so every read and write here is scoped — otherwise two siblings on one
+  /// tablet would share "today's" exercise count (ADR 0014).
+  final String kidId;
+
   final DateTime Function() _clock;
 
   static const _dateKey = 'home_stats.date';
@@ -50,6 +56,7 @@ class HomeStats {
 
   Future<({String? date, int exercisesCompleted, int msPlayed})> _read() async {
     final rows = await (db.select(db.appStateTable)
+          ..where((t) => t.kidId.equals(kidId))
           ..where((t) => t.key.isIn([_dateKey, _completedKey, _msKey])))
         .get();
     final byKey = {for (final row in rows) row.key: row.value};
@@ -75,6 +82,7 @@ class HomeStats {
         batch.insert(
           db.appStateTable,
           AppStateTableCompanion.insert(
+            kidId: kidId,
             key: entry.key,
             value: entry.value,
             updatedAt: now,

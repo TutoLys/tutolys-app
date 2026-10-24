@@ -80,7 +80,10 @@ class ProgressController extends Notifier<ProgressState> {
       ProgressOffline() => ProgressState(
         loading: false,
         offline: true,
-        currentStreakDays: await StreakLocal(ref.read(localDatabaseProvider))
+        currentStreakDays: await StreakLocal(
+          ref.read(localDatabaseProvider),
+          kidId: ref.read(activeKidIdProvider) ?? unpairedKidId,
+        )
             .currentStreak(),
         isStreakEstimated: true,
       ),

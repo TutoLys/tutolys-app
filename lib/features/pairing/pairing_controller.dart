@@ -326,6 +326,27 @@ final pairingApiProvider = Provider<PairingApi>(
 final sessionControllerProvider =
     NotifierProvider<SessionController, SessionState>(SessionController.new);
 
+/// The kid whose rows the local database reads and writes right now
+/// (ADR 0014).
+///
+/// One accessor rather than five reaches into `SessionState`, because this
+/// is exactly the seam the "Qui joue ?" switcher replaces: today it means
+/// "the paired kid", and once a device can hold several pairings it means
+/// "the selected one". Everything downstream keeps working unchanged.
+final activeKidIdProvider = Provider<String?>(
+  (ref) => ref.watch(sessionControllerProvider).kid?.id,
+);
+
+/// Owner for kid-scoped stores built before anyone has paired.
+///
+/// The flusher is constructed at boot, which on a fresh install happens
+/// while the pairing screen is still showing. Nothing can have written rows
+/// yet — the play screen is unreachable unpaired — so an outbox bound to
+/// this sentinel is inert: it matches no row, because a real owner is
+/// always a server-issued UUID. Deliberately not [deviceScope], which means
+/// "belongs to the device" rather than "belongs to nobody yet".
+const String unpairedKidId = '__unpaired__';
+
 final pairingFormProvider =
     NotifierProvider<PairingFormController, PairingUiState>(
       PairingFormController.new,

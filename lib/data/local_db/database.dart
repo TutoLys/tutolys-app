@@ -20,6 +20,15 @@ class EventOutboxTable extends Table {
   /// key here too, so an in-app retry cannot enqueue the same event twice.
   TextColumn get eventId => text().named('event_id')();
 
+  /// Which kid played this. The flusher uploads each event with *that kid's*
+  /// device token, so without this column an event queued by one child on a
+  /// shared tablet could be uploaded as another — silently corrupting the
+  /// per-kid mastery data the whole product exists to produce (ADR 0014).
+  ///
+  /// Not part of the primary key: `event_id` is a UUID and the server's own
+  /// idempotency key, so it is already globally unique on its own.
+  TextColumn get kidId => text().named('kid_id')();
+
   /// The full event as JSON. Stored opaquely on purpose: the outbox must not
   /// need to understand the schema it carries, so a schema bump needs no
   /// migration here.
@@ -138,6 +147,10 @@ class EngineSettingsTable extends Table {
   @override
   String get tableName => 'engine_settings';
 
+  /// One kid wants hints on and the next does not, so a setting belongs to a
+  /// kid rather than to the device (ADR 0014).
+  TextColumn get kidId => text().named('kid_id')();
+
   TextColumn get engineKey => text().named('engine_key')();
   TextColumn get settingKey => text().named('setting_key')();
 
@@ -146,7 +159,7 @@ class EngineSettingsTable extends Table {
   TextColumn get value => text()();
 
   @override
-  Set<Column> get primaryKey => {engineKey, settingKey};
+  Set<Column> get primaryKey => {kidId, engineKey, settingKey};
 }
 
 /// Small key/value store for session and sync bookkeeping.
@@ -155,12 +168,22 @@ class AppStateTable extends Table {
   @override
   String get tableName => 'app_state';
 
+  /// Which kid owns this key, or [deviceScope] for device-level bookkeeping.
+  ///
+  /// This table holds both kinds: `home_stats.*` is a per-kid daily counter,
+  /// while `outbox_capacity.*` counts evictions for the device's whole
+  /// outbox. A sentinel rather than a nullable column on purpose — SQLite
+  /// permits NULL in any primary-key column that is not `INTEGER PRIMARY
+  /// KEY`, and NULLs compare distinct, so a nullable owner here would
+  /// silently allow unlimited duplicate device-level rows (ADR 0014).
+  TextColumn get kidId => text().named('kid_id')();
+
   TextColumn get key => text()();
   TextColumn get value => text()();
   DateTimeColumn get updatedAt => dateTime().named('updated_at')();
 
   @override
-  Set<Column> get primaryKey => {key};
+  Set<Column> get primaryKey => {kidId, key};
 }
 
 /// One row per local calendar date with at least one completed exercise —
@@ -174,13 +197,25 @@ class PlayedDateTable extends Table {
   @override
   String get tableName => 'played_date';
 
+  /// Whose streak this is (ADR 0014). Two siblings on one tablet keep
+  /// separate streaks; without this, either child playing would extend both.
+  TextColumn get kidId => text().named('kid_id')();
+
   /// ISO `yyyy-MM-dd`, local date — not a `DateTimeColumn`, so "the same
   /// calendar day" never depends on a stored time-of-day or timezone.
   TextColumn get date => text()();
 
   @override
-  Set<Column> get primaryKey => {date};
+  Set<Column> get primaryKey => {kidId, date};
 }
+
+/// The `kid_id` value for rows that belong to the device rather than to any
+/// one kid — today only `app_state`'s `outbox_capacity.*` bookkeeping.
+///
+/// A real value, not NULL, for the reason spelled out on
+/// [AppStateTable.kidId]: SQLite would let NULLs pile up as distinct
+/// primary keys.
+const String deviceScope = '';
 
 @DriftDatabase(
   tables: [
@@ -196,13 +231,27 @@ class PlayedDateTable extends Table {
 // Timestamp storage is configured in build.yaml
 // (store_date_time_values_as_text) — see the rationale there.
 class LocalDatabase extends _$LocalDatabase {
-  LocalDatabase(super.e);
+  LocalDatabase(super.e, {this.migrationKidId});
 
   /// In-memory instance for tests.
-  LocalDatabase.memory() : super(memoryExecutor());
+  LocalDatabase.memory({this.migrationKidId}) : super(memoryExecutor());
+
+  /// The kid whose data is already on disk, for the 3 → 4 upgrade.
+  ///
+  /// Before v4 a device meant exactly one kid, so every existing row is
+  /// theirs and the upgrade backfills this id rather than discarding data.
+  /// Passed in rather than read here because it lives in `SessionStore`'s
+  /// platform secure store: a drift migration that reached for
+  /// `flutter_secure_storage` would be untestable and would couple the
+  /// schema to the platform (ADR 0014).
+  ///
+  /// Null means the device was never paired — there is nothing worth
+  /// keeping, and the pre-v4 rows are dropped instead of being backfilled
+  /// to an owner that does not exist.
+  final String? migrationKidId;
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -227,6 +276,10 @@ class LocalDatabase extends _$LocalDatabase {
         'CREATE INDEX IF NOT EXISTS skill_node_cache_lookup '
         'ON skill_node_cache (subject, grade)',
       );
+      await customStatement(
+        'CREATE INDEX IF NOT EXISTS event_outbox_kid '
+        'ON event_outbox (kid_id, delivered_at, queued_at)',
+      );
     },
     onUpgrade: (m, from, to) async {
       if (from < 2) {
@@ -235,8 +288,80 @@ class LocalDatabase extends _$LocalDatabase {
       if (from < 3) {
         await m.createTable(audioCacheTable);
       }
+      if (from < 4) {
+        await _addKidScope(m);
+      }
     },
   );
+
+  /// The 3 → 4 upgrade: give the per-kid tables an owner (ADR 0014).
+  ///
+  /// `played_date`, `engine_settings` and `app_state` gain `kid_id` *inside*
+  /// their primary key, so SQLite has to rebuild them — `alterTable` does
+  /// that. `event_outbox` only gains a plain column.
+  Future<void> _addKidScope(Migrator m) async {
+    final owner = migrationKidId;
+
+    if (owner == null) {
+      // Never paired: the rows belong to nobody. Backfilling them to an
+      // owner that does not exist would resurrect them under whichever kid
+      // pairs next, attributing a stranger's play to them.
+      await delete(eventOutboxTable).go();
+      await delete(playedDateTable).go();
+      await delete(engineSettingsTable).go();
+      await delete(appStateTable).go();
+    }
+
+    final backfill = Variable<String>(owner ?? deviceScope);
+
+    await m.alterTable(
+      TableMigration(
+        eventOutboxTable,
+        columnTransformer: {eventOutboxTable.kidId: backfill},
+        newColumns: [eventOutboxTable.kidId],
+      ),
+    );
+    await m.alterTable(
+      TableMigration(
+        playedDateTable,
+        columnTransformer: {playedDateTable.kidId: backfill},
+        newColumns: [playedDateTable.kidId],
+      ),
+    );
+    await m.alterTable(
+      TableMigration(
+        engineSettingsTable,
+        columnTransformer: {engineSettingsTable.kidId: backfill},
+        newColumns: [engineSettingsTable.kidId],
+      ),
+    );
+
+    // `app_state` is the mixed one: its `home_stats.*` keys belong to the
+    // kid, its `outbox_capacity.*` keys to the device. Everything lands on
+    // the device sentinel first, then the kid's own keys move across — a
+    // whitelist, so a key added later defaults to device scope rather than
+    // being silently attributed to whoever happened to be paired.
+    await m.alterTable(
+      TableMigration(
+        appStateTable,
+        columnTransformer: {
+          appStateTable.kidId: Variable<String>(deviceScope),
+        },
+        newColumns: [appStateTable.kidId],
+      ),
+    );
+    if (owner != null) {
+      await customStatement(
+        "UPDATE app_state SET kid_id = ? WHERE key LIKE 'home_stats.%'",
+        [owner],
+      );
+    }
+
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS event_outbox_kid '
+      'ON event_outbox (kid_id, delivered_at, queued_at)',
+    );
+  }
 }
 
 /// Opens the real on-disk (or browser-persisted) database for the running

@@ -44,5 +44,8 @@ final homeControllerProvider = NotifierProvider<HomeController, HomeState>(
 );
 
 final homeStatsProvider = Provider<HomeStats>(
-  (ref) => HomeStats(ref.watch(localDatabaseProvider)),
+  (ref) => HomeStats(
+    ref.watch(localDatabaseProvider),
+    kidId: ref.watch(activeKidIdProvider) ?? unpairedKidId,
+  ),
 );

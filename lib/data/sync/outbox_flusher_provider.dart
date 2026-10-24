@@ -28,10 +28,17 @@ final telemetryDioProvider = Provider<Dio>((ref) {
   );
 });
 
-/// `DriftEventOutbox` is stateless aside from the database handle, so one
-/// shared instance is enough for every writer and the flusher alike.
+/// `DriftEventOutbox` is stateless aside from the database handle and its
+/// owner, so one shared instance per active kid is enough for every writer
+/// and the flusher alike.
+///
+/// Rebuilds when the active kid changes, which is what keeps one sibling's
+/// queued events from being uploaded under the other's token (ADR 0014).
 final eventOutboxProvider = Provider<DriftEventOutbox>((ref) {
-  return DriftEventOutbox(ref.watch(localDatabaseProvider));
+  return DriftEventOutbox(
+    ref.watch(localDatabaseProvider),
+    kidId: ref.watch(activeKidIdProvider) ?? unpairedKidId,
+  );
 });
 
 /// Plain `Provider`, not `autoDispose`: the flusher's own retry timer and

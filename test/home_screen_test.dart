@@ -129,8 +129,7 @@ void main() {
     (tester) async {
       final db = LocalDatabase.memory();
       addTearDown(db.close);
-      await HomeStats(
-        db,
+      await HomeStats(db, kidId: 'k1',
         clock: DateTime.now,
       ).recordExerciseCompleted(elapsedMs: 120000);
 
@@ -178,7 +177,7 @@ void main() {
     (tester) async {
       final db = LocalDatabase.memory();
       addTearDown(db.close);
-      await StreakLocal(db).recordPlayedToday();
+      await StreakLocal(db, kidId: 'k1').recordPlayedToday();
       final progressApi = _FakeProgressApi()..result = const ProgressOffline();
 
       await tester.pumpWidget(appUnder(db, progressApi: progressApi));

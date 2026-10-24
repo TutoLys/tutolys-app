@@ -130,9 +130,8 @@ void main() {
       // would only coincidentally agree with "today" on the day this was
       // written.
       final now = DateTime.now();
-      await StreakLocal(db, clock: () => now).recordPlayedToday();
-      await StreakLocal(
-        db,
+      await StreakLocal(db, kidId: 'k1', clock: () => now).recordPlayedToday();
+      await StreakLocal(db, kidId: 'k1',
         clock: () => now.subtract(const Duration(days: 1)),
       ).recordPlayedToday();
       api.result = const ProgressOffline();
