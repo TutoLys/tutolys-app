@@ -647,4 +647,92 @@ void main() {
       expect(await cachedAudio('ex1', 'q1_audio'), bytes1);
     });
   });
+
+  group('a cache shared by several kids on one device (ADR 0014)', () {
+    /// A sibling's cached row, written straight to the table.
+    ///
+    /// That bypass *is* the situation: the server never advertises another
+    /// kid's content in this kid's manifest, so there is no way to arrive at
+    /// this state through a sync of our own.
+    Future<void> seedAnotherKidsRow({
+      required String id,
+      required int grade,
+      required String subject,
+    }) async {
+      await db.into(db.exerciseCacheTable).insert(
+            ExerciseCacheTableCompanion.insert(
+              exerciseId: id,
+              version: 1,
+              payload: '{"exercise_id":"$id"}',
+              contentHash: 'hash-$id',
+              engineKey: 'mcq',
+              skillNodeId: 'node-$id',
+              subject: subject,
+              grade: grade,
+              rank: 0,
+              cachedAt: now,
+            ),
+          );
+    }
+
+    test("a grade-1 sync leaves a grade-3 sibling's content alone", () async {
+      await seedAnotherKidsRow(id: 'noah-ex', grade: 3, subject: 'MATH');
+      final mine = exercise('lea-ex', rank: 0);
+      server.content['lea-ex'] = mine;
+
+      final report = await sync.sync();
+
+      expect(report.isOk, isTrue);
+      expect(
+        report.removed,
+        0,
+        reason: 'the sibling\'s row is not "withdrawn", it is not mine',
+      );
+
+      final ids =
+          (await db.select(db.exerciseCacheTable).get()).map((r) => r.exerciseId);
+      expect(
+        ids,
+        containsAll(<String>['noah-ex', 'lea-ex']),
+        reason: 'deleting it here is what makes two kids thrash re-downloading',
+      );
+    });
+
+    test('content withdrawn from my own slice is still removed', () async {
+      final mine = exercise('lea-ex', rank: 0);
+      server.content['lea-ex'] = mine;
+      await sync.sync();
+      expect(await sync.cachedCount(), 1);
+
+      // The server retires it.
+      server.content.remove('lea-ex');
+      final report = await sync.sync();
+
+      expect(
+        report.removed,
+        1,
+        reason: 'scoping withdrawal must not disable withdrawal',
+      );
+      expect(await sync.cachedCount(), 0);
+    });
+
+    test("a subject sync does not withdraw the same kid's other subjects",
+        () async {
+      final math = exercise('m1', rank: 0);
+      final french = exercise('f1', rank: 0, subject: 'FR');
+      server.content['m1'] = math;
+      server.content['f1'] = french;
+      await sync.sync();
+      expect(await sync.cachedCount(), 2);
+
+      final report = await sync.sync(subject: 'MATH');
+
+      expect(report.removed, 0);
+      expect(
+        await sync.cachedCount(),
+        2,
+        reason: 'a MATH-only manifest says nothing about FR',
+      );
+    });
+  });
 }

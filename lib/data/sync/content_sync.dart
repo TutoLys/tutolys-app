@@ -112,7 +112,8 @@ class ContentSync {
     );
 
     return switch (manifestResult) {
-      ManifestFetched(:final manifest) => _applyManifest(manifest, token),
+      ManifestFetched(:final manifest) =>
+        _applyManifest(manifest, token, subject: subject),
       // Offline is not an error: cached content stays playable, which is the
       // entire point of caching it.
       ManifestOffline() => Future.value(const SyncReport.offline()),
@@ -123,10 +124,31 @@ class ContentSync {
 
   Future<SyncReport> _applyManifest(
     ContentManifest manifest,
-    String token,
-  ) async {
+    String token, {
+    String? subject,
+  }) async {
+    // Only this kid's own slice of the cache.
+    //
+    // The content tables are shared by every kid paired to this device
+    // (ADR 0014) because content is identified by `(subject, grade)` and two
+    // same-grade siblings read byte-identical rows. That sharing has exactly
+    // one sharp edge, and it is here: reading the whole table would make
+    // "cached but absent from my manifest" mean "withdrawn" *and* "belongs
+    // to my sibling", so a grade-1 sync would delete a grade-3 sibling's
+    // content, they would re-download it, and the two would thrash forever
+    // — on what may be a metered connection.
+    //
+    // `manifest.grade` is the server's own answer for whose manifest this
+    // is, derived from the device token rather than asked for, so it cannot
+    // disagree with the entries it accompanies.
+    final cachedQuery = db.select(db.exerciseCacheTable)
+      ..where((t) => t.grade.equals(manifest.grade));
+    if (subject != null) {
+      cachedQuery.where((t) => t.subject.equals(subject));
+    }
+
     final cached = {
-      for (final row in await db.select(db.exerciseCacheTable).get())
+      for (final row in await cachedQuery.get())
         row.exerciseId: row.contentHash,
     };
 
