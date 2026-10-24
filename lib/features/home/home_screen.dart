@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/i18n/strings.dart';
 import '../../core/routing/paired_router.dart';
+import '../../data/api/progress_api.dart';
 import '../../data/local_db/database.dart';
 import '../pairing/pairing_controller.dart';
 import '../path/path_controller.dart';
@@ -47,6 +48,10 @@ class HomeScreen extends ConsumerWidget {
               _ContinueLearningCard(pathState: pathState),
               const SizedBox(height: Space.lg),
               if (!home.loading) _StatsRow(home: home, progress: progress),
+              if (progress.dailyQuest != null) ...[
+                const SizedBox(height: Space.lg),
+                _DailyQuestCard(quest: progress.dailyQuest!),
+              ],
             ],
           ),
         ),
@@ -103,10 +108,7 @@ class _ContinueLearningCard extends ConsumerWidget {
                 ),
               )
             else ...[
-              Text(
-                nextLeaf.labelFr,
-                style: context.text.bodyLarge,
-              ),
+              Text(nextLeaf.labelFr, style: context.text.bodyLarge),
               const SizedBox(height: Space.md),
               FilledButton(
                 // The real app's own CTA system gives its primary "play"
@@ -190,6 +192,59 @@ class _StatsRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// A fixed, self-contained daily quest for v1 — "N correct answers in a
+/// row, today" (the target comes from the backend's own
+/// `settings.DAILY_QUEST_TARGET`, never hardcoded here). Teacher-assigned
+/// and bonus-review quest types from the original design sketch are
+/// deliberately not built yet — both need school-tutor plumbing that's
+/// still out of scope.
+class _DailyQuestCard extends StatelessWidget {
+  const _DailyQuestCard({required this.quest});
+
+  final DailyQuestDto quest;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.s;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(Space.lg),
+        child: Row(
+          children: [
+            Icon(
+              quest.completed ? Icons.check_circle_rounded : Icons.bolt_rounded,
+              color: quest.completed
+                  ? context.colors.primary
+                  : context.extras.mutedText,
+              size: 32,
+            ),
+            const SizedBox(width: Space.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(s.homeDailyQuestTitle, style: context.text.titleMedium),
+                  Text(
+                    quest.completed
+                        ? s.homeDailyQuestCompleted
+                        : s.homeDailyQuestProgress(
+                            quest.progress,
+                            quest.target,
+                          ),
+                    style: context.text.bodyMedium?.copyWith(
+                      color: context.extras.mutedText,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

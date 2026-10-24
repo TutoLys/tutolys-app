@@ -54,7 +54,9 @@ class _EmptyContentApi extends ContentApi {
   Future<ManifestResult> fetchManifest({
     required String accessToken,
     String? subject,
-  }) async => ManifestFetched(ContentManifest(grade: 1, manifestHash: 'm', entries: const []));
+  }) async => ManifestFetched(
+    ContentManifest(grade: 1, manifestHash: 'm', entries: const []),
+  );
 
   @override
   Future<ExercisesResult> fetchExercises({
@@ -108,33 +110,37 @@ void main() {
     expect(find.text(Strings.fr.homeGreeting('Yelhan')), findsOneWidget);
   });
 
-  testWidgets('shows the empty continue-learning state when nothing is synced', (
-    tester,
-  ) async {
-    final db = LocalDatabase.memory();
-    addTearDown(db.close);
+  testWidgets(
+    'shows the empty continue-learning state when nothing is synced',
+    (tester) async {
+      final db = LocalDatabase.memory();
+      addTearDown(db.close);
 
-    await tester.pumpWidget(appUnder(db));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(appUnder(db));
+      await tester.pumpAndSettle();
 
-    expect(find.text(Strings.fr.pathEmpty), findsOneWidget);
-    expect(find.text(Strings.fr.homePlay), findsNothing);
-  });
+      expect(find.text(Strings.fr.pathEmpty), findsOneWidget);
+      expect(find.text(Strings.fr.homePlay), findsNothing);
+    },
+  );
 
-  testWidgets("today's real stats render, not zero when something was recorded", (
-    tester,
-  ) async {
-    final db = LocalDatabase.memory();
-    addTearDown(db.close);
-    await HomeStats(db, clock: DateTime.now)
-        .recordExerciseCompleted(elapsedMs: 120000);
+  testWidgets(
+    "today's real stats render, not zero when something was recorded",
+    (tester) async {
+      final db = LocalDatabase.memory();
+      addTearDown(db.close);
+      await HomeStats(
+        db,
+        clock: DateTime.now,
+      ).recordExerciseCompleted(elapsedMs: 120000);
 
-    await tester.pumpWidget(appUnder(db));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(appUnder(db));
+      await tester.pumpAndSettle();
 
-    expect(find.text('1'), findsOneWidget); // exercises today
-    expect(find.text('2'), findsOneWidget); // minutes today (120000ms)
-  });
+      expect(find.text('1'), findsOneWidget); // exercises today
+      expect(find.text('2'), findsOneWidget); // minutes today (120000ms)
+    },
+  );
 
   testWidgets('shows the real streak from the backend', (tester) async {
     final db = LocalDatabase.memory();
@@ -151,32 +157,92 @@ void main() {
     expect(find.text(Strings.fr.homeStatStreak), findsOneWidget);
   });
 
-  testWidgets('offline with no local history shows an estimated zero, not a dash', (
+  testWidgets(
+    'offline with no local history shows an estimated zero, not a dash',
+    (tester) async {
+      final db = LocalDatabase.memory();
+      addTearDown(db.close);
+      final progressApi = _FakeProgressApi()..result = const ProgressOffline();
+
+      await tester.pumpWidget(appUnder(db, progressApi: progressApi));
+      await tester.pumpAndSettle();
+
+      // `~0`, not a bare dash: this device really has no local play history,
+      // which is a known value (zero), distinct from "couldn't tell at all".
+      expect(find.text('~0'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'offline with real local history shows the estimate, marked as one',
+    (tester) async {
+      final db = LocalDatabase.memory();
+      addTearDown(db.close);
+      await StreakLocal(db).recordPlayedToday();
+      final progressApi = _FakeProgressApi()..result = const ProgressOffline();
+
+      await tester.pumpWidget(appUnder(db, progressApi: progressApi));
+      await tester.pumpAndSettle();
+
+      expect(find.text('~1'), findsOneWidget);
+    },
+  );
+
+  testWidgets('no daily-quest card when the backend has nothing to report', (
     tester,
   ) async {
     final db = LocalDatabase.memory();
     addTearDown(db.close);
-    final progressApi = _FakeProgressApi()..result = const ProgressOffline();
 
-    await tester.pumpWidget(appUnder(db, progressApi: progressApi));
+    await tester.pumpWidget(appUnder(db));
     await tester.pumpAndSettle();
 
-    // `~0`, not a bare dash: this device really has no local play history,
-    // which is a known value (zero), distinct from "couldn't tell at all".
-    expect(find.text('~0'), findsOneWidget);
+    expect(find.text(Strings.fr.homeDailyQuestTitle), findsNothing);
   });
 
-  testWidgets('offline with real local history shows the estimate, marked as one', (
+  testWidgets(
+    'shows in-progress daily-quest progress, not the completed message',
+    (tester) async {
+      final db = LocalDatabase.memory();
+      addTearDown(db.close);
+      final progressApi = _FakeProgressApi()
+        ..result = const ProgressFetched(
+          ProgressSnapshot(
+            masteries: [],
+            currentStreakDays: 3,
+            dailyQuest: DailyQuestDto(target: 3, progress: 2, completed: false),
+          ),
+        );
+
+      await tester.pumpWidget(appUnder(db, progressApi: progressApi));
+      await tester.pumpAndSettle();
+
+      expect(find.text(Strings.fr.homeDailyQuestTitle), findsOneWidget);
+      expect(
+        find.text(Strings.fr.homeDailyQuestProgress(2, 3)),
+        findsOneWidget,
+      );
+      expect(find.text(Strings.fr.homeDailyQuestCompleted), findsNothing);
+    },
+  );
+
+  testWidgets('shows the completed message once the target is reached', (
     tester,
   ) async {
     final db = LocalDatabase.memory();
     addTearDown(db.close);
-    await StreakLocal(db).recordPlayedToday();
-    final progressApi = _FakeProgressApi()..result = const ProgressOffline();
+    final progressApi = _FakeProgressApi()
+      ..result = const ProgressFetched(
+        ProgressSnapshot(
+          masteries: [],
+          currentStreakDays: 3,
+          dailyQuest: DailyQuestDto(target: 3, progress: 3, completed: true),
+        ),
+      );
 
     await tester.pumpWidget(appUnder(db, progressApi: progressApi));
     await tester.pumpAndSettle();
 
-    expect(find.text('~1'), findsOneWidget);
+    expect(find.text(Strings.fr.homeDailyQuestCompleted), findsOneWidget);
   });
 }

@@ -16,6 +16,8 @@ class ProgressState {
     this.loading = true,
     this.offline = false,
     this.isStreakEstimated = false,
+    this.freezesAvailable,
+    this.dailyQuest,
   });
 
   final int? currentStreakDays;
@@ -28,6 +30,14 @@ class ProgressState {
   /// history (plan §5.8), not a live read — the backend is still the
   /// source of truth and this is only ever shown while it's unreachable.
   final bool isStreakEstimated;
+
+  /// Null while offline/loading/unreachable — same "unknown, not a
+  /// fabricated 0" rule as `currentStreakDays`. The offline local estimate
+  /// has no opinion on freeze balance, so this stays null there too.
+  final int? freezesAvailable;
+
+  /// Null for the same reasons, or for a kid who's never played.
+  final DailyQuestDto? dailyQuest;
 }
 
 class ProgressController extends Notifier<ProgressState> {
@@ -56,21 +66,21 @@ class ProgressController extends Notifier<ProgressState> {
         masteredCount: snapshot.masteredCount,
         totalSkills: snapshot.masteries.length,
         loading: false,
+        freezesAvailable: snapshot.freezesAvailable,
+        dailyQuest: snapshot.dailyQuest,
       ),
       ProgressOffline() => ProgressState(
         loading: false,
         offline: true,
-        currentStreakDays: await StreakLocal(
-          ref.read(localDatabaseProvider),
-        ).currentStreak(),
+        currentStreakDays: await StreakLocal(ref.read(localDatabaseProvider))
+            .currentStreak(),
         isStreakEstimated: true,
       ),
       // Unauthorized/failed: show nothing rather than a stale/fabricated
       // number — the session controller handles a real 401 (token revoked)
       // separately; this view just has nothing to show this time.
-      ProgressUnauthorized() || ProgressFailed() => const ProgressState(
-        loading: false,
-      ),
+      ProgressUnauthorized() ||
+      ProgressFailed() => const ProgressState(loading: false),
     };
   }
 
@@ -78,9 +88,7 @@ class ProgressController extends Notifier<ProgressState> {
 }
 
 final progressControllerProvider =
-    NotifierProvider<ProgressController, ProgressState>(
-      ProgressController.new,
-    );
+    NotifierProvider<ProgressController, ProgressState>(ProgressController.new);
 
 final progressApiProvider = Provider<ProgressApi>(
   (ref) => ProgressApi(dio: ref.watch(dioProvider)),

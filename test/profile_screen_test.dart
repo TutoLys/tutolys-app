@@ -189,6 +189,34 @@ void main() {
     expect(find.text(Strings.fr.profileSignOut), findsOneWidget);
   });
 
+  testWidgets('shows the real freeze balance from the backend', (tester) async {
+    final progressApi = _FakeProgressApi()
+      ..result = const ProgressFetched(
+        ProgressSnapshot(
+          masteries: [],
+          currentStreakDays: 5,
+          freezesAvailable: 2,
+        ),
+      );
+
+    await tester.pumpWidget(appUnder(progressApi: progressApi));
+    await tester.pumpAndSettle();
+
+    expect(find.text(Strings.fr.profileFreezesAvailable(2)), findsOneWidget);
+  });
+
+  testWidgets('no freeze line when the balance is unknown', (tester) async {
+    final progressApi = _FakeProgressApi()
+      ..result = const ProgressFetched(
+        ProgressSnapshot(masteries: [], currentStreakDays: 5),
+      );
+
+    await tester.pumpWidget(appUnder(progressApi: progressApi));
+    await tester.pumpAndSettle();
+
+    expect(find.text(Strings.fr.profileFreezesAvailable(0)), findsNothing);
+  });
+
   group('PIN gate', () {
     testWidgets('with no PIN set yet, sign-out prompts to create one first', (
       tester,

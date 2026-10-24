@@ -22,22 +22,53 @@ class SkillMasteryDto {
   final bool isMastered;
 }
 
-/// `GET /api/v1/me/progress`'s full body — mastery per skill plus the
-/// kid's current day-streak, read live from telemetry on the backend's
-/// side (never cached there either, see backend ADR 0009).
+/// Today's daily-challenge progress
+/// (`apps.progress.views.DailyQuestSerializer`) — "N correct answers in a
+/// row", target configured backend-side (`settings.DAILY_QUEST_TARGET`).
+class DailyQuestDto {
+  const DailyQuestDto({
+    required this.target,
+    required this.progress,
+    required this.completed,
+  });
+
+  factory DailyQuestDto.fromJson(Map<String, Object?> json) {
+    return DailyQuestDto(
+      target: json['target'] as int,
+      progress: json['progress'] as int,
+      completed: json['completed'] as bool,
+    );
+  }
+
+  final int target;
+  final int progress;
+  final bool completed;
+}
+
+/// `GET /api/v1/me/progress`'s full body — mastery per skill, the kid's
+/// current streak-with-freeze, their spendable freeze balance, and
+/// today's daily-challenge progress, all read live from telemetry on the
+/// backend's side (never cached there either, see backend ADR 0009/0018).
 class ProgressSnapshot {
   const ProgressSnapshot({
     required this.masteries,
     required this.currentStreakDays,
+    this.freezesAvailable,
+    this.dailyQuest,
   });
 
   factory ProgressSnapshot.fromJson(Map<String, Object?> json) {
+    final dailyQuestJson = json['daily_quest'] as Map<String, Object?>?;
     return ProgressSnapshot(
       masteries: ((json['masteries'] as List?) ?? const [])
           .cast<Map<String, Object?>>()
           .map(SkillMasteryDto.fromJson)
           .toList(growable: false),
       currentStreakDays: json['current_streak_days'] as int?,
+      freezesAvailable: json['freezes_available'] as int?,
+      dailyQuest: dailyQuestJson == null
+          ? null
+          : DailyQuestDto.fromJson(dailyQuestJson),
     );
   }
 
@@ -46,6 +77,15 @@ class ProgressSnapshot {
   /// Null means telemetry couldn't be reached for this read (backend's own
   /// degrade-gracefully behaviour) — distinct from a real `0`.
   final int? currentStreakDays;
+
+  /// Same null-means-unknown rule as [currentStreakDays] — both come from
+  /// the same telemetry read on the backend's side.
+  final int? freezesAvailable;
+
+  /// Null for the same reason, or for a kid who's never played at all —
+  /// telemetry still answers "0 correct so far", but a never-paired read
+  /// has nothing to show yet either way.
+  final DailyQuestDto? dailyQuest;
 
   int get masteredCount => masteries.where((m) => m.isMastered).length;
 }
@@ -103,8 +143,7 @@ class ProgressApi {
       DioExceptionType.connectionError ||
       DioExceptionType.connectionTimeout ||
       DioExceptionType.sendTimeout ||
-      DioExceptionType.receiveTimeout =>
-        true,
+      DioExceptionType.receiveTimeout => true,
       _ => false,
     };
   }

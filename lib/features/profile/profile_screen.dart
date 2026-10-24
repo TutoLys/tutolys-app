@@ -112,27 +112,55 @@ class _ProgressSummary extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(Space.lg),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: _ProgressTile(
-                icon: Icons.local_fire_department_rounded,
-                value: progress.currentStreakDays == null
-                    ? '–'
-                    : '${progress.currentStreakDays}',
-                label: progress.currentStreakDays == null
-                    ? s.homeStatStreak
-                    : s.profileStreakDays(progress.currentStreakDays!),
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: _ProgressTile(
+                    icon: Icons.local_fire_department_rounded,
+                    value: progress.currentStreakDays == null
+                        ? '–'
+                        : '${progress.currentStreakDays}',
+                    label: progress.currentStreakDays == null
+                        ? s.homeStatStreak
+                        : s.profileStreakDays(progress.currentStreakDays!),
+                  ),
+                ),
+                const SizedBox(width: Space.md),
+                Expanded(
+                  child: _ProgressTile(
+                    icon: Icons.star_rounded,
+                    value: '${progress.masteredCount}',
+                    label: s.profileSkillsMastered(progress.masteredCount),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: Space.md),
-            Expanded(
-              child: _ProgressTile(
-                icon: Icons.star_rounded,
-                value: '${progress.masteredCount}',
-                label: s.profileSkillsMastered(progress.masteredCount),
+            // Only shown when the balance is actually known — a read that
+            // couldn't reach telemetry has nothing real to claim here
+            // either, same "unknown, not a fabricated number" rule as the
+            // streak tile above.
+            if (progress.freezesAvailable != null) ...[
+              const SizedBox(height: Space.md),
+              Row(
+                children: [
+                  Icon(
+                    Icons.ac_unit_rounded,
+                    size: 18,
+                    color: context.colors.primary,
+                  ),
+                  const SizedBox(width: Space.xs),
+                  Text(
+                    s.profileFreezesAvailable(progress.freezesAvailable!),
+                    style: context.text.labelMedium?.copyWith(
+                      color: context.extras.mutedText,
+                    ),
+                  ),
+                ],
               ),
-            ),
+            ],
           ],
         ),
       ),

@@ -31,8 +31,16 @@ class _FakeProgressApi extends ProgressApi {
   }
 }
 
-SkillMasteryDto mastery(String id, {required double pct, bool isMastered = false}) {
-  return SkillMasteryDto(skillNodeId: id, masteryPct: pct, isMastered: isMastered);
+SkillMasteryDto mastery(
+  String id, {
+  required double pct,
+  bool isMastered = false,
+}) {
+  return SkillMasteryDto(
+    skillNodeId: id,
+    masteryPct: pct,
+    isMastered: isMastered,
+  );
 }
 
 void main() {
@@ -52,7 +60,11 @@ void main() {
             session ??
                 const SessionState(
                   status: SessionStatus.paired,
-                  kid: PairedKid(id: 'k1', displayName: 'Yelhan', gradeLevel: 1),
+                  kid: PairedKid(
+                    id: 'k1',
+                    displayName: 'Yelhan',
+                    gradeLevel: 1,
+                  ),
                   accessToken: 'token',
                 ),
           ),
@@ -91,41 +103,47 @@ void main() {
     expect(state.currentStreakDays, 4);
   });
 
-  test('offline with no local play history estimates a streak of zero', () async {
-    container = build();
-    api.result = const ProgressOffline();
+  test(
+    'offline with no local play history estimates a streak of zero',
+    () async {
+      container = build();
+      api.result = const ProgressOffline();
 
-    await container.read(progressControllerProvider.notifier).refresh();
+      await container.read(progressControllerProvider.notifier).refresh();
 
-    final state = container.read(progressControllerProvider);
-    expect(state.loading, isFalse);
-    expect(state.offline, isTrue);
-    expect(state.isStreakEstimated, isTrue);
-    expect(state.currentStreakDays, 0);
-    expect(state.totalSkills, 0);
-  });
+      final state = container.read(progressControllerProvider);
+      expect(state.loading, isFalse);
+      expect(state.offline, isTrue);
+      expect(state.isStreakEstimated, isTrue);
+      expect(state.currentStreakDays, 0);
+      expect(state.totalSkills, 0);
+    },
+  );
 
-  test('offline falls back to a real estimate from local play history', () async {
-    container = build();
-    // `ProgressController`'s own offline fallback has no clock injection
-    // point — it uses the real wall clock, same as production — so this
-    // seeds against `DateTime.now()` too rather than a fixed date, which
-    // would only coincidentally agree with "today" on the day this was
-    // written.
-    final now = DateTime.now();
-    await StreakLocal(db, clock: () => now).recordPlayedToday();
-    await StreakLocal(
-      db,
-      clock: () => now.subtract(const Duration(days: 1)),
-    ).recordPlayedToday();
-    api.result = const ProgressOffline();
+  test(
+    'offline falls back to a real estimate from local play history',
+    () async {
+      container = build();
+      // `ProgressController`'s own offline fallback has no clock injection
+      // point — it uses the real wall clock, same as production — so this
+      // seeds against `DateTime.now()` too rather than a fixed date, which
+      // would only coincidentally agree with "today" on the day this was
+      // written.
+      final now = DateTime.now();
+      await StreakLocal(db, clock: () => now).recordPlayedToday();
+      await StreakLocal(
+        db,
+        clock: () => now.subtract(const Duration(days: 1)),
+      ).recordPlayedToday();
+      api.result = const ProgressOffline();
 
-    await container.read(progressControllerProvider.notifier).refresh();
+      await container.read(progressControllerProvider.notifier).refresh();
 
-    final state = container.read(progressControllerProvider);
-    expect(state.isStreakEstimated, isTrue);
-    expect(state.currentStreakDays, 2);
-  });
+      final state = container.read(progressControllerProvider);
+      expect(state.isStreakEstimated, isTrue);
+      expect(state.currentStreakDays, 2);
+    },
+  );
 
   test('unauthorized shows nothing rather than an error state', () async {
     container = build();
@@ -138,25 +156,65 @@ void main() {
     expect(state.currentStreakDays, isNull);
   });
 
-  test('no paired kid: stays non-loading with nothing to show, no network call', () async {
-    container = build(session: const SessionState.unpaired());
+  test(
+    'no paired kid: stays non-loading with nothing to show, no network call',
+    () async {
+      container = build(session: const SessionState.unpaired());
 
-    await container.read(progressControllerProvider.notifier).refresh();
+      await container.read(progressControllerProvider.notifier).refresh();
 
-    expect(container.read(progressControllerProvider).loading, isFalse);
-    expect(api.fetchCalls, 0);
-  });
+      expect(container.read(progressControllerProvider).loading, isFalse);
+      expect(api.fetchCalls, 0);
+    },
+  );
 
-  test('a null streak from a successful fetch is distinct from offline', () async {
+  test(
+    'a null streak from a successful fetch is distinct from offline',
+    () async {
+      container = build();
+      api.result = const ProgressFetched(
+        ProgressSnapshot(masteries: [], currentStreakDays: null),
+      );
+
+      await container.read(progressControllerProvider.notifier).refresh();
+
+      final state = container.read(progressControllerProvider);
+      expect(state.offline, isFalse);
+      expect(state.currentStreakDays, isNull);
+    },
+  );
+
+  test(
+    'freeze balance and daily quest pass through from a real fetch',
+    () async {
+      container = build();
+      api.result = const ProgressFetched(
+        ProgressSnapshot(
+          masteries: [],
+          currentStreakDays: 4,
+          freezesAvailable: 2,
+          dailyQuest: DailyQuestDto(target: 3, progress: 2, completed: false),
+        ),
+      );
+
+      await container.read(progressControllerProvider.notifier).refresh();
+
+      final state = container.read(progressControllerProvider);
+      expect(state.freezesAvailable, 2);
+      expect(state.dailyQuest?.target, 3);
+      expect(state.dailyQuest?.progress, 2);
+      expect(state.dailyQuest?.completed, isFalse);
+    },
+  );
+
+  test('offline has no opinion on freeze balance or the daily quest', () async {
     container = build();
-    api.result = const ProgressFetched(
-      ProgressSnapshot(masteries: [], currentStreakDays: null),
-    );
+    api.result = const ProgressOffline();
 
     await container.read(progressControllerProvider.notifier).refresh();
 
     final state = container.read(progressControllerProvider);
-    expect(state.offline, isFalse);
-    expect(state.currentStreakDays, isNull);
+    expect(state.freezesAvailable, isNull);
+    expect(state.dailyQuest, isNull);
   });
 }

@@ -40,6 +40,9 @@ abstract class Strings {
   String get homeStatExercises;
   String get homeStatMinutes;
   String get homeStatStreak;
+  String get homeDailyQuestTitle;
+  String homeDailyQuestProgress(int progress, int target);
+  String get homeDailyQuestCompleted;
 
   // --- path --------------------------------------------------------------
   String get pathTitle;
@@ -53,6 +56,7 @@ abstract class Strings {
   String get profileSignOut;
   String profileSkillsMastered(int count);
   String profileStreakDays(int days);
+  String profileFreezesAvailable(int count);
 
   // --- pin gate ------------------------------------------------------------
   String get pinGateCreateTitle;
@@ -150,6 +154,16 @@ class _FrenchStrings extends Strings {
   String get homeStatStreak => 'Jours de suite';
 
   @override
+  String get homeDailyQuestTitle => 'Défi du jour';
+
+  @override
+  String homeDailyQuestProgress(int progress, int target) =>
+      '$progress/$target bonnes réponses de suite';
+
+  @override
+  String get homeDailyQuestCompleted => 'Défi complété !';
+
+  @override
   String get pathTitle => 'Mon parcours';
 
   @override
@@ -177,6 +191,11 @@ class _FrenchStrings extends Strings {
   @override
   String profileStreakDays(int days) =>
       days == 1 ? 'jour de suite' : 'jours de suite';
+
+  @override
+  String profileFreezesAvailable(int count) => count == 1
+      ? '1 gel de série disponible'
+      : '$count gels de série disponibles';
 
   @override
   String get pinGateCreateTitle => 'Créer un NIP parent';
@@ -293,6 +312,16 @@ class _EnglishStrings extends Strings {
   String get homeStatStreak => 'Day streak';
 
   @override
+  String get homeDailyQuestTitle => 'Daily challenge';
+
+  @override
+  String homeDailyQuestProgress(int progress, int target) =>
+      '$progress/$target correct in a row';
+
+  @override
+  String get homeDailyQuestCompleted => 'Challenge complete!';
+
+  @override
   String get pathTitle => 'My path';
 
   @override
@@ -319,6 +348,11 @@ class _EnglishStrings extends Strings {
 
   @override
   String profileStreakDays(int days) => 'day streak';
+
+  @override
+  String profileFreezesAvailable(int count) => count == 1
+      ? '1 streak freeze available'
+      : '$count streak freezes available';
 
   @override
   String get pinGateCreateTitle => 'Create a parent PIN';
