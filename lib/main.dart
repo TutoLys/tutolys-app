@@ -71,8 +71,12 @@ class TutolysApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
 
-      // The kid-facing register. The adult shell uses TutolysTheme.adult().
-      theme: TutolysTheme.learner(),
+      // The kid-facing register, as the 2026-10-24 design draws it. The
+      // pages inside have not all been redesigned yet, so expect a seam
+      // until each one lands — the chrome is correct, the contents are
+      // still the A7.2 layer. TutolysTheme.learner() goes when the last
+      // page has moved across.
+      theme: TutolysTheme.village(),
       home: const AppShell(),
     );
   }

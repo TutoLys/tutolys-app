@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tutolys_app/core/i18n/strings.dart';
-import 'package:tutolys_app/core/routing/home_shell.dart';
+import 'package:tutolys_app/core/routing/village_shell.dart';
 import 'package:tutolys_app/core/routing/paired_router.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
 import 'package:tutolys_app/features/home/home_screen.dart';
@@ -79,7 +79,7 @@ void main() {
     await tester.pumpWidget(appUnder(router));
     await tester.pumpAndSettle();
 
-    expect(find.byType(HomeShell), findsOneWidget);
+    expect(find.byType(VillageShell), findsOneWidget);
     expect(find.byType(HomeScreen), findsOneWidget);
     expect(find.byType(PlayScreen), findsNothing);
     // IndexedStack keeps every tab built — selection means Home's own
@@ -126,7 +126,7 @@ void main() {
     router.pop();
     await tester.pumpAndSettle();
 
-    expect(find.byType(HomeShell), findsOneWidget);
+    expect(find.byType(VillageShell), findsOneWidget);
     expect(find.byType(PlayScreen), findsNothing);
   });
 }

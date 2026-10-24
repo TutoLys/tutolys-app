@@ -162,7 +162,8 @@ void main() {
     );
     await tester.pumpAndSettle();
     // The home shell starts on its Home tab; the path lives on its own tab.
-    await tester.tap(find.text('Parcours'));
+    // The design renames this destination: Parcours -> Carte.
+    await tester.tap(find.text('Carte'));
     await tester.pumpAndSettle();
 
     expect(find.text('Compter'), findsOneWidget);
@@ -197,7 +198,8 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Parcours'));
+    // The design renames this destination: Parcours -> Carte.
+    await tester.tap(find.text('Carte'));
     await tester.pumpAndSettle();
 
     expect(find.byIcon(Icons.lock_outline), findsOneWidget);
@@ -217,7 +219,8 @@ void main() {
   ) async {
     await tester.pumpWidget(appUnder(leaves: const [], content: const {}));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Parcours'));
+    // The design renames this destination: Parcours -> Carte.
+    await tester.tap(find.text('Carte'));
     await tester.pumpAndSettle();
 
     expect(find.byType(PlayScreen), findsNothing);
