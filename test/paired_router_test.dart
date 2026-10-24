@@ -4,11 +4,10 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:tutolys_app/core/i18n/strings.dart';
 import 'package:tutolys_app/core/routing/village_shell.dart';
 import 'package:tutolys_app/core/routing/paired_router.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
-import 'package:tutolys_app/features/home/home_screen.dart';
+import 'package:tutolys_app/features/home/village_screen.dart';
 import 'package:tutolys_app/features/pairing/pairing_controller.dart';
 import 'package:tutolys_app/features/play/play_screen.dart';
 
@@ -80,11 +79,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(VillageShell), findsOneWidget);
-    expect(find.byType(HomeScreen), findsOneWidget);
+    expect(find.byType(VillageScreen), findsOneWidget);
     expect(find.byType(PlayScreen), findsNothing);
-    // IndexedStack keeps every tab built — selection means Home's own
-    // content is actually hit-testable, not just present in the tree.
-    expect(find.text(Strings.fr.homeContinueLearning), findsOneWidget);
+    // IndexedStack keeps every tab built — selection means Village's own
+    // content is actually hit-testable, not just present in the tree. The
+    // recommend bar is the marker: it belongs to Village and nothing else.
+    expect(find.text('ACTIVITÉ RECOMMANDÉE'), findsOneWidget);
   });
 
   testWidgets('pushing /play with a node shows that node on the play screen', (

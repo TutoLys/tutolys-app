@@ -1,7 +1,7 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-import '../../features/home/home_screen.dart';
+import '../../features/home/village_screen.dart';
 import '../../features/path/path_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/settings/settings_screen.dart';
@@ -32,7 +32,7 @@ class _VillageShellState extends State<VillageShell> {
   /// re-trigger each screen's one-shot `build()` load — Home's and Path's
   /// controllers fetch once and expect to stay mounted.
   static const _pages = <Widget>[
-    HomeScreen(),
+    VillageScreen(),
     PathScreen(),
     _NotBuiltYet(title: 'Quêtes'),
     _NotBuiltYet(title: 'Progrès'),
