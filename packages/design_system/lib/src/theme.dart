@@ -114,32 +114,33 @@ abstract final class TutolysTheme {
   /// register — see [VillageColors].
   static ThemeData village() {
     const scheme = ColorScheme.light(
-      primary: VillageColors.navy,
+      primary: VillageColors.quebecBlue,
       onPrimary: Colors.white,
       primaryContainer: VillageColors.surface,
-      onPrimaryContainer: VillageColors.navy,
-      secondary: VillageColors.cta,
+      onPrimaryContainer: VillageColors.quebecBlue,
+      secondary: VillageColors.gold,
       onSecondary: Color(0xFF3A2A00),
-      surface: VillageColors.card,
-      onSurface: VillageColors.textPrimary,
+      surface: VillageColors.surface,
+      onSurface: VillageColors.ink,
       surfaceContainerHighest: VillageColors.surface,
       error: TutolysColors.danger,
       onError: Colors.white,
     );
 
     return _base(scheme, TutolysRegister.learner).copyWith(
-      // Flat here, not the gradient the design shows: a gradient ground is a
-      // widget the shell paints, not a scaffold colour, and the two must not
-      // both try to own the background.
-      scaffoldBackgroundColor: VillageColors.groundBottom,
+      // Flat, and the *bottom* of the sky gradient: `--sky-top` to
+      // `--sky-bottom` is painted by the shell widget, not the scaffold, so
+      // the two never both try to own the background. Anything the shell
+      // does not cover meets the gradient at its lighter end.
+      scaffoldBackgroundColor: VillageColors.skyBottom,
       extensions: const [
         TutolysThemeExtras(
           register: TutolysRegister.learner,
-          gold: VillageColors.cta,
+          gold: VillageColors.gold,
           success: TutolysColors.success,
           danger: TutolysColors.danger,
-          cardRadius: Radii.cardLg,
-          mutedText: VillageColors.textMuted,
+          cardRadius: VillageMetrics.mdAll,
+          mutedText: VillageColors.inkMuted,
           progressTrack: VillageColors.track,
         ),
       ],

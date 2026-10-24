@@ -50,6 +50,12 @@ flutter:
   uses-material-design: true
   assets:
     - assets/icon/
+    # The 2026-10-24 design's real artwork, copied verbatim from
+    # `docs/design/assets/raw/` (see that folder's README) — the actual bytes
+    # Hafid supplied, not re-exported or re-compressed. Subject buildings and
+    # the mascot are illustrations that cannot be reproduced in code; the nav
+    # icons are PNGs for the same reason.
+    - assets/images/
 
 # `dart run flutter_launcher_icons` regenerates web/icons/*.png from these.
 # Scoped to web only: Linux desktop has no Flutter-tooling icon pipeline (its

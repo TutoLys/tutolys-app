@@ -46,57 +46,100 @@ abstract final class TutolysColors {
 ///
 /// A third direction, superseding both of its predecessors: not the
 /// ink-outline sticker style of `Platforms/3-student-village.html`, and not
-/// ADR 0004's dark A7.2 layer. Pale blue grounds, white cards with a soft
-/// shadow, illustrated buildings per subject, gold pill CTAs, navy accents.
+/// ADR 0004's dark A7.2 layer. Pale blue sky, white cards, gold CTAs.
 ///
 /// It also reverses a documented decision. ADR 0004 chose a **dark** learner
 /// register on the reasoning that "gold reads as reward against a deep blue
 /// rather than as a warning against white". The design says light, so light
-/// it is — but the old argument was a real one, and gold-on-white needs
+/// it is — but the old argument was a real one, and gold-on-white is worth
 /// watching as the pages land.
 ///
-/// Brand hues come from `Platforms/shared.css`, which `TutolysColors` above
-/// already treats as authoritative. The ground and card values are read from
-/// the design rather than from a stylesheet, so they are **approximate until
-/// confirmed against the artifact's own CSS** — flagged rather than passed
-/// off as exact.
+/// **Every value here is copied from the design's own `:root` block**
+/// (`docs/design/01-design-system-gallery.html`), which its README names as
+/// the source of truth. Do not re-derive these by eye — an earlier pass did
+/// exactly that and got the sky, the text colour and the shadow all wrong.
 abstract final class VillageColors {
-  /// Page ground. A pale blue wash, lighter toward the bottom.
-  static const Color groundTop = Color(0xFFE3EFFB);
-  static const Color groundBottom = Color(0xFFF5FAFF);
+  /// The sky behind everything, top to bottom. `--sky-top` / `--sky-bottom`.
+  static const Color skyTop = Color(0xFFBFE3FF);
+  static const Color skyBottom = Color(0xFFEAF6FF);
 
-  /// Cards and panels sit on the ground in plain white.
-  static const Color card = Color(0xFFFFFFFF);
+  /// `--surface`. Cards, sidebar, panels.
+  static const Color surface = Color(0xFFFFFFFF);
 
-  /// Rails, sidebars and inset wells.
-  static const Color surface = Color(0xFFF1F6FD);
+  /// `--quebec-blue` / `--quebec-blue-bright`. The brand, and the brighter
+  /// tone used for active navigation and links.
+  static const Color quebecBlue = Color(0xFF1F3C88);
+  static const Color quebecBlueBright = Color(0xFF2F6FED);
 
-  /// Navy, for headings and the "activité recommandée" band.
-  static const Color navy = TutolysColors.blue;
-  static const Color navyLight = TutolysColors.blueLight;
+  /// `--gold` family. Achievement and the primary CTA.
+  static const Color gold = Color(0xFFD4AF37);
+  static const Color goldLight = Color(0xFFFBBF24);
+  static const Color goldPale = Color(0xFFFDE68A);
 
-  /// The primary call to action is gold, always a pill.
-  static const Color cta = Color(0xFFF2B13B);
-  static const Color ctaDeep = Color(0xFFD99A22);
+  /// `--ink` / `--ink-muted`. Text. Both are blue-tinted, not neutral grey.
+  static const Color ink = Color(0xFF223047);
+  static const Color inkMuted = Color(0xFF7C8AA3);
 
-  static const Color textPrimary = TutolysColors.textOnLight;
-  static const Color textMuted = Color(0xFF5B6475);
+  /// `--line` (borders) and `--track` (progress-bar channels).
+  static const Color line = Color(0xFFE4ECF7);
+  static const Color track = Color(0xFFE1E9F7);
 
-  /// Per-subject accents, from `shared.css`'s own `--math`/`--fr`/… set.
-  /// Used on progress bars, pills and building labels.
-  static const Color math = Color(0xFFF2A93B);
-  static const Color francais = Color(0xFFE8667A);
-  static const Color anglais = Color(0xFF3BB3C3);
-  static const Color science = Color(0xFF52C97E);
-  static const Color universSocial = Color(0xFF9B7AE0);
+  static const Color success = Color(0xFF2FB170);
+  static const Color successPale = Color(0xFFDFF5E8);
 
-  /// Progress tracks, under every one of those accents.
-  static const Color track = Color(0xFFE2E8F2);
+  /// `--retry` / `--retry-pale`. The "almost!" state.
+  ///
+  /// Amber, never red, and paired with a target icon rather than an X —
+  /// because every engine retries until correct and never ends a lesson
+  /// early, so red-and-an-X would contradict the actual mechanic. The
+  /// design's Decision Log makes this an explicit, repeated ruling, and it
+  /// is the same reasoning `EngineFeedback.incorrect` already documents
+  /// ("deliberately gentle — a harsh buzzer teaches avoidance").
+  static const Color retry = Color(0xFFF2994A);
+  static const Color retryPale = Color(0xFFFFF1E0);
 
-  /// The card shadow. Softer and cooler than the learner-dark register's
-  /// navy "cloud" — on a pale ground a heavy shadow reads as grime.
-  static const Color shadow = Color(0x14334155);
-  static const double shadowElevation = 3;
+  /// `--shadow` / `--shadow-sm`, both navy-tinted rather than neutral grey:
+  /// `0 16px 40px rgba(31,60,136,.12)` and `0 6px 16px rgba(31,60,136,.08)`.
+  /// Flutter takes the colour here; elevation approximates the blur.
+  static const Color shadow = Color(0x1F1F3C88);
+  static const Color shadowSmall = Color(0x141F3C88);
+  static const double elevation = 10;
+  static const double elevationSmall = 4;
+}
+
+/// Metrics the design states outright, rather than ones inferred from a
+/// screenshot. Same source as [VillageColors].
+abstract final class VillageMetrics {
+  /// `--radius-shell` — the outer frame and large panels.
+  static const Radius shell = Radius.circular(28);
+
+  /// `--radius-md` — cards, rows, pills' containers.
+  static const Radius md = Radius.circular(16);
+
+  static const BorderRadius shellAll = BorderRadius.all(shell);
+  static const BorderRadius mdAll = BorderRadius.all(md);
+
+  /// `--sidebar-w`. The expanded sidebar at >= 1024px.
+  static const double sidebarWidth = 224;
+
+  /// The compact icon rail at 768-1023px. Stated in the design's nav frame
+  /// rather than as a custom property.
+  static const double railWidth = 84;
+
+  /// `--header-h`.
+  static const double headerHeight = 92;
+}
+
+/// The display typeface the design specifies: **Baloo 2**, weights 600-800,
+/// with the system stack for body text.
+///
+/// Not yet bundled. It has to ship as a real font asset rather than a Google
+/// Fonts CDN call — this app is offline-first, and a runtime network
+/// dependency for type would mean a kid on a plane gets fallback glyphs.
+/// That tradeoff is ADR 0004's own open question, and the design answers the
+/// *which font* half of it without answering the *how delivered* half.
+abstract final class VillageType {
+  static const String display = 'Baloo2';
 }
 
 /// Spacing scale. A 4pt base, so every gap is a multiple and layouts line up
