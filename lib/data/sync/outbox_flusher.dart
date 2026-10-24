@@ -11,6 +11,12 @@ import 'drift_event_outbox.dart';
 /// nobody will ever notice. So every outcome is accounted for: delivered rows
 /// are cleared, transient failures back off and retry, and events the server
 /// will never accept are surfaced rather than quietly deleted.
+///
+/// One narrow, deliberate exception: [maxOutboxRows] bounds total local
+/// storage against an outage lasting months, not days/weeks — see
+/// `DriftEventOutbox.enforceCapacityCap`. Evictions past that ceiling are
+/// still never *silent*: they are counted and timestamped, just not
+/// retried forever. "Never silently" became "never unaccounted."
 class OutboxFlusher {
   OutboxFlusher({
     required this.outbox,
@@ -19,6 +25,7 @@ class OutboxFlusher {
     this.batchSize = 50,
     this.interval = const Duration(seconds: 30),
     this.maxAttempts = 10,
+    this.maxOutboxRows = 10000,
     Random? random,
     DateTime Function()? clock,
   })  : _random = random ?? Random(),
@@ -40,6 +47,10 @@ class OutboxFlusher {
   /// After this many failures an event is reported as stuck rather than
   /// retried indefinitely. It is still never deleted.
   final int maxAttempts;
+
+  /// Hard ceiling on undelivered rows — see `enforceCapacityCap`'s own doc
+  /// for why this exists and what "evicted" means here.
+  final int maxOutboxRows;
 
   final Random _random;
   final DateTime Function() _now;
@@ -77,10 +88,16 @@ class OutboxFlusher {
   /// Upload what is pending. Safe to call concurrently: overlapping calls
   /// return immediately rather than double-sending.
   Future<void> flush() async {
-    if (_flushing || _paused) return;
+    if (_flushing) return;
     _flushing = true;
 
     try {
+      // Checked inside try, not as an early guard above: a paused flusher
+      // still needs enforceCapacityCap to run in finally below — a device
+      // can go on queuing events (PlayScreen writes to the outbox
+      // regardless of pairing state) while its credential sits revoked.
+      if (_paused) return;
+
       final token = accessToken();
       if (token == null || token.isEmpty) {
         // Not paired yet, or mid-refresh. Events stay queued.
@@ -133,6 +150,12 @@ class OutboxFlusher {
           );
       }
     } finally {
+      // Not nested inside the UploadProcessed case (unlike pruneDelivered):
+      // the exact scenario this exists for — sustained offline, every tick
+      // landing on UploadOffline — must never skip it. Runs on every call,
+      // success or not, so local storage stays bounded regardless of why
+      // uploads aren't landing.
+      await outbox.enforceCapacityCap(maxRows: maxOutboxRows);
       _flushing = false;
     }
   }
@@ -158,10 +181,13 @@ class OutboxFlusher {
   /// Health counters, reported alongside request ids and ingest counters
   /// (plan §8). Outbox depth is the number that tells you sync is failing.
   Future<OutboxHealth> health() async {
+    final capacity = await outbox.capacityDropStats();
     return OutboxHealth(
       depth: await outbox.depth(),
       stuck: (await outbox.stuck(afterAttempts: maxAttempts)).length,
       paused: _paused,
+      droppedForCapacity: capacity.totalDropped,
+      lastDroppedForCapacityAt: capacity.lastDroppedAt,
       at: _now(),
     );
   }
@@ -172,6 +198,8 @@ class OutboxHealth {
     required this.depth,
     required this.stuck,
     required this.paused,
+    required this.droppedForCapacity,
+    required this.lastDroppedForCapacityAt,
     required this.at,
   });
 
@@ -184,7 +212,13 @@ class OutboxHealth {
   /// Whether uploads are halted pending a re-pair.
   final bool paused;
 
+  /// Ever evicted by `DriftEventOutbox.enforceCapacityCap`. Zero in the
+  /// overwhelmingly common case — this only moves once an outage has run
+  /// long enough to fill the local storage ceiling.
+  final int droppedForCapacity;
+  final DateTime? lastDroppedForCapacityAt;
+
   final DateTime at;
 
-  bool get isHealthy => stuck == 0 && !paused;
+  bool get isHealthy => stuck == 0 && !paused && droppedForCapacity == 0;
 }

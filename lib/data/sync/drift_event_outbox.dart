@@ -130,4 +130,86 @@ class DriftEventOutbox implements EventOutbox {
           ..where((t) => t.attempts.isBiggerOrEqualValue(afterAttempts)))
         .get();
   }
+
+  static const _droppedCountKey = 'outbox_capacity.dropped_total';
+  static const _lastDropAtKey = 'outbox_capacity.last_dropped_at';
+
+  /// A hard ceiling on undelivered rows, so a backend outage lasting months
+  /// (not the days/weeks the backoff schedule is tuned for) cannot grow
+  /// local storage without bound on a device that may have very little to
+  /// spare.
+  ///
+  /// A deliberate, narrow softening of "never drop an event silently" (see
+  /// this class's own doc and [stuck]): past this ceiling, the oldest
+  /// undelivered rows are evicted — but every eviction is counted and
+  /// timestamped (see [capacityDropStats]), never just deleted and
+  /// forgotten. "Never silently" becomes "never *unaccounted*": the data
+  /// itself can be gone, but the fact that it happened, when, and how much
+  /// never is. A kid playing normally, even through a real multi-week
+  /// outage, will not come close to the default ceiling — this exists for
+  /// "the device sat unreachable for the better part of a year," not the
+  /// realistic case.
+  ///
+  /// Returns the number of rows evicted (0 if under the cap).
+  Future<int> enforceCapacityCap({int maxRows = 10000}) async {
+    final total = await depth();
+    if (total <= maxRows) return 0;
+
+    final overflow = total - maxRows;
+    final toEvict = await (db.select(db.eventOutboxTable)
+          ..where((t) => t.deliveredAt.isNull())
+          ..orderBy([(t) => OrderingTerm.asc(t.queuedAt)])
+          ..limit(overflow))
+        .get();
+
+    if (toEvict.isEmpty) return 0;
+
+    final now = _now();
+    final stats = await capacityDropStats();
+
+    await db.transaction(() async {
+      await (db.delete(db.eventOutboxTable)
+            ..where((t) => t.eventId.isIn(toEvict.map((row) => row.eventId))))
+          .go();
+
+      await db.batch((batch) {
+        batch.insert(
+          db.appStateTable,
+          AppStateTableCompanion.insert(
+            key: _droppedCountKey,
+            value: '${stats.totalDropped + toEvict.length}',
+            updatedAt: now,
+          ),
+          mode: InsertMode.insertOrReplace,
+        );
+        batch.insert(
+          db.appStateTable,
+          AppStateTableCompanion.insert(
+            key: _lastDropAtKey,
+            value: now.toIso8601String(),
+            updatedAt: now,
+          ),
+          mode: InsertMode.insertOrReplace,
+        );
+      });
+    });
+
+    return toEvict.length;
+  }
+
+  /// How many events have ever been evicted by [enforceCapacityCap], and
+  /// when the most recent eviction happened. Zero/null means it has never
+  /// triggered — the overwhelmingly common case.
+  Future<({int totalDropped, DateTime? lastDroppedAt})> capacityDropStats() async {
+    final rows = await (db.select(db.appStateTable)
+          ..where((t) => t.key.isIn([_droppedCountKey, _lastDropAtKey])))
+        .get();
+    final byKey = {for (final row in rows) row.key: row.value};
+
+    final rawDate = byKey[_lastDropAtKey];
+    return (
+      totalDropped: int.tryParse(byKey[_droppedCountKey] ?? '') ?? 0,
+      lastDroppedAt: rawDate == null ? null : DateTime.tryParse(rawDate),
+    );
+  }
 }

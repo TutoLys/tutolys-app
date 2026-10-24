@@ -451,6 +451,140 @@ void main() {
     });
   });
 
+  group('capacity cap', () {
+    test('under the cap, nothing is evicted', () async {
+      for (var i = 0; i < 5; i++) {
+        await outbox.add(event('e$i'));
+      }
+
+      final evicted = await outbox.enforceCapacityCap(maxRows: 10);
+
+      expect(evicted, 0);
+      expect(await outbox.depth(), 5);
+      final stats = await outbox.capacityDropStats();
+      expect(stats.totalDropped, 0);
+      expect(stats.lastDroppedAt, isNull);
+    });
+
+    test('over the cap, the oldest rows are evicted down to the ceiling', () async {
+      for (var i = 0; i < 10; i++) {
+        await outbox.add(event('e$i'));
+        advance(const Duration(seconds: 1));
+      }
+
+      final evicted = await outbox.enforceCapacityCap(maxRows: 6);
+
+      expect(evicted, 4);
+      expect(await outbox.depth(), 6);
+      final remaining = await db.select(db.eventOutboxTable).get();
+      // Oldest 4 (e0-e3) gone; newest 6 (e4-e9) survive.
+      expect(
+        remaining.map((r) => r.eventId).toSet(),
+        {'e4', 'e5', 'e6', 'e7', 'e8', 'e9'},
+      );
+    });
+
+    test('an eviction is counted and timestamped, never silent', () async {
+      for (var i = 0; i < 10; i++) {
+        await outbox.add(event('e$i'));
+      }
+
+      await outbox.enforceCapacityCap(maxRows: 6);
+
+      final stats = await outbox.capacityDropStats();
+      expect(stats.totalDropped, 4);
+      expect(stats.lastDroppedAt, now);
+    });
+
+    test('the drop counter accumulates across repeated evictions', () async {
+      for (var i = 0; i < 10; i++) {
+        await outbox.add(event('first-$i'));
+      }
+      await outbox.enforceCapacityCap(maxRows: 6);
+
+      advance(const Duration(days: 1));
+      for (var i = 0; i < 10; i++) {
+        await outbox.add(event('second-$i'));
+      }
+      await outbox.enforceCapacityCap(maxRows: 6);
+
+      final stats = await outbox.capacityDropStats();
+      // First call: 10 -> 6 (4 evicted). Second call starts from 6 + 10 new
+      // = 16 -> 6 (10 evicted). 4 + 10 = 14, not reset by the second call.
+      expect(stats.totalDropped, 14);
+      expect(stats.lastDroppedAt, now); // the most recent eviction's time
+    });
+
+    test(
+      'flush() enforces the cap even while sustained-offline '
+      '(the scenario this exists for)',
+      () async {
+        server.offline = true;
+        for (var i = 0; i < 10; i++) {
+          await outbox.add(event('e$i'));
+        }
+        final cappedFlusher = OutboxFlusher(
+          outbox: outbox,
+          api: server,
+          accessToken: () => 'token',
+          maxOutboxRows: 6,
+          random: Random(42),
+          clock: () => now,
+        );
+
+        // UploadOffline never reaches the success branch pruneDelivered
+        // lives in — this is exactly the path that would have silently
+        // skipped the cap if it had been nested there instead of in
+        // `finally`.
+        await cappedFlusher.flush();
+
+        expect(await outbox.depth(), 6);
+      },
+    );
+
+    test('flush() enforces the cap even while paused', () async {
+      final pausedFlusher = OutboxFlusher(
+        outbox: outbox,
+        api: server,
+        accessToken: () => 'token',
+        maxOutboxRows: 3,
+        random: Random(42),
+        clock: () => now,
+      );
+      server.unauthorized = true;
+      await outbox.add(event('trigger-pause'));
+      await pausedFlusher.flush(); // 401 -> _paused = true
+      expect(pausedFlusher.isPaused, isTrue);
+
+      // A kid can keep playing while the device's credential sits revoked —
+      // PlayScreen's writes to the outbox aren't gated by pairing state.
+      for (var i = 0; i < 5; i++) {
+        await outbox.add(event('while-paused-$i'));
+      }
+
+      await pausedFlusher.flush();
+
+      expect(pausedFlusher.isPaused, isTrue, reason: 'still paused, not retried');
+      expect(await outbox.depth(), lessThanOrEqualTo(3));
+    });
+
+    test('isHealthy turns false once a capacity eviction has happened', () async {
+      for (var i = 0; i < 10; i++) {
+        await outbox.add(event('e$i'));
+      }
+
+      final healthyBefore = await flusher.health();
+      expect(healthyBefore.isHealthy, isTrue);
+
+      await outbox.enforceCapacityCap(maxRows: 6);
+      final healthAfter = await flusher.health();
+
+      expect(healthAfter.droppedForCapacity, 4);
+      expect(healthAfter.lastDroppedForCapacityAt, now);
+      expect(healthAfter.isHealthy, isFalse);
+    });
+  });
+
   group('the telemetry client writes only to the outbox', () {
     test('a full engine run lands in the outbox and uploads once', () async {
       // The engine SDK knows nothing about storage; it calls the telemetry
