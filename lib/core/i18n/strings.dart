@@ -324,6 +324,7 @@ abstract class Strings {
   String avatarLocked(String condition);
   String avatarName(String key);
 
+  String get profileBadgesEarned;
   String get switchProfile;
   String get whoIsPlaying;
   String get notMe;
@@ -1064,6 +1065,9 @@ class _FrenchStrings extends Strings {
       };
 
   @override
+  String get profileBadgesEarned => 'Badges obtenus';
+
+  @override
   String get switchProfile => 'Changer de profil';
 
   @override
@@ -1801,6 +1805,9 @@ class _EnglishStrings extends Strings {
         'fox_hood' => 'Fox hood',
         _ => 'Avatar',
       };
+
+  @override
+  String get profileBadgesEarned => 'Badges earned';
 
   @override
   String get switchProfile => 'Switch profile';

@@ -186,39 +186,57 @@ void main() {
     expect(find.text(Strings.fr.gradeLabel(3)), findsOneWidget);
   });
 
-  testWidgets(
-    'a freshly-paired kid with no progress yet shows no summary card',
-    (tester) async {
-      await tester.pumpWidget(appUnder());
-      await tester.pumpAndSettle();
+  testWidgets('the hero shows the design\'s three stats: streak and badges', (
+    tester,
+  ) async {
+    final progressApi = _FakeProgressApi()
+      ..result = const ProgressFetched(
+        ProgressSnapshot(masteries: [], currentStreakDays: 5),
+      );
 
-      expect(find.text(Strings.fr.profileSkillsMastered(0)), findsOneWidget);
-    },
-  );
+    await tester.pumpWidget(appUnder(progressApi: progressApi));
+    await tester.pumpAndSettle();
 
-  testWidgets('shows real mastered-skill count and streak', (tester) async {
+    expect(find.text('5'), findsOneWidget);
+    expect(find.text(Strings.fr.profileStreakLabel), findsOneWidget);
+    expect(find.text(Strings.fr.profileBadgesEarned), findsOneWidget);
+    // Mastered skills live on Progrès; Profil no longer repeats them.
+    expect(find.text(Strings.fr.profileSkillsMastered(0)), findsNothing);
+  });
+
+  testWidgets('with a level, the first stat is the level over the XP total', (
+    tester,
+  ) async {
     final progressApi = _FakeProgressApi()
       ..result = const ProgressFetched(
         ProgressSnapshot(
-          masteries: [
-            SkillMasteryDto(skillNodeId: 'a', masteryPct: 95, isMastered: true),
-            SkillMasteryDto(
-              skillNodeId: 'b',
-              masteryPct: 40,
-              isMastered: false,
-            ),
-          ],
-          currentStreakDays: 5,
+          masteries: [],
+          currentStreakDays: 1,
+          totalXp: 135,
+          level: 2,
+          xpIntoLevel: 35,
+          xpToNextLevel: 65,
         ),
       );
 
     await tester.pumpWidget(appUnder(progressApi: progressApi));
     await tester.pumpAndSettle();
 
-    expect(find.text('1'), findsOneWidget); // mastered count
-    expect(find.text('5'), findsOneWidget); // streak
-    expect(find.text(Strings.fr.profileSkillsMastered(1)), findsOneWidget);
-    expect(find.text(Strings.fr.profileStreakDays(5)), findsOneWidget);
+    expect(find.text(Strings.fr.progressLevel(2)), findsOneWidget);
+    expect(find.text('135 ${Strings.fr.profileTotalXp}'), findsOneWidget);
+  });
+
+  testWidgets('the hero shows the kid\'s avatar, never the mascot', (
+    tester,
+  ) async {
+    await tester.pumpWidget(appUnder());
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('profile-avatar')), findsOneWidget);
+    expect(
+      find.image(const AssetImage('assets/images/asset-mascot-welcome.webp')),
+      findsNothing,
+    );
   });
 
   testWidgets('sign-out button is still present', (tester) async {

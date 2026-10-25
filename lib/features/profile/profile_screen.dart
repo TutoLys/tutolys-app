@@ -3,16 +3,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/i18n/strings.dart';
-import '../../core/widgets/breathing_mascot.dart';
+import '../../core/widgets/kid_avatar.dart';
 import '../home/subject_progress.dart';
 import '../home/village_scene.dart';
 import '../pairing/pairing_controller.dart';
 import '../progress/progress_controller.dart';
 import '../quests/quest_board.dart';
 import '../quests/quests_screen.dart' show achievementAsset, achievementName;
+import 'avatar_picker.dart';
+import 'avatars.dart';
 
-/// Profil, as the design draws it: an avatar hero, three stat tiles, and
-/// per-subject progress.
+/// Profil, as the design draws it: an avatar hero card (the kid's avatar,
+/// its edit dot, the design's three stats: level, streak, badges earned)
+/// and per-subject progress.
 ///
 /// The streak-freeze balance used to live here, ahead of the design. It now
 /// sits in Quêtes' streak detail as the design's "Bouclier de série", which
@@ -26,11 +29,14 @@ import '../quests/quests_screen.dart' show achievementAsset, achievementName;
 /// The recent-activity feed still says what it is waiting for: nothing
 /// records an activity history yet.
 ///
-/// Everything else here is real: the name, grade, XP ledger total, streak,
-/// mastered count, and the per-subject bars — the same local join the
-/// Village uses.
+/// Everything else here is real: the name, grade, level and XP ledger
+/// total, streak, badge count, and the per-subject bars — the same local
+/// join the Village uses. The mastered-skills count lives on Progrès.
 class ProfileScreen extends ConsumerWidget {
-  const ProfileScreen({super.key});
+  const ProfileScreen({this.onSwitchProfile, super.key});
+
+  /// Opens "Qui joue ?". Null hides the button (no shell, as in tests).
+  final VoidCallback? onSwitchProfile;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -50,47 +56,40 @@ class ProfileScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _Hero(
+              _HeroCard(
                 name: kid?.displayName ?? '',
                 grade: kid?.gradeLevel,
+                avatarKey: ref.watch(selectedAvatarKeyProvider),
+                onEditAvatar: () => showAvatarPicker(context),
+                onSwitchProfile: onSwitchProfile,
                 title: (board?.has(Achievement.streak7) ?? false)
                     ? t.flameKeeperTitle
                     : null,
-                palette: p,
-              ),
-              const SizedBox(height: Space.md),
-              Row(
-                children: [
-                  Expanded(
-                    child: _Tile(
-                      asset: 'asset-xpstar.webp',
-                      value: '${progress.totalXp}',
-                      label: t.profileTotalXp,
-                      palette: p,
-                    ),
+                stats: [
+                  _HeroStat(
+                    asset: 'asset-xpstar.webp',
+                    value: progress.level == null
+                        ? '${progress.totalXp}'
+                        : t.progressLevel(progress.level!),
+                    label: progress.level == null
+                        ? t.profileTotalXp
+                        : '${progress.totalXp} ${t.profileTotalXp}',
                   ),
-                  const SizedBox(width: Space.sm),
-                  Expanded(
-                    child: _Tile(
-                      asset: 'asset-flame.webp',
-                      value: progress.currentStreakDays == null
-                          ? '–'
-                          : '${progress.isStreakEstimated ? '~' : ''}'
-                              '${progress.currentStreakDays}',
-                      label: t.profileStreakDays(progress.currentStreakDays ?? 0),
-                      palette: p,
-                    ),
+                  _HeroStat(
+                    asset: 'asset-flame.webp',
+                    value: progress.currentStreakDays == null
+                        ? '–'
+                        : '${progress.isStreakEstimated ? '~' : ''}'
+                            '${progress.currentStreakDays}',
+                    label: t.profileStreakLabel,
                   ),
-                  const SizedBox(width: Space.sm),
-                  Expanded(
-                    child: _Tile(
-                      asset: 'asset-badge.webp',
-                      value: '${progress.masteredCount}',
-                      label: t.profileSkillsMastered(progress.masteredCount),
-                      palette: p,
-                    ),
+                  _HeroStat(
+                    asset: 'asset-badge.webp',
+                    value: '${Achievement.values.where((a) => board?.has(a) ?? false).length}',
+                    label: t.profileBadgesEarned,
                   ),
                 ],
+                palette: p,
               ),
               const SizedBox(height: Space.md),
               _Card(
@@ -147,109 +146,275 @@ class ProfileScreen extends ConsumerWidget {
   }
 }
 
-class _Hero extends StatelessWidget {
-  const _Hero({
-    required this.name,
-    required this.grade,
-    required this.palette,
-    this.title,
-  });
-
-  final String name;
-  final int? grade;
-
-  /// An earned title ("Gardien de la flamme"), or null.
-  final String? title;
-  final VillagePalette palette;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const BreathingMascot(height: 116),
-        const SizedBox(height: Space.xs),
-        Text(
-          name,
-          style: TextStyle(
-            fontFamily: VillageType.display,
-            fontWeight: FontWeight.w800,
-            fontSize: 22,
-            color: palette.ink,
-          ),
-        ),
-        if (grade != null)
-          Text(
-            context.s.gradeLabel(grade!),
-            style: TextStyle(fontSize: 13, color: palette.inkMuted),
-          ),
-        if (title != null) ...[
-          const SizedBox(height: 6),
-          Container(
-            key: const ValueKey('profile-title'),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-            decoration: BoxDecoration(
-              color: palette.goldPale,
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Text(
-              title!,
-              style: TextStyle(
-                fontFamily: VillageType.display,
-                fontSize: 11.5,
-                fontWeight: FontWeight.w700,
-                color: palette.ink,
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _Tile extends StatelessWidget {
-  const _Tile({
+class _HeroStat {
+  const _HeroStat({
     required this.asset,
     required this.value,
     required this.label,
-    required this.palette,
   });
 
   final String asset;
   final String value;
   final String label;
+}
+
+/// The design's `.profile-hero`: the avatar with its edit dot, the name and
+/// grade, and the three `.ph-stat-card`s, in one white panel.
+///
+/// The design's header already shows the same face, name and grade, so
+/// this is the only place Profil shows them, and it puts them beside what
+/// only Profil has: the edit dot and the stats. It replaces a centred
+/// mascot-and-name banner that just repeated the header.
+///
+/// Wide, it is one row (avatar, name, stats), as the design's desktop
+/// draws it. Narrow, it stacks and centres with a 76px avatar, as the
+/// design's phone does.
+class _HeroCard extends StatelessWidget {
+  const _HeroCard({
+    required this.name,
+    required this.grade,
+    required this.avatarKey,
+    required this.onEditAvatar,
+    required this.stats,
+    required this.palette,
+    this.onSwitchProfile,
+    this.title,
+  });
+
+  final String name;
+  final int? grade;
+  final String avatarKey;
+  final VoidCallback onEditAvatar;
+  final List<_HeroStat> stats;
+  final VillagePalette palette;
+
+  /// Opens "Qui joue ?". Null hides the button.
+  final VoidCallback? onSwitchProfile;
+
+  /// An earned title ("Gardien de la flamme"), or null.
+  final String? title;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.s;
+    final p = palette;
+    return Material(
+      color: p.surface,
+      borderRadius: VillageMetrics.mdAll,
+      elevation: VillageColors.elevationSmall,
+      shadowColor: p.shadowSmall,
+      child: Padding(
+        padding: const EdgeInsets.all(Space.md),
+        child: LayoutBuilder(
+          builder: (context, box) {
+            final wide = box.maxWidth >= 560;
+            final avatar = Stack(
+              clipBehavior: Clip.none,
+              children: [
+                KidAvatar(
+                  key: const ValueKey('profile-avatar'),
+                  avatarKey: avatarKey,
+                  size: wide ? 92 : 76,
+                ),
+                Positioned(
+                  right: -2,
+                  bottom: -2,
+                  child: _EditDot(
+                    onTap: onEditAvatar,
+                    label: t.avatarEdit,
+                    palette: p,
+                  ),
+                ),
+              ],
+            );
+            final meta = Column(
+              crossAxisAlignment:
+                  wide ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+              children: [
+                Text(
+                  name,
+                  style: TextStyle(
+                    fontFamily: VillageType.display,
+                    fontWeight: FontWeight.w700,
+                    fontSize: wide ? 22 : 18,
+                    color: p.ink,
+                  ),
+                ),
+                if (grade != null)
+                  Text(
+                    t.gradeLabel(grade!),
+                    style: TextStyle(fontSize: 13, color: p.inkMuted),
+                  ),
+                if (title != null) ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    key: const ValueKey('profile-title'),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: p.goldPale,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      title!,
+                      style: TextStyle(
+                        fontFamily: VillageType.display,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: p.ink,
+                      ),
+                    ),
+                  ),
+                ],
+                if (onSwitchProfile != null) ...[
+                  const SizedBox(height: Space.xs),
+                  TextButton.icon(
+                    key: const ValueKey('profile-switch'),
+                    onPressed: onSwitchProfile,
+                    icon: const Icon(Icons.swap_horiz_rounded, size: 18),
+                    label: Text(t.switchProfile),
+                    style: TextButton.styleFrom(
+                      foregroundColor: p.quebecBlue,
+                      visualDensity: VisualDensity.compact,
+                      textStyle: const TextStyle(
+                        fontFamily: VillageType.display,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            );
+            final statCards = Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              alignment: wide ? WrapAlignment.end : WrapAlignment.center,
+              children: [
+                for (final s in stats) _StatCard(stat: s, palette: p),
+              ],
+            );
+            if (!wide) {
+              return Column(
+                children: [
+                  avatar,
+                  const SizedBox(height: Space.sm),
+                  meta,
+                  const SizedBox(height: Space.sm),
+                  statCards,
+                ],
+              );
+            }
+            return Row(
+              children: [
+                avatar,
+                const SizedBox(width: 20),
+                Expanded(child: meta),
+                const SizedBox(width: Space.sm),
+                Flexible(flex: 2, child: statCards),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+/// The design's `.ph-edit-dot`: a 30px white circle on the avatar's corner.
+class _EditDot extends StatelessWidget {
+  const _EditDot({
+    required this.onTap,
+    required this.label,
+    required this.palette,
+  });
+
+  final VoidCallback onTap;
+  final String label;
   final VillagePalette palette;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: palette.surface,
-      borderRadius: VillageMetrics.mdAll,
-      elevation: VillageColors.elevationSmall,
-      shadowColor: palette.shadowSmall,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: Space.md, horizontal: Space.xs),
-        child: Column(
-          children: [
-            Image.asset('assets/images/$asset', width: 26, height: 26),
-            const SizedBox(height: 6),
-            Text(
-              value,
-              style: TextStyle(
-                fontFamily: VillageType.display,
-                fontWeight: FontWeight.w800,
-                fontSize: 19,
-                color: palette.ink,
+    return Tooltip(
+      message: label,
+      child: Semantics(
+        button: true,
+        label: label,
+        child: Material(
+          key: const ValueKey('profile-avatar-edit'),
+          color: palette.surface,
+          shape: const CircleBorder(),
+          elevation: VillageColors.elevationSmall,
+          shadowColor: palette.shadowSmall,
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onTap,
+            child: SizedBox(
+              width: 30,
+              height: 30,
+              child: Center(
+                child: Image.asset(
+                  'assets/images/asset-edit.webp',
+                  width: 16,
+                  excludeFromSemantics: true,
+                ),
               ),
             ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 11, color: palette.inkMuted),
-            ),
-          ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+/// The design's `.ph-stat-card`: icon left, value over label.
+class _StatCard extends StatelessWidget {
+  const _StatCard({required this.stat, required this.palette});
+
+  final _HeroStat stat;
+  final VillagePalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 110),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      decoration: BoxDecoration(
+        color: palette.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: palette.shadowSmall,
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset('assets/images/${stat.asset}', width: 30, height: 30),
+          const SizedBox(width: 10),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                stat.value,
+                style: TextStyle(
+                  fontFamily: VillageType.display,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 17,
+                  color: palette.ink,
+                ),
+              ),
+              Text(
+                stat.label,
+                style: TextStyle(fontSize: 10.5, color: palette.inkMuted),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

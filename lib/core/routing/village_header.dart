@@ -1,6 +1,8 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
+import '../widgets/kid_avatar.dart';
+
 /// One stat in the header: an icon and a value.
 class HeaderStat {
   const HeaderStat({
@@ -35,6 +37,9 @@ class VillageHeader extends StatelessWidget {
     required this.name,
     required this.subtitle,
     required this.stats,
+    this.avatarKey = '',
+    this.onIdentity,
+    this.identityLabel = '',
     this.compact = false,
     this.onSettings,
     this.settingsLabel = '',
@@ -47,6 +52,17 @@ class VillageHeader extends StatelessWidget {
   final String name;
   final String subtitle;
   final List<HeaderStat> stats;
+
+  /// The kid's avatar (`avatars.dart`). The design's `.student-avatar` is
+  /// the kid, never the mascot.
+  final String avatarKey;
+
+  /// Tapping the avatar and name: Profil for one kid, "Qui joue ?" for
+  /// several. Null makes them inert.
+  final VoidCallback? onIdentity;
+
+  /// The identity button's tooltip and screen-reader name.
+  final String identityLabel;
   final bool compact;
 
   /// The design's `.phone-gear-btn`: where Réglages lives on a phone, whose
@@ -93,38 +109,47 @@ class VillageHeader extends StatelessWidget {
               );
           return Row(
             children: [
-              Image.asset(
-                'assets/images/asset-mascot-welcome.webp',
-                height: compact ? 36 : 52,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(width: Space.sm),
               Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontFamily: VillageType.display,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                        color: p.ink,
+                child: _Identity(
+                  onTap: onIdentity,
+                  label: identityLabel,
+                  child: Row(
+                    children: [
+                      KidAvatar(avatarKey: avatarKey, size: avatar),
+                      const SizedBox(width: Space.sm),
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: VillageType.display,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                                color: p.ink,
+                              ),
+                            ),
+                            // The design hides this line on tablet rather than letting
+                            // it squeeze the stats.
+                            if (!compact && subtitle.isNotEmpty)
+                              Text(
+                                subtitle,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: p.inkMuted,
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
-                    ),
-                    // The design hides this line on tablet rather than letting
-                    // it squeeze the stats.
-                    if (!compact && subtitle.isNotEmpty)
-                      Text(
-                        subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 12, color: p.inkMuted),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(width: Space.sm),
@@ -336,6 +361,33 @@ class _RoundButton extends StatelessWidget {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The avatar and name as one button, or as plain content when [onTap] is
+/// null.
+class _Identity extends StatelessWidget {
+  const _Identity({required this.child, required this.label, this.onTap});
+
+  final Widget child;
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    if (onTap == null) return child;
+    return Tooltip(
+      message: label,
+      child: InkWell(
+        key: const ValueKey('header-identity'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: child,
         ),
       ),
     );

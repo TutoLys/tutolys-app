@@ -8,6 +8,7 @@ import '../../features/notifications/notifications_controller.dart';
 import '../../features/notifications/notifications_panel.dart';
 import '../../features/path/path_controller.dart';
 import '../../features/path/path_screen.dart';
+import '../../features/profile/avatars.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/about/about_screen.dart';
 import '../../features/progress/progress_controller.dart';
@@ -125,6 +126,7 @@ class _VillageShellState extends ConsumerState<VillageShell> {
   /// not navigation destinations — nothing in the nav selects them — but
   /// they are pages, and routing them through the same stack keeps one
   /// mechanism rather than bolting a second one on for two screens.
+  static const _profilIndex = 4;
   static const _helpIndex = 6;
   static const _aboutIndex = 7;
 
@@ -161,6 +163,9 @@ class _VillageShellState extends ConsumerState<VillageShell> {
               subtitle: kid?.gradeLevel == null
                   ? ''
                   : t.gradeLabel(kid!.gradeLevel),
+              avatarKey: ref.watch(selectedAvatarKeyProvider),
+              onIdentity: () => _open(_profilIndex),
+              identityLabel: t.navProfil,
               compact: MediaQuery.sizeOf(context).width < Breakpoints.medium,
               // Phones only: same threshold as VillageNavShell's switch to
               // the bottom bar, which has no Réglages tab.
