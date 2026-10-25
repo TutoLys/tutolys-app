@@ -72,6 +72,7 @@ class _VillageShellState extends ConsumerState<VillageShell> {
           // building — leads to the Carte, which is the only place a kid can
           // actually play.
           onOpenPath: () => _open(1),
+          onOpenQuests: () => _open(2),
         ),
         const PathScreen(),
         QuestsScreen(onOpenPath: () => _open(1)),

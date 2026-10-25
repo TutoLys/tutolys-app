@@ -339,15 +339,7 @@ class _SubjectRow extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(999),
-              child: LinearProgressIndicator(
-                value: value,
-                minHeight: 8,
-                backgroundColor: palette.track,
-                valueColor: AlwaysStoppedAnimation(accent),
-              ),
-            ),
+            child: VillageProgressBar(value: value),
           ),
           const SizedBox(width: Space.xs),
           SizedBox(

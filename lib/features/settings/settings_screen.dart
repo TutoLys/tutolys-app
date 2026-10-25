@@ -325,17 +325,15 @@ class _ToggleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final p = VillagePalette.of(context);
     return Padding(
       padding: EdgeInsets.symmetric(vertical: Space.xs),
       child: Row(
         children: [
           Expanded(child: _RowLabel(label: label, sublabel: sublabel)),
-          Switch(
+          VillageSwitch(
             value: value,
             onChanged: onChanged,
-            activeThumbColor: Colors.white,
-            activeTrackColor: p.quebecBlueBright,
+            semanticLabel: label,
           ),
         ],
       ),
@@ -360,50 +358,15 @@ class _SegmentedRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final p = VillagePalette.of(context);
     return Padding(
       padding: EdgeInsets.symmetric(vertical: Space.xs),
       child: Row(
         children: [
           Expanded(child: _RowLabel(label: label, sublabel: sublabel)),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: p.track,
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (var i = 0; i < options.length; i++)
-                  GestureDetector(
-                    onTap: () => onSelect(i),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: i == selected
-                            ? p.surface
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        options[i],
-                        style: TextStyle(
-                          fontFamily: VillageType.display,
-                          fontSize: 13,
-                          fontWeight:
-                              i == selected ? FontWeight.w800 : FontWeight.w600,
-                          color: i == selected
-                              ? p.quebecBlueBright
-                              : p.inkMuted,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+          VillageSegmented(
+            options: options,
+            selected: selected,
+            onSelect: onSelect,
           ),
         ],
       ),
@@ -444,13 +407,19 @@ class _SliderRow extends StatelessWidget {
               ),
             ],
           ),
-          Slider(
-            value: value.toDouble(),
-            max: 100,
-            divisions: 20,
-            activeColor: p.quebecBlueBright,
-            inactiveColor: p.track,
-            onChanged: (v) => onChanged(v.round()),
+          // `.vol-slider-row`: speaker icon, then the bar.
+          Row(
+            children: [
+              Icon(Icons.volume_up_outlined, size: 18, color: p.inkMuted),
+              Expanded(
+                child: VillageSlider(
+                  value: value.toDouble(),
+                  divisions: 20,
+                  onChanged: (v) => onChanged(v.round()),
+                  semanticFormatterCallback: (v) => '${v.round()} %',
+                ),
+              ),
+            ],
           ),
         ],
       ),

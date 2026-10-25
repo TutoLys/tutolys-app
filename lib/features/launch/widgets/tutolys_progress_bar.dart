@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'ambient_loop.dart';
 
-/// The launch progress bar: a glossy rounded pill with a blue → cyan fill, a
+/// The launch progress bar: a glossy rounded pill with a blue → gold fill, a
 /// gold glint sweeping through the filled part and a glowing tip.
 ///
 /// [value] is real progress (0..1), and the fill **only ever moves forward**:
@@ -87,7 +87,7 @@ class _TutolysProgressBarState extends AmbientLoopState<TutolysProgressBar> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF38BDF8)
+                      color: VillageColors.goldLight
                           .withValues(alpha: 0.18 + 0.17 * pulse),
                       blurRadius: 14 + 8 * pulse,
                     ),
@@ -125,16 +125,13 @@ class _Fill extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Quebec blue → bright blue → cyan.
+        // The design's fill, the same blue → gold as every other bar in
+        // the app (`.track > span`), so loading and progress read as one.
         DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(height),
             gradient: const LinearGradient(
-              colors: [
-                VillageColors.quebecBlueBright,
-                Color(0xFF3B9BFF),
-                Color(0xFF38D5F8),
-              ],
+              colors: [VillageColors.quebecBlueBright, VillageColors.goldLight],
             ),
           ),
         ),

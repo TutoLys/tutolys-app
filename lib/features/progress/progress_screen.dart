@@ -220,7 +220,7 @@ class _ByArea extends ConsumerWidget {
       ),
       _ => const Padding(
         padding: EdgeInsets.all(Space.lg),
-        child: Center(child: CircularProgressIndicator()),
+        child: Center(child: VillageLoader()),
       ),
     };
 
@@ -282,9 +282,8 @@ class _AreaRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = palette;
     final t = context.s;
-    final (fill, pillBg, pillFg, pillText) = switch (area.status) {
+    final (pillBg, pillFg, pillText) = switch (area.status) {
       AreaStatus.mastered => (
-        p.gold,
         p.goldPale,
         // `.status-pill.mastered { color: #8A6A1B }` — gold text dark enough
         // to read on its pale ground; on the dark ground, gold itself.
@@ -292,13 +291,11 @@ class _AreaRow extends StatelessWidget {
         t.progressStatusMastered,
       ),
       AreaStatus.learning => (
-        p.quebecBlueBright,
         p.navActiveFill,
         p.quebecBlueBright,
         t.progressStatusLearning,
       ),
       AreaStatus.notStarted => (
-        p.inkMuted,
         p.track,
         p.inkMuted,
         t.progressStatusNew,
@@ -326,15 +323,7 @@ class _AreaRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 // `.track`: 8px, fully rounded.
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: LinearProgressIndicator(
-                    value: area.fraction,
-                    minHeight: 8,
-                    backgroundColor: p.track,
-                    valueColor: AlwaysStoppedAnimation(fill),
-                  ),
-                ),
+                VillageProgressBar(value: area.fraction),
               ],
             ),
           ),

@@ -105,15 +105,7 @@ class _Tile extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(999),
-              child: LinearProgressIndicator(
-                value: value,
-                minHeight: 6,
-                backgroundColor: palette.track,
-                valueColor: AlwaysStoppedAnimation(building.accent),
-              ),
-            ),
+            VillageProgressBar(value: value, height: 6),
             const SizedBox(height: 2),
             Text(
               '${(value * 100).round()} %',

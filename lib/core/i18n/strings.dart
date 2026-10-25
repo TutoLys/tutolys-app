@@ -177,6 +177,7 @@ abstract class Strings {
   String get villageContinuePath;
   String get villageContinueCta;
   String get villageQuestsTitle;
+  String get villageQuestsSeeAll;
   String get villageNoQuests;
   String get villageGreetingReady;
   String get villageGreetingQuest;
@@ -671,6 +672,9 @@ class _FrenchStrings extends Strings {
 
   @override
   String get villageQuestsTitle => 'Quêtes du jour';
+
+  @override
+  String get villageQuestsSeeAll => 'Voir toutes';
 
   @override
   String get villageNoQuests => 'Aucune quête aujourd\'hui.';
@@ -1312,6 +1316,9 @@ class _EnglishStrings extends Strings {
 
   @override
   String get villageQuestsTitle => 'Today\'s quests';
+
+  @override
+  String get villageQuestsSeeAll => 'See all';
 
   @override
   String get villageNoQuests => 'No quests today.';

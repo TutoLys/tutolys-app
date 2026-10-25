@@ -49,7 +49,7 @@ class PathScreen extends ConsumerWidget {
                 if (state.loading)
                   const Padding(
                     padding: EdgeInsets.all(Space.xl),
-                    child: Center(child: CircularProgressIndicator()),
+                    child: Center(child: VillageLoader()),
                   )
                 else if (state.leaves.isEmpty)
                   _Empty(text: t.pathEmpty)

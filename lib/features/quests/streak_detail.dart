@@ -708,7 +708,7 @@ class _GoalTrack extends StatelessWidget {
       children: [
         chip(streak),
         const SizedBox(width: 10),
-        Expanded(child: GradientTrack(value: streak / goal, height: 10)),
+        Expanded(child: VillageProgressBar(value: streak / goal, height: 10)),
         const SizedBox(width: 10),
         chip(goal),
       ],

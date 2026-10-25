@@ -734,7 +734,7 @@ class QuestItem extends StatelessWidget {
                     const SizedBox(height: 5),
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 160),
-                      child: GradientTrack(
+                      child: VillageProgressBar(
                         value: target == 0 ? 0 : current / target,
                       ),
                     ),
@@ -825,7 +825,7 @@ class WeeklyBadgeCard extends StatelessWidget {
             style: TextStyle(fontSize: 11.5, color: p.inkMuted),
           ),
           const SizedBox(height: 10),
-          GradientTrack(value: shown / weeklyBadgeTarget),
+          VillageProgressBar(value: shown / weeklyBadgeTarget),
           const SizedBox(height: 5),
           Text(
             earned
@@ -1005,34 +1005,3 @@ class TodayRing extends StatelessWidget {
   }
 }
 
-/// The design's `.track`: a rounded bar filled blue-to-gold.
-class GradientTrack extends StatelessWidget {
-  const GradientTrack({super.key, required this.value, this.height = 8});
-
-  final double value;
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = VillagePalette.of(context);
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(999),
-      child: Container(
-        height: height,
-        color: p.track,
-        alignment: Alignment.centerLeft,
-        child: FractionallySizedBox(
-          widthFactor: value.clamp(0.0, 1.0),
-          heightFactor: 1,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [p.quebecBlueBright, p.goldLight],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}

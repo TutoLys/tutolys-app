@@ -1,3 +1,4 @@
+import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tutolys_app/core/i18n/strings.dart';
@@ -29,7 +30,7 @@ void main() {
     // A horizontal list only builds what fits, so assert on the first few
     // rather than all six.
     expect(find.text(Strings.fr.subjectMath), findsOneWidget);
-    expect(find.byType(LinearProgressIndicator), findsWidgets);
+    expect(find.byType(VillageProgressBar), findsWidgets);
   });
 
   testWidgets('it scrolls horizontally rather than wrapping or clipping',

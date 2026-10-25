@@ -24,7 +24,7 @@ import '../quests/quests_screen.dart' show questTitle;
 /// render convincing fiction on the most-looked-at screen, the buildings
 /// carry their name only and the coin pill is absent.
 class VillageScreen extends ConsumerWidget {
-  const VillageScreen({this.onOpenPath, super.key});
+  const VillageScreen({this.onOpenPath, this.onOpenQuests, super.key});
 
   /// Where "Continuer", a quest row and a building all lead: the Carte.
   ///
@@ -32,6 +32,9 @@ class VillageScreen extends ConsumerWidget {
   /// does not navigate itself, same as `VillageNavShell` and
   /// `SettingsScreen`.
   final VoidCallback? onOpenPath;
+
+  /// The quest panel's "Voir toutes": the Quêtes page.
+  final VoidCallback? onOpenQuests;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -80,7 +83,11 @@ class VillageScreen extends ConsumerWidget {
                         onTapBuilding: (_) => onOpenPath?.call(),
                       ),
                       const SizedBox(height: Space.md),
-                      _QuestPanel(quests: board?.quests, onOpenPath: onOpenPath),
+                      _QuestPanel(
+                        quests: board?.quests,
+                        onOpenPath: onOpenPath,
+                        onOpenQuests: onOpenQuests,
+                      ),
                     ],
                   );
                 }
@@ -100,6 +107,7 @@ class VillageScreen extends ConsumerWidget {
                 final panel = _QuestPanel(
                   quests: board?.quests,
                   onOpenPath: onOpenPath,
+                  onOpenQuests: onOpenQuests,
                 );
 
                 if (constraints.maxWidth < 760) {
@@ -252,27 +260,32 @@ class _RecommendBar extends StatelessWidget {
   }
 }
 
-/// "Quêtes du jour" — the design's right-hand panel.
+/// "Quêtes du jour" — the design's right-hand panel (`.quest-panel` with
+/// `.quest-panel-head` and `.quest-row`s).
 ///
-/// The same three quests Quêtes lists, from [questBoardProvider].
+/// The same three quests Quêtes lists, from [questBoardProvider]. An open
+/// quest's row leads to the Carte, where it is played; "Voir toutes" opens
+/// Quêtes.
 class _QuestPanel extends StatelessWidget {
-  const _QuestPanel({required this.quests, this.onOpenPath});
+  const _QuestPanel({required this.quests, this.onOpenPath, this.onOpenQuests});
 
   final List<DailyQuestItem>? quests;
   final VoidCallback? onOpenPath;
+  final VoidCallback? onOpenQuests;
 
   @override
   Widget build(BuildContext context) {
     final p = VillagePalette.of(context);
+    final t = context.s;
     final items = quests;
 
     return Container(
-      padding: EdgeInsets.all(18),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: p.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: p.shadow, blurRadius: 40, offset: Offset(0, 16)),
+          BoxShadow(color: p.shadow, blurRadius: 40, offset: const Offset(0, 16)),
         ],
       ),
       child: Column(
@@ -285,7 +298,7 @@ class _QuestPanel extends StatelessWidget {
               const SizedBox(width: 7),
               Expanded(
                 child: Text(
-                  context.s.villageQuestsTitle,
+                  t.villageQuestsTitle,
                   style: TextStyle(
                     fontFamily: VillageType.display,
                     fontWeight: FontWeight.w700,
@@ -294,109 +307,179 @@ class _QuestPanel extends StatelessWidget {
                   ),
                 ),
               ),
+              if (onOpenQuests != null)
+                TextButton(
+                  key: const ValueKey('village-quests-see-all'),
+                  onPressed: onOpenQuests,
+                  style: TextButton.styleFrom(
+                    foregroundColor: p.quebecBlueBright,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    minimumSize: const Size(0, 32),
+                    textStyle: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  child: Text(t.villageQuestsSeeAll),
+                ),
             ],
           ),
-          const SizedBox(height: Space.sm),
+          const SizedBox(height: 2),
           if (items == null || items.isEmpty)
             Padding(
-              padding: EdgeInsets.symmetric(vertical: Space.sm),
+              padding: const EdgeInsets.symmetric(vertical: Space.sm),
               child: Text(
-                context.s.villageNoQuests,
+                t.villageNoQuests,
                 style: TextStyle(fontSize: 12.5, color: p.inkMuted),
               ),
             )
           else
-            for (final q in items)
+            for (var i = 0; i < items.length; i++) ...[
+              if (i > 0) Divider(height: 1, thickness: 1, color: p.line),
               _QuestRow(
-                key: ValueKey('village-quest-${q.key}'),
-                onTap: q.done ? null : onOpenPath,
-                title: questTitle(context.s, q),
-                done: q.done,
-                current: q.progress,
-                target: q.target,
+                key: ValueKey('village-quest-${items[i].key}'),
+                quest: items[i],
+                title: questTitle(t, items[i]),
+                onTap: items[i].done ? null : onOpenPath,
               ),
+            ],
         ],
       ),
     );
   }
 }
 
+/// `.q-chip`: a 38px tile with the design's 145° gradients, one colour and
+/// icon per kind of quest. The design's pink/blue/purple trio, assigned by
+/// what the quest asks rather than by subject — these quests have none.
+(List<Color>, IconData) _chipFor(QuestKind kind) => switch (kind) {
+  QuestKind.challenge => (
+    const [Color(0xFFF472B6), Color(0xFFEC4899)],
+    Icons.bolt_rounded,
+  ),
+  QuestKind.exercises => (
+    const [Color(0xFF60A5FA), Color(0xFF3B82F6)],
+    Icons.task_alt_rounded,
+  ),
+  QuestKind.minutes => (
+    const [Color(0xFFA78BFA), Color(0xFF8B5CF6)],
+    Icons.timer_outlined,
+  ),
+};
+
+/// `.quest-row`: chip, title over "n/m" and the track, then the status dot
+/// (green check once done, blue play otherwise) above the XP reward.
 class _QuestRow extends StatelessWidget {
   const _QuestRow({
     super.key,
+    required this.quest,
     required this.title,
-    required this.done,
-    required this.current,
-    required this.target,
     this.onTap,
   });
 
+  final DailyQuestItem quest;
+  final String title;
   final VoidCallback? onTap;
 
-  final String title;
-  final bool done;
-  final int current;
-  final int target;
+  static const _doneGreen = Color(0xFF3DBE7A);
 
   @override
   Widget build(BuildContext context) {
     final p = VillagePalette.of(context);
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 11),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    final (colors, icon) = _chipFor(quest.kind);
+    final done = quest.done;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 11),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(11),
+                gradient: LinearGradient(
+                  // 145deg in CSS: top-left to bottom-right.
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: colors,
+                ),
+              ),
+              child: Icon(icon, size: 19, color: Colors.white),
+            ),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontFamily: VillageType.display,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12.5,
+                      height: 1.3,
+                      color: p.ink,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '${quest.progress}/${quest.target}',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: p.inkMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  VillageProgressBar(
+                    value: quest.target == 0 ? 0 : quest.progress / quest.target,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 11),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontFamily: VillageType.display,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12.5,
-                    height: 1.3,
-                    color: p.ink,
+                Container(
+                  key: ValueKey(done ? 'quest-status-done' : 'quest-status-go'),
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: done ? _doneGreen : p.quebecBlueBright,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    done ? Icons.check_rounded : Icons.play_arrow_rounded,
+                    size: done ? 15 : 16,
+                    color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  '$current/$target',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: p.inkMuted,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: LinearProgressIndicator(
-                    value: target == 0 ? 0 : current / target,
-                    minHeight: 6,
-                    backgroundColor: p.track,
-                    valueColor: AlwaysStoppedAnimation(p.quebecBlueBright),
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset('assets/images/asset-coin.webp', width: 12, height: 12),
+                    const SizedBox(width: 2),
+                    Text(
+                      context.s.questRewardXp(quest.xpReward),
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        color: p.gold,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ),
-          const SizedBox(width: 11),
-          Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              color: done ? Color(0xFF3DBE7A) : p.quebecBlueBright,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              done ? Icons.check : Icons.play_arrow,
-              size: 14,
-              color: Colors.white,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

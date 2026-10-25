@@ -336,13 +336,9 @@ class _Pill extends StatelessWidget {
             SizedBox(
               width: 56,
               height: 6,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(999),
-                child: LinearProgressIndicator(
-                  value: building.progress ?? 0,
-                  backgroundColor: p.track,
-                  valueColor: AlwaysStoppedAnimation(building.accent),
-                ),
+              child: VillageProgressBar(
+                value: building.progress ?? 0,
+                height: 6,
               ),
             ),
             const SizedBox(width: 8),

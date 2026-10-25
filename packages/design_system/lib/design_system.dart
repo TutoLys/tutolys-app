@@ -8,4 +8,5 @@ library;
 export 'src/theme.dart';
 export 'src/tokens.dart';
 export 'src/widgets/code_field.dart';
+export 'src/widgets/controls.dart';
 export 'src/widgets/mascot.dart';

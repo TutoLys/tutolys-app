@@ -1,3 +1,4 @@
+import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tutolys_app/core/i18n/strings.dart';
@@ -41,7 +42,7 @@ void main() {
     await tester.pumpWidget(harness(_buildings));
 
     expect(
-      find.byType(LinearProgressIndicator),
+      find.byType(VillageProgressBar),
       findsNWidgets(_buildings.length),
     );
   });
@@ -60,8 +61,8 @@ void main() {
     );
 
     expect(find.text('68/100'), findsOneWidget);
-    final bar = tester.widget<LinearProgressIndicator>(
-      find.byType(LinearProgressIndicator),
+    final bar = tester.widget<VillageProgressBar>(
+      find.byType(VillageProgressBar),
     );
     expect(bar.value, closeTo(0.68, 0.001));
   });
