@@ -1,13 +1,17 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/home/village_screen.dart';
 import '../../features/path/path_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/about/about_screen.dart';
+import '../../features/progress/progress_controller.dart';
 import '../../features/help/help_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../i18n/strings.dart';
+import '../../features/pairing/pairing_controller.dart';
+import 'village_header.dart';
 import 'village_nav.dart';
 
 /// The paired learner's shell: the design's navigation chrome wrapped around
@@ -20,14 +24,14 @@ import 'village_nav.dart';
 /// Four of the six destinations have real screens. Quêtes and Progrès do
 /// not yet, and render an honest placeholder naming themselves rather than
 /// a blank or a fake.
-class VillageShell extends StatefulWidget {
+class VillageShell extends ConsumerStatefulWidget {
   const VillageShell({super.key});
 
   @override
-  State<VillageShell> createState() => _VillageShellState();
+  ConsumerState<VillageShell> createState() => _VillageShellState();
 }
 
-class _VillageShellState extends State<VillageShell> {
+class _VillageShellState extends ConsumerState<VillageShell> {
   int _index = 0;
 
   /// `IndexedStack`, not a rebuilt child per tab: switching must not
@@ -75,6 +79,8 @@ class _VillageShellState extends State<VillageShell> {
   @override
   Widget build(BuildContext context) {
     final t = context.s;
+    final kid = ref.watch(sessionControllerProvider).kid;
+    final progress = ref.watch(progressControllerProvider);
     return Scaffold(
       // Transparent: the shell paints the sky gradient, and a scaffold
       // colour underneath it would only show through at the edges.
@@ -89,7 +95,35 @@ class _VillageShellState extends State<VillageShell> {
         ),
         helpLabel: t.navHelp,
         onHelp: () => setState(() => _index = _helpIndex),
-        child: IndexedStack(index: _index, children: _pages(t)),
+        child: Column(
+          children: [
+            // Chrome, not page content: it stays put as the kid moves
+            // between pages, and no page has to remember to draw it.
+            VillageHeader(
+              name: kid?.displayName ?? '',
+              subtitle: kid?.gradeLevel == null
+                  ? ''
+                  : t.gradeLabel(kid!.gradeLevel),
+              compact: MediaQuery.sizeOf(context).width < Breakpoints.medium,
+              stats: [
+                HeaderStat(
+                  asset: 'asset-xpstar.webp',
+                  label: '${progress.totalXp}',
+                ),
+                HeaderStat(
+                  asset: 'asset-flame.webp',
+                  label: progress.currentStreakDays == null
+                      ? '–'
+                      : '${progress.isStreakEstimated ? '~' : ''}'
+                          '${progress.currentStreakDays}',
+                ),
+              ],
+            ),
+            Expanded(
+              child: IndexedStack(index: _index, children: _pages(t)),
+            ),
+          ],
+        ),
       ),
     );
   }

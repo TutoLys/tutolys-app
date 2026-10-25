@@ -38,14 +38,14 @@ class VillageBuilding {
   final double? progress;
 
   VillageBuilding withProgress(double? value) => VillageBuilding(
-        label: label,
-        asset: asset,
-        left: left,
-        top: top,
-        accent: accent,
-        small: small,
-        progress: value,
-      );
+    label: label,
+    asset: asset,
+    left: left,
+    top: top,
+    accent: accent,
+    small: small,
+    progress: value,
+  );
 }
 
 /// The six subject buildings, at the exact positions the design places them.
@@ -91,7 +91,7 @@ List<VillageBuilding> villageBuildings(Strings s) => [
     accent: VillageColors.gold,
     small: true,
   ),
-    ];
+];
 
 /// The village itself: a sky-and-grass scene with the subject buildings
 /// placed on it, the wooden sign, and the mascot greeting.
@@ -203,11 +203,7 @@ class _Sign extends StatelessWidget {
           border: Border.all(color: Color(0xFF8B5A2B), width: 3),
           borderRadius: BorderRadius.circular(10),
           boxShadow: [
-            BoxShadow(
-              color: p.shadow,
-              blurRadius: 40,
-              offset: Offset(0, 16),
-            ),
+            BoxShadow(color: p.shadow, blurRadius: 40, offset: Offset(0, 16)),
           ],
         ),
         child: Column(
@@ -227,10 +223,7 @@ class _Sign extends StatelessWidget {
               padding: EdgeInsets.only(top: 1),
               child: Text(
                 subtitle,
-                style: TextStyle(
-                  fontSize: 10.5,
-                  color: Color(0xFFF3E3CF),
-                ),
+                style: TextStyle(fontSize: 10.5, color: Color(0xFFF3E3CF)),
               ),
             ),
           ],
@@ -240,30 +233,69 @@ class _Sign extends StatelessWidget {
   }
 }
 
-class _Building extends StatelessWidget {
+/// A building, which lifts slightly under the pointer.
+///
+/// `translateY(-3px)` on hover and `scale(.98)` while pressed, both from the
+/// design's own rules. Skipped entirely when animations are reduced — the
+/// lift is decoration, and a kid who asked for less motion (or whose OS did)
+/// should not get it anyway.
+class _Building extends StatefulWidget {
   const _Building({required this.building, this.onTap});
 
   final VillageBuilding building;
   final VoidCallback? onTap;
 
   @override
+  State<_Building> createState() => _BuildingState();
+}
+
+class _BuildingState extends State<_Building> {
+  bool _hovered = false;
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Image.asset(
-            'assets/images/${building.asset}',
-            width: building.small ? 104 : 136,
-            fit: BoxFit.contain,
+    final building = widget.building;
+    final onTap = widget.onTap;
+    final still = MediaQuery.disableAnimationsOf(context);
+
+    final lift = still || !_hovered ? 0.0 : -3.0;
+    final scale = still || !_pressed ? 1.0 : 0.98;
+
+    return MouseRegion(
+      cursor: onTap == null ? MouseCursor.defer : SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: onTap,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        child: AnimatedScale(
+          scale: scale,
+          duration: still ? Duration.zero : Motion.instant,
+          child: AnimatedSlide(
+            offset: Offset(0, lift / 100),
+            duration: still ? Duration.zero : Motion.quick,
+            curve: Motion.enter,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset(
+                  'assets/images/${building.asset}',
+                  width: building.small ? 104 : 136,
+                  fit: BoxFit.contain,
+                ),
+                // `margin-top: -16px` — the pill overlaps the building's
+                // base.
+                Transform.translate(
+                  offset: Offset(0, -16),
+                  child: _Pill(building: building),
+                ),
+              ],
+            ),
           ),
-          // `margin-top: -16px` — the pill overlaps the building's base.
-          Transform.translate(
-            offset: Offset(0, -16),
-            child: _Pill(building: building),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -283,11 +315,7 @@ class _Pill extends StatelessWidget {
         color: p.surface,
         borderRadius: BorderRadius.circular(999),
         boxShadow: [
-          BoxShadow(
-            color: p.shadowSmall,
-            blurRadius: 16,
-            offset: Offset(0, 6),
-          ),
+          BoxShadow(color: p.shadowSmall, blurRadius: 16, offset: Offset(0, 6)),
         ],
       ),
       child: Row(

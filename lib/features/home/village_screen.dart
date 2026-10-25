@@ -6,7 +6,6 @@ import '../../core/i18n/strings.dart';
 
 import '../pairing/pairing_controller.dart';
 import '../progress/progress_controller.dart';
-import 'home_controller.dart';
 import 'subject_progress.dart';
 import 'village_scene.dart';
 
@@ -27,7 +26,6 @@ class VillageScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final kid = ref.watch(sessionControllerProvider).kid;
-    final home = ref.watch(homeControllerProvider);
     final progress = ref.watch(progressControllerProvider);
     // Per-subject mastery, joined locally from the per-skill figures the
     // backend already sends plus the cached curriculum's own subject per
@@ -41,15 +39,9 @@ class VillageScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _Greeting(
-              name: kid?.displayName ?? '',
-              grade: kid?.gradeLevel,
-              streakDays: progress.currentStreakDays,
-              streakEstimated: progress.isStreakEstimated,
-              totalXp: progress.totalXp,
-              exercisesToday: home.exercisesCompletedToday,
-            ),
-            const SizedBox(height: Space.md),
+            // No greeting row here: the shell's header already carries the
+            // name and the stat pills, and two of them on one screen was
+            // the duplication Hafid's screenshot showed.
             // `grid-template-columns: 1fr 300px` above the mobile
             // breakpoint; the panel drops under the scene below it.
             LayoutBuilder(
@@ -124,134 +116,6 @@ String _greetingFor(Strings t, String? name, ProgressState progress) {
       ? t.villageGreetingReady
       : t.villageGreetingQuest;
   return '$hello $line';
-}
-
-class _Greeting extends StatelessWidget {
-  const _Greeting({
-    required this.name,
-    required this.grade,
-    required this.streakDays,
-    required this.streakEstimated,
-    required this.totalXp,
-    required this.exercisesToday,
-  });
-
-  final String name;
-  final int? grade;
-  final int? streakDays;
-  final bool streakEstimated;
-  final int totalXp;
-  final int exercisesToday;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = VillagePalette.of(context);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Image.asset(
-          'assets/images/asset-mascot-welcome.webp',
-          height: 96,
-          fit: BoxFit.contain,
-        ),
-        const SizedBox(width: Space.sm),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                context.s.greeting(name),
-                style: TextStyle(
-                  fontFamily: VillageType.display,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 22,
-                  color: p.ink,
-                ),
-              ),
-              if (grade != null)
-                Padding(
-                  padding: EdgeInsets.only(top: 3),
-                  child: Text(
-                    context.s.gradeLabel(grade!),
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: p.inkMuted,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-        Wrap(
-          spacing: Space.xs,
-          runSpacing: Space.xs,
-          children: [
-            _StatPill(
-              asset: 'asset-xpstar.webp',
-              // The real ledger total (ADR 0022), not a level — levels are
-              // an XP-to-level rule nobody has decided yet.
-              label: '$totalXp XP',
-            ),
-            _StatPill(
-              asset: 'asset-flame.webp',
-              // The `~` marks a local estimate, never the server's figure —
-              // ADR 0006's convention, kept.
-              label: streakDays == null
-                  ? '–'
-                  : '${streakEstimated ? '~' : ''}$streakDays j',
-            ),
-            _StatPill(
-              asset: 'asset-target.webp',
-              label: '$exercisesToday',
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _StatPill extends StatelessWidget {
-  const _StatPill({required this.asset, required this.label});
-
-  final String asset;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = VillagePalette.of(context);
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-      decoration: BoxDecoration(
-        color: p.surface,
-        border: Border.all(color: p.line),
-        borderRadius: BorderRadius.circular(999),
-        boxShadow: [
-          BoxShadow(
-            color: p.shadowSmall,
-            blurRadius: 16,
-            offset: Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Image.asset('assets/images/$asset', width: 18, height: 18),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              fontFamily: VillageType.display,
-              fontWeight: FontWeight.w700,
-              fontSize: 13,
-              color: p.ink,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 /// The navy band. Its content is a real recommendation only once something
