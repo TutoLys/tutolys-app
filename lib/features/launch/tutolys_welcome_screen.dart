@@ -22,8 +22,9 @@ import 'widgets/tutolys_animated_logo.dart';
 /// It is also where "Qui joue ?" belongs once a device can hold several
 /// kids (B-A0.4/B-A0.5): this is the one screen every session passes.
 ///
-/// The village along the bottom shows the five subjects that have real
-/// curriculum data. Culture québécoise (#13) is left off, same as Carte.
+/// The village along the bottom shows all six subjects, matching the
+/// Village scene (which shows Culture québécoise as "coming soon"). It is
+/// decoration here, so nothing marks which ones have content yet.
 class TutolysWelcomeScreen extends StatefulWidget {
   const TutolysWelcomeScreen({required this.onStart, this.kidName, super.key});
 
@@ -104,7 +105,11 @@ class _TutolysWelcomeScreenState extends State<TutolysWelcomeScreen>
                 ),
                 SafeArea(
                   child: Padding(
-                    padding: EdgeInsets.only(bottom: horizon * 0.55),
+                    // Clear of the tallest building (0.95 of the horizon)
+                    // plus a gap, so the button never sits on the roofs:
+                    // on a wide, short window the column used to overlap
+                    // them.
+                    padding: EdgeInsets.only(bottom: horizon * 1.05),
                     child: Center(
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.symmetric(horizontal: Space.lg),
@@ -357,7 +362,7 @@ class _GlowingCtaState extends AmbientLoopState<_GlowingCta> {
   }
 }
 
-/// The five subject buildings standing on a soft white hill.
+/// The six subject buildings standing on a soft white hill.
 class _VillageHorizon extends StatelessWidget {
   const _VillageHorizon({required this.height});
 
@@ -368,6 +373,7 @@ class _VillageHorizon extends StatelessWidget {
     'asset-bldg-math',
     'asset-bldg-science',
     'asset-bldg-univers-social',
+    'asset-bldg-ccq',
     'asset-bldg-anglais',
   ];
 
@@ -403,9 +409,10 @@ class _VillageHorizon extends StatelessWidget {
                 Flexible(
                   child: Image.asset(
                     'assets/images/$b.webp',
-                    // The middle building stands tallest, so the row reads as
-                    // a village with a centre rather than a lineup.
-                    height: height * (i == 2 ? 0.95 : (i == 1 || i == 3) ? 0.8 : 0.66),
+                    // The middle pair stands tallest, stepping down to the
+                    // ends, so the row reads as a village with a centre
+                    // rather than a lineup.
+                    height: height * const [0.66, 0.8, 0.95, 0.95, 0.8, 0.66][i],
                     fit: BoxFit.contain,
                     excludeFromSemantics: true,
                   ),

@@ -228,6 +228,19 @@ void main() {
     });
   });
 
+  testWidgets('the welcome village shows all six subjects', (tester) async {
+    await tester.pumpWidget(_host(TutolysWelcomeScreen(kidName: 'Yelhan', onStart: () {})));
+    final buildings = tester
+        .widgetList<Image>(find.byType(Image))
+        .map((i) => i.image)
+        .whereType<AssetImage>()
+        .map((a) => a.assetName)
+        .where((n) => n.contains('asset-bldg-'))
+        .toList();
+    expect(buildings, hasLength(6));
+    expect(buildings, contains('assets/images/asset-bldg-ccq.webp'));
+  });
+
   testWidgets('the welcome screen fits a small phone without overflow', (tester) async {
     tester.view.physicalSize = const Size(360, 640);
     tester.view.devicePixelRatio = 1;
