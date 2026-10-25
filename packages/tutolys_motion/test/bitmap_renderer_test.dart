@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:design_system/design_system.dart';
 import 'package:engine_sdk/engine_sdk.dart';
@@ -44,13 +45,38 @@ Future<void> _settleFrame(WidgetTester tester) async {
 
 void main() {
   group('pose slots', () {
-    test('every slot falls back to pose.default when it has no art', () {
+    test("the fox's delivered poses fill their slots; the rest fall back", () {
+      const dir = 'assets/characters/fox';
+      final expected = {
+        Reaction.celebrating: '$dir/pose-celebrating.webp',
+        Reaction.victory: '$dir/pose-victory.webp',
+        Reaction.explaining: '$dir/pose-surprised.webp',
+        Reaction.speaking: '$dir/pose-surprised.webp', // via explaining
+        Reaction.curious: '$dir/pose-surprised.webp',
+      };
       for (final r in Reaction.values) {
         expect(
           BitmapCharacterRenderer.poseAsset(BitmapCharacterRenderer.fox, r),
-          'assets/characters/fox/pose-default.webp',
+          expected[r] ?? '$dir/pose-default.webp',
           reason: r.name,
         );
+      }
+    });
+
+    test('"Presque" never borrows a sad or worried face', () {
+      expect(
+        BitmapCharacterRenderer.poseAsset(
+          BitmapCharacterRenderer.fox,
+          Reaction.encouraging,
+        ),
+        'assets/characters/fox/pose-default.webp',
+      );
+    });
+
+    test('every pose the fox names ships in the package', () {
+      for (final e in BitmapCharacterRenderer.fox.assets.entries) {
+        if (e.key == 'package') continue;
+        expect(File(e.value).existsSync(), isTrue, reason: e.value);
       }
     });
 

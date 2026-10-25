@@ -54,9 +54,17 @@ class BitmapCharacterRenderer implements CharacterRenderer {
     assets: const {
       'package': 'tutolys_motion',
       'pose.default': 'assets/characters/fox/pose-default.webp',
-      // Named, empty slots — filled the day the art exists:
-      //   pose.celebrating, pose.victory, pose.encouraging, pose.thinking,
-      //   pose.explaining, pose.speaking, pose.waiting, pose.sleeping
+      // Hafid's emotion renders (2026-10-25): joyful ×2, surprised.
+      'pose.celebrating': 'assets/characters/fox/pose-celebrating.webp',
+      'pose.victory': 'assets/characters/fox/pose-victory.webp',
+      // A hint is an "oh!" moment; curious is the same face.
+      'pose.explaining': 'assets/characters/fox/pose-surprised.webp',
+      'pose.curious': 'assets/characters/fox/pose-surprised.webp',
+      // Deliberately empty: pose.encouraging. The sad, worried and fierce
+      // renders exist, but "Presque" must never look disappointed in the
+      // child (design Decision Log), so it keeps the default pose + sway.
+      // Still empty: pose.thinking, pose.speaking, pose.waiting,
+      // pose.sleeping, pose.idle.
     },
   );
 

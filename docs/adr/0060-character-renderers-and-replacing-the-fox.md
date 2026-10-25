@@ -154,6 +154,35 @@ that fail to load draw the painted fox, never nothing.
 
 No engine, screen or policy changes in any of the three cases.
 
+## First real poses (2026-10-25, later the same day)
+
+Hafid delivered seven fox emotion renders (`Lab/Tutolys/Assets/imgs/engines/`).
+Three fill slots, cropped to the art, feet on the bottom edge, 512 px WebP.
+Their edges were checked on a dark ground and need no matte fix.
+
+| slot | render |
+|---|---|
+| `pose.celebrating` | Joyful … Leap |
+| `pose.victory` | Joyful … Leaping |
+| `pose.explaining`, `pose.curious` (and `speaking`, via its fallback) | Surprised |
+
+Not used, on purpose:
+
+- **Sad, Worried, Fierce.** The obvious home is `pose.encouraging`
+  ("Presque"), but the design's Decision Log never lets a wrong answer
+  look like disappointment: amber, never red, no hearts lost. A fox that
+  looks sad or worried at a six-year-old's mistake is that same signal in
+  a face. `pose.encouraging` stays on the default pose plus the sway, and a
+  test pins it. Using these needs Hafid's explicit call.
+- **Joyful … Leaping (1).** It has a checkerboard baked into its pixels
+  and no alpha.
+
+**Known mismatch:** the new renders are a different take on the fox from
+the waving `pose-default` (cream fur, rounder face, different ears). The
+fox therefore changes look when it hops and changes back when it lands.
+A neutral, idle render in the new style for `pose.default` (and
+`pose.idle`) would close the gap. That is the next pose worth asking for.
+
 ## Not done
 
 - `BreathingMascot` (Village, Carte, Aide, the welcome screen) is still a
