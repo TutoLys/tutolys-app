@@ -19,14 +19,20 @@ final appSettingsStoreProvider = Provider<AppSettingsStore>((ref) {
 class SettingsController extends Notifier<AppSettings> {
   @override
   AppSettings build() {
+    // Watched, not read: the app builds this at boot, before the session
+    // has restored the paired kid, so the first store is the unpaired one.
+    // Rebuilding when the kid arrives is what makes settings survive a
+    // restart; reading once loaded defaults on every launch.
+    final store = ref.watch(appSettingsStoreProvider);
     // Defaults first, real values as soon as the read lands — the screen
     // renders immediately rather than flashing a spinner over nine rows.
-    _load();
+    _load(store);
     return const AppSettings();
   }
 
-  Future<void> _load() async {
-    final loaded = await ref.read(appSettingsStoreProvider).read();
+  Future<void> _load(AppSettingsStore store) async {
+    final loaded = await store.read();
+    // A stale read (the kid changed meanwhile) lands on an unmounted ref.
     if (ref.mounted) state = loaded;
   }
 
