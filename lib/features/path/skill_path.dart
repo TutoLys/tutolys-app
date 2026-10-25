@@ -13,6 +13,11 @@ import '../../core/widgets/breathing_mascot.dart';
 /// the widget still draws it.
 enum PathNodeState { mastered, completed, active, available, locked, soon }
 
+/// Whether a node in [state] can be opened at all. `locked` and `soon`
+/// can't, and get no tap handler.
+bool isOpenState(PathNodeState state) =>
+    state != PathNodeState.locked && state != PathNodeState.soon;
+
 /// One stop on the path.
 class PathNode {
   const PathNode({
@@ -141,6 +146,8 @@ class SkillPath extends StatelessWidget {
     required this.continueLabel,
     this.onTapNode,
     this.compact = false,
+    this.focusNodeId,
+    this.focusKey,
     super.key,
   });
 
@@ -153,6 +160,10 @@ class SkillPath extends StatelessWidget {
 
   /// Phone sizing, below `Breakpoints.compact`.
   final bool compact;
+
+  /// The node that gets [focusKey], so the Carte can scroll to it.
+  final String? focusNodeId;
+  final GlobalKey? focusKey;
 
   /// `left: 50% / 28% / 50% / 72%`, repeating.
   static const _columns = <double>[0.5, 0.28, 0.5, 0.72];
@@ -210,15 +221,16 @@ class SkillPath extends StatelessWidget {
                       left: xOf(i) - m.capWidth / 2,
                       top: tops[i],
                       width: m.capWidth,
-                      child: _Node(
-                        node: nodes[i],
-                        metrics: m,
-                        palette: p,
-                        onTap:
-                            nodes[i].state == PathNodeState.locked ||
-                                nodes[i].state == PathNodeState.soon
-                            ? null
-                            : () => onTapNode?.call(nodes[i]),
+                      child: KeyedSubtree(
+                        key: nodes[i].id == focusNodeId ? focusKey : null,
+                        child: _Node(
+                          node: nodes[i],
+                          metrics: m,
+                          palette: p,
+                          onTap: isOpenState(nodes[i].state)
+                              ? () => onTapNode?.call(nodes[i])
+                              : null,
+                        ),
                       ),
                     ),
                     if (nodes[i].state == PathNodeState.active) ...[

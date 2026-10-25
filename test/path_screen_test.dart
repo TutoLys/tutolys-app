@@ -8,6 +8,7 @@ import 'package:tutolys_app/core/routing/paired_router.dart';
 import 'package:tutolys_app/data/api/content_api.dart';
 import 'package:tutolys_app/data/api/curriculum_api.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
+import 'package:tutolys_app/data/local_db/node_progress_local.dart';
 import 'package:tutolys_app/data/local_db/session_store.dart';
 import 'package:tutolys_app/data/sync/content_hash.dart';
 import 'package:tutolys_app/features/pairing/pairing_controller.dart';
@@ -96,6 +97,7 @@ class _FakeContentApi extends ContentApi {
 Map<String, Object?> exercise({
   required String id,
   required String skillNodeId,
+  int rank = 0,
 }) {
   return {
     'exercise_id': id,
@@ -105,7 +107,7 @@ Map<String, Object?> exercise({
     'skill_node_id': skillNodeId,
     'subject': 'MATH',
     'grade': 1,
-    'rank': 0,
+    'rank': rank,
     'locale': 'fr-CA',
     'prompt': {
       'text': 'Combien font 2 + 2 ?',
@@ -128,13 +130,14 @@ Widget appUnder({
   Map<String, List<CurriculumLeaf>> otherSubjects = const {},
   List<SkillMasteryDto> masteries = const [],
   FakeCurriculumApi? curriculum,
+  LocalDatabase? db,
 }) {
   final router = buildPairedRouter();
   addTearDown(router.dispose);
 
   return ProviderScope(
     overrides: [
-      localDatabaseProvider.overrideWithValue(LocalDatabase.memory()),
+      localDatabaseProvider.overrideWithValue(db ?? LocalDatabase.memory()),
       curriculumApiProvider.overrideWithValue(
         curriculum ?? FakeCurriculumApi({'MATH': leaves, ...otherSubjects}),
       ),
@@ -329,5 +332,200 @@ void main() {
     );
     // The skill still shows, so the kid sees what's coming.
     expect(find.byKey(ValueKey('path-orb-${_compter.id}')), findsOneWidget);
+  });
+
+  group('nothing past the frontier opens (Hafid, asked twice)', () {
+    CurriculumLeaf mesure(String id, int o) => CurriculumLeaf(
+      id: id,
+      labelFr: 'Notion $id',
+      labelEn: '',
+      stableKey: 'mathematique/mesure/b:A/o:$o',
+    );
+    final leaves = [mesure('a', 1), mesure('b', 2), mesure('c', 3)];
+    // a has two lessons, one finished: "1/2", so a is the frontier.
+    // b is mastered on the server, c finished on an older build (a record
+    // with no exercise ids). Neither may open while a isn't done.
+    final content = {
+      'a-0': exercise(id: 'a-0', skillNodeId: 'a'),
+      'a-1': exercise(id: 'a-1', skillNodeId: 'a', rank: 1),
+      'b-0': exercise(id: 'b-0', skillNodeId: 'b'),
+      'c-0': exercise(id: 'c-0', skillNodeId: 'c'),
+    };
+    const masteries = [
+      SkillMasteryDto(skillNodeId: 'b', masteryPct: 95, isMastered: true),
+    ];
+
+    Future<LocalDatabase> seeded() async {
+      final db = LocalDatabase.memory();
+      final local = NodeProgressLocal(db, kidId: 'k1');
+      await local.recordCompleted('a', perfect: true, exerciseId: 'a-0');
+      await local.recordCompleted('c', perfect: true);
+      return db;
+    }
+
+    testWidgets('no orb, card or tap beyond the frontier plays', (
+      tester,
+    ) async {
+      final db = await tester.runAsync(seeded);
+      await openCarte(
+        tester,
+        appUnder(
+          leaves: leaves,
+          content: content,
+          masteries: masteries,
+          db: db,
+        ),
+      );
+
+      // The two-lesson node isn't done until both are.
+      expect(find.byKey(const ValueKey('lesson-count-a')), findsOneWidget);
+      expect(find.text('1/2'), findsOneWidget);
+
+      for (final id in ['b', 'c']) {
+        final orb = find.byKey(ValueKey('path-orb-$id'));
+        expect(orb, findsOneWidget);
+        await tester.ensureVisible(orb);
+        await tester.tap(orb, warnIfMissed: false);
+        await tester.pumpAndSettle();
+        expect(find.byType(PlayScreen), findsNothing, reason: 'orb $id');
+        await tester.tap(find.text('Notion $id'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+        expect(find.byType(PlayScreen), findsNothing, reason: 'label $id');
+      }
+
+      // One Continuer card, and it plays the frontier's unfinished lesson.
+      expect(find.text('Continuer →'), findsOneWidget);
+      await tester.tap(find.text('Continuer →'));
+      await tester.pumpAndSettle();
+      final play = tester.widget<PlayScreen>(find.byType(PlayScreen));
+      expect(play.node.id, 'a');
+      expect(play.envelope['exercise_id'], 'a-1');
+    });
+
+    testWidgets('the Village only ever leads to the Carte, never a game', (
+      tester,
+    ) async {
+      final db = await tester.runAsync(seeded);
+      await tester.pumpWidget(
+        appUnder(
+          leaves: leaves,
+          content: content,
+          masteries: masteries,
+          db: db,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // The Village's own "Continuer" opens the Carte.
+      final cta = find.text('Continuer →').first;
+      await tester.ensureVisible(cta);
+      await tester.pumpAndSettle();
+      await tester.tap(cta);
+      await tester.pumpAndSettle();
+      expect(find.byType(PlayScreen), findsNothing);
+      expect(find.byKey(const ValueKey('path-orb-a')), findsOneWidget);
+    });
+  });
+
+  group('the Carte opens on where the kid is', () {
+    // Twelve nodes in one strand, the first nine done: the frontier sits
+    // far below the first screen.
+    final leaves = [
+      for (var i = 1; i <= 12; i++)
+        CurriculumLeaf(
+          id: 'n$i',
+          labelFr: 'Notion $i',
+          labelEn: '',
+          stableKey: 'mathematique/mesure/b:A/o:$i',
+        ),
+    ];
+    final content = {
+      for (var i = 1; i <= 12; i++)
+        'e$i': exercise(id: 'e$i', skillNodeId: 'n$i'),
+    };
+
+    Future<LocalDatabase> seeded() async {
+      final db = LocalDatabase.memory();
+      final local = NodeProgressLocal(db, kidId: 'k1');
+      for (var i = 1; i <= 9; i++) {
+        await local.recordCompleted('n$i', perfect: true, exerciseId: 'e$i');
+      }
+      return db;
+    }
+
+    void expectCentred(WidgetTester tester, String id) {
+      final orb = find.byKey(ValueKey('path-orb-$id'));
+      final view = tester.getRect(find.byType(Scrollable).first);
+      final y = tester.getCenter(orb).dy;
+      expect(view.contains(tester.getCenter(orb)), isTrue, reason: id);
+      expect(
+        (y - view.center.dy).abs(),
+        lessThan(view.height / 4),
+        reason: '$id roughly centred',
+      );
+    }
+
+    testWidgets('on opening, after a subject switch, and back from a game', (
+      tester,
+    ) async {
+      final db = await tester.runAsync(seeded);
+      final curriculum = FakeCurriculumApi({
+        'MATH': leaves,
+        'FR': const [
+          CurriculumLeaf(
+            id: 'fr-1',
+            labelFr: 'Lire',
+            labelEn: '',
+            stableKey: 'francais-langue/lire/b:A/o:1',
+          ),
+        ],
+      });
+      await openCarte(
+        tester,
+        appUnder(
+          leaves: leaves,
+          content: content,
+          curriculum: curriculum,
+          db: db,
+        ),
+      );
+      expectCentred(tester, 'n10');
+
+      // Away and back: still the frontier, not the top.
+      // The pills sit at the top, scrolled away by the step above.
+      Future<void> pill(String code) async {
+        final f = find.byKey(
+          ValueKey('subject-pill-$code'),
+          skipOffstage: false,
+        );
+        await tester.ensureVisible(f);
+        await tester.pumpAndSettle();
+        await tester.tap(f);
+        await tester.pumpAndSettle();
+      }
+
+      await pill('FR');
+      await pill('MATH');
+      expectCentred(tester, 'n10');
+
+      // Play the frontier and come back: the map shows it.
+      await tester.tap(find.byKey(const ValueKey('path-orb-n10')));
+      await tester.pumpAndSettle();
+      expect(find.byType(PlayScreen), findsOneWidget);
+      // Finished elsewhere: the record moves the frontier to n11.
+      await tester.runAsync(
+        () => NodeProgressLocal(
+          db!,
+          kidId: 'k1',
+        ).recordCompleted('n10', perfect: true, exerciseId: 'e10'),
+      );
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(PlayScreen)),
+      );
+      container.invalidate(nodeProgressProvider);
+      Navigator.of(tester.element(find.byType(PlayScreen))).pop();
+      await tester.pumpAndSettle();
+      expectCentred(tester, 'n11');
+    });
   });
 }

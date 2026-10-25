@@ -20,13 +20,60 @@ import 'subject_pills.dart';
 /// stretches, one per learning area. Node states are real: mastery comes
 /// from `/me/progress` (the same per-skill list the Village joins), and a
 /// node is locked only when nothing is synced to play on it.
-class PathScreen extends ConsumerWidget {
+///
+/// It always opens on where the kid is: on showing the tab, switching
+/// subject, or coming back from a game, it scrolls the frontier node (the
+/// fox and the Continuer card) to the middle of the screen.
+class PathScreen extends ConsumerStatefulWidget {
   const PathScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PathScreen> createState() => _PathScreenState();
+}
+
+class _PathScreenState extends ConsumerState<PathScreen> {
+  final _focusKey = GlobalKey(debugLabel: 'carte-focus');
+  bool _visible = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // The shell's IndexedStack keeps the Carte built while hidden, so
+    // "opening" it is this turning true.
+    final visible = Visibility.of(context);
+    if (visible && !_visible) _scrollToFocus();
+    _visible = visible;
+  }
+
+  /// Centres the frontier node after the next frame, with a short eased
+  /// scroll, or a jump when motion is reduced. Does nothing while hidden.
+  void _scrollToFocus() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !Visibility.of(context)) return;
+      final target = _focusKey.currentContext;
+      if (target == null) return;
+      final still = MediaQuery.disableAnimationsOf(context);
+      Scrollable.ensureVisible(
+        target,
+        alignment: 0.5,
+        duration: still ? Duration.zero : Motion.normal,
+        curve: Motion.enter,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(pathControllerProvider);
     final t = context.s;
+    ref.listen(pathControllerProvider, (prev, next) {
+      final loaded = prev?.loading == true && !next.loading;
+      if (loaded || prev?.subject != next.subject) _scrollToFocus();
+    });
+    // A finished lesson moves the frontier.
+    ref.listen(nodeProgressProvider, (_, next) {
+      if (next.hasValue) _scrollToFocus();
+    });
 
     // No Scaffold or AppBar: the shell owns the chrome, and a second app
     // bar under the header was the duplication the Village had.
@@ -73,7 +120,12 @@ class PathScreen extends ConsumerWidget {
                   // Skills with no lessons yet still show, locked: the kid
                   // sees what's coming.
                   if (state.leaves.isNotEmpty)
-                    _Sections(state: state, compact: compact),
+                    _Sections(
+                      state: state,
+                      compact: compact,
+                      focusKey: _focusKey,
+                      onReturned: _scrollToFocus,
+                    ),
                 ],
               ],
             ),
@@ -85,10 +137,19 @@ class PathScreen extends ConsumerWidget {
 }
 
 class _Sections extends ConsumerWidget {
-  const _Sections({required this.state, required this.compact});
+  const _Sections({
+    required this.state,
+    required this.compact,
+    required this.focusKey,
+    required this.onReturned,
+  });
 
   final PathState state;
   final bool compact;
+  final GlobalKey focusKey;
+
+  /// Called once the kid is back from a game.
+  final VoidCallback onReturned;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -129,6 +190,8 @@ class _Sections extends ConsumerWidget {
         _ => null,
       },
     );
+
+    final focusNodeId = focusNodeIdOf(sections);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -176,7 +239,10 @@ class _Sections extends ConsumerWidget {
                   final pct = ((node.masteryPct ?? 0) * 100).round();
                   return pct > 0 ? t.pathInProgress(pct) : t.pathNotStarted;
                 },
-                onTapNode: (node) => _play(context, ref, lessons[node.id]),
+                focusNodeId: focusNodeId,
+                focusKey: focusKey,
+                onTapNode: (node) =>
+                    _play(context, ref, node, lessons[node.id]),
               ),
             ),
           ),
@@ -189,9 +255,12 @@ class _Sections extends ConsumerWidget {
   Future<void> _play(
     BuildContext context,
     WidgetRef ref,
+    PathNode node,
     NodeLessons? lessons,
   ) async {
-    if (lessons == null) return;
+    // The orb and card already have no handler past the frontier; this is
+    // the last word, so no path into a game can skip the sequence.
+    if (!isOpenState(node.state) || lessons == null) return;
     final envelope = lessons.next;
     final leaf = state.leaves.firstWhere(
       (l) => l.id == envelope['skill_node_id'],
@@ -203,6 +272,7 @@ class _Sections extends ConsumerWidget {
     // The header's XP and streak, and this map's mastery, all moved. The
     // shell keeps tabs alive, so nothing re-reads on its own.
     ref.read(progressControllerProvider.notifier).refresh();
+    onReturned();
   }
 }
 

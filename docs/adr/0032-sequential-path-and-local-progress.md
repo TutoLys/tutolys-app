@@ -34,8 +34,8 @@ nothing, and `play_screen_test` now pins that.
   path or looks like what's blocking it. It stays on the path rather than
   disappearing, because the kid should see that the skill exists and is
   coming.
-- A node completed before this rule existed (out of order, like Hafid's
-  node 3) stays completed and replayable. Nothing is taken back.
+- ~~A node completed before this rule existed stays completed and
+  replayable.~~ Reversed the same day; see the revision below.
 - `PathNodeState.available` is no longer produced by the Carte. The widget
   still draws it.
 
@@ -87,3 +87,30 @@ server-authoritative, monotonic", had never been implemented.
   server's, a larger change than this bug.
 - The old, unused `HomeScreen` still draws `~`; it is not in any
   navigation.
+
+## Revision 2026-10-25: nothing past the frontier opens, and the Carte opens on it
+
+Hafid still could skip ahead on :8080, and asked twice. The cause was this
+ADR's own exception: a node already finished (an older build's record) or
+mastered on the server kept its state, and with it a tap handler, even past
+the frontier.
+
+- **Past the frontier every node is locked**, whatever it was before:
+  completed, mastered, or both. It has no tap handler. Once the frontier
+  reaches it, it shows done again and the frontier moves on past it, so no
+  record is lost. `soon` nodes stay `soon`.
+- Done still means "mastered on the server, or every lesson finished here",
+  so a "2/4" node is the frontier until all four are done.
+- The frontier spans the whole subject, not one strand: a later learning
+  area waits for the earlier ones. That's stricter than "the same strand"
+  and keeps exactly one fox and one Continuer card per subject.
+- **Every way into a game checks it.** The orb and the Continuer card get a
+  handler only when the node is open (`isOpenState`), and the Carte's
+  `_play` refuses a node that isn't, as a last word. The Village never
+  opens a game: its CTA, quest rows and buildings only switch to the Carte.
+- **The Carte opens on the frontier.** On showing the tab, switching
+  subject, finishing loading, a lesson completing, or coming back from a
+  game, it scrolls the active node to the middle of the screen
+  (`Scrollable.ensureVisible`, alignment 0.5, `Motion.normal` eased, or a
+  jump under reduced motion). With every node done it goes to the last
+  one. A hidden tab doesn't scroll until it is shown.

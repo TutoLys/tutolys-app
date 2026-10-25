@@ -72,10 +72,11 @@ List<AreaGroup> groupLeavesByArea({
 /// - **active** — the first playable node neither mastered nor completed, in
 ///   path order: where the kid is. Exactly one per subject, which is what
 ///   lets the mascot and the "Continuer" card mean something.
-/// - **locked** — playable, but after the active node. Unlocking is strictly
-///   sequential (ADR 0032): a node opens only once every playable node
-///   before it is done, so "if the game is not done, we don't go to the
-///   next" (Hafid, 2026-10-25).
+/// - **locked** — after the active node. Unlocking is strictly sequential
+///   (ADR 0032): a node opens only once every playable node before it is
+///   done, so "if the game is not done, we don't go to the next" (Hafid,
+///   2026-10-25). That holds for a node already completed or mastered too:
+///   past the frontier, nothing opens.
 /// - **soon** — no lesson published for it yet. Not locked and not a
 ///   step in the sequence: it is skipped, so a missing lesson never looks
 ///   like the reason the kid is stuck.
@@ -113,17 +114,23 @@ List<PathSection> buildCarteSections({
             () {
               final mastery = masteryOf[leaf.id];
               final PathNodeState state;
-              if (mastery?.isMastered ?? false) {
-                state = PathNodeState.mastered;
-              } else if (!playable.contains(leaf.id)) {
+              final mastered = mastery?.isMastered ?? false;
+              // Mastered with nothing to replay still shows mastered; finished
+              // with nothing to replay can't be played, so it is "soon".
+              if (!playable.contains(leaf.id) && !mastered) {
                 state = PathNodeState.soon;
+              } else if (frontierTaken) {
+                // Past the frontier nothing opens, whatever it once was:
+                // a node finished out of order on an older build, or
+                // mastered on the server, waits its turn like the rest.
+                state = PathNodeState.locked;
+              } else if (mastered) {
+                state = PathNodeState.mastered;
               } else if (completed.contains(leaf.id)) {
                 state = PathNodeState.completed;
-              } else if (!frontierTaken) {
+              } else {
                 frontierTaken = true;
                 state = PathNodeState.active;
-              } else {
-                state = PathNodeState.locked;
               }
               return PathNode(
                 id: leaf.id,
@@ -180,4 +187,17 @@ int naturalCompare(String a, String b) {
     if (c != 0) return c;
   }
   return ca.length.compareTo(cb.length);
+}
+
+/// The node the Carte scrolls to: the active one, or once every node is
+/// done, the last one reached. Null when nothing is open yet.
+String? focusNodeIdOf(List<PathSection> sections) {
+  String? lastOpen;
+  for (final section in sections) {
+    for (final node in section.nodes) {
+      if (node.state == PathNodeState.active) return node.id;
+      if (isOpenState(node.state)) lastOpen = node.id;
+    }
+  }
+  return lastOpen;
 }

@@ -272,9 +272,9 @@ void main() {
       expect(nodes.map((n) => n.state), [
         PathNodeState.completed,
         PathNodeState.active,
-        PathNodeState.completed,
         PathNodeState.locked,
-      ], reason: 'a node done earlier stays done and replayable');
+        PathNodeState.locked,
+      ], reason: 'a node finished out of order waits its turn (Hafid)');
     });
 
     test('server mastery counts as done for the sequence', () {
@@ -283,6 +283,70 @@ void main() {
         masteries: [mastery('a', 95, mastered: true)],
       ).single.nodes;
       expect(nodes[1].state, PathNodeState.active);
+    });
+
+    test('server mastery past the frontier unlocks nothing', () {
+      final nodes = build(
+        four,
+        masteries: [mastery('c', 95, mastered: true)],
+      ).single.nodes;
+      expect(nodes.map((n) => n.state), [
+        PathNodeState.active,
+        PathNodeState.locked,
+        PathNodeState.locked,
+        PathNodeState.locked,
+      ]);
+    });
+
+    test('once the frontier reaches them, done nodes show done again', () {
+      final nodes = build(
+        four,
+        completed: {'a', 'b', 'c'},
+        masteries: [mastery('c', 95, mastered: true)],
+      ).single.nodes;
+      expect(nodes.map((n) => n.state), [
+        PathNodeState.completed,
+        PathNodeState.completed,
+        PathNodeState.mastered,
+        PathNodeState.active,
+      ]);
+    });
+
+    test('the frontier spans sections: a later area waits too', () {
+      final sections = build(
+        [
+          leaf('n', 'mathematique/sens-et-ecriture-des-nombres/b:A/o:1'),
+          leaf('g', 'mathematique/geometrie/b:A/o:1'),
+        ],
+        completed: {'g'},
+      );
+      expect(sections.first.nodes.single.state, PathNodeState.active);
+      expect(sections.last.nodes.single.state, PathNodeState.locked);
+    });
+
+    test('a node with no lesson past the frontier is still "soon"', () {
+      final nodes = build(four, playable: {'a', 'b', 'd'}).single.nodes;
+      expect(nodes[2].state, PathNodeState.soon);
+    });
+  });
+
+  group('the node the Carte scrolls to', () {
+    final three = [
+      leaf('a', 'mathematique/mesure/b:A/o:1'),
+      leaf('b', 'mathematique/mesure/b:A/o:2'),
+      leaf('c', 'mathematique/mesure/b:A/o:3'),
+    ];
+
+    test('is the active node', () {
+      expect(focusNodeIdOf(build(three, completed: {'a'})), 'b');
+    });
+
+    test('is the last one reached once every node is done', () {
+      expect(focusNodeIdOf(build(three, completed: {'a', 'b', 'c'})), 'c');
+    });
+
+    test('is nothing when nothing is open', () {
+      expect(focusNodeIdOf(build(three, playable: const {})), isNull);
     });
   });
 }
