@@ -7,6 +7,8 @@ import '../../core/i18n/strings.dart';
 import '../pairing/pairing_controller.dart';
 import '../progress/progress_controller.dart';
 import 'subject_progress.dart';
+import 'subject_strip.dart';
+import '../../core/widgets/breathing_mascot.dart';
 import 'village_scene.dart';
 
 /// Village — the learner's home.
@@ -54,13 +56,38 @@ class VillageScreen extends ConsumerWidget {
             // breakpoint; the panel drops under the scene below it.
             LayoutBuilder(
               builder: (context, constraints) {
+                final buildings = [
+                  for (final b in villageBuildings(t))
+                    b.withProgress(bySubject[subjectCodeFor(b.asset)]),
+                ];
+
+                // Below the phone breakpoint the design does not shrink the
+                // village — it replaces it. The scene positions buildings at
+                // fixed fractions of a wide canvas, so on ~390px they
+                // overlap, their pills collide and the whole thing clips.
+                if (constraints.maxWidth < Breakpoints.compact) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _MobileGreeting(
+                        text: _greetingFor(t, kid?.displayName, progress),
+                      ),
+                      const SizedBox(height: Space.md),
+                      SubjectStrip(
+                        buildings: buildings,
+                        title: t.villageYourSubjects,
+                        onTapBuilding: (_) => onOpenPath?.call(),
+                      ),
+                      const SizedBox(height: Space.md),
+                      _QuestPanel(progress: progress, onOpenPath: onOpenPath),
+                    ],
+                  );
+                }
+
                 final scene = SizedBox(
                   height: 580,
                   child: VillageScene(
-                    buildings: [
-                      for (final b in villageBuildings(t))
-                        b.withProgress(bySubject[subjectCodeFor(b.asset)]),
-                    ],
+                    buildings: buildings,
                     signTitle: t.villageSignTitle,
                     signSubtitle: kid?.gradeLevel == null
                         ? ''
@@ -375,6 +402,52 @@ class _QuestRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The fox and its line, on a phone — the scene's own greeting lives inside
+/// the village canvas, which mobile does not render.
+class _MobileGreeting extends StatelessWidget {
+  const _MobileGreeting({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const BreathingMascot(height: 64),
+        const SizedBox(width: Space.xs),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: p.surface,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: p.shadowSmall,
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Text(
+              text,
+              style: TextStyle(
+                fontFamily: VillageType.display,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+                color: p.ink,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

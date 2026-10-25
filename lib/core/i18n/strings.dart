@@ -172,6 +172,8 @@ abstract class Strings {
   /// The FAQ, question and answer, in the reader's own language.
   List<HelpEntry> get helpEntries;
 
+  String get villageYourSubjects;
+
   static const Strings fr = _FrenchStrings();
   static const Strings en = _EnglishStrings();
 
@@ -563,6 +565,9 @@ class _FrenchStrings extends Strings {
         HelpEntry(question: 'J\'ai trouvé une erreur ou un problème', answer: 'Dis-le à un parent ou à ton enseignant — ils pourront nous contacter pour toi.'),
       ];
 
+  @override
+  String get villageYourSubjects => 'Tes matières';
+
 }
 
 class _EnglishStrings extends Strings {
@@ -946,6 +951,9 @@ class _EnglishStrings extends Strings {
         HelpEntry(question: 'I lost my streak, what now?', answer: 'Don\'t worry! Start again today — a new streak begins right away.'),
         HelpEntry(question: 'I found a mistake or a problem', answer: 'Tell a parent or your teacher — they can contact us for you.'),
       ];
+
+  @override
+  String get villageYourSubjects => 'Your subjects';
 
 }
 
