@@ -9,6 +9,7 @@ import 'package:tutolys_app/data/api/progress_api.dart';
 import 'package:tutolys_app/data/local_db/session_store.dart';
 import 'package:tutolys_app/features/pairing/pairing_controller.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
+import 'package:tutolys_app/features/profile/avatar_picker.dart';
 import 'package:tutolys_app/features/profile/profile_screen.dart';
 import 'package:tutolys_app/features/settings/settings_screen.dart';
 import 'package:tutolys_app/features/progress/progress_controller.dart';
@@ -71,6 +72,7 @@ Widget appUnder({
   ProgressApi? progressApi,
   QuestBoard? board,
   VoidCallback? onSwitchProfile,
+  double sidebar = 0,
 }) {
   return ProviderScope(
     overrides: [
@@ -88,18 +90,33 @@ Widget appUnder({
         ),
       ),
     ],
-    child: MediaQuery(
-      data: const MediaQueryData(disableAnimations: true),
-      child: MaterialApp(
-        theme: TutolysTheme.learner(),
-        locale: const Locale('fr', 'CA'),
-        supportedLocales: const [Locale('fr', 'CA'), Locale('en', 'CA')],
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        home: ProfileScreen(onSwitchProfile: onSwitchProfile),
+    // The window's real size, so wide layouts and the dialog breakpoint
+    // apply; a bare MediaQueryData would report a 0×0 window.
+    child: Builder(
+      builder: (context) => MediaQuery(
+        data: MediaQueryData.fromView(View.of(context))
+            .copyWith(disableAnimations: true),
+        child: MaterialApp(
+          theme: TutolysTheme.learner(),
+          locale: const Locale('fr', 'CA'),
+          supportedLocales: const [Locale('fr', 'CA'), Locale('en', 'CA')],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: Scaffold(
+            // The shell's sidebar or rail, when [sidebar] is set.
+            body: Row(
+              children: [
+                SizedBox(width: sidebar),
+                Expanded(
+                  child: ProfileScreen(onSwitchProfile: onSwitchProfile),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     ),
   );
@@ -198,6 +215,38 @@ void main() {
       expect(tester.getSize(card).height, lessThan(260));
       expect(tester.getSize(card).height, greaterThan(180));
     });
+  }
+
+  for (final width in [1440.0, 1920.0]) {
+    testWidgets(
+      'at ${width.round()}px the avatar dialog lines up with the Profil column',
+      (tester) async {
+        tester.view.physicalSize = Size(width, 1040);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await tester.pumpWidget(appUnder(sidebar: 224));
+        await tester.pumpAndSettle();
+
+        final column = tester.getRect(
+          find
+              .ancestor(
+                of: find.byKey(const ValueKey('profile-badges')),
+                matching: find.byType(ConstrainedBox),
+              )
+              .last,
+        );
+        await tester.tap(find.byKey(const ValueKey('profile-avatar-edit')));
+        await tester.pumpAndSettle();
+
+        final dialog = tester.getRect(find.byType(AvatarPicker));
+        expect(column.center.dx, greaterThan(width / 2 + 100));
+        expect(dialog.center.dx, closeTo(column.center.dx, 2));
+        expect(dialog.left, closeTo(column.left, 2));
+        expect(dialog.right, closeTo(column.right, 2));
+        // The barrier still covers the whole window, sidebar included.
+        expect(tester.getRect(find.byType(ModalBarrier).last).width, width);
+      },
+    );
   }
 
   testWidgets('recent activity lists the latest badges with their day', (

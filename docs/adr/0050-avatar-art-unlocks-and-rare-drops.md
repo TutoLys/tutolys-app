@@ -198,3 +198,14 @@ manager).
   and "Qui joue ?" draws the same result.
 - Historical figures carry no sex and are kept. An unspecified kid keeps
   whatever they wear.
+
+## Revision 2026-10-25: the dialog lines up with Profil
+
+Centred on the whole window, the dialog sat left of the Profil cards by
+half the sidebar (Hafid: "align with the one in the bg").
+- Profil passes its column's context (`showAvatarPicker(alignTo:)`). The
+  dialog takes that column's left edge and width, and so its centre, at
+  every breakpoint, sidebar or rail.
+- The barrier still covers the whole window. Phones keep the bottom sheet.
+- Tests at 1440 and 1920 with a 224 px sidebar check both edges within 2 px.
+- "Qui joue ?" is a full screen, not a dialog, so it needed nothing.

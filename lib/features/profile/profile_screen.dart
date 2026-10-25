@@ -53,93 +53,98 @@ class ProfileScreen extends ConsumerWidget {
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 680),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _HeroCard(
-                name: kid?.displayName ?? '',
-                grade: kid?.gradeLevel,
-                avatarKey: ref.watch(selectedAvatarKeyProvider),
-                onEditAvatar: () => showAvatarPicker(context),
-                onSwitchProfile: onSwitchProfile,
-                title: (board?.has(Achievement.streak7) ?? false)
-                    ? t.flameKeeperTitle
-                    : null,
-                stats: [
-                  _HeroStat(
-                    asset: 'asset-xpstar.webp',
-                    value: progress.level == null
-                        ? '${progress.totalXp}'
-                        : t.progressLevel(progress.level!),
-                    label: progress.level == null
-                        ? t.profileTotalXp
-                        : '${progress.totalXp} ${t.profileTotalXp}',
-                  ),
-                  _HeroStat(
-                    asset: 'asset-flame.webp',
-                    value: progress.currentStreakDays == null
-                        ? '–'
-                        : '${progress.currentStreakDays}',
-                    label: t.profileStreakLabel,
-                  ),
-                  _HeroStat(
-                    asset: 'asset-badge.webp',
-                    value:
-                        '${Achievement.values.where((a) => board?.has(a) ?? false).length}',
-                    label: t.profileBadgesEarned,
-                  ),
-                ],
-                palette: p,
-              ),
-              const SizedBox(height: Space.md),
-              _Card(
-                title: t.profileBySubject,
-                icon: Icons.insights_outlined,
-                palette: p,
-                child: bySubject.isEmpty
-                    ? Text(
-                        t.profileNoSubjects,
-                        style: TextStyle(fontSize: 13, color: p.inkMuted),
-                      )
-                    : Column(
-                        children: [
-                          for (final b in villageBuildings(t))
-                            if (bySubject[b.subject] != null)
-                              _SubjectRow(
-                                label: b.label,
-                                value: bySubject[b.subject]!,
-                                accent: b.accent,
-                                palette: p,
-                              ),
-                        ],
-                      ),
-              ),
-              const SizedBox(height: Space.md),
-              _Card(
-                title: t.profileBadges,
-                icon: Icons.workspace_premium_outlined,
-                palette: p,
-                child: _BadgeGrid(
-                  earned: {
-                    for (final a in Achievement.values)
-                      if (board?.has(a) ?? false) a,
-                  },
+          // The column's own context, so the avatar dialog can line up
+          // with it.
+          child: Builder(
+            builder: (column) => Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _HeroCard(
+                  name: kid?.displayName ?? '',
+                  grade: kid?.gradeLevel,
+                  avatarKey: ref.watch(selectedAvatarKeyProvider),
+                  onEditAvatar: () =>
+                      showAvatarPicker(context, alignTo: column),
+                  onSwitchProfile: onSwitchProfile,
+                  title: (board?.has(Achievement.streak7) ?? false)
+                      ? t.flameKeeperTitle
+                      : null,
+                  stats: [
+                    _HeroStat(
+                      asset: 'asset-xpstar.webp',
+                      value: progress.level == null
+                          ? '${progress.totalXp}'
+                          : t.progressLevel(progress.level!),
+                      label: progress.level == null
+                          ? t.profileTotalXp
+                          : '${progress.totalXp} ${t.profileTotalXp}',
+                    ),
+                    _HeroStat(
+                      asset: 'asset-flame.webp',
+                      value: progress.currentStreakDays == null
+                          ? '–'
+                          : '${progress.currentStreakDays}',
+                      label: t.profileStreakLabel,
+                    ),
+                    _HeroStat(
+                      asset: 'asset-badge.webp',
+                      value:
+                          '${Achievement.values.where((a) => board?.has(a) ?? false).length}',
+                      label: t.profileBadgesEarned,
+                    ),
+                  ],
                   palette: p,
                 ),
-              ),
-              const SizedBox(height: Space.md),
-              _Card(
-                title: t.profileRecent,
-                icon: Icons.history,
-                palette: p,
-                child: _RecentActivity(
-                  items: board?.recent ?? const [],
-                  today: board?.today ?? DateTime.now(),
+                const SizedBox(height: Space.md),
+                _Card(
+                  title: t.profileBySubject,
+                  icon: Icons.insights_outlined,
                   palette: p,
+                  child: bySubject.isEmpty
+                      ? Text(
+                          t.profileNoSubjects,
+                          style: TextStyle(fontSize: 13, color: p.inkMuted),
+                        )
+                      : Column(
+                          children: [
+                            for (final b in villageBuildings(t))
+                              if (bySubject[b.subject] != null)
+                                _SubjectRow(
+                                  label: b.label,
+                                  value: bySubject[b.subject]!,
+                                  accent: b.accent,
+                                  palette: p,
+                                ),
+                          ],
+                        ),
                 ),
-              ),
-              const SizedBox(height: Space.xl),
-            ],
+                const SizedBox(height: Space.md),
+                _Card(
+                  title: t.profileBadges,
+                  icon: Icons.workspace_premium_outlined,
+                  palette: p,
+                  child: _BadgeGrid(
+                    earned: {
+                      for (final a in Achievement.values)
+                        if (board?.has(a) ?? false) a,
+                    },
+                    palette: p,
+                  ),
+                ),
+                const SizedBox(height: Space.md),
+                _Card(
+                  title: t.profileRecent,
+                  icon: Icons.history,
+                  palette: p,
+                  child: _RecentActivity(
+                    items: board?.recent ?? const [],
+                    today: board?.today ?? DateTime.now(),
+                    palette: p,
+                  ),
+                ),
+                const SizedBox(height: Space.xl),
+              ],
+            ),
           ),
         ),
       ),

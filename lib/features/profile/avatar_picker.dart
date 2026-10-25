@@ -13,24 +13,50 @@ import 'avatars.dart';
 const avatarDialogMinWidth = 768.0;
 
 /// Opens the avatar picker from Profil's edit dot.
-Future<void> showAvatarPicker(BuildContext context) {
+///
+/// On wide screens, with [alignTo] (the Profil column's context), the
+/// dialog takes that column's width and horizontal centre, so it sits
+/// squarely over the cards behind it. Centred on the whole window it sat
+/// left of them by half the sidebar. The barrier still covers the window.
+Future<void> showAvatarPicker(BuildContext context, {BuildContext? alignTo}) {
   final p = VillagePalette.of(context);
   if (MediaQuery.sizeOf(context).width >= avatarDialogMinWidth) {
+    final box = alignTo?.findRenderObject() as RenderBox?;
+    final column = box != null && box.hasSize
+        ? box.localToGlobal(Offset.zero) & box.size
+        : null;
     return showDialog<void>(
       context: context,
-      builder: (context) => Dialog(
-        backgroundColor: p.surface,
-        insetPadding: const EdgeInsets.all(Space.lg),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        clipBehavior: Clip.antiAlias,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: 640,
-            maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+      builder: (context) {
+        final window = MediaQuery.sizeOf(context);
+        final dialog = Dialog(
+          backgroundColor: p.surface,
+          insetPadding: const EdgeInsets.symmetric(vertical: Space.lg),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
           ),
-          child: const AvatarPicker(),
-        ),
-      ),
+          clipBehavior: Clip.antiAlias,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: column?.width ?? 640,
+              maxHeight: window.height * 0.85,
+            ),
+            child: const AvatarPicker(),
+          ),
+        );
+        if (column == null) return dialog;
+        return Stack(
+          children: [
+            Positioned(
+              left: column.left,
+              width: column.width,
+              top: 0,
+              bottom: 0,
+              child: dialog,
+            ),
+          ],
+        );
+      },
     );
   }
   return showModalBottomSheet<void>(
