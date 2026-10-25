@@ -22,3 +22,9 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
   fake_async: ^1.3.3
+
+flutter:
+  # One folder per character. An artist's delivery lands here and is named
+  # in that character's manifest (ADR 0060).
+  assets:
+    - assets/characters/fox/
