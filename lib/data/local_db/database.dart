@@ -165,6 +165,17 @@ class SkillNodeTable extends Table {
   TextColumn get subject => text()();
   IntColumn get grade => integer()();
 
+  /// Document order, strand and learning area as the curriculum endpoint
+  /// sends them (schema v7, backend ADR 0044). Null on rows cached before
+  /// that, until the next sync refills them.
+  IntColumn get docOrder => integer().named('doc_order').nullable()();
+  TextColumn get strandKey => text().named('strand_key').nullable()();
+  TextColumn get strandLabelFr => text().named('strand_label_fr').nullable()();
+  TextColumn get strandLabelEn => text().named('strand_label_en').nullable()();
+  TextColumn get areaLabelFr => text().named('area_label_fr').nullable()();
+  TextColumn get areaLabelEn => text().named('area_label_en').nullable()();
+  IntColumn get areaOrdinal => integer().named('area_ordinal').nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -326,7 +337,7 @@ class LocalDatabase extends _$LocalDatabase {
   Future<String?> Function()? migrationKidIdLoader;
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -373,6 +384,21 @@ class LocalDatabase extends _$LocalDatabase {
       }
       if (from < 6) {
         await m.createTable(assetCacheTable);
+      }
+      // Bounded by `to` too: a migration test that stops at an older
+      // version must not get these columns.
+      if (from < 7 && to >= 7) {
+        for (final column in [
+          skillNodeTable.docOrder,
+          skillNodeTable.strandKey,
+          skillNodeTable.strandLabelFr,
+          skillNodeTable.strandLabelEn,
+          skillNodeTable.areaLabelFr,
+          skillNodeTable.areaLabelEn,
+          skillNodeTable.areaOrdinal,
+        ]) {
+          await m.addColumn(skillNodeTable, column);
+        }
       }
     },
   );
@@ -436,9 +462,7 @@ class LocalDatabase extends _$LocalDatabase {
     await m.alterTable(
       TableMigration(
         appStateTable,
-        columnTransformer: {
-          appStateTable.kidId: Variable<String>(deviceScope),
-        },
+        columnTransformer: {appStateTable.kidId: Variable<String>(deviceScope)},
         newColumns: [appStateTable.kidId],
       ),
     );

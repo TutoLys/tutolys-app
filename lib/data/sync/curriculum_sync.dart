@@ -1,3 +1,5 @@
+import 'package:drift/drift.dart' show Value;
+
 import '../api/curriculum_api.dart';
 import '../local_db/database.dart';
 
@@ -98,6 +100,13 @@ class CurriculumSync {
                 stableKey: leaf.stableKey,
                 subject: subject,
                 grade: grade,
+                docOrder: Value(leaf.docOrder),
+                strandKey: Value(leaf.strandKey),
+                strandLabelFr: Value(leaf.strandLabelFr),
+                strandLabelEn: Value(leaf.strandLabelEn),
+                areaLabelFr: Value(leaf.areaLabelFr),
+                areaLabelEn: Value(leaf.areaLabelEn),
+                areaOrdinal: Value(leaf.areaOrdinal),
               ),
             );
       }

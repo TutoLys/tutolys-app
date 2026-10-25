@@ -31,11 +31,20 @@ class AreaGroup {
 /// "sens et écriture des nombres" (Hafid, 2026-10-25). Leaves no area claims
 /// come last, untitled. Shared by the Carte and Progrès so their titles
 /// always agree.
+///
+/// When the curriculum endpoint sent document order and areas (backend ADR
+/// 0044), those are used instead: areas in document order, titled with the
+/// document's own labels, leaves by `doc_order`. That covers what the table
+/// can't (français beyond "Écrire", CCQ). The table stays as the fallback
+/// for a cache filled by an older backend.
 List<AreaGroup> groupLeavesByArea({
   required String subject,
   required List<CachedSkillNode> leaves,
   required bool english,
 }) {
+  if (leaves.isNotEmpty && leaves.every((l) => l.docOrder != null)) {
+    return _groupByServerAreas(leaves, english: english);
+  }
   final areas = learningAreas[subject] ?? const <LearningArea>[];
   final areaOfStrand = <String, int>{
     for (var i = 0; i < areas.length; i++)
@@ -75,6 +84,33 @@ List<AreaGroup> groupLeavesByArea({
             : (english ? areas[area].labelEn : areas[area].labelFr),
         leaves: groups[area]!..sort(byStrandThenKey),
       ),
+  ];
+}
+
+List<AreaGroup> _groupByServerAreas(
+  List<CachedSkillNode> leaves, {
+  required bool english,
+}) {
+  final sorted = [...leaves]
+    ..sort((a, b) => a.docOrder!.compareTo(b.docOrder!));
+  // Keyed by the area's position; a leaf with no area (its parent was
+  // archived) goes last, untitled, rather than vanishing.
+  final groups = <int, List<CachedSkillNode>>{};
+  final titles = <int, String>{};
+  for (final leaf in sorted) {
+    final fr = leaf.areaLabelFr;
+    final key = fr == null ? -1 : (leaf.areaOrdinal ?? 0);
+    groups.putIfAbsent(key, () => []).add(leaf);
+    if (fr != null) {
+      final en = leaf.areaLabelEn ?? '';
+      titles.putIfAbsent(key, () => english && en.isNotEmpty ? en : fr);
+    }
+  }
+  final order = groups.keys.toList()
+    ..sort((a, b) => a == -1 ? 1 : (b == -1 ? -1 : a.compareTo(b)));
+  return [
+    for (final key in order)
+      AreaGroup(title: titles[key], leaves: groups[key]!),
   ];
 }
 

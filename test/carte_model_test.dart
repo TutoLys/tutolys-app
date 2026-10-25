@@ -71,6 +71,89 @@ void main() {
     expect(fr.first.nodes.map((n) => n.id), ['lex', 'conj', 'acc']);
   });
 
+  group('document order and areas from the backend (ADR 0044)', () {
+    CachedSkillNode placed(
+      String id,
+      int order, {
+      String? area,
+      String? areaEn,
+      int? ordinal,
+    }) => CachedSkillNode(
+      id: id,
+      labelFr: 'fr-$id',
+      labelEn: '',
+      // Keys that would sort the other way: order must come from doc_order.
+      stableKey: 'francais-langue/zz-$id/b:A/o:${100 - order}',
+      subject: 'FR',
+      grade: 1,
+      docOrder: order,
+      areaLabelFr: area,
+      areaLabelEn: areaEn,
+      areaOrdinal: ordinal,
+    );
+
+    test('areas and leaves follow the document, titled with its labels', () {
+      final sections = build([
+        placed('lire2', 30, area: 'Lire des textes variés', ordinal: 1),
+        placed('ecr1', 10, area: 'Écrire des textes variés', ordinal: 0),
+        placed('lire1', 20, area: 'Lire des textes variés', ordinal: 1),
+        placed('ecr2', 12, area: 'Écrire des textes variés', ordinal: 0),
+      ], subject: 'FR');
+      expect(sections.map((s) => s.title), [
+        'Écrire des textes variés',
+        'Lire des textes variés',
+      ]);
+      expect(sections.first.nodes.map((n) => n.id), ['ecr1', 'ecr2']);
+      expect(sections.last.nodes.map((n) => n.id), ['lire1', 'lire2']);
+      expect(sections.first.nodes.first.state, PathNodeState.active);
+    });
+
+    test('a leaf with no area goes last, untitled, never dropped', () {
+      final sections = build([
+        placed('orphan', 5),
+        placed('a', 10, area: 'Écrire des textes variés', ordinal: 0),
+      ], subject: 'FR');
+      expect(sections.map((s) => s.title), ['Écrire des textes variés', null]);
+      expect(sections.last.nodes.single.id, 'orphan');
+    });
+
+    test('English titles when the backend has them, French otherwise', () {
+      final sections = build(
+        [
+          placed(
+            'n',
+            1,
+            area: 'Arithmétique',
+            areaEn: 'Arithmetic',
+            ordinal: 0,
+          ),
+          placed(
+            'l',
+            2,
+            area: 'Lire des textes variés',
+            areaEn: '',
+            ordinal: 1,
+          ),
+        ],
+        english: true,
+        subject: 'FR',
+      );
+      expect(sections.map((s) => s.title), [
+        'Arithmetic',
+        'Lire des textes variés',
+      ]);
+    });
+
+    test('a cache with any row from an older backend uses the table', () {
+      final sections = build([
+        placed('a', 1, area: 'Ignoré', ordinal: 0),
+        leaf('g', 'mathematique/geometrie/b:A/o:1'),
+      ]);
+      expect(sections.map((s) => s.title), contains('Géométrie'));
+      expect(sections.map((s) => s.title), isNot(contains('Ignoré')));
+    });
+  });
+
   test('titles follow the language', () {
     final sections = build([
       leaf('g', 'mathematique/geometrie/b:A/o:1', en: 'Shapes'),

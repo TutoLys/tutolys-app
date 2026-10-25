@@ -37,8 +37,16 @@ void main() {
   late FakeCurriculumServer server;
   late CurriculumSync sync;
 
-  CurriculumLeaf leaf(String id, {String label = 'Lire et écrire tout nombre naturel'}) {
-    return CurriculumLeaf(id: id, labelFr: label, labelEn: '', stableKey: 'mathematique/$id');
+  CurriculumLeaf leaf(
+    String id, {
+    String label = 'Lire et écrire tout nombre naturel',
+  }) {
+    return CurriculumLeaf(
+      id: id,
+      labelFr: label,
+      labelEn: '',
+      stableKey: 'mathematique/$id',
+    );
   }
 
   setUp(() {
@@ -109,20 +117,30 @@ void main() {
 
     expect(report.offline, isTrue);
     final cached = await sync.cachedLeaves(subject: 'MATH', grade: 1);
-    expect(cached.map((c) => c.id).toSet(), {'a', 'b'}, reason: 'offline must not clear the cache');
+    expect(cached.map((c) => c.id).toSet(), {
+      'a',
+      'b',
+    }, reason: 'offline must not clear the cache');
   });
 
-  test('an unauthorized credential is reported, not treated as empty content', () async {
-    server.leavesBySubject['MATH'] = [leaf('a')];
-    await sync.sync(subject: 'MATH', grade: 1);
+  test(
+    'an unauthorized credential is reported, not treated as empty content',
+    () async {
+      server.leavesBySubject['MATH'] = [leaf('a')];
+      await sync.sync(subject: 'MATH', grade: 1);
 
-    server.unauthorized = true;
-    final report = await sync.sync(subject: 'MATH', grade: 1);
+      server.unauthorized = true;
+      final report = await sync.sync(subject: 'MATH', grade: 1);
 
-    expect(report.unauthorized, isTrue);
-    final cached = await sync.cachedLeaves(subject: 'MATH', grade: 1);
-    expect(cached, isNotEmpty, reason: 'an auth failure must not clear the cache');
-  });
+      expect(report.unauthorized, isTrue);
+      final cached = await sync.cachedLeaves(subject: 'MATH', grade: 1);
+      expect(
+        cached,
+        isNotEmpty,
+        reason: 'an auth failure must not clear the cache',
+      );
+    },
+  );
 
   test('a server failure is reported, not treated as empty content', () async {
     server.leavesBySubject['MATH'] = [leaf('a')];
@@ -143,5 +161,47 @@ void main() {
 
     expect(report.unauthorized, isTrue);
     expect(server.fetchCalls, 0);
+  });
+
+  test('document order, strand and area come through to the cache', () async {
+    final parsed = CurriculumLeaf.fromJson({
+      'id': 'l1',
+      'label_fr': 'Lire',
+      'label_en': '',
+      'stable_key': 'francais-langue/lire/b:A/o:1',
+      'doc_order': 412,
+      'strand': {
+        'key': 'francais-langue/lire',
+        'label_fr': 'Compétence Lire des textes variés — Section Stratégies',
+        'label_en': '',
+        'ordinal': 7,
+      },
+      'area': {
+        'label_fr': 'Lire des textes variés',
+        'label_en': '',
+        'ordinal': 1,
+      },
+    });
+    server.leavesBySubject['FR'] = [parsed];
+    await sync.sync(subject: 'FR', grade: 1);
+
+    final row = (await sync.cachedLeaves(subject: 'FR', grade: 1)).single;
+    expect(row.docOrder, 412);
+    expect(row.strandKey, 'francais-langue/lire');
+    expect(row.strandLabelFr, startsWith('Compétence Lire'));
+    expect(row.areaLabelFr, 'Lire des textes variés');
+    expect(row.areaLabelEn, '');
+    expect(row.areaOrdinal, 1);
+  });
+
+  test('an older backend without them still parses, as nulls', () {
+    final old = CurriculumLeaf.fromJson({
+      'id': 'l1',
+      'label_fr': 'Lire',
+      'label_en': '',
+      'stable_key': 'francais-langue/lire/b:A/o:1',
+    });
+    expect(old.docOrder, isNull);
+    expect(old.areaLabelFr, isNull);
   });
 }

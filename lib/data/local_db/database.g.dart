@@ -1250,6 +1250,83 @@ class $SkillNodeTableTable extends SkillNodeTable
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _docOrderMeta = const VerificationMeta(
+    'docOrder',
+  );
+  @override
+  late final GeneratedColumn<int> docOrder = GeneratedColumn<int>(
+    'doc_order',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _strandKeyMeta = const VerificationMeta(
+    'strandKey',
+  );
+  @override
+  late final GeneratedColumn<String> strandKey = GeneratedColumn<String>(
+    'strand_key',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _strandLabelFrMeta = const VerificationMeta(
+    'strandLabelFr',
+  );
+  @override
+  late final GeneratedColumn<String> strandLabelFr = GeneratedColumn<String>(
+    'strand_label_fr',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _strandLabelEnMeta = const VerificationMeta(
+    'strandLabelEn',
+  );
+  @override
+  late final GeneratedColumn<String> strandLabelEn = GeneratedColumn<String>(
+    'strand_label_en',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _areaLabelFrMeta = const VerificationMeta(
+    'areaLabelFr',
+  );
+  @override
+  late final GeneratedColumn<String> areaLabelFr = GeneratedColumn<String>(
+    'area_label_fr',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _areaLabelEnMeta = const VerificationMeta(
+    'areaLabelEn',
+  );
+  @override
+  late final GeneratedColumn<String> areaLabelEn = GeneratedColumn<String>(
+    'area_label_en',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _areaOrdinalMeta = const VerificationMeta(
+    'areaOrdinal',
+  );
+  @override
+  late final GeneratedColumn<int> areaOrdinal = GeneratedColumn<int>(
+    'area_ordinal',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1258,6 +1335,13 @@ class $SkillNodeTableTable extends SkillNodeTable
     stableKey,
     subject,
     grade,
+    docOrder,
+    strandKey,
+    strandLabelFr,
+    strandLabelEn,
+    areaLabelFr,
+    areaLabelEn,
+    areaOrdinal,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1316,6 +1400,63 @@ class $SkillNodeTableTable extends SkillNodeTable
     } else if (isInserting) {
       context.missing(_gradeMeta);
     }
+    if (data.containsKey('doc_order')) {
+      context.handle(
+        _docOrderMeta,
+        docOrder.isAcceptableOrUnknown(data['doc_order']!, _docOrderMeta),
+      );
+    }
+    if (data.containsKey('strand_key')) {
+      context.handle(
+        _strandKeyMeta,
+        strandKey.isAcceptableOrUnknown(data['strand_key']!, _strandKeyMeta),
+      );
+    }
+    if (data.containsKey('strand_label_fr')) {
+      context.handle(
+        _strandLabelFrMeta,
+        strandLabelFr.isAcceptableOrUnknown(
+          data['strand_label_fr']!,
+          _strandLabelFrMeta,
+        ),
+      );
+    }
+    if (data.containsKey('strand_label_en')) {
+      context.handle(
+        _strandLabelEnMeta,
+        strandLabelEn.isAcceptableOrUnknown(
+          data['strand_label_en']!,
+          _strandLabelEnMeta,
+        ),
+      );
+    }
+    if (data.containsKey('area_label_fr')) {
+      context.handle(
+        _areaLabelFrMeta,
+        areaLabelFr.isAcceptableOrUnknown(
+          data['area_label_fr']!,
+          _areaLabelFrMeta,
+        ),
+      );
+    }
+    if (data.containsKey('area_label_en')) {
+      context.handle(
+        _areaLabelEnMeta,
+        areaLabelEn.isAcceptableOrUnknown(
+          data['area_label_en']!,
+          _areaLabelEnMeta,
+        ),
+      );
+    }
+    if (data.containsKey('area_ordinal')) {
+      context.handle(
+        _areaOrdinalMeta,
+        areaOrdinal.isAcceptableOrUnknown(
+          data['area_ordinal']!,
+          _areaOrdinalMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1349,6 +1490,34 @@ class $SkillNodeTableTable extends SkillNodeTable
         DriftSqlType.int,
         data['${effectivePrefix}grade'],
       )!,
+      docOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}doc_order'],
+      ),
+      strandKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}strand_key'],
+      ),
+      strandLabelFr: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}strand_label_fr'],
+      ),
+      strandLabelEn: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}strand_label_en'],
+      ),
+      areaLabelFr: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}area_label_fr'],
+      ),
+      areaLabelEn: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}area_label_en'],
+      ),
+      areaOrdinal: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}area_ordinal'],
+      ),
     );
   }
 
@@ -1365,6 +1534,17 @@ class CachedSkillNode extends DataClass implements Insertable<CachedSkillNode> {
   final String stableKey;
   final String subject;
   final int grade;
+
+  /// Document order, strand and learning area as the curriculum endpoint
+  /// sends them (schema v7, backend ADR 0044). Null on rows cached before
+  /// that, until the next sync refills them.
+  final int? docOrder;
+  final String? strandKey;
+  final String? strandLabelFr;
+  final String? strandLabelEn;
+  final String? areaLabelFr;
+  final String? areaLabelEn;
+  final int? areaOrdinal;
   const CachedSkillNode({
     required this.id,
     required this.labelFr,
@@ -1372,6 +1552,13 @@ class CachedSkillNode extends DataClass implements Insertable<CachedSkillNode> {
     required this.stableKey,
     required this.subject,
     required this.grade,
+    this.docOrder,
+    this.strandKey,
+    this.strandLabelFr,
+    this.strandLabelEn,
+    this.areaLabelFr,
+    this.areaLabelEn,
+    this.areaOrdinal,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1382,6 +1569,27 @@ class CachedSkillNode extends DataClass implements Insertable<CachedSkillNode> {
     map['stable_key'] = Variable<String>(stableKey);
     map['subject'] = Variable<String>(subject);
     map['grade'] = Variable<int>(grade);
+    if (!nullToAbsent || docOrder != null) {
+      map['doc_order'] = Variable<int>(docOrder);
+    }
+    if (!nullToAbsent || strandKey != null) {
+      map['strand_key'] = Variable<String>(strandKey);
+    }
+    if (!nullToAbsent || strandLabelFr != null) {
+      map['strand_label_fr'] = Variable<String>(strandLabelFr);
+    }
+    if (!nullToAbsent || strandLabelEn != null) {
+      map['strand_label_en'] = Variable<String>(strandLabelEn);
+    }
+    if (!nullToAbsent || areaLabelFr != null) {
+      map['area_label_fr'] = Variable<String>(areaLabelFr);
+    }
+    if (!nullToAbsent || areaLabelEn != null) {
+      map['area_label_en'] = Variable<String>(areaLabelEn);
+    }
+    if (!nullToAbsent || areaOrdinal != null) {
+      map['area_ordinal'] = Variable<int>(areaOrdinal);
+    }
     return map;
   }
 
@@ -1393,6 +1601,27 @@ class CachedSkillNode extends DataClass implements Insertable<CachedSkillNode> {
       stableKey: Value(stableKey),
       subject: Value(subject),
       grade: Value(grade),
+      docOrder: docOrder == null && nullToAbsent
+          ? const Value.absent()
+          : Value(docOrder),
+      strandKey: strandKey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(strandKey),
+      strandLabelFr: strandLabelFr == null && nullToAbsent
+          ? const Value.absent()
+          : Value(strandLabelFr),
+      strandLabelEn: strandLabelEn == null && nullToAbsent
+          ? const Value.absent()
+          : Value(strandLabelEn),
+      areaLabelFr: areaLabelFr == null && nullToAbsent
+          ? const Value.absent()
+          : Value(areaLabelFr),
+      areaLabelEn: areaLabelEn == null && nullToAbsent
+          ? const Value.absent()
+          : Value(areaLabelEn),
+      areaOrdinal: areaOrdinal == null && nullToAbsent
+          ? const Value.absent()
+          : Value(areaOrdinal),
     );
   }
 
@@ -1408,6 +1637,13 @@ class CachedSkillNode extends DataClass implements Insertable<CachedSkillNode> {
       stableKey: serializer.fromJson<String>(json['stableKey']),
       subject: serializer.fromJson<String>(json['subject']),
       grade: serializer.fromJson<int>(json['grade']),
+      docOrder: serializer.fromJson<int?>(json['docOrder']),
+      strandKey: serializer.fromJson<String?>(json['strandKey']),
+      strandLabelFr: serializer.fromJson<String?>(json['strandLabelFr']),
+      strandLabelEn: serializer.fromJson<String?>(json['strandLabelEn']),
+      areaLabelFr: serializer.fromJson<String?>(json['areaLabelFr']),
+      areaLabelEn: serializer.fromJson<String?>(json['areaLabelEn']),
+      areaOrdinal: serializer.fromJson<int?>(json['areaOrdinal']),
     );
   }
   @override
@@ -1420,6 +1656,13 @@ class CachedSkillNode extends DataClass implements Insertable<CachedSkillNode> {
       'stableKey': serializer.toJson<String>(stableKey),
       'subject': serializer.toJson<String>(subject),
       'grade': serializer.toJson<int>(grade),
+      'docOrder': serializer.toJson<int?>(docOrder),
+      'strandKey': serializer.toJson<String?>(strandKey),
+      'strandLabelFr': serializer.toJson<String?>(strandLabelFr),
+      'strandLabelEn': serializer.toJson<String?>(strandLabelEn),
+      'areaLabelFr': serializer.toJson<String?>(areaLabelFr),
+      'areaLabelEn': serializer.toJson<String?>(areaLabelEn),
+      'areaOrdinal': serializer.toJson<int?>(areaOrdinal),
     };
   }
 
@@ -1430,6 +1673,13 @@ class CachedSkillNode extends DataClass implements Insertable<CachedSkillNode> {
     String? stableKey,
     String? subject,
     int? grade,
+    Value<int?> docOrder = const Value.absent(),
+    Value<String?> strandKey = const Value.absent(),
+    Value<String?> strandLabelFr = const Value.absent(),
+    Value<String?> strandLabelEn = const Value.absent(),
+    Value<String?> areaLabelFr = const Value.absent(),
+    Value<String?> areaLabelEn = const Value.absent(),
+    Value<int?> areaOrdinal = const Value.absent(),
   }) => CachedSkillNode(
     id: id ?? this.id,
     labelFr: labelFr ?? this.labelFr,
@@ -1437,6 +1687,17 @@ class CachedSkillNode extends DataClass implements Insertable<CachedSkillNode> {
     stableKey: stableKey ?? this.stableKey,
     subject: subject ?? this.subject,
     grade: grade ?? this.grade,
+    docOrder: docOrder.present ? docOrder.value : this.docOrder,
+    strandKey: strandKey.present ? strandKey.value : this.strandKey,
+    strandLabelFr: strandLabelFr.present
+        ? strandLabelFr.value
+        : this.strandLabelFr,
+    strandLabelEn: strandLabelEn.present
+        ? strandLabelEn.value
+        : this.strandLabelEn,
+    areaLabelFr: areaLabelFr.present ? areaLabelFr.value : this.areaLabelFr,
+    areaLabelEn: areaLabelEn.present ? areaLabelEn.value : this.areaLabelEn,
+    areaOrdinal: areaOrdinal.present ? areaOrdinal.value : this.areaOrdinal,
   );
   CachedSkillNode copyWithCompanion(SkillNodeTableCompanion data) {
     return CachedSkillNode(
@@ -1446,6 +1707,23 @@ class CachedSkillNode extends DataClass implements Insertable<CachedSkillNode> {
       stableKey: data.stableKey.present ? data.stableKey.value : this.stableKey,
       subject: data.subject.present ? data.subject.value : this.subject,
       grade: data.grade.present ? data.grade.value : this.grade,
+      docOrder: data.docOrder.present ? data.docOrder.value : this.docOrder,
+      strandKey: data.strandKey.present ? data.strandKey.value : this.strandKey,
+      strandLabelFr: data.strandLabelFr.present
+          ? data.strandLabelFr.value
+          : this.strandLabelFr,
+      strandLabelEn: data.strandLabelEn.present
+          ? data.strandLabelEn.value
+          : this.strandLabelEn,
+      areaLabelFr: data.areaLabelFr.present
+          ? data.areaLabelFr.value
+          : this.areaLabelFr,
+      areaLabelEn: data.areaLabelEn.present
+          ? data.areaLabelEn.value
+          : this.areaLabelEn,
+      areaOrdinal: data.areaOrdinal.present
+          ? data.areaOrdinal.value
+          : this.areaOrdinal,
     );
   }
 
@@ -1457,14 +1735,34 @@ class CachedSkillNode extends DataClass implements Insertable<CachedSkillNode> {
           ..write('labelEn: $labelEn, ')
           ..write('stableKey: $stableKey, ')
           ..write('subject: $subject, ')
-          ..write('grade: $grade')
+          ..write('grade: $grade, ')
+          ..write('docOrder: $docOrder, ')
+          ..write('strandKey: $strandKey, ')
+          ..write('strandLabelFr: $strandLabelFr, ')
+          ..write('strandLabelEn: $strandLabelEn, ')
+          ..write('areaLabelFr: $areaLabelFr, ')
+          ..write('areaLabelEn: $areaLabelEn, ')
+          ..write('areaOrdinal: $areaOrdinal')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, labelFr, labelEn, stableKey, subject, grade);
+  int get hashCode => Object.hash(
+    id,
+    labelFr,
+    labelEn,
+    stableKey,
+    subject,
+    grade,
+    docOrder,
+    strandKey,
+    strandLabelFr,
+    strandLabelEn,
+    areaLabelFr,
+    areaLabelEn,
+    areaOrdinal,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1474,7 +1772,14 @@ class CachedSkillNode extends DataClass implements Insertable<CachedSkillNode> {
           other.labelEn == this.labelEn &&
           other.stableKey == this.stableKey &&
           other.subject == this.subject &&
-          other.grade == this.grade);
+          other.grade == this.grade &&
+          other.docOrder == this.docOrder &&
+          other.strandKey == this.strandKey &&
+          other.strandLabelFr == this.strandLabelFr &&
+          other.strandLabelEn == this.strandLabelEn &&
+          other.areaLabelFr == this.areaLabelFr &&
+          other.areaLabelEn == this.areaLabelEn &&
+          other.areaOrdinal == this.areaOrdinal);
 }
 
 class SkillNodeTableCompanion extends UpdateCompanion<CachedSkillNode> {
@@ -1484,6 +1789,13 @@ class SkillNodeTableCompanion extends UpdateCompanion<CachedSkillNode> {
   final Value<String> stableKey;
   final Value<String> subject;
   final Value<int> grade;
+  final Value<int?> docOrder;
+  final Value<String?> strandKey;
+  final Value<String?> strandLabelFr;
+  final Value<String?> strandLabelEn;
+  final Value<String?> areaLabelFr;
+  final Value<String?> areaLabelEn;
+  final Value<int?> areaOrdinal;
   final Value<int> rowid;
   const SkillNodeTableCompanion({
     this.id = const Value.absent(),
@@ -1492,6 +1804,13 @@ class SkillNodeTableCompanion extends UpdateCompanion<CachedSkillNode> {
     this.stableKey = const Value.absent(),
     this.subject = const Value.absent(),
     this.grade = const Value.absent(),
+    this.docOrder = const Value.absent(),
+    this.strandKey = const Value.absent(),
+    this.strandLabelFr = const Value.absent(),
+    this.strandLabelEn = const Value.absent(),
+    this.areaLabelFr = const Value.absent(),
+    this.areaLabelEn = const Value.absent(),
+    this.areaOrdinal = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   SkillNodeTableCompanion.insert({
@@ -1501,6 +1820,13 @@ class SkillNodeTableCompanion extends UpdateCompanion<CachedSkillNode> {
     required String stableKey,
     required String subject,
     required int grade,
+    this.docOrder = const Value.absent(),
+    this.strandKey = const Value.absent(),
+    this.strandLabelFr = const Value.absent(),
+    this.strandLabelEn = const Value.absent(),
+    this.areaLabelFr = const Value.absent(),
+    this.areaLabelEn = const Value.absent(),
+    this.areaOrdinal = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        labelFr = Value(labelFr),
@@ -1515,6 +1841,13 @@ class SkillNodeTableCompanion extends UpdateCompanion<CachedSkillNode> {
     Expression<String>? stableKey,
     Expression<String>? subject,
     Expression<int>? grade,
+    Expression<int>? docOrder,
+    Expression<String>? strandKey,
+    Expression<String>? strandLabelFr,
+    Expression<String>? strandLabelEn,
+    Expression<String>? areaLabelFr,
+    Expression<String>? areaLabelEn,
+    Expression<int>? areaOrdinal,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1524,6 +1857,13 @@ class SkillNodeTableCompanion extends UpdateCompanion<CachedSkillNode> {
       if (stableKey != null) 'stable_key': stableKey,
       if (subject != null) 'subject': subject,
       if (grade != null) 'grade': grade,
+      if (docOrder != null) 'doc_order': docOrder,
+      if (strandKey != null) 'strand_key': strandKey,
+      if (strandLabelFr != null) 'strand_label_fr': strandLabelFr,
+      if (strandLabelEn != null) 'strand_label_en': strandLabelEn,
+      if (areaLabelFr != null) 'area_label_fr': areaLabelFr,
+      if (areaLabelEn != null) 'area_label_en': areaLabelEn,
+      if (areaOrdinal != null) 'area_ordinal': areaOrdinal,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1535,6 +1875,13 @@ class SkillNodeTableCompanion extends UpdateCompanion<CachedSkillNode> {
     Value<String>? stableKey,
     Value<String>? subject,
     Value<int>? grade,
+    Value<int?>? docOrder,
+    Value<String?>? strandKey,
+    Value<String?>? strandLabelFr,
+    Value<String?>? strandLabelEn,
+    Value<String?>? areaLabelFr,
+    Value<String?>? areaLabelEn,
+    Value<int?>? areaOrdinal,
     Value<int>? rowid,
   }) {
     return SkillNodeTableCompanion(
@@ -1544,6 +1891,13 @@ class SkillNodeTableCompanion extends UpdateCompanion<CachedSkillNode> {
       stableKey: stableKey ?? this.stableKey,
       subject: subject ?? this.subject,
       grade: grade ?? this.grade,
+      docOrder: docOrder ?? this.docOrder,
+      strandKey: strandKey ?? this.strandKey,
+      strandLabelFr: strandLabelFr ?? this.strandLabelFr,
+      strandLabelEn: strandLabelEn ?? this.strandLabelEn,
+      areaLabelFr: areaLabelFr ?? this.areaLabelFr,
+      areaLabelEn: areaLabelEn ?? this.areaLabelEn,
+      areaOrdinal: areaOrdinal ?? this.areaOrdinal,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1569,6 +1923,27 @@ class SkillNodeTableCompanion extends UpdateCompanion<CachedSkillNode> {
     if (grade.present) {
       map['grade'] = Variable<int>(grade.value);
     }
+    if (docOrder.present) {
+      map['doc_order'] = Variable<int>(docOrder.value);
+    }
+    if (strandKey.present) {
+      map['strand_key'] = Variable<String>(strandKey.value);
+    }
+    if (strandLabelFr.present) {
+      map['strand_label_fr'] = Variable<String>(strandLabelFr.value);
+    }
+    if (strandLabelEn.present) {
+      map['strand_label_en'] = Variable<String>(strandLabelEn.value);
+    }
+    if (areaLabelFr.present) {
+      map['area_label_fr'] = Variable<String>(areaLabelFr.value);
+    }
+    if (areaLabelEn.present) {
+      map['area_label_en'] = Variable<String>(areaLabelEn.value);
+    }
+    if (areaOrdinal.present) {
+      map['area_ordinal'] = Variable<int>(areaOrdinal.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1584,6 +1959,13 @@ class SkillNodeTableCompanion extends UpdateCompanion<CachedSkillNode> {
           ..write('stableKey: $stableKey, ')
           ..write('subject: $subject, ')
           ..write('grade: $grade, ')
+          ..write('docOrder: $docOrder, ')
+          ..write('strandKey: $strandKey, ')
+          ..write('strandLabelFr: $strandLabelFr, ')
+          ..write('strandLabelEn: $strandLabelEn, ')
+          ..write('areaLabelFr: $areaLabelFr, ')
+          ..write('areaLabelEn: $areaLabelEn, ')
+          ..write('areaOrdinal: $areaOrdinal, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4221,6 +4603,13 @@ typedef $$SkillNodeTableTableCreateCompanionBuilder =
       required String stableKey,
       required String subject,
       required int grade,
+      Value<int?> docOrder,
+      Value<String?> strandKey,
+      Value<String?> strandLabelFr,
+      Value<String?> strandLabelEn,
+      Value<String?> areaLabelFr,
+      Value<String?> areaLabelEn,
+      Value<int?> areaOrdinal,
       Value<int> rowid,
     });
 typedef $$SkillNodeTableTableUpdateCompanionBuilder =
@@ -4231,6 +4620,13 @@ typedef $$SkillNodeTableTableUpdateCompanionBuilder =
       Value<String> stableKey,
       Value<String> subject,
       Value<int> grade,
+      Value<int?> docOrder,
+      Value<String?> strandKey,
+      Value<String?> strandLabelFr,
+      Value<String?> strandLabelEn,
+      Value<String?> areaLabelFr,
+      Value<String?> areaLabelEn,
+      Value<int?> areaOrdinal,
       Value<int> rowid,
     });
 
@@ -4270,6 +4666,41 @@ class $$SkillNodeTableTableFilterComposer
 
   ColumnFilters<int> get grade => $composableBuilder(
     column: $table.grade,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get docOrder => $composableBuilder(
+    column: $table.docOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get strandKey => $composableBuilder(
+    column: $table.strandKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get strandLabelFr => $composableBuilder(
+    column: $table.strandLabelFr,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get strandLabelEn => $composableBuilder(
+    column: $table.strandLabelEn,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get areaLabelFr => $composableBuilder(
+    column: $table.areaLabelFr,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get areaLabelEn => $composableBuilder(
+    column: $table.areaLabelEn,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get areaOrdinal => $composableBuilder(
+    column: $table.areaOrdinal,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -4312,6 +4743,41 @@ class $$SkillNodeTableTableOrderingComposer
     column: $table.grade,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get docOrder => $composableBuilder(
+    column: $table.docOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get strandKey => $composableBuilder(
+    column: $table.strandKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get strandLabelFr => $composableBuilder(
+    column: $table.strandLabelFr,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get strandLabelEn => $composableBuilder(
+    column: $table.strandLabelEn,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get areaLabelFr => $composableBuilder(
+    column: $table.areaLabelFr,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get areaLabelEn => $composableBuilder(
+    column: $table.areaLabelEn,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get areaOrdinal => $composableBuilder(
+    column: $table.areaOrdinal,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SkillNodeTableTableAnnotationComposer
@@ -4340,6 +4806,37 @@ class $$SkillNodeTableTableAnnotationComposer
 
   GeneratedColumn<int> get grade =>
       $composableBuilder(column: $table.grade, builder: (column) => column);
+
+  GeneratedColumn<int> get docOrder =>
+      $composableBuilder(column: $table.docOrder, builder: (column) => column);
+
+  GeneratedColumn<String> get strandKey =>
+      $composableBuilder(column: $table.strandKey, builder: (column) => column);
+
+  GeneratedColumn<String> get strandLabelFr => $composableBuilder(
+    column: $table.strandLabelFr,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get strandLabelEn => $composableBuilder(
+    column: $table.strandLabelEn,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get areaLabelFr => $composableBuilder(
+    column: $table.areaLabelFr,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get areaLabelEn => $composableBuilder(
+    column: $table.areaLabelEn,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get areaOrdinal => $composableBuilder(
+    column: $table.areaOrdinal,
+    builder: (column) => column,
+  );
 }
 
 class $$SkillNodeTableTableTableManager
@@ -4385,6 +4882,13 @@ class $$SkillNodeTableTableTableManager
                 Value<String> stableKey = const Value.absent(),
                 Value<String> subject = const Value.absent(),
                 Value<int> grade = const Value.absent(),
+                Value<int?> docOrder = const Value.absent(),
+                Value<String?> strandKey = const Value.absent(),
+                Value<String?> strandLabelFr = const Value.absent(),
+                Value<String?> strandLabelEn = const Value.absent(),
+                Value<String?> areaLabelFr = const Value.absent(),
+                Value<String?> areaLabelEn = const Value.absent(),
+                Value<int?> areaOrdinal = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SkillNodeTableCompanion(
                 id: id,
@@ -4393,6 +4897,13 @@ class $$SkillNodeTableTableTableManager
                 stableKey: stableKey,
                 subject: subject,
                 grade: grade,
+                docOrder: docOrder,
+                strandKey: strandKey,
+                strandLabelFr: strandLabelFr,
+                strandLabelEn: strandLabelEn,
+                areaLabelFr: areaLabelFr,
+                areaLabelEn: areaLabelEn,
+                areaOrdinal: areaOrdinal,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -4403,6 +4914,13 @@ class $$SkillNodeTableTableTableManager
                 required String stableKey,
                 required String subject,
                 required int grade,
+                Value<int?> docOrder = const Value.absent(),
+                Value<String?> strandKey = const Value.absent(),
+                Value<String?> strandLabelFr = const Value.absent(),
+                Value<String?> strandLabelEn = const Value.absent(),
+                Value<String?> areaLabelFr = const Value.absent(),
+                Value<String?> areaLabelEn = const Value.absent(),
+                Value<int?> areaOrdinal = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SkillNodeTableCompanion.insert(
                 id: id,
@@ -4411,6 +4929,13 @@ class $$SkillNodeTableTableTableManager
                 stableKey: stableKey,
                 subject: subject,
                 grade: grade,
+                docOrder: docOrder,
+                strandKey: strandKey,
+                strandLabelFr: strandLabelFr,
+                strandLabelEn: strandLabelEn,
+                areaLabelFr: areaLabelFr,
+                areaLabelEn: areaLabelEn,
+                areaOrdinal: areaOrdinal,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
