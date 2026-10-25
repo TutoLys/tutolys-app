@@ -6,7 +6,6 @@ import '../../core/i18n/strings.dart';
 import '../../core/widgets/breathing_mascot.dart';
 import '../home/subject_progress.dart';
 import '../home/village_scene.dart';
-import '../home/village_screen.dart' show subjectCodeFor;
 import '../pairing/pairing_controller.dart';
 import '../progress/progress_controller.dart';
 import '../quests/quest_board.dart';
@@ -106,10 +105,10 @@ class ProfileScreen extends ConsumerWidget {
                     : Column(
                         children: [
                           for (final b in villageBuildings(t))
-                            if (bySubject[subjectCodeFor(b.asset)] != null)
+                            if (bySubject[b.subject] != null)
                               _SubjectRow(
                                 label: b.label,
-                                value: bySubject[subjectCodeFor(b.asset)]!,
+                                value: bySubject[b.subject]!,
                                 accent: b.accent,
                                 palette: p,
                               ),

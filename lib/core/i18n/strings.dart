@@ -183,6 +183,7 @@ abstract class Strings {
   String get villageGreetingQuest;
   String get notBuiltYetSuffix;
   String get comingSoonShort;
+  String villageSubjectSoon(String subject);
 
   /// `Salut <name> !` — the name is interpolated, so the punctuation and
   /// spacing stay inside the locale that owns them (French puts a space
@@ -690,6 +691,9 @@ class _FrenchStrings extends Strings {
 
   @override
   String get comingSoonShort => 'bientôt';
+
+  @override
+  String villageSubjectSoon(String subject) => '$subject arrive bientôt !';
   @override
   String greeting(String name) => name.isEmpty ? 'Salut !' : 'Salut $name !';
 
@@ -1334,6 +1338,9 @@ class _EnglishStrings extends Strings {
 
   @override
   String get comingSoonShort => 'soon';
+
+  @override
+  String villageSubjectSoon(String subject) => '$subject is coming soon!';
   @override
   String greeting(String name) => name.isEmpty ? 'Hi!' : 'Hi $name!';
 

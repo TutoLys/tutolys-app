@@ -3,14 +3,17 @@ import 'package:flutter/material.dart';
 
 import '../../core/i18n/strings.dart';
 import '../../core/widgets/breathing_mascot.dart';
+import '../path/path_controller.dart' show pathSubjects;
 
 /// One subject's building in the village.
 class VillageBuilding {
   const VillageBuilding({
     required this.label,
     required this.asset,
+    required this.subject,
     required this.left,
     required this.top,
+    this.live = true,
     this.accent = VillageColors.quebecBlueBright,
     this.small = false,
     this.progress,
@@ -18,6 +21,16 @@ class VillageBuilding {
 
   final String label;
   final String asset;
+
+  /// The subject code the backend and the Carte use (`MATH`, `FR`, …).
+  /// Tapping the building opens this subject on the Carte.
+  final String subject;
+
+  /// Whether the subject has curriculum to play. A building that is not
+  /// live is drawn greyed out with a "bientôt" tag and does nothing on tap:
+  /// the village shows every subject the program will cover, and lights
+  /// each one up as its content lands.
+  final bool live;
 
   /// Fractions of the scene, from the design's own inline positions.
   final double left;
@@ -41,6 +54,8 @@ class VillageBuilding {
   VillageBuilding withProgress(double? value) => VillageBuilding(
     label: label,
     asset: asset,
+    subject: subject,
+    live: live,
     left: left,
     top: top,
     accent: accent,
@@ -49,50 +64,135 @@ class VillageBuilding {
   );
 }
 
-/// The six subject buildings, at the exact positions the design places them.
+/// Every subject building, at the exact positions the design places them:
+/// the six academic subjects of Québec's primary program that this app
+/// covers. Live or not, every one is drawn, so the village never changes
+/// shape as subjects arrive.
 ///
 /// A function of [Strings] rather than a const list: these labels sit on the
 /// most-looked-at screen in the app and must follow the language toggle.
-List<VillageBuilding> villageBuildings(Strings s) => [
+///
+/// [live] defaults to the Carte's own [pathSubjects]: a subject goes live in
+/// one place, once its curriculum is imported, and the Village lights its
+/// building up and the Carte offers its pill together. CCQ is the one still
+/// to come (open item #13).
+List<VillageBuilding> villageBuildings(
+  Strings s, {
+  Iterable<String> live = pathSubjects,
+}) => [
   VillageBuilding(
     label: s.subjectMath,
     asset: 'asset-bldg-math.webp',
+    subject: 'MATH',
+    live: live.contains('MATH'),
     left: 0.17,
     top: 0.40,
   ),
   VillageBuilding(
     label: s.subjectFrancais,
     asset: 'asset-bldg-francais.webp',
+    subject: 'FR',
+    live: live.contains('FR'),
     left: 0.50,
     top: 0.22,
   ),
   VillageBuilding(
     label: s.subjectUniversSocial,
     asset: 'asset-bldg-univers-social.webp',
+    subject: 'SOC',
+    live: live.contains('SOC'),
     left: 0.83,
     top: 0.32,
   ),
   VillageBuilding(
     label: s.subjectAnglais,
     asset: 'asset-bldg-anglais.webp',
+    subject: 'EN',
+    live: live.contains('EN'),
     left: 0.12,
     top: 0.76,
   ),
   VillageBuilding(
     label: s.subjectScience,
     asset: 'asset-bldg-science.webp',
+    subject: 'SCI',
+    live: live.contains('SCI'),
     left: 0.84,
     top: 0.82,
   ),
   VillageBuilding(
     label: s.subjectCulture,
     asset: 'asset-bldg-ccq.webp',
+    subject: 'CCQ',
+    live: live.contains('CCQ'),
     left: 0.37,
     top: 0.72,
     accent: VillageColors.gold,
     small: true,
   ),
 ];
+
+/// Greyscale for buildings whose subject is not live yet (Rec. 709 luma).
+const _greyscale = ColorFilter.matrix([
+  0.2126, 0.7152, 0.0722, 0, 0, //
+  0.2126, 0.7152, 0.0722, 0, 0, //
+  0.2126, 0.7152, 0.0722, 0, 0, //
+  0, 0, 0, 1, 0,
+]);
+
+/// A building's art, greyed and faded when its subject is not live.
+class VillageBuildingArt extends StatelessWidget {
+  const VillageBuildingArt({required this.building, this.width, super.key});
+
+  final VillageBuilding building;
+  final double? width;
+
+  @override
+  Widget build(BuildContext context) {
+    final art = Image.asset(
+      'assets/images/${building.asset}',
+      width: width,
+      fit: BoxFit.contain,
+    );
+    if (building.live) return art;
+    return Opacity(
+      opacity: 0.6,
+      child: ColorFiltered(colorFilter: _greyscale, child: art),
+    );
+  }
+}
+
+/// The small "BIENTÔT" tag a not-yet-live subject wears in place of its bar.
+class ComingSoonTag extends StatelessWidget {
+  const ComingSoonTag({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: p.track,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        context.s.comingSoonShort.toUpperCase(),
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.4,
+          color: p.inkMuted,
+        ),
+      ),
+    );
+  }
+}
+
+/// How much the scene's contents shrink on narrower canvases. The design is
+/// drawn for ~1100px; below that, buildings and their pills keep their
+/// fractional positions but scale down, so neighbours never collide. Never
+/// below 0.62: under that the phone strip takes over (see `VillageScreen`).
+double villageSceneScale(double width) => (width / 1100).clamp(0.62, 1.0);
 
 /// The village itself: a sky-and-grass scene with the subject buildings
 /// placed on it, the wooden sign, and the mascot greeting.
@@ -144,19 +244,28 @@ class VillageScene extends StatelessWidget {
           builder: (context, constraints) {
             final w = constraints.maxWidth;
             final h = constraints.maxHeight;
+            final scale = villageSceneScale(w);
             return Stack(
               children: [
                 Positioned(
                   top: 22,
                   left: 26,
-                  child: _Sign(title: signTitle, subtitle: signSubtitle),
+                  child: Transform.scale(
+                    scale: scale,
+                    alignment: Alignment.topLeft,
+                    child: _Sign(title: signTitle, subtitle: signSubtitle),
+                  ),
                 ),
                 if (greeting != null)
                   Positioned(
                     left: w * 0.46,
                     top: h * 0.56,
-                    width: w * 0.42,
-                    child: _MascotGreeting(text: greeting!),
+                    width: w * 0.42 / scale,
+                    child: Transform.scale(
+                      scale: scale,
+                      alignment: Alignment.topLeft,
+                      child: _MascotGreeting(text: greeting!),
+                    ),
                   ),
                 for (final b in buildings)
                   Positioned(
@@ -165,11 +274,16 @@ class VillageScene extends StatelessWidget {
                     child: FractionalTranslation(
                       // `transform: translate(-50%, -50%)`.
                       translation: Offset(-0.5, -0.5),
-                      child: _Building(
-                        building: b,
-                        onTap: onTapBuilding == null
-                            ? null
-                            : () => onTapBuilding!(b),
+                      child: Transform.scale(
+                        scale: scale,
+                        child: _Building(
+                          building: b,
+                          // A subject that isn't live yet has nothing to
+                          // open, so it takes no tap at all.
+                          onTap: onTapBuilding == null || !b.live
+                              ? null
+                              : () => onTapBuilding!(b),
+                        ),
                       ),
                     ),
                   ),
@@ -260,10 +374,10 @@ class _BuildingState extends State<_Building> {
     final onTap = widget.onTap;
     final still = MediaQuery.disableAnimationsOf(context);
 
-    final lift = still || !_hovered ? 0.0 : -3.0;
+    final lift = still || !_hovered || onTap == null ? 0.0 : -3.0;
     final scale = still || !_pressed ? 1.0 : 0.98;
 
-    return MouseRegion(
+    final tile = MouseRegion(
       cursor: onTap == null ? MouseCursor.defer : SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
@@ -282,10 +396,9 @@ class _BuildingState extends State<_Building> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Image.asset(
-                  'assets/images/${building.asset}',
+                VillageBuildingArt(
+                  building: building,
                   width: building.small ? 104 : 136,
-                  fit: BoxFit.contain,
                 ),
                 // `margin-top: -16px` — the pill overlaps the building's
                 // base.
@@ -297,6 +410,17 @@ class _BuildingState extends State<_Building> {
             ),
           ),
         ),
+      ),
+    );
+    if (building.live) {
+      return Semantics(button: true, label: building.label, child: tile);
+    }
+    final soon = context.s.villageSubjectSoon(building.label);
+    return Tooltip(
+      message: soon,
+      child: Semantics(
+        label: soon,
+        child: ExcludeSemantics(child: tile),
       ),
     );
   }
@@ -332,7 +456,9 @@ class _Pill extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          ...[
+          if (!building.live)
+            const ComingSoonTag()
+          else ...[
             SizedBox(
               width: 56,
               height: 6,

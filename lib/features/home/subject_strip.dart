@@ -1,6 +1,7 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/i18n/strings.dart';
 import 'village_scene.dart';
 
 /// The design's mobile answer to the village: a horizontal strip of subject
@@ -52,7 +53,7 @@ class SubjectStrip extends StatelessWidget {
             itemBuilder: (context, i) => _Tile(
               building: buildings[i],
               palette: p,
-              onTap: onTapBuilding == null
+              onTap: onTapBuilding == null || !buildings[i].live
                   ? null
                   : () => onTapBuilding!(buildings[i]),
             ),
@@ -74,7 +75,7 @@ class _Tile extends StatelessWidget {
   Widget build(BuildContext context) {
     final value = building.progress ?? 0;
 
-    return GestureDetector(
+    final tile = GestureDetector(
       onTap: onTap,
       child: SizedBox(
         width: 98,
@@ -83,13 +84,7 @@ class _Tile extends StatelessWidget {
             // The image takes whatever height the text and bar leave. At its
             // natural size it overflowed the strip by 14px — but only once
             // decoded, so a cold test run (image still 0px tall) never saw it.
-            Expanded(
-              child: Image.asset(
-                'assets/images/${building.asset}',
-                width: 98,
-                fit: BoxFit.contain,
-              ),
-            ),
+            Expanded(child: VillageBuildingArt(building: building, width: 98)),
             const SizedBox(height: 5),
             Text(
               building.label,
@@ -105,18 +100,34 @@ class _Tile extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            VillageProgressBar(value: value, height: 6),
-            const SizedBox(height: 2),
-            Text(
-              '${(value * 100).round()} %',
-              style: TextStyle(
-                fontSize: 9,
-                fontWeight: FontWeight.w600,
-                color: palette.inkMuted,
+            if (!building.live) ...[
+              const ComingSoonTag(),
+              const SizedBox(height: 4),
+            ] else ...[
+              VillageProgressBar(value: value, height: 6),
+              const SizedBox(height: 2),
+              Text(
+                '${(value * 100).round()} %',
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                  color: palette.inkMuted,
+                ),
               ),
-            ),
+            ],
           ],
         ),
+      ),
+    );
+    if (building.live) {
+      return Semantics(button: true, label: building.label, child: tile);
+    }
+    final soon = context.s.villageSubjectSoon(building.label);
+    return Tooltip(
+      message: soon,
+      child: Semantics(
+        label: soon,
+        child: ExcludeSemantics(child: tile),
       ),
     );
   }

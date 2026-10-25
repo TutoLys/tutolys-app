@@ -24,9 +24,14 @@ import '../quests/quests_screen.dart' show questTitle;
 /// render convincing fiction on the most-looked-at screen, the buildings
 /// carry their name only and the coin pill is absent.
 class VillageScreen extends ConsumerWidget {
-  const VillageScreen({this.onOpenPath, this.onOpenQuests, super.key});
+  const VillageScreen({
+    this.onOpenPath,
+    this.onOpenQuests,
+    this.onOpenSubject,
+    super.key,
+  });
 
-  /// Where "Continuer", a quest row and a building all lead: the Carte.
+  /// Where "Continuer" and a quest row lead: the Carte.
   ///
   /// Supplied by the shell, which owns which page is showing — the screen
   /// does not navigate itself, same as `VillageNavShell` and
@@ -35,6 +40,9 @@ class VillageScreen extends ConsumerWidget {
 
   /// The quest panel's "Voir toutes": the Quêtes page.
   final VoidCallback? onOpenQuests;
+
+  /// A live building: the Carte, opened on that building's subject.
+  final ValueChanged<String>? onOpenSubject;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -62,7 +70,7 @@ class VillageScreen extends ConsumerWidget {
               builder: (context, constraints) {
                 final buildings = [
                   for (final b in villageBuildings(t))
-                    b.withProgress(bySubject[subjectCodeFor(b.asset)]),
+                    b.withProgress(bySubject[b.subject]),
                 ];
 
                 // Below the phone breakpoint the design does not shrink the
@@ -80,7 +88,7 @@ class VillageScreen extends ConsumerWidget {
                       SubjectStrip(
                         buildings: buildings,
                         title: t.villageYourSubjects,
-                        onTapBuilding: (_) => onOpenPath?.call(),
+                        onTapBuilding: (b) => onOpenSubject?.call(b.subject),
                       ),
                       const SizedBox(height: Space.md),
                       _QuestPanel(
@@ -92,16 +100,20 @@ class VillageScreen extends ConsumerWidget {
                   );
                 }
 
-                final scene = SizedBox(
-                  height: 580,
-                  child: VillageScene(
-                    buildings: buildings,
-                    signTitle: t.villageSignTitle,
-                    signSubtitle: kid?.gradeLevel == null
-                        ? ''
-                        : t.gradeLabel(kid!.gradeLevel),
-                    greeting: _greetingFor(t, kid?.displayName, board),
-                    onTapBuilding: (_) => onOpenPath?.call(),
+                // Height follows width: the design's 580px at full size, never
+                // so short that the buildings crowd together vertically.
+                final scene = LayoutBuilder(
+                  builder: (context, box) => SizedBox(
+                    height: (box.maxWidth * 0.6).clamp(400.0, 580.0),
+                    child: VillageScene(
+                      buildings: buildings,
+                      signTitle: t.villageSignTitle,
+                      signSubtitle: kid?.gradeLevel == null
+                          ? ''
+                          : t.gradeLabel(kid!.gradeLevel),
+                      greeting: _greetingFor(t, kid?.displayName, board),
+                      onTapBuilding: (b) => onOpenSubject?.call(b.subject),
+                    ),
                   ),
                 );
                 final panel = _QuestPanel(
@@ -110,7 +122,10 @@ class VillageScreen extends ConsumerWidget {
                   onOpenQuests: onOpenQuests,
                 );
 
-                if (constraints.maxWidth < 760) {
+                // Side by side only while the scene keeps ~760px of its own
+                // (plus the 300px panel and the gap); below that six buildings
+                // and their pills crowd, so the panel moves underneath.
+                if (constraints.maxWidth < _sideBySideMinWidth) {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -139,29 +154,17 @@ class VillageScreen extends ConsumerWidget {
   }
 }
 
-/// Maps a building's display label to the backend's subject code.
-///
-/// The codes are the backend's own `SubjectCode` set; `CCQ` is not among
-/// them (open item #13), so Culture québécoise has no code and will read as
-/// unmeasured until that curriculum round happens.
-/// Keyed on the asset rather than the label: labels are localised now, and
-/// matching on translated display text is how a feature silently breaks the
-/// moment someone switches language.
-String subjectCodeFor(String asset) => switch (asset) {
-  'asset-bldg-math.webp' => 'MATH',
-  'asset-bldg-francais.webp' => 'FR',
-  'asset-bldg-anglais.webp' => 'EN',
-  'asset-bldg-science.webp' => 'SCI',
-  'asset-bldg-univers-social.webp' => 'SOC',
-  _ => '',
-};
+/// Below this the quest panel sits under the scene rather than beside it.
+const double _sideBySideMinWidth = 1100;
 
 /// What the fox says. Built from the real open-quest count when there is one,
 /// so it is never a line of flavour text pretending to know something.
 String _greetingFor(Strings t, String? name, QuestBoard? board) {
   final hello = t.greeting(name ?? '');
   final open = board?.openCount ?? 0;
-  final line = open == 0 ? t.villageGreetingReady : t.villageGreetingQuests(open);
+  final line = open == 0
+      ? t.villageGreetingReady
+      : t.villageGreetingQuests(open);
   return '$hello $line';
 }
 
@@ -285,7 +288,11 @@ class _QuestPanel extends StatelessWidget {
         color: p.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: p.shadow, blurRadius: 40, offset: const Offset(0, 16)),
+          BoxShadow(
+            color: p.shadow,
+            blurRadius: 40,
+            offset: const Offset(0, 16),
+          ),
         ],
       ),
       child: Column(
@@ -437,7 +444,9 @@ class _QuestRow extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   VillageProgressBar(
-                    value: quest.target == 0 ? 0 : quest.progress / quest.target,
+                    value: quest.target == 0
+                        ? 0
+                        : quest.progress / quest.target,
                   ),
                 ],
               ),
@@ -464,7 +473,11 @@ class _QuestRow extends StatelessWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Image.asset('assets/images/asset-coin.webp', width: 12, height: 12),
+                    Image.asset(
+                      'assets/images/asset-coin.webp',
+                      width: 12,
+                      height: 12,
+                    ),
                     const SizedBox(width: 2),
                     Text(
                       context.s.questRewardXp(quest.xpReward),

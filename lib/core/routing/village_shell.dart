@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/home/village_screen.dart';
+import '../../features/path/path_controller.dart';
 import '../../features/path/path_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/about/about_screen.dart';
@@ -73,6 +74,13 @@ class _VillageShellState extends ConsumerState<VillageShell> {
           // actually play.
           onOpenPath: () => _open(1),
           onOpenQuests: () => _open(2),
+          // A building opens the Carte on its own subject: the subject is
+          // chosen before the page switches, so the Carte never flashes the
+          // previous one.
+          onOpenSubject: (code) {
+            ref.read(pathControllerProvider.notifier).selectSubject(code);
+            _open(1);
+          },
         ),
         const PathScreen(),
         QuestsScreen(onOpenPath: () => _open(1)),
