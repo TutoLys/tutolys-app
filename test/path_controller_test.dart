@@ -189,7 +189,7 @@ void main() {
   });
 
   test(
-    'the resolved exercise for an available leaf is the lowest rank',
+    'a node keeps all its lessons, the lowest rank first',
     () async {
       container = build();
       curriculumApi.leaves = const [
@@ -215,6 +215,11 @@ void main() {
 
       final state = container.read(pathControllerProvider);
       expect(state.exerciseByNodeId['leaf-1']!['exercise_id'], 'ex-1');
+      expect(
+        state.lessonsByNodeId['leaf-1']!.map((e) => e['exercise_id']),
+        ['ex-1', 'ex-2'],
+        reason: 'every lesson on the node stays reachable, in rank order',
+      );
     },
   );
 

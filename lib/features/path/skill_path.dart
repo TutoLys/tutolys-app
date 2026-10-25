@@ -19,6 +19,8 @@ class PathNode {
     this.masteryPct,
     this.otherLanguage,
     this.otherLanguageLabel,
+    this.lessons,
+    this.lessonsLabel,
   });
 
   final String id;
@@ -34,6 +36,13 @@ class PathNode {
 
   /// Read to screen readers with the tag ("Lesson in French").
   final String? otherLanguageLabel;
+
+  /// Lessons finished and in all, for a node with more than one: drawn
+  /// under the orb as "2/4". Null for a single-lesson node.
+  final (int done, int total)? lessons;
+
+  /// Read to screen readers with the count ("2 of 4 lessons done").
+  final String? lessonsLabel;
 
   /// 0..1 from the backend, shown on the active node's ring and card. Null
   /// when the kid has never played it — which is not the same as zero.
@@ -275,7 +284,11 @@ class _Node extends StatelessWidget {
       children: [
         Semantics(
           button: !locked,
-          label: [node.label, ?node.otherLanguageLabel].join('. '),
+          label: [
+            node.label,
+            ?node.otherLanguageLabel,
+            ?node.lessonsLabel,
+          ].join('. '),
           child: Stack(
             clipBehavior: Clip.none,
             children: [
@@ -292,6 +305,22 @@ class _Node extends StatelessWidget {
                   right: -10,
                   child: ExcludeSemantics(
                     child: LanguageTag(tag: tag, palette: p),
+                  ),
+                ),
+              if (node.lessons case (final done, final total)? when !locked)
+                Positioned(
+                  bottom: -6,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: ExcludeSemantics(
+                      child: LessonCountTag(
+                        key: ValueKey('lesson-count-${node.id}'),
+                        done: done,
+                        total: total,
+                        palette: p,
+                      ),
+                    ),
                   ),
                 ),
             ],
@@ -764,6 +793,44 @@ class LanguageTag extends StatelessWidget {
           fontWeight: FontWeight.w800,
           letterSpacing: 0.4,
           color: p.inkMuted,
+          height: 1.1,
+        ),
+      ),
+    );
+  }
+}
+
+/// "2/4" under a node's orb: lessons finished out of the node's lessons.
+/// Gold once all are done, blue while some are left.
+class LessonCountTag extends StatelessWidget {
+  const LessonCountTag({
+    required this.done,
+    required this.total,
+    required this.palette,
+    super.key,
+  });
+
+  final int done;
+  final int total;
+  final VillagePalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = palette;
+    final finished = done >= total;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+      decoration: BoxDecoration(
+        color: p.surface,
+        border: Border.all(color: finished ? p.gold : p.line),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        '$done/$total',
+        style: TextStyle(
+          fontSize: 9.5,
+          fontWeight: FontWeight.w800,
+          color: finished ? p.ink : p.quebecBlueBright,
           height: 1.1,
         ),
       ),

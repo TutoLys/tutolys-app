@@ -13,6 +13,7 @@ class NodeProgress {
     required this.plays,
     required this.lastCompletedAt,
     required this.everPerfect,
+    this.exerciseIds,
   });
 
   final String skillNodeId;
@@ -24,10 +25,16 @@ class NodeProgress {
   /// At least one run answered every question right on the first try.
   final bool everPerfect;
 
+  /// Which of the node's lessons (exercise ids) were finished, for a node
+  /// with several. Null on a record written before lessons were tracked:
+  /// all it knows is that *a* lesson was finished.
+  final Set<String>? exerciseIds;
+
   Map<String, Object?> toJson() => {
     'plays': plays,
     'last_completed_at': lastCompletedAt.toUtc().toIso8601String(),
     'ever_perfect': everPerfect,
+    if (exerciseIds case final ids?) 'exercises': ids.toList()..sort(),
   };
 
   static NodeProgress? fromJson(String skillNodeId, String raw) {
@@ -38,6 +45,10 @@ class NodeProgress {
         plays: j['plays'] as int,
         lastCompletedAt: DateTime.parse(j['last_completed_at'] as String),
         everPerfect: j['ever_perfect'] == true,
+        exerciseIds: switch (j['exercises']) {
+          final List<Object?> ids => ids.whereType<String>().toSet(),
+          _ => null,
+        },
       );
     } on Object {
       return null;
@@ -72,6 +83,7 @@ class NodeProgressLocal {
   Future<void> recordCompleted(
     String skillNodeId, {
     required bool perfect,
+    String? exerciseId,
   }) async {
     final key = '$_prefix$skillNodeId';
     final existing =
@@ -87,6 +99,9 @@ class NodeProgressLocal {
       plays: (before?.plays ?? 0) + 1,
       lastCompletedAt: now,
       everPerfect: (before?.everPerfect ?? false) || perfect,
+      exerciseIds: exerciseId == null
+          ? before?.exerciseIds
+          : {...?before?.exerciseIds, exerciseId},
     );
     await db
         .into(db.appStateTable)

@@ -209,4 +209,24 @@ void main() {
       expect(node.label, 'Read');
     });
   });
+
+  test('a lesson count rides only on a node with more than one lesson', () {
+    final nodes = buildCarteSections(
+      subject: 'MATH',
+      leaves: [
+        leaf('a', 'mathematique/geometrie/b:A/o:1'),
+        leaf('b', 'mathematique/geometrie/b:A/o:2'),
+      ],
+      playable: {'a', 'b'},
+      masteries: const [],
+      appLocale: const Locale('fr', 'CA'),
+      lessonCounts: const {'a': (2, 4), 'b': (0, 1)},
+      describeLessons: (d, t) => '$d/$t',
+    ).single.nodes;
+
+    expect(nodes[0].lessons, (2, 4));
+    expect(nodes[0].lessonsLabel, '2/4');
+    expect(nodes[0].state, PathNodeState.active, reason: 'not all done');
+    expect(nodes[1].lessons, isNull);
+  });
 }

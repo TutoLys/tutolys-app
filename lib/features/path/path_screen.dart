@@ -8,6 +8,7 @@ import '../../data/local_db/node_progress_local.dart';
 import '../../core/routing/paired_router.dart';
 import '../progress/progress_controller.dart';
 import 'carte_model.dart';
+import 'node_lessons.dart';
 import 'path_controller.dart';
 import 'skill_path.dart';
 import 'subject_pills.dart';
@@ -78,21 +79,32 @@ class _Sections extends ConsumerWidget {
     final masteries = ref.watch(progressControllerProvider).masteries;
     // Finished on this device: refreshed by the play screen after every
     // completed exercise, so the map changes the moment the kid is back.
-    final completed =
-        ref.watch(nodeProgressProvider).value?.keys.toSet() ?? const <String>{};
+    final lessons = nodeLessonsOf(
+      state,
+      ref.watch(nodeProgressProvider).value ?? const {},
+    );
 
     final sections = buildCarteSections(
       subject: state.subject,
       leaves: state.leaves,
-      playable: state.exerciseByNodeId.keys.toSet(),
+      playable: state.lessonsByNodeId.keys.toSet(),
       masteries: masteries,
       appLocale: Localizations.localeOf(context),
-      completed: completed,
+      completed: {
+        for (final MapEntry(:key, :value) in lessons.entries)
+          if (value.complete) key,
+      },
+      // The tag describes the lesson a tap would play.
       lessonLocales: {
-        for (final MapEntry(:key, :value) in state.exerciseByNodeId.entries)
-          key: (value['locale'] as String?) ?? 'fr-CA',
+        for (final MapEntry(:key, :value) in lessons.entries)
+          key: (value.next['locale'] as String?) ?? 'fr-CA',
+      },
+      lessonCounts: {
+        for (final MapEntry(:key, :value) in lessons.entries)
+          key: (value.doneCount, value.total),
       },
       describeLanguage: t.lessonLanguage,
+      describeLessons: t.pathLessonsDone,
     );
 
     return Column(
@@ -141,7 +153,7 @@ class _Sections extends ConsumerWidget {
                   final pct = ((node.masteryPct ?? 0) * 100).round();
                   return pct > 0 ? t.pathInProgress(pct) : t.pathNotStarted;
                 },
-                onTapNode: (node) => _play(context, ref, node),
+                onTapNode: (node) => _play(context, ref, lessons[node.id]),
               ),
             ),
           ),
@@ -151,10 +163,16 @@ class _Sections extends ConsumerWidget {
     );
   }
 
-  Future<void> _play(BuildContext context, WidgetRef ref, PathNode node) async {
-    final envelope = state.exerciseByNodeId[node.id];
-    if (envelope == null) return;
-    final leaf = state.leaves.firstWhere((l) => l.id == node.id);
+  Future<void> _play(
+    BuildContext context,
+    WidgetRef ref,
+    NodeLessons? lessons,
+  ) async {
+    if (lessons == null) return;
+    final envelope = lessons.next;
+    final leaf = state.leaves.firstWhere(
+      (l) => l.id == envelope['skill_node_id'],
+    );
     await GoRouter.of(context).push(
       '/play',
       extra: PlayRequest(node: leaf, envelope: envelope),

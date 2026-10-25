@@ -115,3 +115,26 @@ installed over `celebrationRowsProvider` in `main.dart`:
   the language tag (it is the engine session's file), and the question of
   whether the `EN` tree should be ESL or English Language Arts stays open
   (backend ADR 0025).
+
+## Revision 2026-10-25: several lessons per node
+
+A node can carry several lessons (ranks 0..N), and lessons for all six
+subjects are being authored that way. The Carte kept only the first, so
+lessons 2..N were synced but unreachable.
+
+- `pickLessons` keeps every rank per node, each in the kid's language;
+  `PathState.lessonsByNodeId` holds them in rank order.
+- The completion record now also stores **which exercise ids** were
+  finished (`NodeProgress.exerciseIds`, written by the play screen).
+  A record from before this has no ids; it is read as "the first lesson
+  done", which is what it meant when nodes had one lesson.
+- A tap plays the **first unfinished lesson** in rank order, then the
+  first again once all are done (a replay).
+- **Completed** now means every lesson on the node is done. A partly done
+  node stays active or available.
+- An orb with more than one lesson shows "2/4" underneath, read aloud as
+  "2 leçons sur 4 terminées". It turns gold when all are done.
+
+A lesson is identified by exercise id, so finishing the French version
+does not count for the English one on the same rank. Rare, and the honest
+reading: the kid hasn't played that version.

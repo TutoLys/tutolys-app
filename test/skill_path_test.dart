@@ -157,4 +157,51 @@ void main() {
     expect(await orbWidth(compact: false), 60);
     expect(await orbWidth(compact: true), 50);
   });
+
+  group('a node with several lessons', () {
+    testWidgets('shows how many are done under its orb', (tester) async {
+      await tester.pumpWidget(
+        pathIn(
+          stillness: true,
+          nodes: const [
+            PathNode(
+              id: 'a',
+              label: 'Additionner',
+              state: PathNodeState.available,
+              lessons: (2, 4),
+              lessonsLabel: '2 of 4 lessons done',
+            ),
+          ],
+        ),
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('lesson-count-a')),
+          matching: find.text('2/4'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel(RegExp('2 of 4 lessons done')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a locked node shows no count', (tester) async {
+      await tester.pumpWidget(
+        pathIn(
+          stillness: true,
+          nodes: const [
+            PathNode(
+              id: 'a',
+              label: 'Additionner',
+              state: PathNodeState.locked,
+              lessons: (0, 3),
+            ),
+          ],
+        ),
+      );
+      expect(find.byKey(const ValueKey('lesson-count-a')), findsNothing);
+    });
+  });
 }

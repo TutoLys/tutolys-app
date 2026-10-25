@@ -269,7 +269,11 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     StreakLocal(db, kidId: _kidId).recordPlayedToday();
     unawaited(
       NodeProgressLocal(db, kidId: _kidId)
-          .recordCompleted(widget.node.id, perfect: summary.perfect)
+          .recordCompleted(
+            widget.node.id,
+            perfect: summary.perfect,
+            exerciseId: widget.envelope['exercise_id'] as String?,
+          )
           .then((_) => ref.invalidate(nodeProgressProvider)),
     );
 

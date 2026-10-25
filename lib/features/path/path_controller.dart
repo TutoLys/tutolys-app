@@ -22,7 +22,7 @@ class PathState {
   const PathState({
     this.subject = defaultPathSubject,
     this.leaves = const [],
-    this.exerciseByNodeId = const {},
+    this.lessonsByNodeId = const {},
     this.loading = true,
     this.offline = false,
     this.error,
@@ -34,13 +34,16 @@ class PathState {
 
   final List<CachedSkillNode> leaves;
 
-  /// One resolved exercise envelope per node — the first by rank, when a
-  /// node has several (A7 plan's own simplification). A node's presence
-  /// here is the only real, non-fabricated signal this pass has for
-  /// "available" vs "locked": there is no progress/mastery model yet (A7
-  /// plan's gap #5), so nothing is ever locked for having-been-attempted
-  /// reasons, only for having nothing to play yet.
-  final Map<String, Map<String, Object?>> exerciseByNodeId;
+  /// Every lesson on each node, rank order, in the kid's language
+  /// ([pickLessons]). A node's presence here is what makes it playable
+  /// rather than locked; nothing gates on order.
+  final Map<String, List<Map<String, Object?>>> lessonsByNodeId;
+
+  /// Each node's first lesson.
+  Map<String, Map<String, Object?>> get exerciseByNodeId => {
+    for (final MapEntry(:key, :value) in lessonsByNodeId.entries)
+      key: value.first,
+  };
 
   final bool loading;
   final bool offline;
@@ -52,7 +55,7 @@ class PathState {
   final String contentLocale;
 
   bool isAvailable(CachedSkillNode leaf) =>
-      exerciseByNodeId.containsKey(leaf.id);
+      lessonsByNodeId.containsKey(leaf.id);
 }
 
 class PathController extends Notifier<PathState> {
@@ -113,7 +116,7 @@ class PathController extends Notifier<PathState> {
       subject: subject,
       grade: kid.gradeLevel,
     );
-    final exerciseByNodeId = pickLessonsByNode(
+    final lessonsByNodeId = pickLessons(
       await contentSync.cachedExercises(
         subject: subject,
         grade: kid.gradeLevel,
@@ -128,7 +131,7 @@ class PathController extends Notifier<PathState> {
     state = PathState(
       subject: subject,
       leaves: leaves,
-      exerciseByNodeId: exerciseByNodeId,
+      lessonsByNodeId: lessonsByNodeId,
       loading: false,
       offline: curriculumReport.offline,
       error: curriculumReport.error,
@@ -146,14 +149,13 @@ class PathController extends Notifier<PathState> {
   }
 }
 
-/// One lesson per node, in the kid's language where it exists.
+/// Every lesson per node, rank order, in the kid's language where it exists.
 ///
 /// [envelopes] are rank-ordered (`ContentSync.cachedExercises`) and may hold
 /// one lesson in two languages: siblings share the cache, and a translation
 /// is another exercise on the same node and rank. For each (node, rank) this
-/// takes the version in [locale], else French, else whatever was authored;
-/// then the first rank per node, as before.
-Map<String, Map<String, Object?>> pickLessonsByNode(
+/// takes the version in [locale], else French, else whatever was authored.
+Map<String, List<Map<String, Object?>>> pickLessons(
   List<Map<String, Object?>> envelopes, {
   required String locale,
 }) {
@@ -172,13 +174,25 @@ Map<String, Map<String, Object?>> pickLessonsByNode(
         ),
       );
 
-  final picked = <String, Map<String, Object?>>{};
+  final picked = <String, List<Map<String, Object?>>>{};
   for (final MapEntry(key: (node, _), value: versions) in byLesson.entries) {
-    // Map insertion follows rank order, so the first per node is the lowest.
-    picked.putIfAbsent(node, () => choose(versions));
+    // Map insertion follows rank order, so each list is too.
+    picked.putIfAbsent(node, () => []).add(choose(versions));
   }
   return picked;
 }
+
+/// Each node's first lesson only ([pickLessons]'s rank 0).
+Map<String, Map<String, Object?>> pickLessonsByNode(
+  List<Map<String, Object?>> envelopes, {
+  required String locale,
+}) => {
+  for (final MapEntry(:key, :value) in pickLessons(
+    envelopes,
+    locale: locale,
+  ).entries)
+    key: value.first,
+};
 
 final pathControllerProvider = NotifierProvider<PathController, PathState>(
   PathController.new,

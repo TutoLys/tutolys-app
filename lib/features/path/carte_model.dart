@@ -65,7 +65,7 @@ List<AreaGroup> groupLeavesByArea({
 ///
 /// Every state is real or absent:
 /// - **mastered** — the backend says so (`is_mastered`, ADR 0009's 80% rule).
-/// - **completed** — the kid finished its exercise on this device
+/// - **completed** — the kid finished every lesson on it on this device
 ///   ([completed], from `nodeProgressProvider`). Immediate, unlike mastery,
 ///   which waits on telemetry and a scheduled job. Never shown as mastered,
 ///   and it counts toward no percentage: those stay the server's.
@@ -83,7 +83,9 @@ List<PathSection> buildCarteSections({
   required Locale appLocale,
   Set<String> completed = const {},
   Map<String, String> lessonLocales = const {},
+  Map<String, (int done, int total)> lessonCounts = const {},
   String Function(String locale)? describeLanguage,
+  String Function(int done, int total)? describeLessons,
 }) {
   final asked = contentLocaleFor(subject, appLocale);
   final masteryOf = {for (final m in masteries) m.skillNodeId: m};
@@ -127,6 +129,16 @@ List<PathSection> buildCarteSections({
                     : leaf.labelFr,
                 state: state,
                 masteryPct: mastery == null ? null : mastery.masteryPct / 100,
+                // Only worth showing when there is more than one lesson.
+                lessons: switch (lessonCounts[leaf.id]) {
+                  (final done, final total) when total > 1 => (done, total),
+                  _ => null,
+                },
+                lessonsLabel: switch (lessonCounts[leaf.id]) {
+                  (final done, final total) when total > 1 =>
+                    describeLessons?.call(done, total),
+                  _ => null,
+                },
                 otherLanguage: _otherLanguage(lessonLocales[leaf.id], asked),
                 otherLanguageLabel:
                     _otherLanguage(lessonLocales[leaf.id], asked) == null
