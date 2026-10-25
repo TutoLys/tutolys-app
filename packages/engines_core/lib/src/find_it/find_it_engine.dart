@@ -22,8 +22,17 @@ enum FindItLayout {
 }
 
 class FindItCell {
-  const FindItCell({required this.id, required this.label, this.join = false});
+  const FindItCell({
+    required this.id,
+    required this.label,
+    this.join = false,
+    this.imageRef,
+  });
   final String id;
+
+  /// `items` and `grid` only: a picture in place of (grid) or beside
+  /// (items) the label. Sentences and words stay text.
+  final String? imageRef;
 
   /// What the cell shows. May be empty in a grid (an empty square on a
   /// plan is still a place you can point at).
@@ -233,10 +242,12 @@ class FindItEngine
       if (join != null && join is! bool) {
         return const ParseResult.invalid('join must be true or false.');
       }
+      final image = c['image_ref'];
       cells.add(
         FindItCell(
           id: id,
           label: label,
+          imageRef: image is String && image.isNotEmpty ? image : null,
           join: join is bool
               ? join
               : FindItCell.joinsByDefault.contains(label.trim()),
@@ -512,6 +523,7 @@ class FindItEngine
               child: AnswerTile(
                 key: ValueKey('find-cell-$id'),
                 label: content.cell(id).label,
+                imageRef: content.cell(id).imageRef,
                 state: stateOf(id),
                 semanticsState: hintOf(id),
                 onTap: tapOf(id),
@@ -575,6 +587,7 @@ class FindItEngine
             onTap: tapOf(id),
             shape: _CellShape.square,
             size: size,
+            imageRef: content.cell(id).imageRef,
           );
         },
       ),
@@ -797,6 +810,7 @@ class _FindCell extends StatelessWidget {
     required this.onTap,
     required this.shape,
     this.size = 0,
+    this.imageRef,
     super.key,
   });
 
@@ -807,6 +821,10 @@ class _FindCell extends StatelessWidget {
   final VoidCallback? onTap;
   final _CellShape shape;
   final double size;
+
+  /// Square cells only: the picture fills the square, and the label is what
+  /// shows until it has synced.
+  final String? imageRef;
 
   @override
   Widget build(BuildContext context) {
@@ -845,7 +863,15 @@ class _FindCell extends StatelessWidget {
         ? SizedBox(
             width: size,
             height: size,
-            child: Center(child: text),
+            child: imageRef == null
+                ? Center(child: text)
+                : Padding(
+                    padding: EdgeInsets.all(size * 0.1),
+                    child: ContentImage(
+                      ref: imageRef!,
+                      fallback: Center(child: text),
+                    ),
+                  ),
           )
         : ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 48, minWidth: 40),

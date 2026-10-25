@@ -5,15 +5,17 @@ import 'package:flutter/material.dart';
 import '../widgets/answer_tile.dart';
 
 class SortBucket {
-  const SortBucket({required this.id, required this.label});
+  const SortBucket({required this.id, required this.label, this.imageRef});
   final String id;
   final String label;
+  final String? imageRef;
 }
 
 class SortItem {
-  const SortItem({required this.id, required this.label});
+  const SortItem({required this.id, required this.label, this.imageRef});
   final String id;
   final String label;
+  final String? imageRef;
 }
 
 class SortContent {
@@ -117,6 +119,11 @@ class SortBucketsEngine
     capabilities: EngineCapabilities(keyboard: true, screenReader: true),
   );
 
+  static String? _image(Object? raw) {
+    final v = raw is Map ? raw['image_ref'] : null;
+    return v is String && v.isNotEmpty ? v : null;
+  }
+
   static (String, String)? _entry(Object? raw) {
     if (raw is! Map) return null;
     final id = raw['id'];
@@ -149,7 +156,7 @@ class SortBucketsEngine
           'Every bucket needs an id and a label.',
         );
       }
-      buckets.add(SortBucket(id: e.$1, label: e.$2));
+      buckets.add(SortBucket(id: e.$1, label: e.$2, imageRef: _image(b)));
     }
     final bucketIds = {for (final b in buckets) b.id};
     if (bucketIds.length != buckets.length) {
@@ -170,7 +177,7 @@ class SortBucketsEngine
           'Item ${e.$1} belongs in $target, which is not a bucket.',
         );
       }
-      items.add(SortItem(id: e.$1, label: e.$2));
+      items.add(SortItem(id: e.$1, label: e.$2, imageRef: _image(i)));
       answer[e.$1] = target;
     }
     if (answer.length != items.length) {
@@ -344,6 +351,7 @@ class SortBucketsEngine
                         child: AnswerTile(
                           key: ValueKey('sort-item-$id'),
                           label: view.content.item(id).label,
+                          imageRef: view.content.item(id).imageRef,
                           state: s.selected == id
                               ? AnswerTileState.picked
                               : AnswerTileState.idle,
@@ -385,6 +393,7 @@ class SortBucketsEngine
                           child: _BucketCard(
                             key: ValueKey('sort-bucket-${b.id}'),
                             label: b.label,
+                            imageRef: b.imageRef,
                             highlighted: holding && view.enabled,
                             dropHint: fr
                                 ? 'touche pour déposer ici'
@@ -398,6 +407,7 @@ class SortBucketsEngine
                                   AnswerTile(
                                     key: ValueKey('sort-placed-$id'),
                                     label: view.content.item(id).label,
+                                    imageRef: view.content.item(id).imageRef,
                                     state: s.locked.contains(id)
                                         ? AnswerTileState.correct
                                         : AnswerTileState.idle,
@@ -435,6 +445,7 @@ class SortBucketsEngine
 class _BucketCard extends StatelessWidget {
   const _BucketCard({
     required this.label,
+    this.imageRef,
     required this.highlighted,
     required this.dropHint,
     required this.onTap,
@@ -443,6 +454,7 @@ class _BucketCard extends StatelessWidget {
   });
 
   final String label;
+  final String? imageRef;
   final bool highlighted;
   final String dropHint;
   final VoidCallback? onTap;
@@ -471,6 +483,19 @@ class _BucketCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (imageRef != null)
+                  Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxWidth: 72,
+                        maxHeight: 72,
+                      ),
+                      child: ContentImage(
+                        ref: imageRef!,
+                        fallback: const SizedBox.shrink(),
+                      ),
+                    ),
+                  ),
                 Semantics(
                   button: true,
                   enabled: onTap != null,

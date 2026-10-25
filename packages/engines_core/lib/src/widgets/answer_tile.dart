@@ -1,4 +1,5 @@
 import 'package:design_system/design_system.dart';
+import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
 
 /// What an answer tile shows about itself.
@@ -32,6 +33,7 @@ class AnswerTile extends StatelessWidget {
     required this.onTap,
     this.semanticsState,
     this.badge,
+    this.imageRef,
     super.key,
   });
 
@@ -48,6 +50,12 @@ class AnswerTile extends StatelessWidget {
   /// A small number drawn on the tile — which pair a matched tile belongs
   /// to (`pair_match`), so two linked tiles read as a pair without lines.
   final int? badge;
+
+  /// A picture for this answer (`image_ref`), drawn before the label in a
+  /// 56px box. The label stays: it is the screen-reader name, and the text
+  /// a child sees until the picture has synced (when nothing is drawn in
+  /// its place, so the tile never shows an empty frame).
+  final String? imageRef;
 
   @override
   Widget build(BuildContext context) {
@@ -97,6 +105,20 @@ class AnswerTile extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               child: Row(
                 children: [
+                  if (imageRef != null)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          maxWidth: 56,
+                          maxHeight: 56,
+                        ),
+                        child: ContentImage(
+                          ref: imageRef!,
+                          fallback: const SizedBox.shrink(),
+                        ),
+                      ),
+                    ),
                   Expanded(
                     child: Text(
                       label,

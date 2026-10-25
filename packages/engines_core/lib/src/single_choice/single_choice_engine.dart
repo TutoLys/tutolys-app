@@ -296,6 +296,7 @@ class SingleChoiceEngine
                     return AnswerTile(
                       key: ValueKey('mcq-option-$id'),
                       label: option.label,
+                      imageRef: option.imageRef,
                       state: state,
                       semanticsState: switch (state) {
                         AnswerTileState.retry =>

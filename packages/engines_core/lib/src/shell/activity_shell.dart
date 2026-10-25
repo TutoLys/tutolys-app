@@ -1,4 +1,5 @@
 import 'package:design_system/design_system.dart';
+import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -44,6 +45,7 @@ class ActivityShell extends StatelessWidget {
     this.xp,
     this.inARow = 0,
     this.promptText,
+    this.promptImageRef,
     this.onSpeak,
     this.character,
     this.revealedHint,
@@ -74,6 +76,12 @@ class ActivityShell extends StatelessWidget {
 
   /// Null when the engine renders its own prompt (the legacy path).
   final String? promptText;
+
+  /// The prompt's picture (`prompt.image_ref`), drawn above the question.
+  /// Nothing is drawn until it has synced: the question still reads
+  /// without it, because content never puts the question only in a
+  /// picture.
+  final String? promptImageRef;
 
   /// Null hides the speaker: there's nothing that may be read aloud.
   final VoidCallback? onSpeak;
@@ -114,6 +122,20 @@ class ActivityShell extends StatelessWidget {
     // (the legacy path), small in the top bar.
     final hasPrompt = promptText != null || onSpeak != null;
     final header = <Widget>[
+      if (promptImageRef != null)
+        Padding(
+          padding: const EdgeInsets.only(bottom: Space.md),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 180, maxWidth: 360),
+              child: ContentImage(
+                key: const ValueKey('prompt-image'),
+                ref: promptImageRef!,
+                fallback: const SizedBox.shrink(),
+              ),
+            ),
+          ),
+        ),
       if (hasPrompt)
         _PromptRow(
           palette: p,
