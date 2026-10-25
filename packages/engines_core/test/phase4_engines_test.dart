@@ -148,16 +148,22 @@ void main() {
     const engine = TimedChoiceEngine();
     final content = engine.parse(speedConfig).valueOrNull!;
 
-    test('parses real content; the time limit is required and bounded', () {
+    test('parses real content; a time limit, when set, is bounded', () {
       expect(content.timeLimit, const Duration(seconds: 8));
+      expect(content.timed, isTrue);
       expect(
         engine.parse({...speedConfig, 'time_limit_ms': 500}),
         isA<ParseInvalid<TimedChoiceContent>>(),
       );
-      expect(
-        engine.parse({...speedConfig}..remove('time_limit_ms')),
-        isA<ParseInvalid<TimedChoiceContent>>(),
-      );
+      for (final untimed in [
+        {...speedConfig}..remove('time_limit_ms'),
+        {...speedConfig, 'time_limit_ms': 0},
+        {...speedConfig, 'time_limit_ms': null},
+      ]) {
+        final c = engine.parse(untimed).valueOrNull!;
+        expect(c.timed, isFalse, reason: 'absent, 0 and null are untimed');
+        expect(c.timeLimit, isNull);
+      }
       expect(
         engine.parse({...speedConfig, 'correct': 'z'}),
         isA<ParseInvalid<TimedChoiceContent>>(),
@@ -307,6 +313,49 @@ void main() {
       );
       expect(c.state.lastOutcome, Outcome.correct);
       c.dispose();
+    });
+  });
+
+  group('speed_tap untimed — every regular lesson (ADR 0042)', () {
+    final untimed = {...speedConfig, 'shuffle': false}..remove('time_limit_ms');
+
+    testWidgets('no countdown, no timeout: wrong, retry, right', (
+      tester,
+    ) async {
+      final (c, outbox) = controllerFor('speed_tap', untimed);
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(app(c));
+      expect(find.byType(CountdownBar), findsNothing);
+
+      // Far longer than any limit: nothing runs out.
+      await tester.pump(const Duration(seconds: 30));
+      expect(find.text('Temps écoulé !'), findsNothing);
+      expect(c.state.lastOutcome, isNull);
+
+      await tester.tap(find.byKey(const ValueKey('speed-option-a')));
+      await settle(tester);
+      expect(c.state.lastOutcome, Outcome.incorrect);
+      expect(find.text('Temps écoulé !'), findsNothing);
+      await tester.tap(find.text('RÉESSAYER'));
+      await settle(tester);
+      await tester.pump(const Duration(seconds: 30));
+      await tester.tap(find.byKey(const ValueKey('speed-option-b')));
+      await settle(tester);
+      expect(find.text('Bravo !'), findsOneWidget);
+      final types = outbox.all.map((e) => e['event_type']);
+      expect(types, isNot(contains('time_expired')));
+      c.dispose();
+    });
+
+    test('a stray TimeUp does nothing to an untimed question', () {
+      const engine = TimedChoiceEngine();
+      final content = engine.parse(untimed).valueOrNull!;
+      final s = engine.initialize(content, const EngineSeed(1));
+      expect(engine.reduce(s, const TimeUp(0)).events, isEmpty);
+      expect(
+        engine.extractAnswer(engine.reduce(s, const TimeUp(0)).state),
+        isNull,
+      );
     });
   });
 

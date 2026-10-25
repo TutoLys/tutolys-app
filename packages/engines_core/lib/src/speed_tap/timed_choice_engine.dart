@@ -6,12 +6,19 @@ import '../widgets/answer_tile.dart';
 import '../widgets/countdown_bar.dart';
 
 class TimedChoiceContent {
-  const TimedChoiceContent({required this.choice, required this.timeLimit});
+  const TimedChoiceContent({required this.choice, this.timeLimit});
 
   /// The same options/correct/shuffle shape as `mcq` — the backend's
-  /// `speed_tap` schema is `mcq` plus `time_limit_ms`.
+  /// `speed_tap` schema is `mcq` plus an optional `time_limit_ms`.
   final SingleChoiceContent choice;
-  final Duration timeLimit;
+
+  /// Null: no countdown, no timeout — a tap is the answer and the child
+  /// takes as long as they need. **Every regular lesson is untimed**
+  /// (Hafid, 2026-10-25); a limit is for future diagnostic tests only
+  /// (ADR 0042).
+  final Duration? timeLimit;
+
+  bool get timed => timeLimit != null;
 }
 
 class TimedChoiceState {
@@ -22,6 +29,7 @@ class TimedChoiceState {
     this.solved = false,
     this.timedOut = false,
     this.round = 0,
+    this.timed = true,
   });
 
   final List<String> order;
@@ -35,6 +43,11 @@ class TimedChoiceState {
   /// Bumped after every verdict, so each retry gets a fresh countdown and a
   /// stale [TimeUp] from the previous one is ignored.
   final int round;
+
+  /// Whether the content has a countdown. From the content, never the
+  /// snapshot: the reducer can't see the content, and an untimed question
+  /// must ignore any [TimeUp].
+  final bool timed;
 
   TimedChoiceState copyWith({
     String? selected,
@@ -50,6 +63,7 @@ class TimedChoiceState {
     solved: solved ?? this.solved,
     timedOut: timedOut ?? this.timedOut,
     round: round ?? this.round,
+    timed: timed,
   );
 }
 
@@ -68,11 +82,16 @@ class TimeUp extends TimedChoiceAction {
   final int round;
 }
 
-/// Answer before the countdown runs out — the `speed_tap` engine on the
-/// `LearningEngine` contract (Phase 4).
+/// Tap the answer — the `speed_tap` engine on the `LearningEngine`
+/// contract (Phase 4), **untimed unless the content sets a limit**.
 ///
-/// A tap *is* the answer here ([SubmitMode.immediate]): speed is the point,
-/// so there's no VALIDER. Running out of time is a [NoResponseAnswer], an
+/// A tap *is* the answer here ([SubmitMode.immediate]): there's no VALIDER.
+/// Without `time_limit_ms` there is no countdown and no timeout, so it
+/// plays as a single choice answered by tapping — what every regular
+/// lesson uses (Hafid: timing a grade-1 lesson "does not make any sense").
+/// A limit is kept for future diagnostic tests only (ADR 0042).
+///
+/// When timed, running out of time is a [NoResponseAnswer], an
 /// attempt that's wrong about speed, not about the content, and the child
 /// retries with a fresh countdown — the same forgiving contract as before
 /// (ADR 0005). Like `mcq`, a tried option stays marked.
@@ -102,16 +121,18 @@ class TimedChoiceEngine
   @override
   ParseResult<TimedChoiceContent> parse(Map<String, Object?> config) {
     final limit = config['time_limit_ms'];
-    if (limit is! int || limit < 1000 || limit > 60000) {
+    // Absent, null or 0 all mean untimed.
+    final timed = limit != null && limit != 0;
+    if (timed && (limit is! int || limit < 1000 || limit > 60000)) {
       return const ParseResult.invalid(
-        'time_limit_ms must be an integer between 1000 and 60000.',
+        'time_limit_ms, when set, is an integer between 1000 and 60000.',
       );
     }
     return switch (const SingleChoiceEngine().parse(config)) {
       ParseOk(:final value) => ParseResult.ok(
         TimedChoiceContent(
           choice: value,
-          timeLimit: Duration(milliseconds: limit),
+          timeLimit: timed ? Duration(milliseconds: limit as int) : null,
         ),
       ),
       ParseInvalid(:final reason) => ParseResult.invalid(reason),
@@ -125,6 +146,7 @@ class TimedChoiceEngine
         order: const SingleChoiceEngine()
             .initialize(content.choice, seed)
             .order,
+        timed: content.timed,
       );
 
   @override
@@ -142,7 +164,8 @@ class TimedChoiceEngine
           InteractionEvent('option_selected', {'option_id': optionId}),
         ]);
       case TimeUp(:final round):
-        if (round != s.round) return Transition(s);
+        // An untimed question has no countdown to run out.
+        if (!s.timed || round != s.round) return Transition(s);
         return Transition(s.copyWith(timedOut: true), [
           InteractionEvent('time_expired', {'round': round}),
         ]);
@@ -194,8 +217,9 @@ class TimedChoiceEngine
       selected: base.selected,
       tried: base.tried,
       solved: base.solved,
-      timedOut: snap['timed_out'] == true,
+      timedOut: content.timed && snap['timed_out'] == true,
       round: round is int ? round : 0,
+      timed: content.timed,
     );
   }
 
@@ -214,14 +238,16 @@ class TimedChoiceEngine
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            CountdownBar(
-              duration: view.content.timeLimit,
-              round: s.round,
-              running: live,
-              onExpired: () => view.dispatch(TimeUp(s.round)),
-              semanticsLabel: fr ? 'Temps restant' : 'Time left',
-            ),
-            const SizedBox(height: 16),
+            if (view.content.timed) ...[
+              CountdownBar(
+                duration: view.content.timeLimit!,
+                round: s.round,
+                running: live,
+                onExpired: () => view.dispatch(TimeUp(s.round)),
+                semanticsLabel: fr ? 'Temps restant' : 'Time left',
+              ),
+              const SizedBox(height: 16),
+            ],
             for (final id in s.order) ...[
               AnswerTile(
                 key: ValueKey('speed-option-$id'),
