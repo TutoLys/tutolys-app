@@ -182,6 +182,143 @@ void main() {
     });
   });
 
+  group('letters, joined marks, Cartesian origin, compass', () {
+    test('punctuation joins by default; "?" is the content\'s call', () {
+      final c = engine.parse({
+        'layout': 'words',
+        'scene_items': [
+          {'id': 'w1', 'label': 'Où'},
+          {'id': 'w2', 'label': 'vas-tu'},
+          {'id': 'w3', 'label': '?'},
+          {'id': 'w4', 'label': 'Ici'},
+          {'id': 'w5', 'label': '.'},
+          {'id': 'w6', 'label': '!', 'join': true},
+        ],
+        'correct_ids': ['w3'],
+      }).valueOrNull!;
+      expect(
+        [for (final x in c.cells) x.join],
+        [
+          false,
+          false,
+          false, // French puts a space before ?
+          false,
+          true,
+          true,
+        ],
+      );
+    });
+
+    test('bottom_left: rows listed from the bottom are shown bottom-up', () {
+      // (x, y) with the origin at the bottom left: listed y = 1 first.
+      final c = engine.parse({
+        'layout': 'grid',
+        'columns': 2,
+        'origin': 'bottom_left',
+        'scene_items': [
+          {'id': 'x1y1', 'label': ''},
+          {'id': 'x2y1', 'label': ''},
+          {'id': 'x1y2', 'label': ''},
+          {'id': 'x2y2', 'label': '⭐'},
+        ],
+        'correct_ids': ['x2y2'],
+        'row_labels': ['1', '2'],
+      }).valueOrNull!;
+      expect(c.cells.map((x) => x.id), ['x1y2', 'x2y2', 'x1y1', 'x2y1']);
+      expect(c.rowLabels, ['2', '1'], reason: 'top row drawn first');
+      expect(
+        engine.parse({...planConfig, 'origin': 'middle'}),
+        isA<ParseInvalid<FindItContent>>(),
+      );
+    });
+
+    testWidgets('bottom_left: (2, 2) is drawn top right, named by its labels', (
+      tester,
+    ) async {
+      tallView(tester);
+      final (c, _) = controllerFor({
+        'layout': 'grid',
+        'columns': 2,
+        'origin': 'bottom_left',
+        'scene_items': [
+          {'id': 'x1y1', 'label': ''},
+          {'id': 'x2y1', 'label': ''},
+          {'id': 'x1y2', 'label': ''},
+          {'id': 'x2y2', 'label': ''},
+        ],
+        'correct_ids': ['x2y2'],
+        'row_labels': ['1', '2'],
+        'column_labels': ['1', '2'],
+      });
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(app(c));
+      final top = tester.getTopLeft(
+        find.byKey(const ValueKey('find-cell-x2y2')),
+      );
+      final bottom = tester.getTopLeft(
+        find.byKey(const ValueKey('find-cell-x2y1')),
+      );
+      expect(top.dy, lessThan(bottom.dy));
+      expect(find.bySemanticsLabel('colonne 2, rangée 2'), findsOneWidget);
+      c.dispose();
+    });
+
+    testWidgets('letters: one word, each letter named by its place', (
+      tester,
+    ) async {
+      tallView(tester);
+      final (c, _) = controllerFor({
+        'layout': 'letters',
+        'scene_items': [
+          for (final (i, l) in ['v', 'e', 'r', 't'].indexed)
+            {'id': 'l$i', 'label': l},
+        ],
+        'correct_ids': ['l3'],
+      });
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(app(c));
+      expect(find.bySemanticsLabel('lettre 4 : t'), findsOneWidget);
+      final a = tester.getTopRight(find.byKey(const ValueKey('find-cell-l0')));
+      final b = tester.getTopLeft(find.byKey(const ValueKey('find-cell-l1')));
+      expect(b.dx - a.dx, lessThanOrEqualTo(2), reason: 'no gap in a word');
+      c.dispose();
+    });
+
+    testWidgets('compass labels around a plan; 6×6 still fits a phone', (
+      tester,
+    ) async {
+      tallView(tester, width: 375);
+      final (c, _) = controllerFor({
+        'layout': 'grid',
+        'columns': 6,
+        'scene_items': [
+          for (var i = 0; i < 36; i++)
+            {'id': 'c$i', 'label': i == 7 ? '🏠' : ''},
+        ],
+        'correct_ids': ['c1'],
+        'row_labels': [for (var i = 1; i <= 6; i++) '$i'],
+        'column_labels': ['A', 'B', 'C', 'D', 'E', 'F'],
+        'edge_labels': {
+          'top': 'Nord',
+          'right': 'Est',
+          'bottom': 'Sud',
+          'left': 'Ouest',
+        },
+      });
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(app(c));
+      expect(tester.takeException(), isNull);
+      for (final w in ['Nord', 'Est', 'Sud', 'Ouest']) {
+        expect(find.text(w), findsOneWidget);
+      }
+      final size = tester.getSize(find.byKey(const ValueKey('find-cell-c0')));
+      // ignore: avoid_print
+      print('6x6 with axes and compass at 375px: ${size.width}px squares');
+      expect(size.width, greaterThanOrEqualTo(32));
+      c.dispose();
+    });
+  });
+
   group('reduce', () {
     test('one right answer: a new pick replaces the last', () {
       final c = engine.parse(sentenceConfig).valueOrNull!;

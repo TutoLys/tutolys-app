@@ -100,3 +100,39 @@ each tap toggles, and "Trouvés : 1 sur 3" shows above the scene.
 - App: analyze clean, 464 tests pass with the engine registered.
 - **Not done:** live play on web, and dev-stack activation (no Docker
   here).
+
+## Amendment, same day: letters, joined marks, Cartesian origin, compass
+
+The Questions Maker's review of the three uses asked for four things. All
+are optional, so content without them plays as before:
+
+- **`letters` layout** (2–16 cells): one word, letter by letter, 2px apart.
+  It's for "Touche la lettre muette dans « vert »" and grapheme → phoneme
+  work. Each letter's screen-reader name includes its place ("lettre 4 :
+  t"), because a repeated letter alone is ambiguous.
+- **`join` on a `words` cell**: no space before it. It defaults to true for
+  `. , ) » …`, so "dort." reads as written while "." stays tappable alone.
+  It defaults to false for `? ! : ;`, because French puts a space before
+  them. An English "?" sets `join: true`. In a lesson about punctuation, a
+  stray space is a content error, so the default is per mark and the
+  author can override it.
+- **`origin: "bottom_left"`** for a Cartesian grid. `scene_items` and
+  `row_labels` are then listed bottom row first, so (2, 3) means 2 right
+  and 3 up, as a child reads it. Parse turns the rows into display order
+  once, and nothing after it knows. Without it, the natural top-down
+  reading of `scene_items` would silently flip every answer. An unlabelled
+  row is counted from the bottom for the screen reader.
+- **`edge_labels`** `{top, right, bottom, left}`: a plan's compass.
+  Left and right are drawn turned to take 22px each.
+
+**Measured phone limit** (375px, row and column labels plus a compass):
+6×6 squares are ~37px and 5×5 ~52px. So the backend validator now warns
+above 5 columns (it was 6), and the Questions Maker plans around 5×5 for
+anything a phone will show.
+
+Tests: find_it 13 → 18:
+- default and explicit `join`;
+- `bottom_left` reordering and refusing an unknown origin;
+- (2, 2) drawn top right and named "colonne 2, rangée 2";
+- letters with no gap and positional names;
+- a 6×6 plan with axes and compass on a phone, with no overflow.

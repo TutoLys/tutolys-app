@@ -13,17 +13,41 @@ enum FindItLayout {
   /// A sentence: words and marks in reading order, as tappable chips.
   words,
 
+  /// One word, letter by letter, with no gap between them: "Touche la
+  /// lettre muette dans « vert »".
+  letters,
+
   /// Rows × columns, row-major: a plan, a map, a Cartesian grid.
   grid,
 }
 
 class FindItCell {
-  const FindItCell({required this.id, required this.label});
+  const FindItCell({required this.id, required this.label, this.join = false});
   final String id;
 
   /// What the cell shows. May be empty in a grid (an empty square on a
   /// plan is still a place you can point at).
   final String label;
+
+  /// `words` only: no space before this cell, so "dort." reads as written
+  /// while "." stays tappable on its own.
+  final bool join;
+
+  /// Marks that never take a space before them, in either language. French
+  /// puts one before « ? ! : ; », so those are the content's call (`join`).
+  static const joinsByDefault = {'.', ',', ')', '»', '…'};
+}
+
+/// Text drawn on the four sides of a grid: the compass of a plan.
+class EdgeLabels {
+  const EdgeLabels({this.top, this.right, this.bottom, this.left});
+  final String? top;
+  final String? right;
+  final String? bottom;
+  final String? left;
+
+  bool get isEmpty =>
+      top == null && right == null && bottom == null && left == null;
 }
 
 class LegendEntry {
@@ -41,6 +65,8 @@ class FindItContent {
     this.rowLabels = const [],
     this.columnLabels = const [],
     this.legend = const [],
+    this.edges = const EdgeLabels(),
+    this.bottomOrigin = false,
     this.shuffle = true,
   });
 
@@ -51,13 +77,23 @@ class FindItContent {
   /// Grid only.
   final int columns;
 
-  /// Grid only, optional: drawn left of each row (top to bottom) and above
-  /// each column. A Cartesian grid lists its rows top-down, "3, 2, 1".
+  /// Grid only, optional: drawn left of each row and under each column.
+  /// Both, like [cells], are held in **display order**, top row first —
+  /// parse turns a bottom-left-origin grid around once, so nothing after it
+  /// has to know.
   final List<String> rowLabels;
   final List<String> columnLabels;
 
   /// Optional: what the symbols on a plan mean ("🏫 l'école").
   final List<LegendEntry> legend;
+
+  /// Grid only, optional: "Nord" above, "Sud" below…
+  final EdgeLabels edges;
+
+  /// Grid only: the content listed its rows from the bottom up (a Cartesian
+  /// grid, where (2, 3) is 2 right and 3 up). Only changes how an unlabelled
+  /// row is counted for a screen reader; the cells are already turned.
+  final bool bottomOrigin;
 
   /// `items` layout only.
   final bool shuffle;
@@ -156,16 +192,20 @@ class FindItEngine
     final layout = switch (config['layout']) {
       null || 'items' => FindItLayout.items,
       'words' => FindItLayout.words,
+      'letters' => FindItLayout.letters,
       'grid' => FindItLayout.grid,
       _ => null,
     };
     if (layout == null) {
-      return const ParseResult.invalid('layout is items, words or grid.');
+      return const ParseResult.invalid(
+        'layout is items, words, letters or grid.',
+      );
     }
     final raw = config['scene_items'];
     final (min, max) = switch (layout) {
       FindItLayout.items => (3, 12),
       FindItLayout.words => (2, 24),
+      FindItLayout.letters => (2, 16),
       FindItLayout.grid => (4, 64),
     };
     if (raw is! List || raw.length < min || raw.length > max) {
@@ -189,7 +229,19 @@ class FindItEngine
       if (cells.any((x) => x.id == id)) {
         return const ParseResult.invalid('Scene item ids must be unique.');
       }
-      cells.add(FindItCell(id: id, label: label));
+      final join = c['join'];
+      if (join != null && join is! bool) {
+        return const ParseResult.invalid('join must be true or false.');
+      }
+      cells.add(
+        FindItCell(
+          id: id,
+          label: label,
+          join: join is bool
+              ? join
+              : FindItCell.joinsByDefault.contains(label.trim()),
+        ),
+      );
     }
     final ids = {for (final c in cells) c.id};
     final correct = _strings(config['correct_ids']);
@@ -210,6 +262,9 @@ class FindItEngine
     var columns = 0;
     var rowLabels = const <String>[];
     var columnLabels = const <String>[];
+    var edges = const EdgeLabels();
+    var bottomOrigin = false;
+    var displayCells = cells;
     if (layout == FindItLayout.grid) {
       final c = config['columns'];
       if (c is! int || c < 2 || c > 8 || cells.length % c != 0) {
@@ -230,8 +285,40 @@ class FindItEngine
       if (cl == null || (cl.isNotEmpty && cl.length != c)) {
         return const ParseResult.invalid('column_labels needs one per column.');
       }
-      rowLabels = rl;
+      final origin = config['origin'];
+      if (origin != null && origin != 'top_left' && origin != 'bottom_left') {
+        return const ParseResult.invalid('origin is top_left or bottom_left.');
+      }
+      bottomOrigin = origin == 'bottom_left';
       columnLabels = cl;
+      if (bottomOrigin) {
+        // Listed bottom row first: turn rows (and their labels) into
+        // display order once, here.
+        displayCells = [
+          for (var r = rows - 1; r >= 0; r--)
+            ...cells.sublist(r * c, (r + 1) * c),
+        ];
+        rowLabels = rl.reversed.toList();
+      } else {
+        rowLabels = rl;
+      }
+      final rawEdges = config['edge_labels'];
+      if (rawEdges != null) {
+        if (rawEdges is! Map) {
+          return const ParseResult.invalid('edge_labels must be an object.');
+        }
+        String? side(String k) {
+          final v = rawEdges[k];
+          return v is String && v.isNotEmpty ? v : null;
+        }
+
+        edges = EdgeLabels(
+          top: side('top'),
+          right: side('right'),
+          bottom: side('bottom'),
+          left: side('left'),
+        );
+      }
     }
 
     final legend = <LegendEntry>[];
@@ -259,9 +346,11 @@ class FindItEngine
     return ParseResult.ok(
       FindItContent(
         layout: layout,
-        cells: List.unmodifiable(cells),
+        cells: List.unmodifiable(displayCells),
         correct: correct.toSet(),
         columns: columns,
+        edges: edges,
+        bottomOrigin: bottomOrigin,
         rowLabels: List.unmodifiable(rowLabels),
         columnLabels: List.unmodifiable(columnLabels),
         legend: List.unmodifiable(legend),
@@ -431,19 +520,44 @@ class FindItEngine
         ],
       ),
       FindItLayout.words => Wrap(
-        spacing: 6,
         runSpacing: 10,
         alignment: WrapAlignment.center,
         children: [
-          for (final id in s.order)
+          for (final (i, id) in s.order.indexed)
+            Padding(
+              // A word gets a space before it; a joined mark doesn't.
+              padding: EdgeInsets.only(
+                left: i == 0 ? 0 : (content.cell(id).join ? 2 : 8),
+              ),
+              child: _FindCell(
+                key: ValueKey('find-cell-$id'),
+                label: content.cell(id).label,
+                semanticsLabel: content.cell(id).label,
+                state: stateOf(id),
+                hint: hintOf(id),
+                onTap: tapOf(id),
+                shape: _CellShape.word,
+              ),
+            ),
+        ],
+      ),
+      FindItLayout.letters => Wrap(
+        spacing: 2,
+        runSpacing: 8,
+        alignment: WrapAlignment.center,
+        children: [
+          for (final (i, id) in s.order.indexed)
             _FindCell(
               key: ValueKey('find-cell-$id'),
               label: content.cell(id).label,
-              semanticsLabel: content.cell(id).label,
+              // "lettre 3 : r" — a letter alone is ambiguous when repeated.
+              semanticsLabel: fr
+                  ? 'lettre ${i + 1} : ${content.cell(id).label}'
+                  : 'letter ${i + 1}: ${content.cell(id).label}',
               state: stateOf(id),
               hint: hintOf(id),
               onTap: tapOf(id),
-              shape: _CellShape.word,
+              shape: _CellShape.letter,
             ),
         ],
       ),
@@ -527,7 +641,9 @@ class FindItEngine
     final col = c.columnLabels.isNotEmpty
         ? c.columnLabels[column]
         : '${column + 1}';
-    final r = c.rowLabels.isNotEmpty ? c.rowLabels[row] : '${row + 1}';
+    final r = c.rowLabels.isNotEmpty
+        ? c.rowLabels[row]
+        : '${c.bottomOrigin ? c.rows - row : row + 1}';
     return fr ? 'colonne $col, rangée $r' : 'column $col, row $r';
   }
 }
@@ -541,6 +657,7 @@ class _Grid extends StatelessWidget {
 
   static const _gap = 6.0;
   static const _axis = 28.0;
+  static const _edge = 22.0;
 
   @override
   Widget build(BuildContext context) {
@@ -556,8 +673,13 @@ class _Grid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final n = content.columns;
+        final edges = content.edges;
+        final sides =
+            (edges.left != null ? _edge + _gap : 0) +
+            (edges.right != null ? _edge + _gap : 0);
         final room =
             constraints.maxWidth -
+            sides -
             (hasRows ? _axis + _gap : 0) -
             _gap * (n - 1);
         // Never so big a 2×2 fills the screen. As big as fits otherwise: a
@@ -572,43 +694,85 @@ class _Grid extends StatelessWidget {
                 child: ExcludeSemantics(child: Text(text, style: axisStyle)),
               ),
             );
+        Widget edge(String text, {int turns = 0}) => Semantics(
+          label: text,
+          child: ExcludeSemantics(
+            child: RotatedBox(
+              quarterTurns: turns,
+              child: Text(
+                text,
+                textAlign: TextAlign.center,
+                style: axisStyle.copyWith(color: p.quebecBlue),
+              ),
+            ),
+          ),
+        );
+        final grid = Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var r = 0; r < content.rows; r++) ...[
+              if (r > 0) const SizedBox(height: _gap),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (hasRows) ...[
+                    axisLabel(content.rowLabels[r], width: _axis),
+                    const SizedBox(width: _gap),
+                  ],
+                  for (var c = 0; c < n; c++) ...[
+                    if (c > 0) const SizedBox(width: _gap),
+                    cellBuilder(content.cells[r * n + c].id, r, c, size),
+                  ],
+                ],
+              ),
+            ],
+            // Column labels sit under the grid, like a graph's x axis.
+            if (hasColumns) ...[
+              const SizedBox(height: _gap),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (hasRows) const SizedBox(width: _axis + _gap),
+                  for (var c = 0; c < n; c++) ...[
+                    if (c > 0) const SizedBox(width: _gap),
+                    axisLabel(
+                      content.columnLabels[c],
+                      width: size,
+                      height: _axis,
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ],
+        );
+        if (edges.isEmpty) return Center(child: grid);
         return Center(
           child: Column(
+            key: const ValueKey('find-edges'),
             mainAxisSize: MainAxisSize.min,
             children: [
-              for (var r = 0; r < content.rows; r++) ...[
-                if (r > 0) const SizedBox(height: _gap),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (hasRows) ...[
-                      axisLabel(content.rowLabels[r], width: _axis),
-                      const SizedBox(width: _gap),
-                    ],
-                    for (var c = 0; c < n; c++) ...[
-                      if (c > 0) const SizedBox(width: _gap),
-                      cellBuilder(content.cells[r * n + c].id, r, c, size),
-                    ],
-                  ],
-                ),
-              ],
-              // Column labels sit under the grid, like a graph's x axis.
-              if (hasColumns) ...[
+              if (edges.top != null) ...[
+                edge(edges.top!),
                 const SizedBox(height: _gap),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (hasRows) const SizedBox(width: _axis + _gap),
-                    for (var c = 0; c < n; c++) ...[
-                      if (c > 0) const SizedBox(width: _gap),
-                      axisLabel(
-                        content.columnLabels[c],
-                        width: size,
-                        height: _axis,
-                      ),
-                    ],
+              ],
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (edges.left != null) ...[
+                    SizedBox(width: _edge, child: edge(edges.left!, turns: 3)),
+                    const SizedBox(width: _gap),
                   ],
-                ),
+                  grid,
+                  if (edges.right != null) ...[
+                    const SizedBox(width: _gap),
+                    SizedBox(width: _edge, child: edge(edges.right!, turns: 1)),
+                  ],
+                ],
+              ),
+              if (edges.bottom != null) ...[
+                const SizedBox(height: _gap),
+                edge(edges.bottom!),
               ],
             ],
           ),
@@ -618,7 +782,7 @@ class _Grid extends StatelessWidget {
   }
 }
 
-enum _CellShape { word, square }
+enum _CellShape { word, letter, square }
 
 /// One tappable square of a plan or word of a sentence. Same four states as
 /// [AnswerTile], and like it each state reads without colour: picked has a
@@ -669,7 +833,11 @@ class _FindCell extends StatelessWidget {
         fontFamily: VillageType.display,
         fontWeight: FontWeight.w700,
         // Emoji on a plan read better big; words stay text-sized.
-        fontSize: square ? size * 0.42 : 20,
+        fontSize: square
+            ? size * 0.42
+            : shape == _CellShape.letter
+            ? 28
+            : 20,
         color: p.ink,
       ),
     );
@@ -682,7 +850,10 @@ class _FindCell extends StatelessWidget {
         : ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 48, minWidth: 40),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: EdgeInsets.symmetric(
+                horizontal: shape == _CellShape.letter ? 6 : 12,
+                vertical: 8,
+              ),
               child: Center(widthFactor: 1, child: text),
             ),
           );
