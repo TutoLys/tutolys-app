@@ -209,6 +209,36 @@ class PlayedDateTable extends Table {
   Set<Column> get primaryKey => {kidId, date};
 }
 
+/// In-progress activity sessions, so a session survives the app being
+/// killed mid-question (architecture doc §5.4, ADR 0019).
+///
+/// One row per live session. The row is written in the same transaction as
+/// the step's outbox events (`DriftActivitySessionStore.commit`) and deleted
+/// in the transaction that records the session's end, so a row here always
+/// means "unfinished, and everything it did is already in the outbox".
+@DataClassName('ActivitySessionRow')
+class ActivitySessionTable extends Table {
+  @override
+  String get tableName => 'activity_session';
+
+  TextColumn get activitySessionId => text().named('activity_session_id')();
+
+  /// Per kid, like everything else a child produces (ADR 0014).
+  TextColumn get kidId => text().named('kid_id')();
+
+  TextColumn get exerciseId => text().named('exercise_id')();
+
+  /// `SessionSnapshot.toJson()`. One JSON column rather than a column per
+  /// field: the snapshot is versioned by its own reader, which rejects what
+  /// it can't trust, so its shape can grow without a migration.
+  TextColumn get snapshot => text()();
+
+  DateTimeColumn get updatedAt => dateTime().named('updated_at')();
+
+  @override
+  Set<Column> get primaryKey => {activitySessionId};
+}
+
 /// The `kid_id` value for rows that belong to the device rather than to any
 /// one kid — today only `app_state`'s `outbox_capacity.*` bookkeeping.
 ///
@@ -226,6 +256,7 @@ const String deviceScope = '';
     AppStateTable,
     PlayedDateTable,
     AudioCacheTable,
+    ActivitySessionTable,
   ],
 )
 // Timestamp storage is configured in build.yaml
@@ -266,7 +297,7 @@ class LocalDatabase extends _$LocalDatabase {
   Future<String?> Function()? migrationKidIdLoader;
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -295,6 +326,7 @@ class LocalDatabase extends _$LocalDatabase {
         'CREATE INDEX IF NOT EXISTS event_outbox_kid '
         'ON event_outbox (kid_id, delivered_at, queued_at)',
       );
+      await _createActivitySessionIndex();
     },
     onUpgrade: (m, from, to) async {
       if (from < 2) {
@@ -306,7 +338,18 @@ class LocalDatabase extends _$LocalDatabase {
       if (from < 4) {
         await _addKidScope(m);
       }
+      if (from < 5) {
+        await m.createTable(activitySessionTable);
+        await _createActivitySessionIndex();
+      }
     },
+  );
+
+  /// "This kid's unfinished session for this exercise" — the lookup the
+  /// play screen makes before starting anything.
+  Future<void> _createActivitySessionIndex() => customStatement(
+    'CREATE INDEX IF NOT EXISTS activity_session_lookup '
+    'ON activity_session (kid_id, exercise_id)',
   );
 
   /// The 3 → 4 upgrade: give the per-kid tables an owner (ADR 0014).

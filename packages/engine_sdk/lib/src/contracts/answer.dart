@@ -32,7 +32,9 @@ sealed class AnswerValue {
           (json['placements'] as Map).cast<String, String>(),
         ),
         'text' => TextAnswer(json['value'] as String),
-        'blanks' => BlanksAnswer((json['blanks'] as Map).cast<String, String>()),
+        'blanks' => BlanksAnswer(
+          (json['blanks'] as Map).cast<String, String>(),
+        ),
         'hotspot' => HotspotAnswer(_strings(json['regions'])),
         _ => null,
       };
@@ -66,7 +68,10 @@ class MultiSelectAnswer extends AnswerValue {
   String get kind => 'multi_select';
 
   @override
-  Map<String, Object?> toJson() => {'kind': kind, 'selected': selectedOptionIds};
+  Map<String, Object?> toJson() => {
+    'kind': kind,
+    'selected': selectedOptionIds,
+  };
 }
 
 class PairsAnswer extends AnswerValue {
@@ -89,7 +94,8 @@ class PairsAnswer extends AnswerValue {
 }
 
 class OrderingAnswer extends AnswerValue {
-  OrderingAnswer(Iterable<String> ids) : orderedItemIds = List.unmodifiable(ids);
+  OrderingAnswer(Iterable<String> ids)
+    : orderedItemIds = List.unmodifiable(ids);
   final List<String> orderedItemIds;
 
   @override

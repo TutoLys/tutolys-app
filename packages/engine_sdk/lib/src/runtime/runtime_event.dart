@@ -56,7 +56,10 @@ sealed class RuntimeEvent {
 // ── learning ────────────────────────────────────────────────────────────────
 
 class QuestionPresented extends RuntimeEvent {
-  const QuestionPresented({required this.questionIndex, required this.questionCount});
+  const QuestionPresented({
+    required this.questionIndex,
+    required this.questionCount,
+  });
   final int questionIndex;
   final int questionCount;
 
@@ -136,7 +139,10 @@ class QuestionCompleted extends RuntimeEvent {
 }
 
 class ActivityCompleted extends RuntimeEvent {
-  const ActivityCompleted({required this.questionsCompleted, required this.questionsSolved});
+  const ActivityCompleted({
+    required this.questionsCompleted,
+    required this.questionsSolved,
+  });
   final int questionsCompleted;
   final int questionsSolved;
 
@@ -273,7 +279,10 @@ class SessionFailed extends RuntimeEvent {
 }
 
 class EvaluationFailedDiagnostic extends RuntimeEvent {
-  const EvaluationFailedDiagnostic({required this.questionIndex, required this.reason});
+  const EvaluationFailedDiagnostic({
+    required this.questionIndex,
+    required this.reason,
+  });
   final int questionIndex;
   final String reason;
 

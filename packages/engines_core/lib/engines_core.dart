@@ -8,3 +8,7 @@ export 'src/compose_build_engine.dart';
 export 'src/mcq_engine.dart';
 export 'src/pair_match_engine.dart';
 export 'src/speed_tap_engine.dart';
+export 'src/shell/activity_shell.dart';
+export 'src/shell/learning_activity_view.dart';
+export 'src/shell/legacy_engine_host.dart';
+export 'src/shell/shell_strings.dart';

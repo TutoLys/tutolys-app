@@ -259,40 +259,79 @@ class TelemetryClient {
     final now = _now();
     final identity = _identity;
 
-    // Only keys present in play_event.v1.json: the schema sets
-    // additionalProperties:false, so an extra field means a rejected event.
-    final event = <String, Object?>{
-      'schema_version': schemaVersion,
-      'event_id': _uuid.v4(),
-      'event_ts': now.toUtc().toIso8601String(),
-      'session_id': sessionId,
-      'event_type': type.wire,
-      'app_version': appVersion,
-      'exercise_run_id': _runId,
-      'exercise_id': identity?.exerciseId,
-      'exercise_version': identity?.exerciseVersion,
-      'engine_key': identity?.engineKey,
-      'engine_version': identity?.engineVersion,
-      'skill_node_id': identity?.skillNodeId,
-      'subject': identity?.subject,
-      'grade': identity?.grade,
-      'rank': identity?.rank,
-      'attempt_index': attemptIndex,
-      'answer_payload': answerPayload,
-      'answer_hash': answerHash,
-      'is_correct': isCorrect,
-      'hint_index': hintIndex,
-      'summary': summary?.toJson(),
-      'ms_since_run_start': _runStartedAt == null
+    final event = buildV1Event(
+      eventId: _uuid.v4(),
+      eventTs: now,
+      sessionId: sessionId,
+      type: type,
+      appVersion: appVersion,
+      runId: _runId,
+      identity: identity,
+      attemptIndex: attemptIndex,
+      answerPayload: answerPayload,
+      answerHash: answerHash,
+      isCorrect: isCorrect,
+      hintIndex: hintIndex,
+      summary: summary,
+      msSinceRunStart: _runStartedAt == null
           ? null
           : now.difference(_runStartedAt!).inMilliseconds,
-      'ms_since_prev_event': _previousEventAt == null
+      msSincePrevEvent: _previousEventAt == null
           ? null
           : now.difference(_previousEventAt!).inMilliseconds,
-    };
+    );
 
     _previousEventAt = now;
 
     await outbox.add(event);
   }
 }
+
+/// One `play_event.v1` event, every key present (null when it doesn't
+/// apply). The only place the v1 shape is spelled out: `TelemetryClient`
+/// and the activity runtime's `V1EventRecorder` both build through here, so
+/// the two paths cannot drift apart.
+///
+/// Only keys present in play_event.v1.json: the schema sets
+/// additionalProperties:false, so an extra field means a rejected event.
+Map<String, Object?> buildV1Event({
+  required String eventId,
+  required DateTime eventTs,
+  required String sessionId,
+  required PlayEventType type,
+  required String appVersion,
+  String? runId,
+  ExerciseIdentity? identity,
+  int? attemptIndex,
+  Map<String, Object?>? answerPayload,
+  String? answerHash,
+  bool? isCorrect,
+  int? hintIndex,
+  ExerciseSummary? summary,
+  int? msSinceRunStart,
+  int? msSincePrevEvent,
+}) => <String, Object?>{
+  'schema_version': TelemetryClient.schemaVersion,
+  'event_id': eventId,
+  'event_ts': eventTs.toUtc().toIso8601String(),
+  'session_id': sessionId,
+  'event_type': type.wire,
+  'app_version': appVersion,
+  'exercise_run_id': runId,
+  'exercise_id': identity?.exerciseId,
+  'exercise_version': identity?.exerciseVersion,
+  'engine_key': identity?.engineKey,
+  'engine_version': identity?.engineVersion,
+  'skill_node_id': identity?.skillNodeId,
+  'subject': identity?.subject,
+  'grade': identity?.grade,
+  'rank': identity?.rank,
+  'attempt_index': attemptIndex,
+  'answer_payload': answerPayload,
+  'answer_hash': answerHash,
+  'is_correct': isCorrect,
+  'hint_index': hintIndex,
+  'summary': summary?.toJson(),
+  'ms_since_run_start': msSinceRunStart,
+  'ms_since_prev_event': msSincePrevEvent,
+};

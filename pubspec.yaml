@@ -22,6 +22,8 @@ dependencies:
     path: packages/engine_sdk
   engines_core:
     path: packages/engines_core
+  tutolys_motion:
+    path: packages/tutolys_motion
 
   flutter_riverpod: ^3.0.3      # state
   go_router: ^17.2.1            # routing

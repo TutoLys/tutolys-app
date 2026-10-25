@@ -1,8 +1,8 @@
 # Learning engine platform — audit and proposed architecture
 
 Status: **accepted 2026-10-25.** Hafid approved the design and took every §10
-recommendation (D1–D8). **Phase 1 (contracts) is done**; see ADR 0017.
-Phases 2+ not started.
+recommendation (D1–D8). **Phase 1 (contracts) is done** (ADR 0017); **Phase 2
+(shared runtime) is done** (ADR 0019). Phase 3 (the `mcq` port) is next.
 
 This answers the "Learning Engine Platform, Animation Framework & Educational
 Telemetry" brief. The brief asks for an audit before any design, so §1 is a
@@ -398,17 +398,20 @@ any → failed(reason) (content invalid, engine unresolvable, evaluator threw)
   exercise and survives resume. `session_run_id` is new per process/screen
   mount. The existing `exercise_run_id` stays, one per question, because
   XP and mastery key off it.
-- **SessionStore.** A new drift table, kid-scoped like the rest of ADR
-  0014:
-  `activity_session(id, kid_id, exercise_id, exercise_version, content_hash, seed, question_index, engine_snapshot json, attempt_numbers json, status, active_ms, updated_at)`.
-  It is written after every durable step. A snapshot whose `content_hash`
-  no longer matches the cache is abandoned, never replayed against new
-  content.
-- **No duplicate submissions.** The `attempt` event id is deterministic:
-  `uuid5(question_instance_id, attempt_number)`. If a crash happens between
-  the outbox write and the snapshot write, the resume path re-derives the
-  same id and the outbox PK rejects the duplicate locally. Telemetry's
-  `ON CONFLICT` covers the network side.
+- **ActivitySessionStore** (renamed from `SessionStore`; the app already
+  has one, for pairing). Built in Phase 2 as the drift table
+  `activity_session(activity_session_id, kid_id, exercise_id, snapshot
+  json, updated_at)`, kid-scoped like the rest of ADR 0014. The snapshot
+  JSON carries the seed, machine state, engine state, recorder tallies and
+  active time. A snapshot whose version or `content_hash` no longer matches
+  the cache is abandoned, never replayed against new content.
+- **No duplicate submissions.** Each step's outbox events and its snapshot
+  commit in **one transaction** (ADR 0019), so there is no crash window
+  between them. This replaced the original plan to write them one after
+  the other. That plan relied on deterministic ids alone, which would not
+  survive telemetry deduplicating on `(event_id, event_ts)`. The ids are
+  still deterministic (`uuid5(question_instance_id, attempt_number)`), as
+  a second line of defence.
 - **Active time.** `ActiveClock` is built on `Stopwatch`, which is
   monotonic. It pauses on `AppLifecycleState.inactive/hidden/paused` and on
   shell pause. Wall clock is used only for `event_ts`.

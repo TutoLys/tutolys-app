@@ -943,6 +943,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.12"
+  tutolys_motion:
+    dependency: "direct main"
+    description:
+      path: "packages/tutolys_motion"
+      relative: true
+    source: path
+    version: "0.1.0"
   typed_data:
     dependency: transitive
     description:

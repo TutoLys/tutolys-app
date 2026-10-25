@@ -1,26 +1,40 @@
-import 'package:design_system/design_system.dart';
+import 'dart:async';
+
 import 'package:engine_sdk/engine_sdk.dart';
+import 'package:engines_core/engines_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:tutolys_motion/tutolys_motion.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/i18n/strings.dart';
 import '../../data/local_db/database.dart';
+import '../../data/local_db/drift_activity_session_store.dart';
 import '../../data/local_db/home_stats.dart';
 import '../../data/local_db/streak_local.dart';
 import '../../data/sync/drift_audio_resolver.dart';
 import '../../data/sync/outbox_flusher_provider.dart';
 import '../pairing/pairing_controller.dart';
+import '../settings/settings_controller.dart';
 import 'engine_registry_provider.dart';
-import 'mascot_feedback.dart';
+import 'learning_platform_providers.dart';
 import 'xp_estimate.dart';
 
 /// Hosts one exercise, reached by tapping an available node on the path.
 ///
-/// The one place `TutolysEngine`/`EngineRegistry`/`EngineFeedback`/
-/// `TelemetryClient` all actually come together in the running app — every
-/// other app code before A7 only ever constructed test doubles for these
-/// (see `a7-skill-path-plan.md`'s own gap #4).
+/// The composition root of the learning engine platform (architecture doc
+/// §4.1): the shared shell, the animation director and its cast, the audio
+/// coordinator and the durable session store all meet here, and nowhere
+/// else. Engines see none of it.
+///
+/// Two paths, picked per exercise:
+///
+/// - **runtime** — every question's engine is on the new `LearningEngine`
+///   contract: an [ActivitySessionController] drives it, with resume after
+///   a crash and the shell's VALIDER / feedback banner.
+/// - **legacy** — anything else (all content, in Phase 2): the existing
+///   `ExerciseRunner` inside the shell via [LegacyEngineHost], with its own
+///   telemetry unchanged and its reactions bridged to the director.
 class PlayScreen extends ConsumerStatefulWidget {
   const PlayScreen({required this.node, required this.envelope, super.key});
 
@@ -32,50 +46,192 @@ class PlayScreen extends ConsumerStatefulWidget {
 }
 
 class _PlayScreenState extends ConsumerState<PlayScreen> {
-  final MascotEngineFeedback _feedback = MascotEngineFeedback();
-  late final TelemetryClient _telemetry;
-  late final DriftAudioResolver _audio;
+  late final AnimationDirector _director;
+  late final AppLifecycleListener _lifecycle;
+
+  /// Captured once: `ref` is unusable in [dispose], which still needs it.
+  late final AudioCoordinator _audio = ref.read(audioCoordinatorProvider);
+
+  // Runtime path.
+  ActivitySessionController? _controller;
+  StreamSubscription<RuntimeEvent>? _autoRead;
+  final List<ExerciseResult> _questionResults = [];
+
+  // Legacy path.
+  TelemetryClient? _telemetry;
+  LegacyFeedbackBridge? _bridge;
+  DriftAudioResolver? _legacyAudio;
+
+  String get _kidId => ref.read(activeKidIdProvider) ?? unpairedKidId;
 
   @override
   void initState() {
     super.initState();
-    _audio = DriftAudioResolver(ref.read(localDatabaseProvider));
-    _telemetry = TelemetryClient(
-      outbox: ref.read(eventOutboxProvider),
-      // One session id per visit to this screen, not one per app launch —
-      // there is no app-session lifecycle wired anywhere yet (a gap beyond
-      // A7's own scope: nothing calls `logSessionStart`/`logSessionEnd`
-      // outside this one screen today). Flagged, not silently assumed
-      // correct.
-      sessionId: const Uuid().v4(),
-      appVersion: appVersion,
+    final parsed = QuestionEnvelope.parse(widget.envelope).valueOrNull;
+    final learning = ref.read(learningEngineRegistryProvider);
+
+    final Stream<RuntimeEvent> events;
+    if (parsed != null && learning.servesAll(parsed)) {
+      final controller = ActivitySessionController(
+        envelope: parsed,
+        kidId: _kidId,
+        engines: learning,
+        evaluators: ref.read(evaluatorRegistryProvider),
+        store: DriftActivitySessionStore(
+          ref.read(localDatabaseProvider),
+          kidId: _kidId,
+        ),
+        appVersion: appVersion,
+        currentAppVersion: AppVersion.tryParse(appVersion),
+      );
+      _controller = controller;
+      events = controller.events;
+      _autoRead = controller.events.listen(_onRuntimeEvent);
+      unawaited(_startRuntime(controller));
+    } else {
+      _legacyAudio = DriftAudioResolver(ref.read(localDatabaseProvider));
+      _bridge = LegacyFeedbackBridge();
+      events = _bridge!.events;
+      _telemetry = TelemetryClient(
+        outbox: ref.read(eventOutboxProvider),
+        // One session id per visit to this screen: the legacy path has no
+        // logical session that outlives it (the runtime path does).
+        sessionId: const Uuid().v4(),
+        appVersion: appVersion,
+      )..logSessionStart();
+    }
+
+    _director = AnimationDirector(
+      events: events,
+      cast: defaultCast,
+      registry: ref.read(characterRegistryProvider),
     );
-    _telemetry.logSessionStart();
+
+    _audio; // resolve now, while ref is usable
+    _lifecycle = AppLifecycleListener(
+      onHide: () {
+        unawaited(_controller?.pause());
+        unawaited(_audio.pause());
+      },
+      onShow: () => unawaited(_controller?.resume()),
+    );
+  }
+
+  Future<void> _startRuntime(ActivitySessionController c) async {
+    final store = DriftActivitySessionStore(
+      ref.read(localDatabaseProvider),
+      kidId: _kidId,
+    );
+    final previous = await store.live(
+      kidId: _kidId,
+      exerciseId: c.envelope.exerciseId,
+    );
+    await c.start(resumeFrom: previous);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _director.reducedMotion = MediaQuery.disableAnimationsOf(context);
   }
 
   @override
   void dispose() {
-    _telemetry.logSessionEnd();
-    _feedback.dispose();
+    _lifecycle.dispose();
+    unawaited(_autoRead?.cancel());
+    unawaited(_audio.stopChannel(AudioChannel.narration));
+    // Not exited and not finished means the screen went away mid-session:
+    // leave the snapshot in place so the next visit resumes it.
+    _controller?.dispose();
+    _telemetry?.logSessionEnd();
+    _bridge?.dispose();
+    _director.dispose();
     super.dispose();
   }
+
+  // ── runtime path ───────────────────────────────────────────────────────
+
+  void _onRuntimeEvent(RuntimeEvent e) {
+    switch (e) {
+      case QuestionPresented(:final questionIndex):
+        final c = _controller!;
+        final plan = _planFor(c, questionIndex);
+        if (plan != null && plan.autoPlays(SpeechPart.prompt)) _speak(c, plan);
+      case QuestionCompleted(:final attempts, :final solved):
+        _questionResults.add(
+          ExerciseResult(
+            outcome: ExerciseOutcome.completed,
+            attempts: attempts,
+            correct: solved ? 1 : 0,
+            elapsedMs: 0,
+          ),
+        );
+      case _:
+    }
+  }
+
+  SpeechPlan? _planFor(ActivitySessionController c, int index) {
+    if (index >= c.envelope.questions.length) return null;
+    return SpeechPlan(
+      envelope: c.envelope,
+      question: c.envelope.questions[index],
+      readAloudEnabled: ref.read(settingsControllerProvider).readAloud,
+    );
+  }
+
+  void _speak(ActivitySessionController c, SpeechPlan plan) {
+    final source = plan.promptSource();
+    if (source == null) return;
+    unawaited(c.recordAudioRequest(SpeechPart.prompt));
+    _audio.play(
+      AudioRequest(
+        source: source,
+        channel: AudioChannel.narration,
+        priority: 10,
+      ),
+    );
+  }
+
+  int _runtimeXp() => _questionResults.fold(0, (sum, q) => sum + estimateXp(q));
+
+  void _onRuntimeDone() {
+    final c = _controller!;
+    if (c.state.phase == SessionPhase.completed &&
+        _questionResults.isNotEmpty) {
+      final attempts = _questionResults.fold(0, (s, q) => s + q.attempts);
+      final correct = _questionResults.fold(0, (s, q) => s + q.correct);
+      _handleFinished(
+        ExerciseResult(
+          outcome: ExerciseOutcome.completed,
+          attempts: attempts,
+          correct: correct,
+          elapsedMs: c.activeMs,
+          questionResults: _questionResults.length > 1
+              ? List.of(_questionResults)
+              : const [],
+        ),
+      );
+    } else {
+      Navigator.of(context).pop();
+    }
+  }
+
+  // ── shared ─────────────────────────────────────────────────────────────
 
   void _handleFinished(ExerciseResult result) {
     // Home's stat tiles are real counts, never a mastery judgment — an
     // abandoned run taught nothing worth counting as "played today".
     if (result.outcome == ExerciseOutcome.completed) {
       final db = ref.read(localDatabaseProvider);
-      final kidId = ref.read(activeKidIdProvider) ?? unpairedKidId;
-      HomeStats(db, kidId: kidId).recordExerciseCompleted(
-        elapsedMs: result.elapsedMs,
-      );
-      StreakLocal(db, kidId: kidId).recordPlayedToday();
+      HomeStats(
+        db,
+        kidId: _kidId,
+      ).recordExerciseCompleted(elapsedMs: result.elapsedMs);
+      StreakLocal(db, kidId: _kidId).recordPlayedToday();
 
       // A client-side estimate, shown immediately — `manage.py award_xp`
-      // hasn't run yet at this instant, so there's no real total to show
-      // without waiting for the next scheduled refresh (same reasoning
-      // `StreakLocal`'s own offline estimate already established). The
-      // authoritative total still comes from `ProgressState.totalXp`.
+      // hasn't run yet at this instant. The authoritative total still comes
+      // from `ProgressState.totalXp`.
       final xp = estimateXp(result);
       if (xp > 0) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -91,33 +247,43 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final registry = ref.watch(engineRegistryProvider);
+    final locale = Localizations.localeOf(context);
+    final compact = MediaQuery.sizeOf(context).width < 600;
+    final stage = CharacterStage(
+      director: _director,
+      registry: ref.read(characterRegistryProvider),
+      size: compact ? 56 : 72,
+    );
+
+    final c = _controller;
+    if (c != null) {
+      return Scaffold(
+        body: LearningActivityView(
+          controller: c,
+          locale: locale,
+          character: stage,
+          onDone: _onRuntimeDone,
+          xpEarned: _runtimeXp,
+          speakPrompt: (q) {
+            final plan = _planFor(c, q.index);
+            if (plan == null || plan.promptSource() == null) return null;
+            return () => _speak(c, plan);
+          },
+        ),
+      );
+    }
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.node.labelFr)),
-      body: SafeArea(
-        child: Column(
-          children: [
-            ValueListenableBuilder<MascotMood>(
-              valueListenable: _feedback.mood,
-              builder: (context, mood, _) => Padding(
-                padding: const EdgeInsets.all(Space.md),
-                child: TutolysMascot(mood: mood, size: 96),
-              ),
-            ),
-            Expanded(
-              child: ExerciseRunner(
-                envelope: widget.envelope,
-                registry: registry,
-                telemetry: _telemetry,
-                feedback: _feedback,
-                audio: _audio,
-                locale: Localizations.localeOf(context),
-                onFinished: _handleFinished,
-              ),
-            ),
-          ],
-        ),
+      body: LegacyEngineHost(
+        envelope: widget.envelope,
+        registry: ref.watch(engineRegistryProvider),
+        telemetry: _telemetry!,
+        feedback: _bridge!,
+        audio: _legacyAudio,
+        locale: locale,
+        character: stage,
+        onFinished: _handleFinished,
+        onClose: () => Navigator.of(context).pop(),
       ),
     );
   }

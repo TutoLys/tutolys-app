@@ -1,22 +1,27 @@
 import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-AudioRequest _req(AudioChannel c, [int priority = 0]) =>
-    AudioRequest(source: const EffectAudio('x'), channel: c, priority: priority);
+AudioRequest _req(AudioChannel c, [int priority = 0]) => AudioRequest(
+  source: const EffectAudio('x'),
+  channel: c,
+  priority: priority,
+);
 
-QuestionEnvelope _env(Map<String, Object?> extra, {Map<String, Object?>? prompt}) =>
-    QuestionEnvelope.parse({
-      'exercise_id': 'ex',
-      'version': 1,
-      'engine_key': 'mcq',
-      'skill_node_id': 's',
-      'subject': 'FR',
-      'grade': 1,
-      'rank': 0,
-      'prompt': prompt ?? {'text': 'Lis le mot', 'audio_ref': 'audio'},
-      'config': const {},
-      ...extra,
-    }).valueOrNull!;
+QuestionEnvelope _env(
+  Map<String, Object?> extra, {
+  Map<String, Object?>? prompt,
+}) => QuestionEnvelope.parse({
+  'exercise_id': 'ex',
+  'version': 1,
+  'engine_key': 'mcq',
+  'skill_node_id': 's',
+  'subject': 'FR',
+  'grade': 1,
+  'rank': 0,
+  'prompt': prompt ?? {'text': 'Lis le mot', 'audio_ref': 'audio'},
+  'config': const {},
+  ...extra,
+}).valueOrNull!;
 
 void main() {
   group('AudioLanePolicy', () {
@@ -62,27 +67,45 @@ void main() {
       final env = _env(const {});
       final plan = SpeechPlan(envelope: env, question: env.questions.single);
       expect(plan.autoPlays(SpeechPart.prompt), isTrue);
-      expect(plan.canSpeak(SpeechPart.option), isTrue);
-      expect(plan.autoPlays(SpeechPart.option), isFalse);
+      expect(
+        plan.canSpeak(SpeechPart.option),
+        isFalse,
+        reason: 'only the question, never the choices',
+      );
       final src = plan.promptSource() as PrerecordedAudio;
       expect(src.ref, 'audio');
       expect(src.exerciseId, 'ex');
     });
 
-    test('a reading assessment can forbid reading options aloud', () {
-      final env = _env({'speech_policy': {'options': 'never'}});
+    test('content can opt answer choices in to being read on request', () {
+      final env = _env({
+        'speech_policy': {'options': 'on_request'},
+      });
       final plan = SpeechPlan(envelope: env, question: env.questions.single);
-      expect(plan.canSpeak(SpeechPart.option), isFalse);
+      expect(plan.canSpeak(SpeechPart.option), isTrue);
+      expect(plan.autoPlays(SpeechPart.option), isFalse);
     });
 
     test('a forbidden prompt has no source even when an asset exists', () {
-      final env = _env({'speech_policy': {'prompt': 'never'}});
-      expect(SpeechPlan(envelope: env, question: env.questions.single).promptSource(), isNull);
+      final env = _env({
+        'speech_policy': {'prompt': 'never'},
+      });
+      expect(
+        SpeechPlan(
+          envelope: env,
+          question: env.questions.single,
+        ).promptSource(),
+        isNull,
+      );
     });
 
     test('read-aloud off stops auto-play but keeps the speaker button', () {
       final env = _env(const {});
-      final plan = SpeechPlan(envelope: env, question: env.questions.single, readAloudEnabled: false);
+      final plan = SpeechPlan(
+        envelope: env,
+        question: env.questions.single,
+        readAloudEnabled: false,
+      );
       expect(plan.autoPlays(SpeechPart.prompt), isFalse);
       expect(plan.canSpeak(SpeechPart.prompt), isTrue);
     });
@@ -95,8 +118,12 @@ void main() {
           'speech': {'text': 'sept plus cinq', 'mode': 'tts'},
         },
       );
-      final src = SpeechPlan(envelope: env, question: env.questions.single).promptSource()
-          as TtsUtterance;
+      final src =
+          SpeechPlan(
+                envelope: env,
+                question: env.questions.single,
+              ).promptSource()
+              as TtsUtterance;
       expect(src.text, 'sept plus cinq');
       expect(src.locale, 'fr-CA');
     });
@@ -111,7 +138,10 @@ void main() {
         },
       );
       expect(
-        SpeechPlan(envelope: env, question: env.questions.single).promptSource(),
+        SpeechPlan(
+          envelope: env,
+          question: env.questions.single,
+        ).promptSource(),
         isA<PrerecordedAudio>(),
       );
     });

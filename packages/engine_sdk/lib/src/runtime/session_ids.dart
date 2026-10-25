@@ -11,7 +11,11 @@ import 'package:uuid/uuid.dart';
 class SessionIds {
   SessionIds(this.activitySessionId) {
     if (!Uuid.isValidUUID(fromString: activitySessionId)) {
-      throw ArgumentError.value(activitySessionId, 'activitySessionId', 'must be a UUID');
+      throw ArgumentError.value(
+        activitySessionId,
+        'activitySessionId',
+        'must be a UUID',
+      );
     }
   }
 

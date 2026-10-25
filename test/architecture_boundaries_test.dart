@@ -10,7 +10,10 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-final _import = RegExp(r'''^\s*(?:import|export)\s+['"]([^'"]+)['"]''', multiLine: true);
+final _import = RegExp(
+  r'''^\s*(?:import|export)\s+['"]([^'"]+)['"]''',
+  multiLine: true,
+);
 
 List<(String file, String uri)> _importsUnder(String dir) {
   final root = Directory(dir);
@@ -18,7 +21,8 @@ List<(String file, String uri)> _importsUnder(String dir) {
   return [
     for (final f in root.listSync(recursive: true).whereType<File>())
       if (f.path.endsWith('.dart'))
-        for (final m in _import.allMatches(f.readAsStringSync())) (f.path, m.group(1)!),
+        for (final m in _import.allMatches(f.readAsStringSync()))
+          (f.path, m.group(1)!),
   ];
 }
 
@@ -37,7 +41,14 @@ bool _package(String uri, String name) => uri.startsWith('package:$name/');
 
 void main() {
   test('engines import only flutter, engine_sdk and design_system', () {
-    const allowed = ['flutter', 'engine_sdk', 'design_system', 'engines_core', 'meta', 'collection'];
+    const allowed = [
+      'flutter',
+      'engine_sdk',
+      'design_system',
+      'engines_core',
+      'meta',
+      'collection',
+    ];
     _expectNone(
       'packages/engines_core/lib',
       (uri) =>
@@ -70,11 +81,31 @@ void main() {
   });
 
   test('the pure runtime and contracts stay free of audio players', () {
-    for (final dir in ['packages/engine_sdk/lib/src/runtime', 'packages/engine_sdk/lib/src/contracts']) {
+    for (final dir in [
+      'packages/engine_sdk/lib/src/runtime',
+      'packages/engine_sdk/lib/src/contracts',
+    ]) {
       _expectNone(
         dir,
-        (uri) => _package(uri, 'audioplayers') || _package(uri, 'path_provider'),
+        (uri) =>
+            _package(uri, 'audioplayers') || _package(uri, 'path_provider'),
         '$dir must stay pure: testable without a platform',
+      );
+    }
+  });
+
+  test('no production code imports the engine SDK test doubles', () {
+    for (final dir in [
+      'lib',
+      'packages/engines_core/lib',
+      'packages/tutolys_motion/lib',
+    ]) {
+      _expectNone(
+        dir,
+        (uri) =>
+            uri == 'package:engine_sdk/testing.dart' ||
+            uri.contains('engine_sdk/testing/'),
+        'the fake engine exists for tests only',
       );
     }
   });

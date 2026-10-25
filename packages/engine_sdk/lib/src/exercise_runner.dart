@@ -88,7 +88,11 @@ class ExerciseRunner extends StatefulWidget {
 class _ExerciseRunnerState extends State<ExerciseRunner> {
   late final Random _random = widget.random ?? Random();
   late final DateTime Function() _clock = widget.clock ?? DateTime.now;
-  late final ExercisePromptAudio _player = ExercisePromptAudio();
+  // Created on first play, never just to be disposed: an exercise with no
+  // audio, or a child who leaves before it plays, allocates no platform
+  // player at all.
+  ExercisePromptAudio? _playerOrNull;
+  ExercisePromptAudio get _player => _playerOrNull ??= ExercisePromptAudio();
 
   bool _started = false;
   bool _finished = false;
@@ -132,7 +136,7 @@ class _ExerciseRunnerState extends State<ExerciseRunner> {
     if (_started && !_finished) {
       unawaited(widget.telemetry.logAbandon());
     }
-    _player.dispose();
+    _playerOrNull?.dispose();
     super.dispose();
   }
 

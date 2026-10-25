@@ -106,7 +106,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(PlayScreen), findsOneWidget);
-    expect(find.text('Compter jusqu’à 10'), findsWidgets);
+    // The design's exercise chrome has no title bar (ADR 0019), so the node
+    // isn't drawn as text any more; what routing owes is that it arrives.
+    expect(
+      tester.widget<PlayScreen>(find.byType(PlayScreen)).node.labelFr,
+      'Compter jusqu’à 10',
+    );
   });
 
   testWidgets('popping from play returns to the home shell', (tester) async {

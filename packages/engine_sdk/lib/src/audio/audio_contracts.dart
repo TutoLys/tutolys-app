@@ -189,12 +189,16 @@ abstract final class AudioLanePolicy {
       case AudioChannel.sfx:
         return LaneDecision(
           start: true,
-          stop: playingPriorities.containsKey(AudioChannel.sfx) ? {AudioChannel.sfx} : const {},
+          stop: playingPriorities.containsKey(AudioChannel.sfx)
+              ? {AudioChannel.sfx}
+              : const {},
         );
       case AudioChannel.music:
         return LaneDecision(
           start: true,
-          stop: playingPriorities.containsKey(AudioChannel.music) ? {AudioChannel.music} : const {},
+          stop: playingPriorities.containsKey(AudioChannel.music)
+              ? {AudioChannel.music}
+              : const {},
           duckMusic: voices.isNotEmpty,
         );
     }
@@ -207,7 +211,11 @@ abstract final class AudioLanePolicy {
 /// reading assessment that forbids reading its options aloud can't be
 /// undone by one engine forgetting the rule.
 class SpeechPlan {
-  SpeechPlan({required this.envelope, required this.question, this.readAloudEnabled = true});
+  SpeechPlan({
+    required this.envelope,
+    required this.question,
+    this.readAloudEnabled = true,
+  });
 
   final QuestionEnvelope envelope;
   final QuestionSpec question;
@@ -244,7 +252,10 @@ class SpeechPlan {
     if (speech != null && speech.mode == SpeechMode.tts) {
       final text = speech.text ?? prompt.text;
       if (text != null && text.isNotEmpty) {
-        return TtsUtterance(text: text, locale: speech.locale ?? envelope.locale);
+        return TtsUtterance(
+          text: text,
+          locale: speech.locale ?? envelope.locale,
+        );
       }
     }
     return null;

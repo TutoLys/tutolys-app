@@ -33,11 +33,15 @@ enum SessionPhase {
   failed,
   abandoned;
 
-  bool get isTerminal => this == completed || this == failed || this == abandoned;
+  bool get isTerminal =>
+      this == completed || this == failed || this == abandoned;
 
   /// Phases a learner can pause in.
   bool get isPlaying =>
-      this == presenting || this == awaitingInteraction || this == evaluating || this == feedback;
+      this == presenting ||
+      this == awaitingInteraction ||
+      this == evaluating ||
+      this == feedback;
 }
 
 class SessionState {
@@ -84,7 +88,9 @@ class SessionState {
 
   bool get canRetry {
     final outcome = lastOutcome;
-    if (outcome != Outcome.incorrect && outcome != Outcome.partial) return false;
+    if (outcome != Outcome.incorrect && outcome != Outcome.partial) {
+      return false;
+    }
     final max = maxAttempts;
     return max == null || attempts < max;
   }
@@ -111,7 +117,9 @@ class SessionState {
     attempts: attempts ?? this.attempts,
     maxAttempts: maxAttempts ?? this.maxAttempts,
     lastOutcome: clearLastOutcome ? null : (lastOutcome ?? this.lastOutcome),
-    pendingAnswer: clearPendingAnswer ? null : (pendingAnswer ?? this.pendingAnswer),
+    pendingAnswer: clearPendingAnswer
+        ? null
+        : (pendingAnswer ?? this.pendingAnswer),
     resumeTo: clearResumeTo ? null : (resumeTo ?? this.resumeTo),
     questionsCompleted: questionsCompleted ?? this.questionsCompleted,
     questionsSolved: questionsSolved ?? this.questionsSolved,
@@ -156,7 +164,9 @@ class SessionState {
         failureReason: json['failure_reason'] as String?,
       );
       if (pending != null && state.pendingAnswer == null) return null;
-      if (state.questionIndex < 0 || state.questionIndex > state.questionCount) return null;
+      if (state.questionIndex < 0 || state.questionIndex > state.questionCount) {
+        return null;
+      }
       return state;
     } on Object {
       return null;
@@ -198,7 +208,11 @@ class Evaluated extends SessionInput {
 }
 
 class EvaluationFailed extends SessionInput {
-  const EvaluationFailed({required this.reason, required this.evaluator, this.skillNodeIds = const []});
+  const EvaluationFailed({
+    required this.reason,
+    required this.evaluator,
+    this.skillNodeIds = const [],
+  });
   final String reason;
   final String evaluator;
   final List<String> skillNodeIds;
@@ -248,10 +262,15 @@ abstract final class ActivitySessionMachine {
     if (s.phase.isTerminal) return SessionStep.rejected(s);
 
     return switch ((s.phase, input)) {
-      (SessionPhase.created, StartLoading()) =>
-        SessionStep(s.copyWith(phase: SessionPhase.loading), const []),
+      (SessionPhase.created, StartLoading()) => SessionStep(
+        s.copyWith(phase: SessionPhase.loading),
+        const [],
+      ),
 
-      (SessionPhase.loading, ContentLoaded(:final questionCount, :final maxAttempts)) =>
+      (
+        SessionPhase.loading,
+        ContentLoaded(:final questionCount, :final maxAttempts),
+      ) =>
         questionCount < 1
             ? _fail(s, 'Activity has no questions.')
             : SessionStep(
@@ -264,12 +283,18 @@ abstract final class ActivitySessionMachine {
               ),
 
       (SessionPhase.ready, Begin()) => SessionStep(
-        s.copyWith(phase: SessionPhase.presenting, questionIndex: 0, attempts: 0),
+        s.copyWith(
+          phase: SessionPhase.presenting,
+          questionIndex: 0,
+          attempts: 0,
+        ),
         [QuestionPresented(questionIndex: 0, questionCount: s.questionCount)],
       ),
 
-      (SessionPhase.presenting, QuestionShown()) =>
-        SessionStep(s.copyWith(phase: SessionPhase.awaitingInteraction), const []),
+      (SessionPhase.presenting, QuestionShown()) => SessionStep(
+        s.copyWith(phase: SessionPhase.awaitingInteraction),
+        const [],
+      ),
 
       (SessionPhase.awaitingInteraction, Submit(:final answer)) => SessionStep(
         s.copyWith(
@@ -297,10 +322,18 @@ abstract final class ActivitySessionMachine {
                   lastOutcome: result.outcome,
                   clearPendingAnswer: true,
                 ),
-                [AnswerEvaluated(questionIndex: s.questionIndex, result: result)],
+                [
+                  AnswerEvaluated(
+                    questionIndex: s.questionIndex,
+                    result: result,
+                  ),
+                ],
               ),
 
-      (SessionPhase.evaluating, EvaluationFailed(:final reason, :final evaluator, :final skillNodeIds)) =>
+      (
+        SessionPhase.evaluating,
+        EvaluationFailed(:final reason, :final evaluator, :final skillNodeIds),
+      ) =>
         SessionStep(
           s.copyWith(
             phase: SessionPhase.feedback,
@@ -316,7 +349,10 @@ abstract final class ActivitySessionMachine {
                 skillNodeIds: skillNodeIds,
               ),
             ),
-            EvaluationFailedDiagnostic(questionIndex: s.questionIndex, reason: reason),
+            EvaluationFailedDiagnostic(
+              questionIndex: s.questionIndex,
+              reason: reason,
+            ),
           ],
         ),
 
@@ -332,7 +368,9 @@ abstract final class ActivitySessionMachine {
         const [SessionResumed(afterInterruption: false)],
       ),
 
-      (final phase, Interrupt()) when phase != SessionPhase.created && phase != SessionPhase.interrupted =>
+      (final phase, Interrupt())
+          when phase != SessionPhase.created &&
+              phase != SessionPhase.interrupted =>
         SessionStep(
           s.copyWith(
             phase: SessionPhase.interrupted,
@@ -354,7 +392,10 @@ abstract final class ActivitySessionMachine {
         [ActivityAbandoned(questionIndex: s.questionIndex, reason: reason)],
       ),
 
-      (SessionPhase.created || SessionPhase.loading || SessionPhase.ready, Fail(:final reason)) =>
+      (
+        SessionPhase.created || SessionPhase.loading || SessionPhase.ready,
+        Fail(:final reason),
+      ) =>
         _fail(s, reason),
 
       _ => SessionStep.rejected(s),
@@ -369,7 +410,10 @@ abstract final class ActivitySessionMachine {
   static SessionStep _continue(SessionState s) {
     if (s.canRetry) {
       return SessionStep(
-        s.copyWith(phase: SessionPhase.awaitingInteraction, clearLastOutcome: true),
+        s.copyWith(
+          phase: SessionPhase.awaitingInteraction,
+          clearLastOutcome: true,
+        ),
         const [],
       );
     }
@@ -395,7 +439,10 @@ abstract final class ActivitySessionMachine {
         ),
         [
           completed,
-          ActivityCompleted(questionsCompleted: done, questionsSolved: solvedCount),
+          ActivityCompleted(
+            questionsCompleted: done,
+            questionsSolved: solvedCount,
+          ),
         ],
       );
     }

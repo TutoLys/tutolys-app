@@ -19,55 +19,59 @@ SessionStep _run(SessionState s, List<SessionInput> inputs) {
   return step;
 }
 
-SessionState _awaiting({int questions = 2, int? maxAttempts}) => _run(SessionState.initial, [
-  const StartLoading(),
-  ContentLoaded(questionCount: questions, maxAttempts: maxAttempts),
-  const Begin(),
-  const QuestionShown(),
-]).state;
+SessionState _awaiting({int questions = 2, int? maxAttempts}) =>
+    _run(SessionState.initial, [
+      const StartLoading(),
+      ContentLoaded(questionCount: questions, maxAttempts: maxAttempts),
+      const Begin(),
+      const QuestionShown(),
+    ]).state;
 
 const _a = SingleChoiceAnswer('a');
 const _b = SingleChoiceAnswer('b');
 
 void main() {
   group('happy path', () {
-    test('two questions, each right first time, emit the learning events in order', () {
-      final events = <RuntimeEvent>[];
-      var s = SessionState.initial;
-      for (final input in <SessionInput>[
-        const StartLoading(),
-        const ContentLoaded(questionCount: 2),
-        const Begin(),
-        const QuestionShown(),
-        const Submit(_a),
-        Evaluated(_result(Outcome.correct, 1)),
-        const Continue(),
-        const QuestionShown(),
-        const Submit(_b),
-        Evaluated(_result(Outcome.correct, 1)),
-        const Continue(),
-      ]) {
-        final step = ActivitySessionMachine.reduce(s, input);
-        expect(step.accepted, isTrue, reason: '$input in ${s.phase}');
-        events.addAll(step.events);
-        s = step.state;
-      }
+    test(
+      'two questions, each right first time, emit the learning events in order',
+      () {
+        final events = <RuntimeEvent>[];
+        var s = SessionState.initial;
+        for (final input in <SessionInput>[
+          const StartLoading(),
+          const ContentLoaded(questionCount: 2),
+          const Begin(),
+          const QuestionShown(),
+          const Submit(_a),
+          Evaluated(_result(Outcome.correct, 1)),
+          const Continue(),
+          const QuestionShown(),
+          const Submit(_b),
+          Evaluated(_result(Outcome.correct, 1)),
+          const Continue(),
+        ]) {
+          final step = ActivitySessionMachine.reduce(s, input);
+          expect(step.accepted, isTrue, reason: '$input in ${s.phase}');
+          events.addAll(step.events);
+          s = step.state;
+        }
 
-      expect(s.phase, SessionPhase.completed);
-      expect(s.questionsCompleted, 2);
-      expect(s.questionsSolved, 2);
-      expect(events.map((e) => e.type), [
-        'question_presented',
-        'answer_submitted',
-        'attempt',
-        'exercise_complete',
-        'question_presented',
-        'answer_submitted',
-        'attempt',
-        'exercise_complete',
-        'activity_completed',
-      ]);
-    });
+        expect(s.phase, SessionPhase.completed);
+        expect(s.questionsCompleted, 2);
+        expect(s.questionsSolved, 2);
+        expect(events.map((e) => e.type), [
+          'question_presented',
+          'answer_submitted',
+          'attempt',
+          'exercise_complete',
+          'question_presented',
+          'answer_submitted',
+          'attempt',
+          'exercise_complete',
+          'activity_completed',
+        ]);
+      },
+    );
 
     test('an empty activity fails instead of completing', () {
       final step = _run(SessionState.initial, [const StartLoading()]);
@@ -81,23 +85,26 @@ void main() {
   });
 
   group('retry', () {
-    test('a wrong answer returns to the same question with the attempt counted', () {
-      var s = _run(_awaiting(), [
-        const Submit(_b),
-        Evaluated(_result(Outcome.incorrect, 1)),
-      ]).state;
-      expect(s.phase, SessionPhase.feedback);
+    test(
+      'a wrong answer returns to the same question with the attempt counted',
+      () {
+        var s = _run(_awaiting(), [
+          const Submit(_b),
+          Evaluated(_result(Outcome.incorrect, 1)),
+        ]).state;
+        expect(s.phase, SessionPhase.feedback);
 
-      final step = ActivitySessionMachine.reduce(s, const Continue());
-      s = step.state;
-      expect(s.phase, SessionPhase.awaitingInteraction);
-      expect(s.questionIndex, 0);
-      expect(s.attempts, 1);
-      expect(step.events, isEmpty, reason: 'a retry is not a completion');
+        final step = ActivitySessionMachine.reduce(s, const Continue());
+        s = step.state;
+        expect(s.phase, SessionPhase.awaitingInteraction);
+        expect(s.questionIndex, 0);
+        expect(s.attempts, 1);
+        expect(step.events, isEmpty, reason: 'a retry is not a completion');
 
-      final second = ActivitySessionMachine.reduce(s, const Submit(_a));
-      expect((second.events.single as AnswerSubmitted).attemptNumber, 2);
-    });
+        final second = ActivitySessionMachine.reduce(s, const Submit(_a));
+        expect((second.events.single as AnswerSubmitted).attemptNumber, 2);
+      },
+    );
 
     test('partial credit also allows a retry', () {
       final s = _run(_awaiting(), [
@@ -137,7 +144,10 @@ void main() {
 
     test('a verdict for another attempt number is rejected', () {
       final s = _run(_awaiting(), [const Submit(_a)]).state;
-      final stale = ActivitySessionMachine.reduce(s, Evaluated(_result(Outcome.correct, 2)));
+      final stale = ActivitySessionMachine.reduce(
+        s,
+        Evaluated(_result(Outcome.correct, 2)),
+      );
       expect(stale.accepted, isFalse);
       expect(stale.state.phase, SessionPhase.evaluating);
     });
@@ -148,7 +158,10 @@ void main() {
         const ContentLoaded(questionCount: 1),
         const Begin(),
       ]).state;
-      expect(ActivitySessionMachine.reduce(s, const Submit(_a)).accepted, isFalse);
+      expect(
+        ActivitySessionMachine.reduce(s, const Submit(_a)).accepted,
+        isFalse,
+      );
     });
 
     test('a terminal session rejects everything', () {
@@ -160,7 +173,11 @@ void main() {
         const Abandon(),
         const Interrupt(),
       ]) {
-        expect(ActivitySessionMachine.reduce(s, input).accepted, isFalse, reason: '$input');
+        expect(
+          ActivitySessionMachine.reduce(s, input).accepted,
+          isFalse,
+          reason: '$input',
+        );
       }
     });
   });
@@ -179,15 +196,18 @@ void main() {
       expect(step.events.whereType<EvaluationFailedDiagnostic>(), hasLength(1));
     });
 
-    test('moves on instead of retrying, so a broken evaluator cannot trap a child', () {
-      final s = _run(_awaiting(), [
-        const Submit(_a),
-        const EvaluationFailed(reason: 'boom', evaluator: 'mcq.exact@1'),
-        const Continue(),
-      ]).state;
-      expect(s.phase, SessionPhase.presenting);
-      expect(s.questionIndex, 1);
-    });
+    test(
+      'moves on instead of retrying, so a broken evaluator cannot trap a child',
+      () {
+        final s = _run(_awaiting(), [
+          const Submit(_a),
+          const EvaluationFailed(reason: 'boom', evaluator: 'mcq.exact@1'),
+          const Continue(),
+        ]).state;
+        expect(s.phase, SessionPhase.presenting);
+        expect(s.questionIndex, 1);
+      },
+    );
   });
 
   group('pause and interruption', () {
@@ -196,10 +216,16 @@ void main() {
       expect(paused.state.phase, SessionPhase.paused);
       expect(paused.events.single, isA<SessionPaused>());
 
-      final resumed = ActivitySessionMachine.reduce(paused.state, const Resume());
+      final resumed = ActivitySessionMachine.reduce(
+        paused.state,
+        const Resume(),
+      );
       expect(resumed.state.phase, SessionPhase.awaitingInteraction);
       expect(resumed.state.resumeTo, isNull);
-      expect((resumed.events.single as SessionResumed).afterInterruption, isFalse);
+      expect(
+        (resumed.events.single as SessionResumed).afterInterruption,
+        isFalse,
+      );
     });
 
     test('cannot pause before play starts', () {
@@ -207,24 +233,47 @@ void main() {
         const StartLoading(),
         const ContentLoaded(questionCount: 1),
       ]).state;
-      expect(ActivitySessionMachine.reduce(ready, const Pause()).accepted, isFalse);
+      expect(
+        ActivitySessionMachine.reduce(ready, const Pause()).accepted,
+        isFalse,
+      );
     });
 
-    test('an interrupted evaluation resumes into evaluating with its answer kept', () {
-      final s = _run(_awaiting(), [const Submit(_a), const Interrupt()]).state;
-      expect(s.phase, SessionPhase.interrupted);
+    test(
+      'an interrupted evaluation resumes into evaluating with its answer kept',
+      () {
+        final s = _run(_awaiting(), [
+          const Submit(_a),
+          const Interrupt(),
+        ]).state;
+        expect(s.phase, SessionPhase.interrupted);
 
-      final resumed = ActivitySessionMachine.reduce(s, const Resume());
-      expect(resumed.state.phase, SessionPhase.evaluating);
-      expect(resumed.state.pendingAnswer, isA<SingleChoiceAnswer>());
-      expect(resumed.state.attempts, 1, reason: 'same attempt, so same event id');
-      expect((resumed.events.single as SessionResumed).afterInterruption, isTrue);
-    });
+        final resumed = ActivitySessionMachine.reduce(s, const Resume());
+        expect(resumed.state.phase, SessionPhase.evaluating);
+        expect(resumed.state.pendingAnswer, isA<SingleChoiceAnswer>());
+        expect(
+          resumed.state.attempts,
+          1,
+          reason: 'same attempt, so same event id',
+        );
+        expect(
+          (resumed.events.single as SessionResumed).afterInterruption,
+          isTrue,
+        );
+      },
+    );
 
-    test('a session that died while paused resumes into what the pause held', () {
-      final s = _run(_awaiting(), [const Pause(), const Interrupt(), const Resume()]).state;
-      expect(s.phase, SessionPhase.awaitingInteraction);
-    });
+    test(
+      'a session that died while paused resumes into what the pause held',
+      () {
+        final s = _run(_awaiting(), [
+          const Pause(),
+          const Interrupt(),
+          const Resume(),
+        ]).state;
+        expect(s.phase, SessionPhase.awaitingInteraction);
+      },
+    );
 
     test('an interrupted session can be abandoned', () {
       final step = _run(_awaiting(), [
@@ -232,7 +281,10 @@ void main() {
         const Abandon(AbandonReason.staleResume),
       ]);
       expect(step.state.phase, SessionPhase.abandoned);
-      expect((step.events.single as ActivityAbandoned).reason, AbandonReason.staleResume);
+      expect(
+        (step.events.single as ActivityAbandoned).reason,
+        AbandonReason.staleResume,
+      );
     });
   });
 
@@ -242,7 +294,10 @@ void main() {
         SessionState.initial,
         _awaiting(),
         _run(_awaiting(), [const Submit(_a)]).state,
-        _run(_awaiting(), [const Submit(_a), Evaluated(_result(Outcome.incorrect, 1))]).state,
+        _run(_awaiting(), [
+          const Submit(_a),
+          Evaluated(_result(Outcome.incorrect, 1)),
+        ]).state,
         _run(_awaiting(), [const Pause()]).state,
         _run(_awaiting(), [const Submit(_a), const Interrupt()]).state,
       ];

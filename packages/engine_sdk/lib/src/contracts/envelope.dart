@@ -52,7 +52,11 @@ enum SpeechTrigger {
 /// How a piece of text should *sound*, which may differ from how it reads:
 /// "7 + 5" is spoken "sept plus cinq".
 class SpeechSpec {
-  const SpeechSpec({this.text, this.locale, this.mode = SpeechMode.prerecorded});
+  const SpeechSpec({
+    this.text,
+    this.locale,
+    this.mode = SpeechMode.prerecorded,
+  });
 
   final String? text;
   final String? locale;
@@ -62,11 +66,14 @@ class SpeechSpec {
 class SpeechPolicy {
   const SpeechPolicy({
     this.prompt = SpeechTrigger.auto,
-    this.options = SpeechTrigger.onRequest,
+    this.options = SpeechTrigger.never,
     this.feedback = SpeechTrigger.onRequest,
   });
 
-  /// v1 behaviour: the runner auto-plays the prompt's audio (ADR 0013).
+  /// v1 behaviour: the runner auto-plays the prompt's audio (ADR 0013), and
+  /// answer choices are **never** read unless the content opts in — Hafid's
+  /// explicit correction, recorded in the design's Decision Log ("only the
+  /// question").
   static const v1Default = SpeechPolicy();
 
   final SpeechTrigger prompt;
@@ -86,7 +93,11 @@ class PromptSpec {
 }
 
 class EvaluationPolicy {
-  const EvaluationPolicy({this.policy = 'exact', this.version = 1, this.maxAttempts});
+  const EvaluationPolicy({
+    this.policy = 'exact',
+    this.version = 1,
+    this.maxAttempts,
+  });
 
   static const v1Default = EvaluationPolicy();
 
@@ -189,7 +200,11 @@ class QuestionEnvelope {
           r.errors.add('config.questions[$i] must be an object');
           continue;
         }
-        final qr = _Reader(q.cast<String, Object?>(), r.errors, 'config.questions[$i].');
+        final qr = _Reader(
+          q.cast<String, Object?>(),
+          r.errors,
+          'config.questions[$i].',
+        );
         questions.add(
           QuestionSpec(
             index: i,
@@ -219,13 +234,15 @@ class QuestionEnvelope {
         final v = policyMap[key];
         if (v == null) return fallback;
         final parsed = SpeechTrigger.parse(v);
-        if (parsed == null) r.errors.add('speech_policy.$key is not a known trigger');
+        if (parsed == null) {
+          r.errors.add('speech_policy.$key is not a known trigger');
+        }
         return parsed ?? fallback;
       }
 
       speechPolicy = SpeechPolicy(
         prompt: trigger('prompt', SpeechTrigger.auto),
-        options: trigger('options', SpeechTrigger.onRequest),
+        options: trigger('options', SpeechTrigger.never),
         feedback: trigger('feedback', SpeechTrigger.onRequest),
       );
     }
@@ -276,7 +293,11 @@ class QuestionEnvelope {
     );
   }
 
-  static PromptSpec _parsePrompt(_Reader parent, Map<String, Object?>? m, String path) {
+  static PromptSpec _parsePrompt(
+    _Reader parent,
+    Map<String, Object?>? m,
+    String path,
+  ) {
     if (m == null) return PromptSpec.empty;
     final r = _Reader(m, parent.errors, '${parent.prefix}$path.');
     final speechMap = r.optMap('speech');
@@ -288,7 +309,9 @@ class QuestionEnvelope {
         'tts' => SpeechMode.tts,
         _ => null,
       };
-      if (mode == null) parent.errors.add('${r.prefix}speech.mode is not a known mode');
+      if (mode == null) {
+        parent.errors.add('${r.prefix}speech.mode is not a known mode');
+      }
       speech = SpeechSpec(
         text: sr.optString('text'),
         locale: sr.optString('locale'),
@@ -326,7 +349,9 @@ class AppVersion implements Comparable<AppVersion> {
 
   @override
   int compareTo(AppVersion other) {
-    final n = parts.length > other.parts.length ? parts.length : other.parts.length;
+    final n = parts.length > other.parts.length
+        ? parts.length
+        : other.parts.length;
     for (var i = 0; i < n; i++) {
       final a = i < parts.length ? parts[i] : 0;
       final b = i < other.parts.length ? other.parts[i] : 0;

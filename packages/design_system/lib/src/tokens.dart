@@ -280,6 +280,8 @@ class VillagePalette {
     required this.navActiveFill,
     required this.navHoverFill,
     required this.goldPale,
+    required this.successPale,
+    required this.retryPale,
     required this.isDark,
   });
 
@@ -301,6 +303,8 @@ class VillagePalette {
     shadowSmall: VillageColors.shadowSmall,
     navActiveFill: Color(0xFFE8F0FF),
     goldPale: VillageColors.goldPale,
+    successPale: VillageColors.successPale,
+    retryPale: VillageColors.retryPale,
     navHoverFill: Color(0xFFF4F8FF),
     isDark: false,
   );
@@ -323,6 +327,8 @@ class VillagePalette {
     shadowSmall: VillageDarkColors.shadowSmall,
     navActiveFill: VillageDarkColors.bluePale,
     goldPale: VillageDarkColors.goldPale,
+    successPale: VillageDarkColors.successPale,
+    retryPale: VillageDarkColors.retryPale,
     navHoverFill: VillageDarkColors.bluePale,
     isDark: true,
   );
@@ -348,6 +354,12 @@ class VillagePalette {
   /// `--gold-pale`: the ground behind gold text, e.g. a "Maîtrisé" pill. A
   /// background, so dark mode inverts it to deep brown rather than darkening.
   final Color goldPale;
+
+  /// `--success-pale` / `--retry-pale`: the exercise feedback banner's
+  /// grounds (03-exercise-engines.html `.exo-feedback`). Backgrounds, so
+  /// dark mode inverts them to deep green and deep brown.
+  final Color successPale;
+  final Color retryPale;
   final bool isDark;
 
   static VillagePalette of(BuildContext context) =>

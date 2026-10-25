@@ -2816,6 +2816,388 @@ class AudioCacheTableCompanion extends UpdateCompanion<CachedAudio> {
   }
 }
 
+class $ActivitySessionTableTable extends ActivitySessionTable
+    with TableInfo<$ActivitySessionTableTable, ActivitySessionRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ActivitySessionTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _activitySessionIdMeta = const VerificationMeta(
+    'activitySessionId',
+  );
+  @override
+  late final GeneratedColumn<String> activitySessionId =
+      GeneratedColumn<String>(
+        'activity_session_id',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _kidIdMeta = const VerificationMeta('kidId');
+  @override
+  late final GeneratedColumn<String> kidId = GeneratedColumn<String>(
+    'kid_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _exerciseIdMeta = const VerificationMeta(
+    'exerciseId',
+  );
+  @override
+  late final GeneratedColumn<String> exerciseId = GeneratedColumn<String>(
+    'exercise_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _snapshotMeta = const VerificationMeta(
+    'snapshot',
+  );
+  @override
+  late final GeneratedColumn<String> snapshot = GeneratedColumn<String>(
+    'snapshot',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    activitySessionId,
+    kidId,
+    exerciseId,
+    snapshot,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'activity_session';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ActivitySessionRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('activity_session_id')) {
+      context.handle(
+        _activitySessionIdMeta,
+        activitySessionId.isAcceptableOrUnknown(
+          data['activity_session_id']!,
+          _activitySessionIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_activitySessionIdMeta);
+    }
+    if (data.containsKey('kid_id')) {
+      context.handle(
+        _kidIdMeta,
+        kidId.isAcceptableOrUnknown(data['kid_id']!, _kidIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kidIdMeta);
+    }
+    if (data.containsKey('exercise_id')) {
+      context.handle(
+        _exerciseIdMeta,
+        exerciseId.isAcceptableOrUnknown(data['exercise_id']!, _exerciseIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_exerciseIdMeta);
+    }
+    if (data.containsKey('snapshot')) {
+      context.handle(
+        _snapshotMeta,
+        snapshot.isAcceptableOrUnknown(data['snapshot']!, _snapshotMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_snapshotMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {activitySessionId};
+  @override
+  ActivitySessionRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ActivitySessionRow(
+      activitySessionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}activity_session_id'],
+      )!,
+      kidId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kid_id'],
+      )!,
+      exerciseId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}exercise_id'],
+      )!,
+      snapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}snapshot'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ActivitySessionTableTable createAlias(String alias) {
+    return $ActivitySessionTableTable(attachedDatabase, alias);
+  }
+}
+
+class ActivitySessionRow extends DataClass
+    implements Insertable<ActivitySessionRow> {
+  final String activitySessionId;
+
+  /// Per kid, like everything else a child produces (ADR 0014).
+  final String kidId;
+  final String exerciseId;
+
+  /// `SessionSnapshot.toJson()`. One JSON column rather than a column per
+  /// field: the snapshot is versioned by its own reader, which rejects what
+  /// it can't trust, so its shape can grow without a migration.
+  final String snapshot;
+  final DateTime updatedAt;
+  const ActivitySessionRow({
+    required this.activitySessionId,
+    required this.kidId,
+    required this.exerciseId,
+    required this.snapshot,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['activity_session_id'] = Variable<String>(activitySessionId);
+    map['kid_id'] = Variable<String>(kidId);
+    map['exercise_id'] = Variable<String>(exerciseId);
+    map['snapshot'] = Variable<String>(snapshot);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  ActivitySessionTableCompanion toCompanion(bool nullToAbsent) {
+    return ActivitySessionTableCompanion(
+      activitySessionId: Value(activitySessionId),
+      kidId: Value(kidId),
+      exerciseId: Value(exerciseId),
+      snapshot: Value(snapshot),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory ActivitySessionRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ActivitySessionRow(
+      activitySessionId: serializer.fromJson<String>(json['activitySessionId']),
+      kidId: serializer.fromJson<String>(json['kidId']),
+      exerciseId: serializer.fromJson<String>(json['exerciseId']),
+      snapshot: serializer.fromJson<String>(json['snapshot']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'activitySessionId': serializer.toJson<String>(activitySessionId),
+      'kidId': serializer.toJson<String>(kidId),
+      'exerciseId': serializer.toJson<String>(exerciseId),
+      'snapshot': serializer.toJson<String>(snapshot),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  ActivitySessionRow copyWith({
+    String? activitySessionId,
+    String? kidId,
+    String? exerciseId,
+    String? snapshot,
+    DateTime? updatedAt,
+  }) => ActivitySessionRow(
+    activitySessionId: activitySessionId ?? this.activitySessionId,
+    kidId: kidId ?? this.kidId,
+    exerciseId: exerciseId ?? this.exerciseId,
+    snapshot: snapshot ?? this.snapshot,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  ActivitySessionRow copyWithCompanion(ActivitySessionTableCompanion data) {
+    return ActivitySessionRow(
+      activitySessionId: data.activitySessionId.present
+          ? data.activitySessionId.value
+          : this.activitySessionId,
+      kidId: data.kidId.present ? data.kidId.value : this.kidId,
+      exerciseId: data.exerciseId.present
+          ? data.exerciseId.value
+          : this.exerciseId,
+      snapshot: data.snapshot.present ? data.snapshot.value : this.snapshot,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ActivitySessionRow(')
+          ..write('activitySessionId: $activitySessionId, ')
+          ..write('kidId: $kidId, ')
+          ..write('exerciseId: $exerciseId, ')
+          ..write('snapshot: $snapshot, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(activitySessionId, kidId, exerciseId, snapshot, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ActivitySessionRow &&
+          other.activitySessionId == this.activitySessionId &&
+          other.kidId == this.kidId &&
+          other.exerciseId == this.exerciseId &&
+          other.snapshot == this.snapshot &&
+          other.updatedAt == this.updatedAt);
+}
+
+class ActivitySessionTableCompanion
+    extends UpdateCompanion<ActivitySessionRow> {
+  final Value<String> activitySessionId;
+  final Value<String> kidId;
+  final Value<String> exerciseId;
+  final Value<String> snapshot;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const ActivitySessionTableCompanion({
+    this.activitySessionId = const Value.absent(),
+    this.kidId = const Value.absent(),
+    this.exerciseId = const Value.absent(),
+    this.snapshot = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ActivitySessionTableCompanion.insert({
+    required String activitySessionId,
+    required String kidId,
+    required String exerciseId,
+    required String snapshot,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : activitySessionId = Value(activitySessionId),
+       kidId = Value(kidId),
+       exerciseId = Value(exerciseId),
+       snapshot = Value(snapshot),
+       updatedAt = Value(updatedAt);
+  static Insertable<ActivitySessionRow> custom({
+    Expression<String>? activitySessionId,
+    Expression<String>? kidId,
+    Expression<String>? exerciseId,
+    Expression<String>? snapshot,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (activitySessionId != null) 'activity_session_id': activitySessionId,
+      if (kidId != null) 'kid_id': kidId,
+      if (exerciseId != null) 'exercise_id': exerciseId,
+      if (snapshot != null) 'snapshot': snapshot,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ActivitySessionTableCompanion copyWith({
+    Value<String>? activitySessionId,
+    Value<String>? kidId,
+    Value<String>? exerciseId,
+    Value<String>? snapshot,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return ActivitySessionTableCompanion(
+      activitySessionId: activitySessionId ?? this.activitySessionId,
+      kidId: kidId ?? this.kidId,
+      exerciseId: exerciseId ?? this.exerciseId,
+      snapshot: snapshot ?? this.snapshot,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (activitySessionId.present) {
+      map['activity_session_id'] = Variable<String>(activitySessionId.value);
+    }
+    if (kidId.present) {
+      map['kid_id'] = Variable<String>(kidId.value);
+    }
+    if (exerciseId.present) {
+      map['exercise_id'] = Variable<String>(exerciseId.value);
+    }
+    if (snapshot.present) {
+      map['snapshot'] = Variable<String>(snapshot.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ActivitySessionTableCompanion(')
+          ..write('activitySessionId: $activitySessionId, ')
+          ..write('kidId: $kidId, ')
+          ..write('exerciseId: $exerciseId, ')
+          ..write('snapshot: $snapshot, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$LocalDatabase extends GeneratedDatabase {
   _$LocalDatabase(QueryExecutor e) : super(e);
   $LocalDatabaseManager get managers => $LocalDatabaseManager(this);
@@ -2834,6 +3216,8 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
   late final $AudioCacheTableTable audioCacheTable = $AudioCacheTableTable(
     this,
   );
+  late final $ActivitySessionTableTable activitySessionTable =
+      $ActivitySessionTableTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2846,6 +3230,7 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
     appStateTable,
     playedDateTable,
     audioCacheTable,
+    activitySessionTable,
   ];
   @override
   DriftDatabaseOptions get options =>
@@ -4458,6 +4843,237 @@ typedef $$AudioCacheTableTableProcessedTableManager =
       CachedAudio,
       PrefetchHooks Function()
     >;
+typedef $$ActivitySessionTableTableCreateCompanionBuilder =
+    ActivitySessionTableCompanion Function({
+      required String activitySessionId,
+      required String kidId,
+      required String exerciseId,
+      required String snapshot,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$ActivitySessionTableTableUpdateCompanionBuilder =
+    ActivitySessionTableCompanion Function({
+      Value<String> activitySessionId,
+      Value<String> kidId,
+      Value<String> exerciseId,
+      Value<String> snapshot,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$ActivitySessionTableTableFilterComposer
+    extends Composer<_$LocalDatabase, $ActivitySessionTableTable> {
+  $$ActivitySessionTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get activitySessionId => $composableBuilder(
+    column: $table.activitySessionId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kidId => $composableBuilder(
+    column: $table.kidId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get exerciseId => $composableBuilder(
+    column: $table.exerciseId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get snapshot => $composableBuilder(
+    column: $table.snapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ActivitySessionTableTableOrderingComposer
+    extends Composer<_$LocalDatabase, $ActivitySessionTableTable> {
+  $$ActivitySessionTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get activitySessionId => $composableBuilder(
+    column: $table.activitySessionId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kidId => $composableBuilder(
+    column: $table.kidId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get exerciseId => $composableBuilder(
+    column: $table.exerciseId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get snapshot => $composableBuilder(
+    column: $table.snapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ActivitySessionTableTableAnnotationComposer
+    extends Composer<_$LocalDatabase, $ActivitySessionTableTable> {
+  $$ActivitySessionTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get activitySessionId => $composableBuilder(
+    column: $table.activitySessionId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get kidId =>
+      $composableBuilder(column: $table.kidId, builder: (column) => column);
+
+  GeneratedColumn<String> get exerciseId => $composableBuilder(
+    column: $table.exerciseId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get snapshot =>
+      $composableBuilder(column: $table.snapshot, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$ActivitySessionTableTableTableManager
+    extends
+        RootTableManager<
+          _$LocalDatabase,
+          $ActivitySessionTableTable,
+          ActivitySessionRow,
+          $$ActivitySessionTableTableFilterComposer,
+          $$ActivitySessionTableTableOrderingComposer,
+          $$ActivitySessionTableTableAnnotationComposer,
+          $$ActivitySessionTableTableCreateCompanionBuilder,
+          $$ActivitySessionTableTableUpdateCompanionBuilder,
+          (
+            ActivitySessionRow,
+            BaseReferences<
+              _$LocalDatabase,
+              $ActivitySessionTableTable,
+              ActivitySessionRow
+            >,
+          ),
+          ActivitySessionRow,
+          PrefetchHooks Function()
+        > {
+  $$ActivitySessionTableTableTableManager(
+    _$LocalDatabase db,
+    $ActivitySessionTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ActivitySessionTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ActivitySessionTableTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ActivitySessionTableTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> activitySessionId = const Value.absent(),
+                Value<String> kidId = const Value.absent(),
+                Value<String> exerciseId = const Value.absent(),
+                Value<String> snapshot = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ActivitySessionTableCompanion(
+                activitySessionId: activitySessionId,
+                kidId: kidId,
+                exerciseId: exerciseId,
+                snapshot: snapshot,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String activitySessionId,
+                required String kidId,
+                required String exerciseId,
+                required String snapshot,
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ActivitySessionTableCompanion.insert(
+                activitySessionId: activitySessionId,
+                kidId: kidId,
+                exerciseId: exerciseId,
+                snapshot: snapshot,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ActivitySessionTableTable, ActivitySessionRow>(
+                    table,
+                  ),
+                  BaseReferences<
+                    _$LocalDatabase,
+                    $ActivitySessionTableTable,
+                    ActivitySessionRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ActivitySessionTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$LocalDatabase,
+      $ActivitySessionTableTable,
+      ActivitySessionRow,
+      $$ActivitySessionTableTableFilterComposer,
+      $$ActivitySessionTableTableOrderingComposer,
+      $$ActivitySessionTableTableAnnotationComposer,
+      $$ActivitySessionTableTableCreateCompanionBuilder,
+      $$ActivitySessionTableTableUpdateCompanionBuilder,
+      (
+        ActivitySessionRow,
+        BaseReferences<
+          _$LocalDatabase,
+          $ActivitySessionTableTable,
+          ActivitySessionRow
+        >,
+      ),
+      ActivitySessionRow,
+      PrefetchHooks Function()
+    >;
 
 class $LocalDatabaseManager {
   final _$LocalDatabase _db;
@@ -4476,4 +5092,6 @@ class $LocalDatabaseManager {
       $$PlayedDateTableTableTableManager(_db, _db.playedDateTable);
   $$AudioCacheTableTableTableManager get audioCacheTable =>
       $$AudioCacheTableTableTableManager(_db, _db.audioCacheTable);
+  $$ActivitySessionTableTableTableManager get activitySessionTable =>
+      $$ActivitySessionTableTableTableManager(_db, _db.activitySessionTable);
 }

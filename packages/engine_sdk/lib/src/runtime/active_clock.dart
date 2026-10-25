@@ -36,6 +36,8 @@ class ActiveClock {
 
   int get activeMs {
     final since = _runningSince;
-    return since == null ? _bankedMs : _bankedMs + (_now() - since).inMilliseconds;
+    return since == null
+        ? _bankedMs
+        : _bankedMs + (_now() - since).inMilliseconds;
   }
 }
