@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/i18n/strings.dart';
+import 'skill_path.dart';
 import '../../core/routing/paired_router.dart';
 import '../../data/local_db/database.dart';
 import '../home/home_controller.dart';
@@ -21,18 +22,16 @@ class PathScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final s = context.s;
     final pathState = ref.watch(pathControllerProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: Text(s.pathTitle)),
-      body: SafeArea(
-        child: switch (pathState) {
-          PathState(loading: true) => const _Loading(),
-          PathState(leaves: []) => _Empty(offline: pathState.offline),
-          _ => _SkillPath(state: pathState),
-        },
-      ),
+    // No Scaffold or AppBar: the shell already owns the chrome, and a
+    // second app bar under the header was the duplication the Village had.
+    return SafeArea(
+      child: switch (pathState) {
+        PathState(loading: true) => const _Loading(),
+        PathState(leaves: []) => _Empty(offline: pathState.offline),
+        _ => _CartePage(state: pathState),
+      },
     );
   }
 }
@@ -462,5 +461,91 @@ class _PathNodePlaced extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Carte — the design's skill path for one subject.
+///
+/// Node states come from the only real signal this screen has: a node with a
+/// synced exercise is playable, one without is locked. Mastery per node is
+/// not modelled yet, so nothing is drawn as `mastered` — a gold star a kid
+/// cannot earn is worse than a blue one they can.
+class _CartePage extends ConsumerWidget {
+  const _CartePage({required this.state});
+
+  final PathState state;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = VillagePalette.of(context);
+    final t = context.s;
+
+    final nodes = [
+      for (final leaf in state.leaves)
+        PathNode(
+          id: leaf.id,
+          // The curriculum carries both labels; show the one matching the
+          // kid's language, falling back to French — a missing English
+          // label is a content gap, not a reason to show nothing.
+          label: Localizations.localeOf(context).languageCode == 'en' &&
+                  leaf.labelEn.isNotEmpty
+              ? leaf.labelEn
+              : leaf.labelFr,
+          state: state.exerciseByNodeId.containsKey(leaf.id)
+              ? PathNodeState.available
+              : PathNodeState.locked,
+        ),
+    ];
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(Space.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            t.subjectMath.toUpperCase(),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.66,
+              color: p.inkMuted,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            t.pathTitle,
+            style: TextStyle(
+              fontFamily: VillageType.display,
+              fontWeight: FontWeight.w700,
+              fontSize: 21,
+              color: p.ink,
+            ),
+          ),
+          const SizedBox(height: Space.lg),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.4),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.6)),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 30),
+              child: SkillPath(
+                nodes: nodes,
+                onTapNode: (node) => _play(context, ref, node),
+              ),
+            ),
+          ),
+          const SizedBox(height: Space.xl),
+        ],
+      ),
+    );
+  }
+
+  void _play(BuildContext context, WidgetRef ref, PathNode node) {
+    final envelope = state.exerciseByNodeId[node.id];
+    if (envelope == null) return;
+    final leaf = state.leaves.firstWhere((l) => l.id == node.id);
+    GoRouter.of(context).push('/play', extra: PlayRequest(node: leaf, envelope: envelope));
   }
 }

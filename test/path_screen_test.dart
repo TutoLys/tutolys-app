@@ -171,11 +171,11 @@ void main() {
 
     // Tapping the node opens its quest card rather than navigating
     // straight away — a second, explicit tap on "Jouer" commits to it.
-    await tester.tap(find.text('Compter'));
+    // The design plays on the orb itself — there is no intermediate card
+    // between tapping a node and the exercise opening.
+    await tester.tap(find.byIcon(Icons.play_arrow_rounded));
     await tester.pumpAndSettle();
-    expect(find.byType(PlayScreen), findsNothing);
 
-    await tester.tap(find.text('Jouer'));
     await tester.pumpAndSettle();
 
     expect(find.byType(PlayScreen), findsOneWidget);
@@ -202,14 +202,14 @@ void main() {
     await tester.tap(find.text('Carte'));
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.lock_outline), findsOneWidget);
+    expect(find.byIcon(Icons.lock_rounded), findsOneWidget);
 
     // The tap opens the quest card (same as an available node) — it just
     // never offers a real "Jouer" button, only a disabled locked one.
-    await tester.tap(find.text('Compter'));
+    // A locked orb has no handler at all, so tapping it cannot play.
+    await tester.tap(find.byIcon(Icons.lock_rounded), warnIfMissed: false);
     await tester.pumpAndSettle();
 
-    expect(find.text('Jouer'), findsNothing);
     expect(find.byType(PlayScreen), findsNothing);
     expect(find.byType(PathScreen), findsOneWidget);
   });
