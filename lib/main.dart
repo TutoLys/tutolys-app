@@ -136,11 +136,8 @@ class TutolysApp extends ConsumerWidget {
       // in-app toggle is off. The app may add a reason to disable
       // animations; it may not take one away.
       builder: (context, child) {
-        final media = MediaQuery.of(context);
-        return MediaQuery(
-          data: media.copyWith(
-            disableAnimations: media.disableAnimations || reduceMotion,
-          ),
+        return ReduceMotionScope(
+          reduceMotion: reduceMotion,
           child: const _RootNavigator(),
         );
       },
@@ -214,6 +211,32 @@ class MisconfiguredApp extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Réglages' "Réduire les animations", OR-ed into Flutter's own
+/// `MediaQuery.disableAnimations`, so every consumer reading it follows,
+/// games included. It can add a reason to reduce motion, never take the
+/// platform's away.
+class ReduceMotionScope extends StatelessWidget {
+  const ReduceMotionScope({
+    required this.reduceMotion,
+    required this.child,
+    super.key,
+  });
+
+  final bool reduceMotion;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    return MediaQuery(
+      data: media.copyWith(
+        disableAnimations: media.disableAnimations || reduceMotion,
+      ),
+      child: child,
     );
   }
 }

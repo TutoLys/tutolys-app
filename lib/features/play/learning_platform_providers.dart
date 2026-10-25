@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:engine_sdk/engine_sdk.dart';
 import 'package:engines_core/engines_core.dart';
 import 'package:flutter/widgets.dart';
@@ -65,14 +67,40 @@ final characterRegistryProvider = Provider<CharacterRegistry>(
 /// as data here, never as a name inside an engine.
 const defaultCast = CastAssignment({ActorRole.guide: 'fox'});
 
+/// Where the coordinator finds a clip's bytes: the synced audio cache.
+final audioResolverProvider = Provider<AudioResolver>(
+  (ref) => DriftAudioResolver(ref.watch(localDatabaseProvider)),
+);
+
+/// The coordinator's players. Null is the platform's own; tests put fakes
+/// here to check that Réglages reaches what actually plays.
+final channelPlayerFactoryProvider =
+    Provider<ChannelPlayer Function(AudioChannel)?>((ref) => null);
+
 /// The app's one audio coordinator: one player per channel for the whole
 /// app, so a question being read and a character speaking can never overlap.
 final audioCoordinatorProvider = Provider<AudioCoordinator>((ref) {
   final coordinator = ChannelAudioCoordinator(
-    resolver: DriftAudioResolver(ref.watch(localDatabaseProvider)),
+    resolver: ref.watch(audioResolverProvider),
+    playerFactory: ref.watch(channelPlayerFactoryProvider),
     effectsEnabled: () => ref.read(settingsControllerProvider).soundEffects,
     musicEnabled: () => ref.read(settingsControllerProvider).music,
+    masterVolume: () => ref.read(settingsControllerProvider).volume / 100,
   );
+  // Réglages applies live: the toggles are read on every request, and
+  // these two act on what is already playing.
+  ref.listen(settingsControllerProvider.select((s) => s.volume), (_, _) {
+    unawaited(coordinator.refreshVolume());
+  });
+  ref.listen(settingsControllerProvider.select((s) => s.readAloud), (_, on) {
+    if (!on) unawaited(coordinator.stopChannel(AudioChannel.narration));
+  });
+  ref.listen(settingsControllerProvider.select((s) => s.music), (_, on) {
+    if (!on) unawaited(coordinator.stopChannel(AudioChannel.music));
+  });
+  ref.listen(settingsControllerProvider.select((s) => s.soundEffects), (_, on) {
+    if (!on) unawaited(coordinator.stopChannel(AudioChannel.sfx));
+  });
   ref.onDispose(coordinator.dispose);
   return coordinator;
 });

@@ -103,6 +103,7 @@ class ChannelAudioCoordinator implements AudioCoordinator {
     this.effectBytes,
     this.effectsEnabled,
     this.musicEnabled,
+    this.masterVolume,
     this.duckedMusicVolume = 0.3,
   }) : _factory = playerFactory ?? ((_) => platformChannelPlayer());
 
@@ -116,7 +117,15 @@ class ChannelAudioCoordinator implements AudioCoordinator {
   /// Read on every request, so a Réglages change applies immediately.
   final bool Function()? effectsEnabled;
   final bool Function()? musicEnabled;
+
+  /// Réglages' overall volume, 0..1, applied to every channel before each
+  /// play. A change while something plays is pushed by [refreshVolume].
+  /// Null means full volume.
+  final double Function()? masterVolume;
+
+  /// Music under a voice plays at this fraction of [masterVolume].
   final double duckedMusicVolume;
+  bool _ducked = false;
 
   final ChannelPlayer Function(AudioChannel) _factory;
   final Map<AudioChannel, ChannelPlayer> _players = {};
@@ -130,6 +139,21 @@ class ChannelAudioCoordinator implements AudioCoordinator {
 
   ChannelPlayer _player(AudioChannel c) =>
       _players.putIfAbsent(c, () => _factory(c));
+
+  double _levelFor(AudioChannel c) {
+    final master = (masterVolume?.call() ?? 1).clamp(0.0, 1.0);
+    return c == AudioChannel.music && _ducked
+        ? master * duckedMusicVolume
+        : master;
+  }
+
+  /// Re-applies [masterVolume] to every player, for a Réglages change
+  /// while a sound is playing.
+  Future<void> refreshVolume() async {
+    for (final MapEntry(:key, :value) in _players.entries) {
+      await _safely(() => value.setVolume(_levelFor(key)));
+    }
+  }
 
   void _emit(int id, PlaybackPhase phase) {
     if (!_disposed) _status.add(PlaybackStatus(id, phase));
@@ -178,8 +202,11 @@ class ChannelAudioCoordinator implements AudioCoordinator {
     _playing[channel] = entry;
     _emit(entry.requestId, PlaybackPhase.loading);
     if (decision.duckMusic && channel.isVoice) {
+      _ducked = true;
       await _safely(
-        () => _player(AudioChannel.music).setVolume(duckedMusicVolume),
+        () =>
+            _player(AudioChannel.music)
+                .setVolume(_levelFor(AudioChannel.music)),
       );
     }
 
@@ -215,6 +242,7 @@ class ChannelAudioCoordinator implements AudioCoordinator {
       EffectAudio(:final name) => 'sfx_$name',
       TtsUtterance() => 'tts',
     };
+    await _safely(() => player.setVolume(_levelFor(channel)));
     final ok = await _safely(() => player.play(bytes, cacheKey: key));
     if (!ok) {
       _finish(channel, entry, PlaybackPhase.error);
@@ -250,7 +278,14 @@ class ChannelAudioCoordinator implements AudioCoordinator {
     if (channel.isVoice &&
         !_playing.keys.any((c) => c.isVoice) &&
         _players.containsKey(AudioChannel.music)) {
-      unawaited(_safely(() => _players[AudioChannel.music]!.setVolume(1)));
+      _ducked = false;
+      unawaited(
+        _safely(
+          () => _players[AudioChannel.music]!.setVolume(
+            _levelFor(AudioChannel.music),
+          ),
+        ),
+      );
     }
   }
 

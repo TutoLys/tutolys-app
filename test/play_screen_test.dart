@@ -140,6 +140,7 @@ void main() {
     bool runtime = false,
     bool legacyOnly = false,
     bool english = false,
+    bool dark = false,
     List<CelebrationRowData> celebrationRows = const [],
   }) => ProviderScope(
     overrides: [
@@ -163,7 +164,7 @@ void main() {
     child: MediaQuery(
       data: const MediaQueryData(disableAnimations: true),
       child: MaterialApp(
-        theme: TutolysTheme.village(),
+        theme: dark ? TutolysTheme.villageDark() : TutolysTheme.village(),
         locale: english ? const Locale('en', 'CA') : const Locale('fr', 'CA'),
         supportedLocales: const [Locale('fr', 'CA'), Locale('en', 'CA')],
         localizationsDelegates: const [
@@ -475,6 +476,19 @@ void main() {
       );
     },
   );
+
+  testWidgets('in the dark theme, the game chrome is dark too', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app(_mcqEnvelope, dark: true));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await settle(tester);
+
+    final chrome = tester.element(find.text('VALIDER'));
+    expect(VillagePalette.of(chrome).isDark, isTrue);
+    expect(Theme.of(chrome).brightness, Brightness.dark);
+  });
 
   testWidgets(
     'in English, the game chrome is English (content stays as authored)',

@@ -214,4 +214,50 @@ void main() {
     expect(await h.done, PlaybackPhase.stopped);
     expect(players[AudioChannel.narration]!.log.last, 'dispose');
   });
+
+  group('master volume (Réglages)', () {
+    test('every play is set to the master volume first', () async {
+      var master = 0.7;
+      final audio = ChannelAudioCoordinator(
+        resolver: resolver,
+        playerFactory: (c) => players.putIfAbsent(c, FakePlayer.new),
+        masterVolume: () => master,
+      );
+      audio.play(prompt());
+      await pumpEventQueue();
+      expect(players[AudioChannel.narration]!.volume, 0.7);
+
+      // Moved while playing: pushed at once, not at the next play.
+      master = 0.2;
+      await audio.refreshVolume();
+      expect(players[AudioChannel.narration]!.volume, 0.2);
+    });
+
+    test(
+      'ducked music is a fraction of the master, not of full volume',
+      () async {
+        resolver.put('ex', 'music', Uint8List(4));
+        final audio = ChannelAudioCoordinator(
+          resolver: resolver,
+          playerFactory: (c) => players.putIfAbsent(c, FakePlayer.new),
+          masterVolume: () => 0.5,
+        );
+        audio.play(
+          const AudioRequest(
+            source: PrerecordedAudio(exerciseId: 'ex', ref: 'music'),
+            channel: AudioChannel.music,
+            priority: 1,
+          ),
+        );
+        await pumpEventQueue();
+        expect(players[AudioChannel.music]!.volume, 0.5);
+        audio.play(prompt());
+        await pumpEventQueue();
+        expect(players[AudioChannel.music]!.volume, closeTo(0.15, 1e-9));
+        players[AudioChannel.narration]!.finish();
+        await pumpEventQueue();
+        expect(players[AudioChannel.music]!.volume, 0.5);
+      },
+    );
+  });
 }
