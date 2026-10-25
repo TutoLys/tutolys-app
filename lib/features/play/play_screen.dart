@@ -85,6 +85,13 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   @override
   void initState() {
     super.initState();
+    final lessonId = widget.envelope['exercise_id'] as String?;
+    unawaited(
+      ref.read(nodeProgressProvider.future).then((done) {
+        final ids = done[widget.node.id]?.exerciseIds;
+        _replay = lessonId != null && (ids?.contains(lessonId) ?? false);
+      }),
+    );
     final parsed = QuestionEnvelope.parse(widget.envelope).valueOrNull;
     final learning = ref.read(learningEngineRegistryProvider);
 
@@ -233,23 +240,20 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
   /// XP so far: every finished question, plus the one just answered right
   /// — shown the moment the banner says "Bravo", not a tap later.
+  /// Question XP only: the lesson bonuses arrive with the celebration.
   int _runtimeXp() {
     final c = _controller!;
-    final done = _questionResults.fold(0, (sum, q) => sum + estimateXp(q));
+    var solved = _questionResults.where((q) => q.correct > 0).length;
     final s = c.state;
-    if (s.phase != SessionPhase.feedback || s.lastOutcome != Outcome.correct) {
-      return done;
+    if (s.phase == SessionPhase.feedback && s.lastOutcome == Outcome.correct) {
+      solved++;
     }
-    return done +
-        estimateXp(
-          ExerciseResult(
-            outcome: ExerciseOutcome.completed,
-            attempts: s.attempts,
-            correct: 1,
-            elapsedMs: 0,
-          ),
-        );
+    return questionXp(solved, replay: _replay);
   }
+
+  /// This kid already finished this lesson here: half question XP, no
+  /// lesson bonus (XP option A). Read once, when the screen opens.
+  bool _replay = false;
 
   void _onRuntimeDone() {
     final c = _controller!;
@@ -290,7 +294,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       firstTry: perQuestion.where((q) => q.isFirstTryPerfect).length,
       // A client-side estimate — `manage.py award_xp` hasn't run yet. The
       // authoritative total still comes from `ProgressState.totalXp`.
-      xp: estimateXp(result),
+      xp: estimateXp(result, replay: _replay),
     );
 
     // Home's stat tiles, the offline streak, and the map's "done" mark all

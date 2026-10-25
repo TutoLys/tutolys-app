@@ -7,6 +7,7 @@ import '../home/home_controller.dart';
 import '../home/subject_progress.dart';
 import '../pairing/pairing_controller.dart';
 import '../path/path_controller.dart' show pathSubjects;
+import '../play/xp_estimate.dart';
 import '../progress/progress_controller.dart';
 import 'quests_model.dart';
 
@@ -71,7 +72,7 @@ List<DailyQuestItem> buildDailyQuests({
         target: challenge.target,
         progress: challenge.progress.clamp(0, challenge.target),
         done: challenge.completed,
-        xpReward: 15,
+        xpReward: xpDailyChallenge,
       ),
     DailyQuestItem(
       kind: QuestKind.exercises,

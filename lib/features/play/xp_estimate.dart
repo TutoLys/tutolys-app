@@ -1,26 +1,39 @@
 import 'package:engine_sdk/engine_sdk.dart';
 
-/// Must track `settings.XP_PER_QUESTION`/`XP_FIRST_TRY_PERFECT_BONUS` in
-/// tutolys-backend (ADR 0022) — a deliberate, hardcoded mirror, same
-/// pattern `StreakLocal`'s own offline estimate already uses for
-/// telemetry's streak algorithm. The *authoritative* total is always
-/// `ProgressState.totalXp`, read from the backend's real ledger; this is
-/// only for the immediate "+N XP" moment right after an exercise finishes
-/// — `manage.py award_xp` hasn't run yet at that instant, so there's no
-/// real number to show without waiting for the next scheduled refresh.
-const int xpPerQuestion = 10;
-const int xpFirstTryPerfectBonus = 5;
+// XP option A (Hafid, 2026-10-25), a deliberate mirror of the backend's
+// ledger rules, same pattern as `StreakLocal` mirroring telemetry's streak.
+// The *authoritative* total is always `ProgressState.totalXp`; this only
+// fills the moment between a right answer and the next server read.
 
-int _xpForOneQuestion(ExerciseResult result) =>
-    xpPerQuestion + (result.isFirstTryPerfect ? xpFirstTryPerfectBonus : 0);
+/// Each question solved: 1 XP.
+const int xpPerQuestion = 1;
 
-/// The XP a completed exercise is expected to earn, once `award_xp` next
-/// runs. A multi-question exercise sums its real per-question results
-/// (`questionResults`); a single-question one has none to sum, so it's
-/// just the one question's own score — exactly mirroring how the backend
-/// ledger awards one row per question either way.
-int estimateXp(ExerciseResult result) {
+/// A lesson finished (every question of the série): +2.
+const int xpLessonComplete = 2;
+
+/// Every question right on the first try: +1 more.
+const int xpPerfectLesson = 1;
+
+/// The daily challenge, once completed.
+const int xpDailyChallenge = 10;
+
+/// XP for [questions] solved questions. A replay of a lesson this kid has
+/// already finished earns half, rounded down over the lesson.
+int questionXp(int questions, {bool replay = false}) =>
+    replay ? (questions * xpPerQuestion) ~/ 2 : questions * xpPerQuestion;
+
+/// The XP a completed lesson is expected to earn: its questions, plus the
+/// lesson bonuses unless it's a replay. Nothing for an abandoned run.
+int estimateXp(ExerciseResult result, {bool replay = false}) {
   if (result.outcome != ExerciseOutcome.completed) return 0;
-  if (result.questionResults.isEmpty) return _xpForOneQuestion(result);
-  return result.questionResults.fold(0, (sum, q) => sum + _xpForOneQuestion(q));
+  final questions = result.questionResults.isEmpty
+      ? [result]
+      : result.questionResults;
+  final solved = questions.where((q) => q.correct > 0).length;
+  var xp = questionXp(solved, replay: replay);
+  if (!replay) {
+    xp += xpLessonComplete;
+    if (questions.every((q) => q.isFirstTryPerfect)) xp += xpPerfectLesson;
+  }
+  return xp;
 }

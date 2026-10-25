@@ -252,7 +252,7 @@ void main() {
         findsOneWidget,
         reason: 'right first time',
       );
-      expect(find.text('+15 XP'), findsOneWidget);
+      expect(find.text('+4 XP'), findsOneWidget, reason: '1 + 2 + 1');
       expect(
         find.text('Résous 5 exercices'),
         findsOneWidget,
@@ -314,9 +314,9 @@ void main() {
       await settle(tester);
       expect(find.text('Bravo !'), findsOneWidget);
       expect(
-        find.text('+10'),
+        find.text('+1'),
         findsOneWidget,
-        reason: 'XP shows on the right answer',
+        reason: 'XP shows on the right answer: 1 per question',
       );
       await tester.tap(find.text('CONTINUER'));
       await settle(tester);
@@ -325,9 +325,9 @@ void main() {
       // The celebration, not a snackbar.
       expect(find.text('Exercice terminé !'), findsOneWidget);
       expect(
-        find.text('+10 XP'),
+        find.text('+3 XP'),
         findsOneWidget,
-        reason: 'second try: 10, no bonus',
+        reason: 'second try: 1 + 2 for the lesson, no perfect bonus',
       );
       expect(find.text('1/1'), findsOneWidget);
       expect(find.byType(SnackBar), findsNothing);
@@ -476,6 +476,37 @@ void main() {
       );
     },
   );
+
+  testWidgets('a lesson already finished here earns replay XP, no bonus', (
+    tester,
+  ) async {
+    await tester.runAsync(
+      () => NodeProgressLocal(db, kidId: 'kid-lea').recordCompleted(
+        _node.id,
+        perfect: true,
+        exerciseId: _mcqEnvelope['exercise_id'] as String?,
+      ),
+    );
+    await tester.pumpWidget(app(_mcqEnvelope));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await settle(tester);
+
+    await tester.tap(find.text('12'));
+    await settle(tester);
+    await tester.tap(find.text('VALIDER'));
+    await settle(tester);
+    await tester.tap(find.text('CONTINUER'));
+    await settle(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Parfait !'), findsOneWidget);
+    expect(
+      find.text('+0 XP'),
+      findsOneWidget,
+      reason: 'half of 1 question, rounded down, and no lesson bonus',
+    );
+  });
 
   testWidgets('in the dark theme, the game chrome is dark too', (
     tester,
