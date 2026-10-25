@@ -1,4 +1,5 @@
 import 'package:design_system/design_system.dart';
+import 'package:engine_sdk/engine_sdk.dart' show AudioOutputKeepAlive;
 import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -20,6 +21,9 @@ import 'features/settings/settings_controller.dart';
 
 void main() {
   final binding = WidgetsFlutterBinding.ensureInitialized();
+  // From the first tap, keep the audio output awake (web only), so the first
+  // read-aloud isn't clipped while the OS wakes the sink (ADR 0043).
+  AudioOutputKeepAlive.instance.armOnFirstGesture();
 
   // Hold the native splash until Flutter's first frame is up.
   //
