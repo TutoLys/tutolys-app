@@ -134,6 +134,14 @@ class TutolysApp extends ConsumerWidget {
         );
       },
       home: const AppShell(),
+      // This navigator only ever holds AppShell; page URLs (`/village`,
+      // `/carte`…) belong to the paired router nested inside it. Without
+      // this, the browser URL is also offered to this navigator as its
+      // initial route, which it cannot match, so every refresh logged
+      // "Could not navigate to initial route" before falling back to `/`.
+      onGenerateInitialRoutes: (_) => [
+        MaterialPageRoute<void>(builder: (_) => const AppShell()),
+      ],
     );
   }
 }
