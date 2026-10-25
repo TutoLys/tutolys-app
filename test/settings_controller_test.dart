@@ -67,4 +67,35 @@ void main() {
     expect((await AppSettingsStore(db, kidId: 'kid-lea').read()).darkTheme,
         isTrue);
   });
+
+  test('not ready until the kid\'s stored settings have been read', () async {
+    // AppShell keeps the splash up on this, so the first frame is already
+    // in the kid's theme instead of light-then-dark.
+    await AppSettingsStore(db, kidId: 'kid-lea')
+        .write(const AppSettings(darkTheme: true));
+    container.listen(settingsReadyProvider, (_, _) {});
+    await settle();
+
+    container.read(_kidProvider.notifier).set('kid-lea');
+    expect(container.read(settingsReadyProvider), isFalse,
+        reason: 'the new kid\'s settings are still being read');
+    expect(container.read(settingsControllerProvider).darkTheme, isFalse);
+
+    await settle();
+    await settle();
+    expect(container.read(settingsReadyProvider), isTrue);
+    expect(container.read(settingsControllerProvider).darkTheme, isTrue,
+        reason: 'ready means the real value is already in place');
+  });
+
+  test('a change is not reverted by a later rebuild', () async {
+    container.read(_kidProvider.notifier).set('kid-lea');
+    container.listen(settingsControllerProvider, (_, _) {});
+    await settle();
+    await settle();
+
+    await container.read(settingsControllerProvider.notifier).setVolume(15);
+    await settle();
+    expect(container.read(settingsControllerProvider).volume, 15);
+  });
 }

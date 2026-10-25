@@ -10,6 +10,25 @@ final appSettingsStoreProvider = Provider<AppSettingsStore>((ref) {
   );
 });
 
+/// The active kid's settings as stored, read once per kid.
+///
+/// Watches the kid-scoped store: the app first builds this at boot, before
+/// the session has restored the paired kid, so it re-reads when the kid
+/// arrives. Reading only once loaded defaults on every launch.
+final storedSettingsProvider = FutureProvider<AppSettings>(
+  (ref) => ref.watch(appSettingsStoreProvider).read(),
+);
+
+/// Whether the active kid's settings have been read.
+///
+/// `AppShell` holds the native splash until this is true, so the first
+/// frame a kid sees is already in their theme and language. Without it the
+/// app drew in the default light theme and switched to dark a moment later.
+/// A failed read counts as ready: defaults beat a splash that never ends.
+final settingsReadyProvider = Provider<bool>(
+  (ref) => !ref.watch(storedSettingsProvider).isLoading,
+);
+
 /// Holds Réglages' state, writing through on every change.
 ///
 /// No save button, deliberately: the design has none, and a child should not
@@ -19,21 +38,10 @@ final appSettingsStoreProvider = Provider<AppSettingsStore>((ref) {
 class SettingsController extends Notifier<AppSettings> {
   @override
   AppSettings build() {
-    // Watched, not read: the app builds this at boot, before the session
-    // has restored the paired kid, so the first store is the unpaired one.
-    // Rebuilding when the kid arrives is what makes settings survive a
-    // restart; reading once loaded defaults on every launch.
-    final store = ref.watch(appSettingsStoreProvider);
-    // Defaults first, real values as soon as the read lands — the screen
-    // renders immediately rather than flashing a spinner over nine rows.
-    _load(store);
-    return const AppSettings();
-  }
-
-  Future<void> _load(AppSettingsStore store) async {
-    final loaded = await store.read();
-    // A stale read (the kid changed meanwhile) lands on an unmounted ref.
-    if (ref.mounted) state = loaded;
+    // Rebuilds only when the stored value is (re)read — on boot and when
+    // the kid changes — never after a write, so a change made here is never
+    // reverted by a stale read. Defaults stand in while the splash is up.
+    return ref.watch(storedSettingsProvider).value ?? const AppSettings();
   }
 
   Future<void> _apply(AppSettings next) async {

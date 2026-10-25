@@ -8,6 +8,7 @@ import '../../data/sync/outbox_flusher.dart';
 import '../../data/sync/outbox_flusher_provider.dart';
 import '../../features/pairing/pairing_controller.dart';
 import '../../features/pairing/pairing_screen.dart';
+import '../../features/settings/settings_controller.dart';
 import 'paired_router.dart';
 
 /// Chooses the screen from the session state.
@@ -69,22 +70,27 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
   @override
   Widget build(BuildContext context) {
     final session = ref.watch(sessionControllerProvider);
+    final settingsReady = ref.watch(settingsReadyProvider);
 
-    // Also here, not only in the listener below: `ref.listen` fires on
-    // *change*, so a restore that finishes before the first build would
-    // leave the native splash up forever with the app running behind it.
+    // The app is ready to show once the session has resolved and, for a
+    // paired kid, their settings have been read. Waiting for the settings
+    // too means the first frame is already in the kid's theme and language,
+    // instead of drawing light and turning dark a moment later.
+    final ready = switch (session.status) {
+      SessionStatus.checking => false,
+      SessionStatus.unpaired => true,
+      SessionStatus.paired => settingsReady,
+    };
+
+    // In build rather than a listener: build re-runs whenever either input
+    // changes, and a listener only fires on a change, so a restore that
+    // finished before the first build would leave the splash up forever.
     // `remove()` is safe to call more than once.
-    if (session.status != SessionStatus.checking) {
-      FlutterNativeSplash.remove();
-    }
+    if (ready) FlutterNativeSplash.remove();
 
     // A revoked device token pauses the flusher (see OutboxFlusher) until the
     // app re-pairs — the only path that ever replaces that token.
     ref.listen<SessionState>(sessionControllerProvider, (previous, next) {
-      // The session has resolved either way — let the native splash go.
-      if (next.status != SessionStatus.checking) {
-        FlutterNativeSplash.remove();
-      }
       if (next.status == SessionStatus.paired) {
         _flusher.resume();
       }
@@ -93,6 +99,9 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
     return AnimatedSwitcher(
       duration: Motion.normal,
       child: switch (session.status) {
+        // Session resolved but the kid's settings not read yet: stay blank
+        // behind the splash rather than drawing in the default theme.
+        _ when !ready => const _Splash(),
         SessionStatus.checking => const _Splash(),
         SessionStatus.unpaired => const PairingScreen(),
         SessionStatus.paired => const _PairedShell(),

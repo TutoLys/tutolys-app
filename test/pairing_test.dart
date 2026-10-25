@@ -10,6 +10,7 @@ import 'package:tutolys_app/core/routing/village_shell.dart';
 import 'package:tutolys_app/data/api/content_api.dart';
 import 'package:tutolys_app/data/api/curriculum_api.dart';
 import 'package:tutolys_app/data/api/pairing_api.dart';
+import 'package:tutolys_app/data/api/progress_api.dart';
 import 'package:tutolys_app/data/api/telemetry_api.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
 import 'package:tutolys_app/data/local_db/session_store.dart';
@@ -20,6 +21,7 @@ import 'package:tutolys_app/features/pairing/pairing_controller.dart';
 import 'package:tutolys_app/features/pairing/pairing_screen.dart';
 import 'package:tutolys_app/features/path/path_controller.dart';
 import 'package:tutolys_app/features/path/path_screen.dart';
+import 'package:tutolys_app/features/progress/progress_controller.dart';
 
 /// Neither the path screen's own data needs a real network in these
 /// pairing-focused tests: both report offline immediately, so
@@ -43,6 +45,14 @@ class _OfflineContentApi extends ContentApi {
     required String accessToken,
     String? subject,
   }) async => const ManifestOffline();
+}
+
+class _OfflineProgressApi extends ProgressApi {
+  _OfflineProgressApi() : super(dio: Dio());
+
+  @override
+  Future<ProgressResult> fetchMyProgress({required String accessToken}) async =>
+      const ProgressOffline();
 }
 
 /// In-memory stand-ins. Hand-written rather than generated: there are two of
@@ -619,6 +629,7 @@ void main() {
             localDatabaseProvider.overrideWithValue(db),
             curriculumApiProvider.overrideWithValue(_OfflineCurriculumApi()),
             contentApiProvider.overrideWithValue(_OfflineContentApi()),
+            progressApiProvider.overrideWithValue(_OfflineProgressApi()),
             eventOutboxProvider.overrideWithValue(outbox),
             outboxFlusherProvider.overrideWithValue(
               OutboxFlusher(
