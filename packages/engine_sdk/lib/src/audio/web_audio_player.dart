@@ -21,9 +21,15 @@ export 'web_audio_backend.dart';
 /// clip decoded **before** anything starts, so playback begins at sample 0
 /// every time.
 class WebAudioChannelPlayer implements ChannelPlayer {
-  WebAudioChannelPlayer(this.backend);
+  WebAudioChannelPlayer(
+    this.backend, {
+    this.wakeSettle = const Duration(milliseconds: 50),
+  });
 
   final WebAudioBackend backend;
+
+  /// The pause between waking a sleeping context and the first sample.
+  final Duration wakeSettle;
 
   final StreamController<void> _complete = StreamController.broadcast();
   WebVoice? _voice;
@@ -49,8 +55,11 @@ class WebAudioChannelPlayer implements ChannelPlayer {
     final gen = ++_generation;
     _stopVoice();
     _paused = false;
-    await backend.ensureRunning();
+    final woke = await backend.ensureRunning();
     final buffer = await backend.decode(bytes);
+    // A context that was asleep reports running before the output has
+    // settled; give it a moment so the first syllable isn't spent there.
+    if (woke) await Future<void>.delayed(wakeSettle);
     if (gen != _generation) return; // replaced or stopped while decoding
     _buffer = buffer;
     _startAt(0);

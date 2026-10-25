@@ -18,15 +18,26 @@ class _JsWebAudioBackend implements WebAudioBackend {
   static web.AudioContext? _shared;
   static bool _primed = false;
 
+  // The keep-alive signal: one per page, like the context.
+  static bool _keepAliveWanted = false;
+  static web.ConstantSourceNode? _keepAliveSource;
+  static web.GainNode? _keepAliveGain;
+
+  /// Low enough to be inaudible, not zero: some audio stacks treat an
+  /// exactly-silent stream as idle and suspend the output anyway.
+  static const _keepAliveLevel = 0.0001;
+
   web.AudioContext get _ctx => _shared ??= web.AudioContext();
 
   @override
   double get currentTime => _ctx.currentTime;
 
   @override
-  Future<void> ensureRunning() async {
+  Future<bool> ensureRunning() async {
     final ctx = _ctx;
-    if (ctx.state != 'running') await ctx.resume().toDart;
+    final woke = ctx.state != 'running';
+    if (woke) await ctx.resume().toDart;
+    _applyKeepAlive();
     if (!_primed) {
       // Play one silent frame so the output device is already open when
       // the first real clip starts; some outputs take a moment to wake and
@@ -36,6 +47,37 @@ class _JsWebAudioBackend implements WebAudioBackend {
       final src = ctx.createBufferSource()..buffer = silence;
       src.connect(ctx.destination);
       src.start();
+    }
+    return woke;
+  }
+
+  @override
+  void setKeepAlive(bool on) {
+    _keepAliveWanted = on;
+    _applyKeepAlive();
+  }
+
+  void _applyKeepAlive() {
+    final ctx = _shared;
+    final running = ctx != null && ctx.state == 'running';
+    if (_keepAliveWanted && running && _keepAliveSource == null) {
+      final gain = ctx.createGain()..gain.value = _keepAliveLevel;
+      final src = ctx.createConstantSource();
+      src.connect(gain);
+      gain.connect(ctx.destination);
+      src.start();
+      _keepAliveSource = src;
+      _keepAliveGain = gain;
+    } else if (!_keepAliveWanted && _keepAliveSource != null) {
+      try {
+        _keepAliveSource!.stop();
+      } on Object {
+        // Already stopped.
+      }
+      _keepAliveSource!.disconnect();
+      _keepAliveGain?.disconnect();
+      _keepAliveSource = null;
+      _keepAliveGain = null;
     }
   }
 

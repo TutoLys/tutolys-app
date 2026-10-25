@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:engine_sdk/engine_sdk.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Records every Web Audio call in order, so the test can say what happened
@@ -14,8 +15,20 @@ class FakeBackend implements WebAudioBackend {
   /// Lets a test hold a decode open, to tap again meanwhile.
   Completer<void>? decodeGate;
 
+  /// Whether the next [ensureRunning] finds the context asleep.
+  bool asleep = false;
+  final keepAlive = <bool>[];
+
   @override
-  Future<void> ensureRunning() async => log.add('running');
+  Future<bool> ensureRunning() async {
+    log.add('running');
+    final woke = asleep;
+    asleep = false;
+    return woke;
+  }
+
+  @override
+  void setKeepAlive(bool on) => keepAlive.add(on);
 
   @override
   Future<Object> decode(Uint8List bytes) async {
@@ -54,6 +67,75 @@ class FakeVoice implements WebVoice {
 Uint8List bytes(int n) => Uint8List(n);
 
 void main() {
+  testWidgets('a context that had to wake gets 50 ms before the first sample', (
+    tester,
+  ) async {
+    final b = FakeBackend()..asleep = true;
+    final p = WebAudioChannelPlayer(b);
+    final playing = p.play(bytes(4), cacheKey: 'q');
+    await tester.pump(const Duration(milliseconds: 49));
+    expect(b.voices, isEmpty);
+    await tester.pump(const Duration(milliseconds: 2));
+    await playing;
+    expect(b.voices, hasLength(1));
+    // Already awake: no pause.
+    await p.play(bytes(4), cacheKey: 'q');
+    expect(b.voices, hasLength(2));
+  });
+
+  group('AudioOutputKeepAlive', () {
+    testWidgets('on while any activity is mounted, off when the last leaves', (
+      tester,
+    ) async {
+      final b = FakeBackend();
+      final k = AudioOutputKeepAlive(b);
+      k.acquire();
+      k.acquire();
+      expect(b.keepAlive.last, isTrue);
+      expect(b.log, contains('running'), reason: 'woken on entry');
+      k.release();
+      expect(b.keepAlive.last, isTrue, reason: 'one holder left');
+      k.release();
+      expect(b.keepAlive.last, isFalse);
+      k.release();
+      expect(k.active, isFalse, reason: 'an extra release is harmless');
+    });
+
+    testWidgets('off while the app is hidden, back on when it returns', (
+      tester,
+    ) async {
+      final b = FakeBackend();
+      final k = AudioOutputKeepAlive(b)..acquire();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      expect(b.keepAlive.last, isFalse, reason: 'never runs in the background');
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      expect(b.keepAlive.last, isTrue);
+      k.release();
+    });
+
+    testWidgets('the scope widget holds it exactly while mounted', (
+      tester,
+    ) async {
+      final b = FakeBackend();
+      final k = AudioOutputKeepAlive(b);
+      await tester.pumpWidget(
+        AudioOutputKeepAliveScope(keepAlive: k, child: const SizedBox()),
+      );
+      expect(k.active, isTrue);
+      await tester.pumpWidget(const SizedBox());
+      expect(k.active, isFalse);
+      expect(b.keepAlive.last, isFalse);
+    });
+
+    test('native: no backend, nothing happens', () {
+      final k = AudioOutputKeepAlive(null)..acquire();
+      expect(k.active, isTrue);
+      k.release();
+    });
+  });
+
   test(
     'wakes the context and decodes the whole clip before it starts, from 0',
     () async {

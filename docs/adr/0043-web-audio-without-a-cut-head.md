@@ -93,3 +93,62 @@ it.
 - `flutter build web --profile` compiles, and the bundle contains the new
   path. engine_sdk 147, engines_core 176 and app 481 tests pass; analyze is
   clean.
+
+## Revision, same day: keep the output awake
+
+The first fix shipped, and Hafid still heard the start clipped. His key
+observation: "if I click once and it cuts it, and I click again before
+the sentence ends, it always works just fine". So the decode/start path
+was right. What loses the head is the **operating system's audio
+output** waking from idle suspend. PipeWire and PulseAudio suspend the
+sink after about 5 s of silence, and Bluetooth headsets do the same. The
+first sound after that loses roughly 200–500 ms while the sink resumes,
+and a replay while it's awake is fine. This session's sandbox has no real
+sink, which is why the first fix couldn't reproduce or catch it.
+
+The fix:
+
+- **A keep-alive signal.** `WebAudioBackend.setKeepAlive(on)` runs a
+  `ConstantSourceNode` through a `GainNode` at **0.0001** on the shared
+  context while on. That's inaudible but not exactly 0, because some
+  stacks treat true silence as idle and suspend anyway. It starts only
+  once the context is running, so after a user gesture. If it's wanted
+  before that, the next `ensureRunning()` starts it.
+- **Only while an activity is on screen.** `AudioOutputKeepAlive` is
+  reference-counted, and `AudioOutputKeepAliveScope` holds it while
+  mounted. `ActivityShell`, the chrome of every activity on both the new
+  runtime and the legacy runner, now wraps its tree in that scope.
+  Entering an activity is a tap, so the context is resumed right then,
+  and the output is awake before the first read-aloud.
+- **Never in the background.** An `AppLifecycleListener` turns it off on
+  `hidden`, `paused` and `detached`, and back on at `resumed`. When the
+  last activity leaves, it stops.
+- **Belt and braces.** When `ensureRunning()` had to wake the context (it
+  now returns whether it did), the player waits **50 ms** before starting
+  the clip. An already-awake context starts immediately.
+- **Native is unaffected.** There the keep-alive has no backend and does
+  nothing.
+
+The Backend session's ~250 ms of leading silence in generated clips
+stays as a third layer.
+
+### Verification of the revision
+
+- 5 more tests (13 in `web_audio_player_test.dart`):
+  - the 50 ms pause happens only after a wake (49 ms: nothing yet; 51 ms:
+    playing; awake: immediate);
+  - keep-alive on while any holder is mounted, off when the last leaves,
+    with an extra release harmless;
+  - off while the app is hidden and back on at resumed;
+  - the scope widget holds it exactly while mounted;
+  - native does nothing.
+- The real JS backend in the browser pane: keep-alive on, five 600 ms
+  clips each played 608 ms on the audio clock, toggling off/on/off raised
+  no errors, and the console was clean. The bundle from
+  `flutter build web --profile` contains it.
+- **Not provable here:** that the sink stays awake. That needs a real
+  output device, so Hafid's machine is the test, after more than 5 s of
+  quiet on a question.
+- engine_sdk 152, engines_core 176. App: 498 pass on HEAD plus these
+  changes. In the shared tree one `profile_screen_test` fails, and it
+  belongs to the app session's uncommitted profile/progress work, not this.

@@ -7,8 +7,20 @@ import 'dart:typed_data';
 abstract interface class WebAudioBackend {
   /// Resume the shared context if it is suspended (it starts suspended
   /// until a user gesture, and browsers suspend it in the background), and
-  /// prime the output device once. Completes when audio will be heard.
-  Future<void> ensureRunning();
+  /// prime the output device once. Completes when the context is running;
+  /// true when it had to be woken, so the caller can give the output a
+  /// moment before the first sample.
+  Future<bool> ensureRunning();
+
+  /// Keep the operating system's audio output open, or let it sleep.
+  ///
+  /// PipeWire/PulseAudio suspend an idle sink after ~5 s of silence, and
+  /// Bluetooth headsets do the same; the first sound after that loses
+  /// 200–500 ms while the sink wakes — Hafid's cut-off first words, which a
+  /// replay inside the sentence never showed. While on, an inaudible
+  /// constant signal plays so the sink never goes idle. A no-op until the
+  /// context is running: it takes effect on the next [ensureRunning].
+  void setKeepAlive(bool on);
 
   /// Decode a whole clip into memory. Nothing plays until this is done, so
   /// nothing can be lost to buffering.

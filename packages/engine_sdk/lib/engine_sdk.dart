@@ -9,6 +9,7 @@ export 'src/audio.dart';
 export 'src/audio/audio_contracts.dart';
 export 'src/audio/channel_audio_coordinator.dart';
 export 'src/audio/web_audio_player.dart';
+export 'src/audio/output_keep_alive.dart';
 export 'src/contracts/answer.dart';
 export 'src/contracts/envelope.dart';
 export 'src/contracts/evaluation.dart';
