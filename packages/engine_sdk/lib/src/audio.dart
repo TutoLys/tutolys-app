@@ -3,9 +3,8 @@ import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 
-import 'audio_file_stub.dart'
-    if (dart.library.io) 'audio_file_io.dart'
-    as platform_audio;
+import 'audio/channel_audio_coordinator.dart';
+import 'audio/platform_channel_player.dart';
 
 /// Resolves a question prompt's `audio_ref` to the actual cached bytes.
 ///
@@ -53,28 +52,24 @@ class InMemoryAudioResolver implements AudioResolver {
 /// decorative sound effect would get — a kid who can't hear the prompt
 /// still has the text on screen.
 ///
-/// Native platforms play from a temp file (`DeviceFileSource`, the
-/// best-supported source type everywhere `dart:io` exists); web plays
-/// straight from bytes (`BytesSource`, which `audioplayers`' web backend
-/// implements via a standard Blob URL). The `dart:io`-touching half of
-/// this split lives in `audio_file_io.dart`, selected by a conditional
-/// import — `dart:io` does not compile for a web target at all, so the
-/// branch has to happen at the import level, not just at runtime behind
-/// `kIsWeb` (same class of problem ADR 0002/0003 already hit with
-/// drift's native backend).
+/// Plays through the same [ChannelPlayer] as the new runtime's
+/// coordinator, so the legacy runner gets the same fix (ADR 0043): native
+/// platforms play from a temp file through audioplayers; a browser plays a
+/// fully decoded buffer on a warm Web Audio context, so the first words are
+/// never cut off.
 class ExercisePromptAudio {
-  ExercisePromptAudio({AudioPlayer? player})
-    : _player = player ?? AudioPlayer();
+  ExercisePromptAudio({AudioPlayer? player, ChannelPlayer? channel})
+    : _channel =
+          channel ??
+          (player != null
+              ? AudioplayersChannelPlayer(player)
+              : platformChannelPlayer());
 
-  final AudioPlayer _player;
+  final ChannelPlayer _channel;
 
   Future<void> play(Uint8List bytes, {required String cacheKey}) async {
     try {
-      final source = kIsWeb
-          ? BytesSource(bytes)
-          : await platform_audio.fileSourceFor(bytes, cacheKey);
-      await _player.stop();
-      await _player.play(source);
+      await _channel.play(bytes, cacheKey: cacheKey);
     } catch (error, stack) {
       // A kid never sees this; the text prompt is still right there.
       debugPrint(
@@ -83,9 +78,9 @@ class ExercisePromptAudio {
     }
   }
 
-  Future<void> stop() => _player.stop();
+  Future<void> stop() => _channel.stop();
 
   void dispose() {
-    unawaited(_player.dispose());
+    unawaited(_channel.dispose());
   }
 }

@@ -22,6 +22,10 @@ dependencies:
   # straight from bytes (BytesSource, which audioplayers_web backs with a
   # standard Blob URL — the well-supported direction for that platform).
   audioplayers: ^6.5.1
+  # The web audio player (ADR 0043): a decoded buffer on one Web Audio
+  # context, because audioplayers' web element cut the first words off.
+  # Already in the tree through audioplayers_web; pinned to what it uses.
+  web: ^1.1.1
   path_provider: ^2.1.5
 
 dev_dependencies:

@@ -8,6 +8,7 @@ import '../audio_file_stub.dart'
     if (dart.library.io) '../audio_file_io.dart'
     as platform_audio;
 import 'audio_contracts.dart';
+import 'platform_channel_player.dart';
 
 /// One player's worth of playback. An interface so the coordinator's rules
 /// are tested without a platform audio backend.
@@ -25,8 +26,9 @@ abstract interface class ChannelPlayer {
   Future<void> dispose();
 }
 
-/// [ChannelPlayer] on audioplayers, with the same native-file / web-bytes
-/// split `ExercisePromptAudio` already proved (ADR 0013).
+/// [ChannelPlayer] on audioplayers: native platforms, playing from a temp
+/// file (ADR 0013). In a browser the default is [WebAudioChannelPlayer]
+/// instead (ADR 0043): audioplayers' web backend loses the head of a clip.
 class AudioplayersChannelPlayer implements ChannelPlayer {
   AudioplayersChannelPlayer([AudioPlayer? player])
     : _player = player ?? AudioPlayer();
@@ -100,7 +102,7 @@ class ChannelAudioCoordinator implements AudioCoordinator {
     this.effectsEnabled,
     this.musicEnabled,
     this.duckedMusicVolume = 0.3,
-  }) : _factory = playerFactory ?? ((_) => AudioplayersChannelPlayer());
+  }) : _factory = playerFactory ?? ((_) => platformChannelPlayer());
 
   final AudioResolver resolver;
   final TtsEngine? tts;
