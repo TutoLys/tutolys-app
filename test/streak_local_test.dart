@@ -73,4 +73,27 @@ void main() {
 
     expect(await StreakLocal(db, kidId: 'kid-1', clock: () => today).currentStreak(), 2);
   });
+
+  test('playedDays returns each day once, for this kid only', () async {
+    final today = DateTime.utc(2026, 10, 21, 9);
+    for (final offset in [0, 0, 3]) {
+      await StreakLocal(db, kidId: 'kid-1',
+        clock: () => today.subtract(Duration(days: offset)),
+      ).recordPlayedToday();
+    }
+    await StreakLocal(db, kidId: 'kid-2', clock: () => today).recordPlayedToday();
+
+    final days = await StreakLocal(db, kidId: 'kid-1').playedDays();
+
+    expect(days, {DateTime(2026, 10, 21), DateTime(2026, 10, 18)});
+  });
+
+  test('today() is the same date recordPlayedToday writes', () async {
+    final now = DateTime.utc(2026, 10, 21, 23, 30);
+    final streak = StreakLocal(db, kidId: 'kid-1', clock: () => now);
+
+    await streak.recordPlayedToday();
+
+    expect(await streak.playedDays(), {streak.today()});
+  });
 }

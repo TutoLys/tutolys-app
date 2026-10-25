@@ -37,6 +37,28 @@ class StreakLocal {
         );
   }
 
+  /// Today, as a local calendar date with no time part — the same "today"
+  /// [recordPlayedToday] writes, so a caller comparing against
+  /// [playedDays] cannot drift by a timezone.
+  DateTime today() => DateTime.parse(_todayIso());
+
+  /// Every local calendar day this kid completed an exercise on this
+  /// device, for drawing — Quêtes' week strip and the streak calendar.
+  ///
+  /// All of them rather than a range: the table holds one row per day ever
+  /// played, so a whole school year is a few hundred rows, and one read
+  /// lets the calendar page between months without going back to the DB.
+  ///
+  /// This device only. Play on a sibling's tablet, or a gap a streak freeze
+  /// bridged server-side, is not here — the streak *number* comes from the
+  /// backend, this only marks the days.
+  Future<Set<DateTime>> playedDays() async {
+    final rows = await (db.select(db.playedDateTable)
+          ..where((t) => t.kidId.equals(kidId)))
+        .get();
+    return {for (final r in rows) DateTime.parse(r.date)};
+  }
+
   /// Consecutive local calendar days with at least one completed exercise,
   /// counted back from today — the same algorithm and one-day grace as
   /// telemetry's `kid_streak` (still-active as long as yesterday, not just
