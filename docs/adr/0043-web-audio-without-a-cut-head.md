@@ -203,3 +203,46 @@ Suspects checked while adding it:
   serves the old bytes, the sha check refuses them, silently, and the old
   cached clip keeps playing. The trace's sha and first-audible-ms will
   show it if so.
+
+### Bluetooth: a keep-alive the codec can't drop
+
+Hafid listens over **Bluetooth** (Chrome, Linux, PipeWire), and the
+keep-alive build still lost "2–3 words" on the first tap. The first
+keep-alive was a DC constant at gain 0.0001, about −80 dBFS or a few LSB
+at 16-bit. A Bluetooth codec (SBC/AAC) can encode that as digital
+silence, or the chain can filter it out as DC. Either way the headset
+still powers its audio path down and loses the first ~0.5–1 s while it
+resumes. The context and the sink were never the same question.
+
+The changes:
+- **The default signal is a 25 Hz sine at −60 dBFS**
+  (`KeepAliveConfig.defaultToneHz` = 25,
+  `KeepAliveConfig.defaultLevel` = 0.001). That's about 33 LSB at
+  16-bit, far above any codec's silence threshold. It's a real AC signal,
+  so no DC filter removes it, and it stays inaudible: at 25 Hz the ear's
+  threshold is around 60 dB SPL, well above what −60 dBFS through
+  headphones gives.
+- **Variants, chosen from the page URL** so they can be compared on
+  Hafid's headset without a rebuild:
+  - `?audiokeepalive=tone` (the default), `noise` (low white noise,
+    looped), `dc` (the old signal, to compare) or `off`;
+  - `&audiolevel=0.002`, capped at 0.05, so a typo can never make it
+    audible;
+  - `&audiopreroll=300`: each clip's first sample is scheduled that many
+    ms later, up to 2000, while the signal is already transmitting. A
+    resume never gets it. The default is 0, because with the signal
+    running the sink should already be awake.
+- The `?audiodebug=1` trace now names the active variant
+  (`keepAlive: tone @ 0.001 25Hz, pre-roll 0ms`).
+- The pre-roll is scheduled on the context's clock
+  (`start(currentTime + preRoll)`), so it is sample-accurate.
+
+Verification:
+- 3 more tests (16 in `web_audio_player_test.dart`): the defaults; URL
+  variants with the level and pre-roll caps, and an unknown kind falling
+  back to tone; the pre-roll on a clip's first start but not on a resume.
+- In a real browser on the built app: `tone`, `noise` at 0.002 with a
+  300 ms pre-roll, and `dc` each start with no console errors, and each is
+  named in the trace.
+- Whether the codec keeps the headset awake can only be shown on
+  Bluetooth hardware, so it's Hafid's test.

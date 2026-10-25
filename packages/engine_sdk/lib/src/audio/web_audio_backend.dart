@@ -1,6 +1,10 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'keep_alive_config.dart';
+
+export 'keep_alive_config.dart';
+
 /// The few Web Audio calls the web player needs. An interface so the
 /// player's ordering — wake the context, decode the whole clip, then start
 /// it at sample 0 — is tested without a browser.
@@ -30,7 +34,20 @@ abstract interface class WebAudioBackend {
   double get currentTime;
 
   /// Start [buffer] now, from [offsetSeconds], at [volume].
-  WebVoice start(Object buffer, {double offsetSeconds = 0, double volume = 1});
+  ///
+  /// [delaySeconds] schedules the first sample that far ahead on the
+  /// context's clock — the pre-roll, during which the keep-alive signal is
+  /// already reaching the output.
+  WebVoice start(
+    Object buffer, {
+    double offsetSeconds = 0,
+    double volume = 1,
+    double delaySeconds = 0,
+  });
+
+  /// How the output is kept awake: the page's `?audiokeepalive=` choice,
+  /// or the default.
+  KeepAliveConfig get keepAliveConfig;
 
   /// For `?audiodebug=1`: the context's state, clock and latencies, and
   /// whether the keep-alive signal is running.

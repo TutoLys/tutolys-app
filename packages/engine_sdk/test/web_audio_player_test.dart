@@ -46,9 +46,21 @@ class FakeBackend implements WebAudioBackend {
   @override
   double get currentTime => now;
 
+  KeepAliveConfig config = const KeepAliveConfig();
+  final delays = <double>[];
+
   @override
-  WebVoice start(Object buffer, {double offsetSeconds = 0, double volume = 1}) {
+  KeepAliveConfig get keepAliveConfig => config;
+
+  @override
+  WebVoice start(
+    Object buffer, {
+    double offsetSeconds = 0,
+    double volume = 1,
+    double delaySeconds = 0,
+  }) {
     log.add('start $buffer @$offsetSeconds');
+    delays.add(delaySeconds);
     final v = FakeVoice(volume);
     voices.add(v);
     return v;
@@ -87,6 +99,45 @@ void main() {
     // Already awake: no pause.
     await p.play(bytes(4), cacheKey: 'q');
     expect(b.voices, hasLength(2));
+  });
+
+  group('KeepAliveConfig', () {
+    test('default: a 25 Hz tone at -60 dBFS, no pre-roll', () {
+      final c = KeepAliveConfig.fromQuery(const {});
+      expect(c.kind, KeepAliveKind.tone);
+      expect(c.level, 0.001);
+      expect(c.toneHz, 25);
+      expect(c.preRollMs, 0);
+    });
+
+    test('the page URL picks a variant; levels and pre-roll are capped', () {
+      final c = KeepAliveConfig.fromQuery(const {
+        'audiokeepalive': 'noise',
+        'audiolevel': '0.5',
+        'audiopreroll': '99999',
+      });
+      expect(c.kind, KeepAliveKind.noise);
+      expect(c.level, 0.05, reason: 'never loud enough to hear by mistake');
+      expect(c.preRollMs, 2000);
+      expect(
+        KeepAliveConfig.fromQuery(const {'audiokeepalive': 'off'}).kind,
+        KeepAliveKind.off,
+      );
+      expect(
+        KeepAliveConfig.fromQuery(const {'audiokeepalive': 'banana'}).kind,
+        KeepAliveKind.tone,
+      );
+    });
+
+    test('a pre-roll delays a clip\'s first sample, never a resume', () async {
+      final b = FakeBackend()..config = const KeepAliveConfig(preRollMs: 300);
+      final p = WebAudioChannelPlayer(b);
+      await p.play(bytes(4), cacheKey: 'q');
+      b.now = 1;
+      await p.pause();
+      await p.resume();
+      expect(b.delays, [0.3, 0]);
+    });
   });
 
   group('AudioOutputKeepAlive', () {

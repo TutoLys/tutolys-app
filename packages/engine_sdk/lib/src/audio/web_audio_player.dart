@@ -80,7 +80,14 @@ class WebAudioChannelPlayer implements ChannelPlayer {
   void _startAt(double offset) {
     final buffer = _buffer;
     if (buffer == null) return;
-    final voice = backend.start(buffer, offsetSeconds: offset, volume: _volume);
+    final preRoll = backend.keepAliveConfig.preRollMs / 1000;
+    final voice = backend.start(
+      buffer,
+      offsetSeconds: offset,
+      volume: _volume,
+      // Only a clip's first start gets the pre-roll; a resume continues.
+      delaySeconds: offset == 0 ? preRoll : 0,
+    );
     if (AudioDebug.enabled) {
       AudioDebug.log('start at offset ${offset}s: ${backend.debugState()}');
     }

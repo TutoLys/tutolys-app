@@ -21,12 +21,17 @@ class _JsWebAudioBackend implements WebAudioBackend {
 
   // The keep-alive signal: one per page, like the context.
   static bool _keepAliveWanted = false;
-  static web.ConstantSourceNode? _keepAliveSource;
+  static web.AudioScheduledSourceNode? _keepAliveSource;
   static web.GainNode? _keepAliveGain;
 
-  /// Low enough to be inaudible, not zero: some audio stacks treat an
-  /// exactly-silent stream as idle and suspend the output anyway.
-  static const _keepAliveLevel = 0.0001;
+  /// Read once from the page URL (`?audiokeepalive=…`), so a variant can
+  /// be tried on real hardware without a rebuild.
+  static final KeepAliveConfig _config = KeepAliveConfig.fromQuery(
+    Uri.base.queryParameters,
+  );
+
+  @override
+  KeepAliveConfig get keepAliveConfig => _config;
 
   web.AudioContext get _ctx => _shared ??= web.AudioContext();
 
@@ -70,6 +75,7 @@ class _JsWebAudioBackend implements WebAudioBackend {
       'sampleRate': ctx.sampleRate,
       'keepAliveWanted': _keepAliveWanted,
       'keepAliveRunning': _keepAliveSource != null,
+      'keepAlive': _config.toString(),
     };
   }
 
@@ -103,9 +109,12 @@ class _JsWebAudioBackend implements WebAudioBackend {
   void _applyKeepAlive() {
     final ctx = _shared;
     final running = ctx != null && ctx.state == 'running';
-    if (_keepAliveWanted && running && _keepAliveSource == null) {
-      final gain = ctx.createGain()..gain.value = _keepAliveLevel;
-      final src = ctx.createConstantSource();
+    if (_keepAliveWanted &&
+        running &&
+        _keepAliveSource == null &&
+        _config.kind != KeepAliveKind.off) {
+      final gain = ctx.createGain()..gain.value = _config.level;
+      final src = _keepAliveNode(ctx);
       src.connect(gain);
       gain.connect(ctx.destination);
       src.start();
@@ -124,6 +133,34 @@ class _JsWebAudioBackend implements WebAudioBackend {
     }
   }
 
+  /// The signal itself: a low sine by default (a real AC signal no codec
+  /// encodes as silence and no DC filter removes), low noise, or the first
+  /// version's DC constant to compare against.
+  web.AudioScheduledSourceNode _keepAliveNode(web.AudioContext ctx) {
+    switch (_config.kind) {
+      case KeepAliveKind.noise:
+        final rate = ctx.sampleRate;
+        final length = (rate * 2).round();
+        final noise = ctx.createBuffer(1, length, rate);
+        final data = noise.getChannelData(0).toDart;
+        final random = math.Random(1);
+        for (var i = 0; i < length; i++) {
+          data[i] = random.nextDouble() * 2 - 1;
+        }
+        noise.copyToChannel(data.toJS, 0);
+        return ctx.createBufferSource()
+          ..buffer = noise
+          ..loop = true;
+      case KeepAliveKind.dc:
+        return ctx.createConstantSource();
+      case KeepAliveKind.tone:
+      case KeepAliveKind.off:
+        return ctx.createOscillator()
+          ..type = 'sine'
+          ..frequency.value = _config.toneHz;
+    }
+  }
+
   @override
   Future<Object> decode(Uint8List bytes) async {
     // decodeAudioData detaches the buffer it's given: hand it a copy, so
@@ -134,7 +171,12 @@ class _JsWebAudioBackend implements WebAudioBackend {
   }
 
   @override
-  WebVoice start(Object buffer, {double offsetSeconds = 0, double volume = 1}) {
+  WebVoice start(
+    Object buffer, {
+    double offsetSeconds = 0,
+    double volume = 1,
+    double delaySeconds = 0,
+  }) {
     final ctx = _ctx;
     final src = ctx.createBufferSource()..buffer = buffer as web.AudioBuffer;
     final gain = ctx.createGain();
@@ -143,7 +185,10 @@ class _JsWebAudioBackend implements WebAudioBackend {
     gain.connect(ctx.destination);
     final voice = _JsVoice(src, gain);
     src.onended = ((web.Event _) => voice._end()).toJS;
-    src.start(0, offsetSeconds);
+    src.start(
+      delaySeconds > 0 ? ctx.currentTime + delaySeconds : 0,
+      offsetSeconds,
+    );
     return voice;
   }
 }
