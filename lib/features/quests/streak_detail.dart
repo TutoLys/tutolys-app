@@ -19,18 +19,18 @@ Future<void> showStreakDetail(
   final phone = MediaQuery.sizeOf(context).width < Breakpoints.compact;
 
   Widget detail(BuildContext routeContext) => StreakDetail(
-        streakDays: streakDays,
-        freezesAvailable: freezesAvailable,
-        played: played,
-        board: board,
-        onClose: () => Navigator.of(routeContext).pop(),
-        onOpenPath: onOpenPath == null
-            ? null
-            : () {
-                Navigator.of(routeContext).pop();
-                onOpenPath();
-              },
-      );
+    streakDays: streakDays,
+    freezesAvailable: freezesAvailable,
+    played: played,
+    board: board,
+    onClose: () => Navigator.of(routeContext).pop(),
+    onOpenPath: onOpenPath == null
+        ? null
+        : () {
+            Navigator.of(routeContext).pop();
+            onOpenPath();
+          },
+  );
 
   if (phone) {
     return Navigator.of(context).push(
@@ -66,9 +66,11 @@ Future<void> showStreakDetail(
 /// flamme" activates at 7 and shows on Profil, and the shield is the real
 /// streak-freeze balance (backend ADR 0019).
 ///
+/// The *Entre amis* tab is drawn as the design draws it — greyed out,
+/// "bientôt", with no handler and nothing behind it. Hafid's call
+/// (2026-10-25): the label stays, the social feature stays out (#12).
+///
 /// Left out, on purpose:
-/// - **The *Entre amis* tab.** Social features are out (open item #12), and
-///   one tab alone is not a tab bar.
 /// - **"Rechargé dans 3 jours".** The backend grants a shield a week after
 ///   its last grant and does not serve that date; until it does (work order Q2,
 ///   `Platforms/BACKEND_WORKORDER_QUESTS.md`), the tag shows the real balance.
@@ -113,9 +115,8 @@ class _StreakDetailState extends State<StreakDetail> {
   DateTime get _current =>
       DateTime(widget.played.today.year, widget.played.today.month);
 
-  void _shift(int months) => setState(
-        () => _month = DateTime(_month.year, _month.month + months),
-      );
+  void _shift(int months) =>
+      setState(() => _month = DateTime(_month.year, _month.month + months));
 
   @override
   Widget build(BuildContext context) {
@@ -155,20 +156,30 @@ class _StreakDetailState extends State<StreakDetail> {
               children: [
                 _RewardCard(
                   key: const ValueKey('reward-chest'),
-                  leading: Image.asset('assets/images/asset-chest.webp', width: 42, height: 42),
+                  leading: Image.asset(
+                    'assets/images/asset-chest.webp',
+                    width: 42,
+                    height: 42,
+                  ),
                   title: t.chestTitle,
                   body: (widget.board?.has(Achievement.streak3) ?? false)
                       ? t.chestBody
                       : t.chestBodyLocked,
                   tag: (widget.board?.has(Achievement.streak3) ?? false)
                       ? _Tag.ok(t.rewardObtained)
-                      : _Tag.pending(t.rewardDaysLeft(3 - (streak ?? 0).clamp(0, 2))),
+                      : _Tag.pending(
+                          t.rewardDaysLeft(3 - (streak ?? 0).clamp(0, 2)),
+                        ),
                 ),
                 if (freezes != null) ...[
                   const SizedBox(height: 10),
                   _RewardCard(
                     key: const ValueKey('reward-shield'),
-                    leading: Image.asset('assets/images/asset-badge.webp', width: 42, height: 42),
+                    leading: Image.asset(
+                      'assets/images/asset-badge.webp',
+                      width: 42,
+                      height: 42,
+                    ),
                     title: t.streakShieldTitle,
                     body: t.streakShieldBody,
                     tag: freezes > 0
@@ -180,13 +191,19 @@ class _StreakDetailState extends State<StreakDetail> {
                 _RewardCard(
                   key: const ValueKey('reward-title'),
                   leading: _RoundLeading(
-                    child: Icon(Icons.receipt_long_outlined, size: 20, color: VillagePalette.of(context).quebecBlueBright),
+                    child: Icon(
+                      Icons.receipt_long_outlined,
+                      size: 20,
+                      color: VillagePalette.of(context).quebecBlueBright,
+                    ),
                   ),
                   title: '${t.flameKeeperTitlePrefix}${t.flameKeeperTitle}',
                   body: t.flameKeeperBody,
                   tag: (widget.board?.has(Achievement.streak7) ?? false)
                       ? _Tag.active(t.rewardActive)
-                      : _Tag.pending(t.rewardDaysLeft(7 - (streak ?? 0).clamp(0, 6))),
+                      : _Tag.pending(
+                          t.rewardDaysLeft(7 - (streak ?? 0).clamp(0, 6)),
+                        ),
                 ),
               ],
             ),
@@ -269,7 +286,9 @@ class _Hero extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: Space.md),
+          const SizedBox(height: 16),
+          const _Tabs(),
+          const SizedBox(height: 18),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
             decoration: BoxDecoration(
@@ -302,11 +321,109 @@ class _Hero extends StatelessWidget {
                   ),
                 ),
               ),
-              Image.asset('assets/images/asset-flame.webp', width: 66, height: 66),
+              Image.asset(
+                'assets/images/asset-flame.webp',
+                width: 66,
+                height: 66,
+              ),
             ],
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The design's `.sm-tabs`: "Personnelle" active, "Entre amis" at 55 %
+/// opacity with a "bientôt" tag. Not a [TabBar] — there is one page, and
+/// the second tab is a label, not a destination. The rule under the tabs
+/// runs edge to edge, like the design's `margin: 0 -20px`.
+class _Tabs extends StatelessWidget {
+  const _Tabs();
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.s;
+    final p = VillagePalette.of(context);
+    TextStyle tab(Color c) => TextStyle(
+      fontFamily: VillageType.display,
+      fontWeight: FontWeight.w700,
+      fontSize: 12.5,
+      color: c,
+    );
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // The design's rule runs past the hero's 20px padding to both edges.
+        const Positioned(
+          left: -20,
+          right: -20,
+          bottom: 0,
+          child: Divider(height: 1, thickness: 1, color: Color(0x14000000)),
+        ),
+        // Scales down rather than overflowing on a narrow phone or a longer
+        // translation; at the design's 380px both tabs fit at full size.
+        Center(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  key: const ValueKey('streak-tab-personal'),
+                  padding: const EdgeInsets.only(bottom: 9),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: p.quebecBlueBright, width: 2),
+                    ),
+                  ),
+                  child: Text(
+                    t.streakTabPersonal,
+                    style: tab(p.quebecBlueBright),
+                  ),
+                ),
+                const SizedBox(width: 30),
+                Semantics(
+                  enabled: false,
+                  label: '${t.streakTabFriends}, ${t.comingSoonShort}',
+                  excludeSemantics: true,
+                  child: Opacity(
+                    key: const ValueKey('streak-tab-friends'),
+                    opacity: 0.55,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 11),
+                      child: Row(
+                        children: [
+                          Text(t.streakTabFriends, style: tab(p.inkMuted)),
+                          const SizedBox(width: 5),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: p.track,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              t.comingSoonShort,
+                              style: TextStyle(
+                                fontSize: 8.5,
+                                fontWeight: FontWeight.w700,
+                                color: p.inkMuted,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -329,7 +446,11 @@ class _Nudge extends StatelessWidget {
         color: p.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: p.shadowSmall, blurRadius: 16, offset: const Offset(0, 6)),
+          BoxShadow(
+            color: p.shadowSmall,
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
         ],
       ),
       child: Row(
@@ -339,7 +460,11 @@ class _Nudge extends StatelessWidget {
             width: 34,
             height: 34,
             decoration: BoxDecoration(color: pale, shape: BoxShape.circle),
-            child: Icon(Icons.bolt, size: 17, color: p.isDark ? p.goldLight : const Color(0xFF8A6A1B)),
+            child: Icon(
+              Icons.bolt,
+              size: 17,
+              color: p.isDark ? p.goldLight : const Color(0xFF8A6A1B),
+            ),
           ),
           const SizedBox(width: Space.sm),
           Expanded(
@@ -449,8 +574,12 @@ class _Calendar extends StatelessWidget {
         children: [
           Row(
             children: [
-              arrow(Icons.chevron_left, t.streakDetailPrevMonth, onPrev,
-                  const ValueKey('cal-prev')),
+              arrow(
+                Icons.chevron_left,
+                t.streakDetailPrevMonth,
+                onPrev,
+                const ValueKey('cal-prev'),
+              ),
               Expanded(
                 child: Text(
                   t.monthYear(month.year, month.month).toUpperCase(),
@@ -464,8 +593,12 @@ class _Calendar extends StatelessWidget {
                   ),
                 ),
               ),
-              arrow(Icons.chevron_right, t.streakDetailNextMonth, onNext,
-                  const ValueKey('cal-next')),
+              arrow(
+                Icons.chevron_right,
+                t.streakDetailNextMonth,
+                onNext,
+                const ValueKey('cal-next'),
+              ),
             ],
           ),
           const SizedBox(height: Space.xs),
@@ -560,22 +693,22 @@ class _GoalTrack extends StatelessWidget {
     final goal = nextStreakGoal(streak);
 
     Widget chip(int n) => Container(
-          width: 34,
-          height: 34,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: p.isDark ? VillageDarkColors.goldPale : VillageColors.goldPale,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Text(
-            '$n',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: p.isDark ? p.goldLight : const Color(0xFF8A6A1B),
-            ),
-          ),
-        );
+      width: 34,
+      height: 34,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: p.isDark ? VillageDarkColors.goldPale : VillageColors.goldPale,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        '$n',
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: p.isDark ? p.goldLight : const Color(0xFF8A6A1B),
+        ),
+      ),
+    );
 
     return Row(
       key: ValueKey('goal-$streak-$goal'),
@@ -620,7 +753,11 @@ class _RoundLeading extends StatelessWidget {
         color: p.surface,
         shape: BoxShape.circle,
         boxShadow: [
-          BoxShadow(color: p.shadowSmall, blurRadius: 12, offset: const Offset(0, 4)),
+          BoxShadow(
+            color: p.shadowSmall,
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: child,
@@ -683,12 +820,19 @@ class _RewardCard extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   body,
-                  style: TextStyle(fontSize: 11.5, height: 1.4, color: p.inkMuted),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    height: 1.4,
+                    color: p.inkMuted,
+                  ),
                 ),
                 const SizedBox(height: 5),
                 if (tag.kind == _TagKind.active)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: _okPale,
                       borderRadius: BorderRadius.circular(999),

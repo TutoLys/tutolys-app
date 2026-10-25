@@ -432,9 +432,49 @@ void main() {
       await open(tester);
 
       expect(find.text(fr.streakShieldTitle), findsNothing);
-      // The other two rewards stay; the social tab (open item #12) does not.
+      // The other two rewards stay.
       expect(find.byKey(const ValueKey('reward-chest')), findsOneWidget);
-      expect(find.text('Entre amis'), findsNothing);
+    });
+
+    testWidgets('Personnelle is active; Entre amis is a greyed label only', (
+      tester,
+    ) async {
+      _wide(tester);
+      await tester.pumpWidget(_app(progress: _snapshot()));
+      await tester.pumpAndSettle();
+      await open(tester);
+
+      expect(find.text(fr.streakTabPersonal), findsOneWidget);
+      expect(find.text(fr.streakTabFriends), findsOneWidget);
+      expect(find.text(fr.comingSoonShort), findsOneWidget);
+      final friends = tester.widget<Opacity>(
+        find.byKey(const ValueKey('streak-tab-friends')),
+      );
+      expect(friends.opacity, 0.55);
+      // Nothing behind it (#12): no handler anywhere above the label.
+      expect(
+        find.ancestor(
+          of: find.text(fr.streakTabFriends),
+          matching: find.byWidgetPredicate(
+            (w) => w is GestureDetector || w is InkWell,
+          ),
+        ),
+        findsNothing,
+      );
+
+      // Tapping it changes nothing.
+      await tester.tap(find.text(fr.streakTabFriends), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(find.text(fr.streakDetailCalendar), findsOneWidget);
+    });
+
+    testWidgets('the tab row fits the full-screen phone layout', (tester) async {
+      _phone(tester);
+      await tester.pumpWidget(_app(progress: _snapshot()));
+      await tester.pumpAndSettle();
+      await open(tester);
+      expect(tester.takeException(), isNull);
+      expect(find.text(fr.streakTabFriends), findsOneWidget);
     });
 
     testWidgets('chest and title: pending until the streak earns them', (

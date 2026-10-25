@@ -230,6 +230,10 @@ abstract class Strings {
   String streakShieldBalance(int count);
   String get streakShieldNone;
   String get closeLabel;
+  String get streakTabPersonal;
+
+  /// A label only: the design's greyed-out tab. No social feature (#12).
+  String get streakTabFriends;
 
   // --- quêtes: the full board (app ADR 0015, revised) ------------------------
   String questExercisesTitle(int target);
@@ -774,6 +778,12 @@ class _FrenchStrings extends Strings {
 
   @override
   String get closeLabel => 'Fermer';
+
+  @override
+  String get streakTabPersonal => 'Personnelle';
+
+  @override
+  String get streakTabFriends => 'Entre amis';
 
   @override
   String questExercisesTitle(int target) => 'Résous $target exercices';
@@ -1358,6 +1368,12 @@ class _EnglishStrings extends Strings {
 
   @override
   String get closeLabel => 'Close';
+
+  @override
+  String get streakTabPersonal => 'Personal';
+
+  @override
+  String get streakTabFriends => 'With friends';
 
   @override
   String questExercisesTitle(int target) => 'Solve $target exercises';

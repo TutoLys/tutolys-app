@@ -130,7 +130,11 @@ instead of drawing the element empty.
 - **Shared by the header, the nav badge and Village**: the "2/3 quêtes"
   pill, the badge counting open quests, and the Village panel and greeting
   all read the same `questBoardProvider`.
-- **Still out**: the *Entre amis* tab (open item #12, Hafid's own ruling).
+- **Entre amis** (added the same day, at Hafid's request): the tab row is
+  drawn as the design draws it. "Personnelle" is active. "Entre amis" is
+  greyed out (55 %), tagged "bientôt", and has no handler and nothing
+  behind it. The label is the design's; the social feature stays out
+  (#12).
 
 **Known limit**: all of this history is per device, like `played_date`.
 Play on a second device does not count toward quests or badges until the
