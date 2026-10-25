@@ -130,18 +130,33 @@ class TutolysApp extends ConsumerWidget {
           data: media.copyWith(
             disableAnimations: media.disableAnimations || reduceMotion,
           ),
-          child: child ?? const SizedBox.shrink(),
+          child: const _RootNavigator(),
         );
       },
-      home: const AppShell(),
-      // This navigator only ever holds AppShell; page URLs (`/village`,
-      // `/carte`…) belong to the paired router nested inside it. Without
-      // this, the browser URL is also offered to this navigator as its
-      // initial route, which it cannot match, so every refresh logged
-      // "Could not navigate to initial route" before falling back to `/`.
-      onGenerateInitialRoutes: (_) => [
-        MaterialPageRoute<void>(builder: (_) => const AppShell()),
-      ],
+    );
+  }
+}
+
+/// The app's root navigator, holding [AppShell] and nothing else.
+///
+/// Built by hand in `MaterialApp.builder` rather than given as `home`, so
+/// that `MaterialApp` has no navigator of its own. Page URLs (`/village`,
+/// `/carte`…) belong to the paired router nested inside AppShell, and a
+/// `home` navigator would compete with it for the browser's: it was handed
+/// the URL as an initial route it could not match ("Could not navigate to
+/// initial route" on every refresh), and every back-button or address-bar
+/// change as a named route it could not build (a null-check crash in
+/// `_onUnknownRoute`). With no app-level navigator, both go straight to the
+/// paired router. This one still gives dialogs, tooltips and the pairing
+/// screen the Overlay they need.
+class _RootNavigator extends StatelessWidget {
+  const _RootNavigator();
+
+  @override
+  Widget build(BuildContext context) {
+    return Navigator(
+      onGenerateRoute: (_) =>
+          MaterialPageRoute<void>(builder: (_) => const AppShell()),
     );
   }
 }
