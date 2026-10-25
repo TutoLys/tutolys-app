@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/routing/app_shell.dart';
 import 'core/startup/release_config_guard.dart';
+import 'features/launch/boot_handoff.dart';
 import 'data/local_db/database.dart';
 import 'data/local_db/session_store.dart';
 import 'data/sync/outbox_flusher_provider.dart' show telemetryBaseUrl;
@@ -16,15 +17,13 @@ import 'features/settings/settings_controller.dart';
 void main() {
   final binding = WidgetsFlutterBinding.ensureInitialized();
 
-  // Hold the native splash until the app is genuinely usable.
+  // Hold the native splash until Flutter's first frame is up.
   //
-  // Without this there are two splashes back to back: the native one
-  // disappears on the first frame, and `AppShell` then shows its own
-  // loading screen while the device token is read from the secure store and
-  // refreshed. Two screens, two different foxes, two different
-  // backgrounds — which is exactly how it read. `AppShell` removes this one
-  // once the session has resolved, so there is one splash and it ends when
-  // the app can actually be used.
+  // `AppShell` removes it on that first frame, where `LaunchFlow`'s loader
+  // takes over: the same night sky, emblem, wordmark and bar, continuing
+  // from where the web page's own bar stopped (ADR 0018). Before ADR 0018
+  // the splash was held until the session resolved; the loader now does
+  // that waiting, with real progress on screen instead of a still image.
   FlutterNativeSplash.preserve(widgetsBinding: binding);
 
   // Before anything else: a release build still pointed at localhost must
@@ -82,6 +81,10 @@ class TutolysApp extends ConsumerWidget {
     final reduceMotion = ref.watch(
       settingsControllerProvider.select((s) => s.reduceMotion),
     );
+
+    // The web page's HTML loader speaks before Flutter can, so it reads the
+    // language from the last run (ADR 0018). No-op off the web.
+    rememberBootLocale(english ? 'en' : 'fr');
 
     return MaterialApp(
       title: 'TutoLys',

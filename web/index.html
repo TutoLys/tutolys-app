@@ -105,6 +105,271 @@
       <img class="center" aria-hidden="true" src="splash/img/light-1x.png" alt="">
   </picture>
   
+  <!-- Launch loader, HTML stage (ADR 0018).
+
+       The first thing a child sees on web, while the app itself downloads.
+       It draws the same composition as Flutter's `TutolysLoaderScreen` —
+       same layout maths, same emblem, wordmark, bar and copy — so when
+       Flutter's first frame replaces it, nothing visibly changes except
+       that the bar keeps going. `globalThis.tutolysBoot` carries the bar's
+       position and the current line across that hand-over
+       (`lib/features/launch/boot_handoff_web.dart`).
+
+       The bar follows real milestones reported by `flutter_bootstrap.js`,
+       easing toward each one and never past it. Kept outside
+       flutter_native_splash's own blocks so regenerating the native splash
+       doesn't drop it; it removes itself once that splash is gone.
+
+       Fonts and images are the app's own bundled assets, never a CDN. -->
+  <style id="launch-stage-style">
+    @font-face {
+      font-family: "TutolysDisplay";
+      src: url("assets/packages/design_system/fonts/Baloo2-ExtraBold.ttf") format("truetype");
+      font-weight: 800;
+      font-display: block;
+    }
+    @font-face {
+      font-family: "TutolysDisplay";
+      src: url("assets/packages/design_system/fonts/Baloo2-SemiBold.ttf") format("truetype");
+      font-weight: 600;
+      font-display: block;
+    }
+    #splash { display: none; }
+    #launch-stage {
+      --s: 1;
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      background:
+        radial-gradient(90% 60% at 50% 22%, rgba(47, 111, 237, 0.38), rgba(47, 111, 237, 0) 70%),
+        linear-gradient(180deg, #142A66 0%, #1F3C88 30%, #1F3C88 70%, #142A66 100%);
+      font-family: "TutolysDisplay", system-ui, sans-serif;
+      transition: opacity 340ms ease;
+    }
+    #launch-stage .logo {
+      position: relative;
+      width: calc(200px * var(--s));
+      height: calc(200px * var(--s));
+    }
+    #launch-stage .glow {
+      position: absolute;
+      inset: -30%;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(251, 191, 36, 0.18) 0%, rgba(47, 111, 237, 0.13) 45%, rgba(47, 111, 237, 0) 100%);
+      animation: ls-glow 4.8s ease-in-out infinite;
+    }
+    #launch-stage .emblem {
+      position: absolute;
+      inset: 0;
+      animation: ls-float 4.8s ease-in-out infinite;
+    }
+    #launch-stage .emblem img,
+    #launch-stage .emblem .shine {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    #launch-stage .emblem .shine {
+      -webkit-mask: url("assets/assets/images/asset-logo.webp") center / contain no-repeat;
+      mask: url("assets/assets/images/asset-logo.webp") center / contain no-repeat;
+      background: linear-gradient(135deg, rgba(255,255,255,0) 40%, rgba(255,255,255,0.55) 50%, rgba(255,255,255,0) 60%) no-repeat;
+      background-size: 300% 300%;
+      animation: ls-shine 4.8s linear infinite;
+    }
+    #launch-stage .wordmark {
+      margin-top: calc(28px * var(--s));
+      font-weight: 800;
+      font-size: calc(54px * var(--s));
+      line-height: 1;
+      letter-spacing: -0.5px;
+      color: #fff;
+      text-shadow: 0 calc(3px * var(--s)) calc(10px * var(--s)) rgba(11, 26, 69, 0.55);
+    }
+    #launch-stage .wordmark span {
+      background: linear-gradient(180deg, #FDE68A, #FBBF24, #D4AF37);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    #launch-stage .bar {
+      position: relative;
+      margin-top: calc(40px * var(--s));
+      width: min(calc(320px * var(--s)), calc(100vw - 64px));
+      height: calc(16px * var(--s));
+      border-radius: 999px;
+      background: #14295F;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: 0 0 18px rgba(56, 189, 248, 0.26);
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+    #launch-stage .fill {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 0;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #2F6FED, #3B9BFF, #38D5F8);
+      transition: width 600ms cubic-bezier(0.215, 0.61, 0.355, 1);
+      overflow: hidden;
+    }
+    #launch-stage .fill::before {
+      content: "";
+      position: absolute;
+      left: calc(5px * var(--s));
+      right: calc(5px * var(--s));
+      top: 0;
+      height: 50%;
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0.05));
+    }
+    #launch-stage .fill::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 22%;
+      min-width: 28px;
+      background: linear-gradient(90deg, rgba(253,230,138,0), rgba(253,230,138,0.75), rgba(253,230,138,0));
+      animation: ls-glint 1.8s ease-in-out infinite;
+    }
+    #launch-stage .message {
+      margin-top: calc(20px * var(--s));
+      width: min(420px, calc(100vw - 48px));
+      height: calc(52px * var(--s));
+      text-align: center;
+      font-weight: 600;
+      font-size: calc(19px * var(--s));
+      line-height: 1.25;
+      color: rgba(255, 255, 255, 0.92);
+      transition: opacity 190ms ease;
+      /* Centred in its two-line box, like the Flutter rotator's Stack. */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #launch-stage .message.swapping { opacity: 0; }
+    @keyframes ls-float {
+      0%, 100% { transform: translateY(0) scale(1); }
+      25% { transform: translateY(calc(-7px * var(--s))) scale(1.018); }
+      75% { transform: translateY(calc(7px * var(--s))) scale(0.982); }
+    }
+    @keyframes ls-glow {
+      0%, 100% { opacity: 0.6; }
+      25% { opacity: 0.85; }
+      75% { opacity: 0.35; }
+    }
+    @keyframes ls-shine {
+      0% { background-position: 100% 100%; }
+      40%, 100% { background-position: 0% 0%; }
+    }
+    @keyframes ls-glint {
+      from { left: -30%; }
+      to { left: 100%; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #launch-stage .glow, #launch-stage .emblem,
+      #launch-stage .emblem .shine, #launch-stage .fill::after { animation: none; }
+      #launch-stage .emblem .shine { display: none; }
+      #launch-stage .fill, #launch-stage .message { transition: none; }
+    }
+  </style>
+  <div id="launch-stage" role="status">
+    <div class="logo" aria-hidden="true">
+      <div class="glow"></div>
+      <div class="emblem">
+        <img src="assets/assets/images/asset-logo.webp" alt="">
+        <div class="shine"></div>
+      </div>
+    </div>
+    <div class="wordmark" aria-label="TutoLys">Tuto<span>Lys</span></div>
+    <div class="bar" aria-hidden="true"><div class="fill"></div></div>
+    <p class="message" aria-live="polite"></p>
+  </div>
+  <script id="launch-stage-script">
+    (function () {
+      var stage = document.getElementById("launch-stage");
+      var fill = stage.querySelector(".fill");
+      var message = stage.querySelector(".message");
+      var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      // Same lines as Strings.launchMessages, in the language the kid
+      // chose last run (the app saves it: rememberBootLocale). French when
+      // there is none — the app's own default, not the browser's guess.
+      var english = false;
+      try { english = localStorage.getItem("tutolys.locale") === "en"; } catch (e) {}
+      var lines = english ? [
+        "Getting your adventure ready…",
+        "Setting up the village for you…",
+        "Gathering your activities…",
+        "Foxy is on the way with your challenges…",
+        "Laying out your learning path…"
+      ] : [
+        "Préparation de ton aventure…",
+        "On prépare le village pour toi…",
+        "On rassemble tes activités…",
+        "Foxy arrive avec tes défis…",
+        "On installe ton parcours d’apprentissage…"
+      ];
+
+      // Read by Flutter on its first frame (boot_handoff_web.dart).
+      var boot = window.tutolysBoot = { progress: 0.04, messageIndex: 0, ceiling: 0.3 };
+
+      // Same scale rule as TutolysLoaderScreen.
+      function layout() {
+        var s = Math.min(window.innerHeight / 760, window.innerWidth / 420);
+        stage.style.setProperty("--s", Math.max(0.62, Math.min(1.25, s)));
+      }
+      layout();
+      window.addEventListener("resize", layout);
+
+      function show(p) {
+        boot.progress = p;
+        fill.style.width = (p * 100).toFixed(2) + "%";
+      }
+      show(boot.progress);
+      message.textContent = lines[0];
+
+      // A milestone from flutter_bootstrap.js: land at least on `at`, then
+      // creep toward `ceiling` without reaching it.
+      boot.reach = function (at, ceiling) {
+        boot.ceiling = Math.max(boot.ceiling, ceiling);
+        show(Math.max(boot.progress, at));
+      };
+      var creep = setInterval(function () {
+        var target = boot.ceiling - 0.02;
+        if (boot.progress < target) show(boot.progress + (target - boot.progress) * 0.08);
+      }, 250);
+
+      var rotate = setInterval(function () {
+        boot.messageIndex = (boot.messageIndex + 1) % lines.length;
+        if (reduced) { message.textContent = lines[boot.messageIndex]; return; }
+        message.classList.add("swapping");
+        setTimeout(function () {
+          message.textContent = lines[boot.messageIndex];
+          message.classList.remove("swapping");
+        }, 190);
+      }, 1800);
+
+      // Gone when flutter_native_splash removes its own splash, which
+      // AppShell does on Flutter's first frame.
+      new MutationObserver(function (_, observer) {
+        if (!document.getElementById("splash")) {
+          clearInterval(creep);
+          clearInterval(rotate);
+          stage.remove();
+          observer.disconnect();
+        }
+      }).observe(document.body, { childList: true });
+    })();
+  </script>
+
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader
