@@ -163,6 +163,7 @@ abstract class Strings {
   String get settingsParentZone;
   String get settingsParentZoneBody;
   String get settingsParentZoneCta;
+  String get settingsParentZoneSoon;
   String get settingsAbout;
   String get settingsSignOut;
   String get comingSoonTitle;
@@ -179,6 +180,13 @@ abstract class Strings {
   String get villageContinueCta;
   String get villageQuestsTitle;
   String get villageQuestsSeeAll;
+  String get notificationsTitle;
+  String get notificationsEmpty;
+  String get notificationsEmptyHint;
+  String get notificationDailyQuest;
+  String get notificationStreakFreeze;
+  String notificationsBellLabel(int unread);
+  String notificationsAgo(Duration elapsed);
   String get villageNoQuests;
   String get villageGreetingReady;
   String get villageGreetingQuest;
@@ -638,6 +646,10 @@ class _FrenchStrings extends Strings {
   String get settingsParentZoneCta => 'Ouvrir le site';
 
   @override
+  String get settingsParentZoneSoon =>
+      'Le site des parents arrive bientôt !';
+
+  @override
   String get settingsAbout => 'À propos de TutoLys';
 
   @override
@@ -681,6 +693,39 @@ class _FrenchStrings extends Strings {
 
   @override
   String get villageQuestsSeeAll => 'Voir toutes';
+
+  @override
+  String get notificationsTitle => 'Notifications';
+
+  @override
+  String get notificationsEmpty => 'Rien de nouveau pour l’instant.';
+
+  @override
+  String get notificationsEmptyHint =>
+      'Réussis le défi du jour pour en recevoir une !';
+
+  @override
+  String get notificationDailyQuest => 'Défi du jour réussi ! Bravo !';
+
+  @override
+  String get notificationStreakFreeze =>
+      'Ton bouclier a protégé ta série.';
+
+  @override
+  String notificationsBellLabel(int unread) => switch (unread) {
+        0 => 'Notifications',
+        1 => 'Notifications, 1 non lue',
+        _ => 'Notifications, $unread non lues',
+      };
+
+  @override
+  String notificationsAgo(Duration elapsed) {
+    if (elapsed.inMinutes < 1) return 'à l’instant';
+    if (elapsed.inHours < 1) return 'il y a ${elapsed.inMinutes} min';
+    if (elapsed.inDays < 1) return 'il y a ${elapsed.inHours} h';
+    if (elapsed.inDays == 1) return 'hier';
+    return 'il y a ${elapsed.inDays} jours';
+  }
 
   @override
   String get villageNoQuests => 'Aucune quête aujourd\'hui.';
@@ -1289,6 +1334,9 @@ class _EnglishStrings extends Strings {
   String get settingsParentZoneCta => 'Open the website';
 
   @override
+  String get settingsParentZoneSoon => 'The parents’ website is coming soon!';
+
+  @override
   String get settingsAbout => 'About TutoLys';
 
   @override
@@ -1332,6 +1380,38 @@ class _EnglishStrings extends Strings {
 
   @override
   String get villageQuestsSeeAll => 'See all';
+
+  @override
+  String get notificationsTitle => 'Notifications';
+
+  @override
+  String get notificationsEmpty => 'Nothing new for now.';
+
+  @override
+  String get notificationsEmptyHint =>
+      'Finish today’s challenge to get one!';
+
+  @override
+  String get notificationDailyQuest => 'Daily challenge done! Well done!';
+
+  @override
+  String get notificationStreakFreeze => 'Your shield saved your streak.';
+
+  @override
+  String notificationsBellLabel(int unread) => switch (unread) {
+        0 => 'Notifications',
+        1 => 'Notifications, 1 unread',
+        _ => 'Notifications, $unread unread',
+      };
+
+  @override
+  String notificationsAgo(Duration elapsed) {
+    if (elapsed.inMinutes < 1) return 'just now';
+    if (elapsed.inHours < 1) return '${elapsed.inMinutes} min ago';
+    if (elapsed.inDays < 1) return '${elapsed.inHours} h ago';
+    if (elapsed.inDays == 1) return 'yesterday';
+    return '${elapsed.inDays} days ago';
+  }
 
   @override
   String get villageNoQuests => 'No quests today.';

@@ -215,6 +215,7 @@ abstract final class TutolysTheme {
   static ThemeData _base(ColorScheme scheme, TutolysRegister register) {
     final isLearner = register == TutolysRegister.learner;
     final radius = isLearner ? Radii.cardLg : Radii.cardSm;
+    final buttonFont = isLearner ? VillageType.display : null;
 
     return ThemeData(
       useMaterial3: true,
@@ -234,14 +235,23 @@ abstract final class TutolysTheme {
           // which deliberately differ between the two registers.
           shape: const RoundedRectangleBorder(borderRadius: Radii.pillAll),
           textStyle: TextStyle(
+            // Body copy is the system font, as in the design, but every
+            // button there is Baloo 2 (`font-family: var(--font-display)`).
+            fontFamily: buttonFont,
             fontSize: isLearner ? 18 : 15,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.2,
           ),
         ),
       ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          textStyle: TextStyle(fontFamily: buttonFont, fontWeight: FontWeight.w700),
+        ),
+      ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
+          textStyle: TextStyle(fontFamily: buttonFont, fontWeight: FontWeight.w700),
           minimumSize: Size(0, isLearner ? 56 : 44),
           shape: const RoundedRectangleBorder(borderRadius: Radii.pillAll),
           side: BorderSide(color: scheme.primary.withValues(alpha: 0.5), width: 1.5),

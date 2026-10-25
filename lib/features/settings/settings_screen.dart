@@ -166,9 +166,7 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   static void _notBuilt(BuildContext context, String what) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$what — ${context.s.notBuiltYetSuffix}')),
-    );
+    VillageToast.show(context, '$what — ${context.s.notBuiltYetSuffix}');
   }
 }
 
@@ -477,13 +475,23 @@ class _ParentZone extends StatelessWidget {
                 backgroundColor: Colors.white,
                 foregroundColor: p.quebecBlue,
                 minimumSize: Size(0, 40),
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                // The design's display face, like every other button;
+                // Material's default fell back to the platform font.
+                textStyle: const TextStyle(
+                  fontFamily: VillageType.display,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
               ),
               // Account, subscription and privacy live on the website, not
               // in here — the app is for playing (Hafid, 2026-10-24). The
               // site is Track F and unbuilt, so this says where it will go
               // rather than opening nothing.
-              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('${t.settingsParentZoneCta} — ${t.comingSoonShort}')),
+              onPressed: () => VillageToast.show(
+                context,
+                t.settingsParentZoneSoon,
+                icon: Icons.schedule_rounded,
               ),
               child: Text(t.settingsParentZoneCta),
             ),
