@@ -29,6 +29,7 @@ class RecorderFrame {
     required this.now,
     required this.activeMs,
     required this.identity,
+    this.contentHash,
   });
 
   /// Wall clock, for `event_ts` only.
@@ -41,6 +42,10 @@ class RecorderFrame {
 
   /// The current question's identity.
   final ExerciseIdentity identity;
+
+  /// The envelope's content hash, for v2's `content_hash`. v1 has no field
+  /// for it and ignores it.
+  final String? contentHash;
 }
 
 /// Records against `play_event.v1` — what telemetry accepts today.

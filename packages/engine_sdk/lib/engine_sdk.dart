@@ -27,6 +27,7 @@ export 'src/runtime/activity_session_machine.dart';
 export 'src/runtime/runtime_event.dart';
 export 'src/runtime/session_ids.dart';
 export 'src/runtime/v1_event_recorder.dart';
+export 'src/runtime/v2_event_recorder.dart';
 export 'src/runtime/activity_session_store.dart';
 export 'src/settings.dart';
 export 'src/telemetry.dart';

@@ -7,6 +7,9 @@ import 'package:json_schema/json_schema.dart';
 
 import 'package:engine_sdk/testing.dart';
 
+RuntimeEventRecorder v1Recorder(SessionIds ids, String appVersion) =>
+    V1EventRecorder(ids: ids, appVersion: appVersion);
+
 void main() {
   late JsonSchema schema;
   setUpAll(() {
@@ -51,6 +54,8 @@ void main() {
     store: store,
     appVersion: '0.2.0',
     currentAppVersion: appVersion,
+    // This file pins the v1 record; v2 is v2_event_recorder_test.dart.
+    recorderFactory: v1Recorder,
     seed: 7,
     clock: ActiveClock(monotonic: () => mono),
     now: () => DateTime.utc(2026, 10, 25, 14).add(mono),

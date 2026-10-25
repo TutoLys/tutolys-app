@@ -316,14 +316,21 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('open'), findsOneWidget, reason: 'finished and popped');
       final events = await outbox();
+      // play_event.v2 (engine_sdk V2EventRecorder): v1's events, plus the
+      // listen and the picks v1 had nowhere to put.
       expect(events.map((e) => e['event_type']).toList(), [
         'session_start',
         'exercise_start',
+        'question_presented',
+        'audio_requested',
+        'option_selected',
         'attempt',
+        'option_selected',
         'attempt',
         'exercise_complete',
         'session_end',
       ]);
+      expect(events.map((e) => e['schema_version']).toSet(), {2});
       final attempts = events
           .where((e) => e['event_type'] == 'attempt')
           .toList();

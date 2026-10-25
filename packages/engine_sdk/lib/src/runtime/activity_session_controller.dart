@@ -15,6 +15,7 @@ import 'activity_session_store.dart';
 import 'runtime_event.dart';
 import 'session_ids.dart';
 import 'v1_event_recorder.dart';
+import 'v2_event_recorder.dart';
 
 /// Why a session could not start.
 enum ActivityFailure {
@@ -78,6 +79,7 @@ class ActivitySessionController extends ChangeNotifier {
     required this.store,
     required this.appVersion,
     this.currentAppVersion,
+    this.recorderFactory = _v2,
     SessionIds? ids,
     int? seed,
     ActiveClock? clock,
@@ -100,10 +102,19 @@ class ActivitySessionController extends ChangeNotifier {
   int _seed;
   ActiveClock _clock;
   final DateTime Function() _now;
-  late V1EventRecorder _recorder = V1EventRecorder(
-    ids: _ids,
-    appVersion: appVersion,
-  );
+  late RuntimeEventRecorder _recorder = _newRecorder(_ids);
+
+  /// Which wire format the outbox gets. `play_event.v2` since telemetry
+  /// ADR 0013 (engine_sdk's V2EventRecorder); v1 stays for a host pointed at
+  /// a telemetry that predates it.
+  final RuntimeEventRecorder Function(SessionIds ids, String appVersion)
+  recorderFactory;
+
+  static RuntimeEventRecorder _v2(SessionIds ids, String appVersion) =>
+      V2EventRecorder(ids: ids, appVersion: appVersion);
+
+  RuntimeEventRecorder _newRecorder(SessionIds ids) =>
+      recorderFactory(ids, appVersion);
 
   SessionState _state = SessionState.initial;
   final List<LearningEngineResolved> _questions = [];
@@ -128,7 +139,8 @@ class ActivitySessionController extends ChangeNotifier {
   ActivityFailure? get failure => _failure;
   String? get failureReason => _failureReason;
 
-  /// Durable events telemetry v1 can't carry yet (see [V1EventRecorder]).
+  /// Durable events the recorder's format can't carry (see
+  /// [RuntimeEventRecorder.unrecordedCount]).
   int get unrecordedEventCount => _recorder.unrecordedCount;
 
   int get hintsShown => _hintsShown;
@@ -262,7 +274,7 @@ class ActivitySessionController extends ChangeNotifier {
     _ids = SessionIds(snap.activitySessionId);
     _seed = snap.seed;
     _clock = ActiveClock(initialActiveMs: snap.activeMs);
-    _recorder = V1EventRecorder(ids: _ids, appVersion: appVersion);
+    _recorder = _newRecorder(_ids);
     final rs = snap.recorderState;
     _recorder.restore((rs?['recorder'] as Map?)?.cast<String, Object?>());
     _hintsShown = rs?['hints_shown'] as int? ?? 0;
@@ -314,7 +326,7 @@ class ActivitySessionController extends ChangeNotifier {
 
   Future<void> _abandonStale(SessionSnapshot snap) async {
     final ids = SessionIds(snap.activitySessionId);
-    final recorder = V1EventRecorder(ids: ids, appVersion: appVersion)
+    final recorder = _newRecorder(ids)
       ..restore(
         (snap.recorderState?['recorder'] as Map?)?.cast<String, Object?>(),
       );
@@ -342,6 +354,7 @@ class ActivitySessionController extends ChangeNotifier {
             now: _now(),
             activeMs: snap.activeMs,
             identity: identity,
+            contentHash: snap.contentHash,
           ),
         ),
     ];
@@ -429,22 +442,22 @@ class ActivitySessionController extends ChangeNotifier {
 
   /// A speaker button or an auto-read. Recorded whether or not the audio
   /// then plays: the request is the learner's, the playback is ours.
-  Future<void> recordAudioRequest(SpeechPart part, {String? partId}) => _serial(
-    () async {
-      if (_state.phase.isTerminal || _state.questionIndex >= _questions.length) {
-        return;
-      }
-      final key = '${part.name}:${partId ?? ''}';
-      final replay = !_spokenParts.add(key);
-      final e = AudioRequested(
-        questionIndex: _state.questionIndex,
-        part: part,
-        partId: partId,
-        replay: replay,
-      );
-      await _commit(_state, [e], engineState: _engineState);
-    },
-  );
+  Future<void> recordAudioRequest(SpeechPart part, {String? partId}) =>
+      _serial(() async {
+        if (_state.phase.isTerminal ||
+            _state.questionIndex >= _questions.length) {
+          return;
+        }
+        final key = '${part.name}:${partId ?? ''}';
+        final replay = !_spokenParts.add(key);
+        final e = AudioRequested(
+          questionIndex: _state.questionIndex,
+          part: part,
+          partId: partId,
+          replay: replay,
+        );
+        await _commit(_state, [e], engineState: _engineState);
+      });
 
   Future<void> pause() => _serial(() async {
     final step = ActivitySessionMachine.reduce(_state, const Pause());
@@ -578,6 +591,7 @@ class ActivitySessionController extends ChangeNotifier {
             now: now,
             activeMs: active,
             identity: _identityFor(_questionIndexOf(e, next.questionIndex)),
+            contentHash: envelope.contentHash,
           ),
         ),
     ];
