@@ -20,3 +20,4 @@ export 'src/compose_build/compose_slots_engine.dart';
 export 'src/pair_match/pair_match_board_engine.dart';
 export 'src/speed_tap/timed_choice_engine.dart';
 export 'src/shell/activity_complete_view.dart';
+export 'src/sort_buckets/sort_buckets_engine.dart';
