@@ -146,6 +146,59 @@ const learningAreas = <String, List<LearningArea>>{
         'connaissances-liees-a-la-diversite-des-societes-et-de-leur-territoire',
       ],
     ),
+    // Added by the round-4 rebuild (backend ADR 0025), which has no
+    // learning-area map file; titled from the tree's own strand names.
+    LearningArea(
+      labelFr: 'Démarche de recherche et de traitement de l’information',
+      labelEn: 'Researching and processing information',
+      strands: [
+        'demarche-de-recherche-et-de-traitement-de-l-information-en-geographie-et-en-histoire',
+      ],
+    ),
+    LearningArea(
+      labelFr: 'Techniques propres à la géographie et à l’histoire',
+      labelEn: 'Geography and history techniques',
+      strands: ['techniques-particulieres-a-la-geographie-et-a-l-histoire'],
+    ),
+  ],
+  // Culture et citoyenneté québécoise (backend ADR 0025). No learning-area
+  // map exists for it; the French titles are the tree's own strand names,
+  // the five themes then the two competency strands, and the English is
+  // ours, not the ministry's.
+  'CCQ': [
+    LearningArea(
+      labelFr: 'Conscience de soi et construction identitaire',
+      labelEn: 'Self-awareness and identity',
+      strands: ['conscience-de-soi-et-construction-identitaire'],
+    ),
+    LearningArea(
+      labelFr: 'Relations entre humains',
+      labelEn: 'Relationships between people',
+      strands: ['relations-entre-humains'],
+    ),
+    LearningArea(
+      labelFr: 'Quête de sens',
+      labelEn: 'Search for meaning',
+      strands: ['quete-de-sens'],
+    ),
+    LearningArea(
+      labelFr: 'Relations entre les humains et l’environnement',
+      labelEn: 'People and the environment',
+      strands: ['relations-entre-les-humains-et-l-environnement'],
+    ),
+    LearningArea(
+      labelFr: 'Médias et vie numérique',
+      labelEn: 'Media and digital life',
+      strands: ['medias-et-vie-numerique'],
+    ),
+    LearningArea(
+      labelFr: 'Exercer la compétence',
+      labelEn: 'Practising the competency',
+      strands: [
+        'indicateurs-de-progression-de-la-competence',
+        'elements-de-contenu-lies-a-l-exercice-de-la-competence',
+      ],
+    ),
   ],
 };
 

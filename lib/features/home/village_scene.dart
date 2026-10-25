@@ -74,8 +74,9 @@ class VillageBuilding {
 ///
 /// [live] defaults to the Carte's own [pathSubjects]: a subject goes live in
 /// one place, once its curriculum is imported, and the Village lights its
-/// building up and the Carte offers its pill together. CCQ is the one still
-/// to come (open item #13).
+/// building up and the Carte offers its pill together. All six are live
+/// since CCQ's curriculum landed (backend ADR 0025); the coming-soon state
+/// stays for whatever comes next.
 List<VillageBuilding> villageBuildings(
   Strings s, {
   Iterable<String> live = pathSubjects,

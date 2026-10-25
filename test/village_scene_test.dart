@@ -96,7 +96,7 @@ void main() {
   });
 
   group('the full program, live or coming soon', () {
-    test('six subjects, the five with curriculum live, CCQ coming', () {
+    test('six subjects, all live now that CCQ has curriculum', () {
       expect(_buildings.map((b) => b.subject), [
         'MATH',
         'FR',
@@ -105,7 +105,15 @@ void main() {
         'SCI',
         'CCQ',
       ]);
-      expect(_buildings.where((b) => !b.live).map((b) => b.subject), ['CCQ']);
+      expect(_buildings.every((b) => b.live), isTrue);
+    });
+
+    test('a subject not in the list is coming soon', () {
+      final noCcq = villageBuildings(
+        Strings.fr,
+        live: const ['MATH', 'FR', 'EN', 'SCI', 'SOC'],
+      );
+      expect(noCcq.where((b) => !b.live).map((b) => b.subject), ['CCQ']);
     });
 
     test('a subject goes live by being listed, nothing else changes', () {
@@ -132,7 +140,12 @@ void main() {
               width: 1000,
               height: 580,
               child: VillageScene(
-                buildings: [_buildings.last],
+                buildings: [
+                  villageBuildings(
+                    Strings.fr,
+                    live: const ['MATH', 'FR', 'EN', 'SCI', 'SOC'],
+                  ).last,
+                ],
                 signTitle: 'x',
                 signSubtitle: 'y',
                 onTapBuilding: (b) => tapped = b.subject,

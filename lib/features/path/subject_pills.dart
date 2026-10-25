@@ -11,6 +11,7 @@ const subjectArt = {
   'EN': 'asset-bldg-anglais.webp',
   'SCI': 'asset-bldg-science.webp',
   'SOC': 'asset-bldg-univers-social.webp',
+  'CCQ': 'asset-bldg-ccq.webp',
 };
 
 String subjectLabel(Strings t, String code) => switch (code) {
@@ -19,6 +20,7 @@ String subjectLabel(Strings t, String code) => switch (code) {
   'EN' => t.subjectAnglais,
   'SCI' => t.subjectScience,
   'SOC' => t.subjectUniversSocial,
+  'CCQ' => t.subjectCulture,
   _ => code,
 };
 

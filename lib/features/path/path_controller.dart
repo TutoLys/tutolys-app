@@ -14,7 +14,7 @@ const defaultPathSubject = 'MATH';
 /// The subjects the Carte can show — the five with real curriculum data.
 /// Culture québécoise is drawn by the design but has no backend subject yet
 /// (open item #13), and a pill opening an empty map is worse than no pill.
-const pathSubjects = ['MATH', 'FR', 'EN', 'SCI', 'SOC'];
+const pathSubjects = ['MATH', 'FR', 'EN', 'SCI', 'SOC', 'CCQ'];
 
 /// What the path screen renders.
 class PathState {

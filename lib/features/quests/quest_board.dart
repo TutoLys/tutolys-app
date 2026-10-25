@@ -5,6 +5,7 @@ import '../../data/local_db/quest_log.dart';
 import '../home/home_controller.dart';
 import '../home/subject_progress.dart';
 import '../pairing/pairing_controller.dart';
+import '../path/path_controller.dart' show pathSubjects;
 import '../progress/progress_controller.dart';
 import 'quests_model.dart';
 
@@ -92,8 +93,9 @@ enum Achievement {
   explorer,
 }
 
-/// The five subjects with real curriculum (CCQ is open item #13).
-const realSubjects = {'MATH', 'FR', 'EN', 'SCI', 'SOC'};
+/// Every subject with curriculum: the Carte's own list, so an achievement
+/// over "all subjects" counts the same subjects the kid can actually play.
+final realSubjects = pathSubjects.toSet();
 
 /// Which achievements the kid's real data earns right now. Unlocks are
 /// recorded once and never revoked, so this only ever adds.
