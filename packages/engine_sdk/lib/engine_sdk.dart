@@ -16,6 +16,7 @@ export 'src/contracts/learning_engine_registry.dart';
 export 'src/contracts/parse_result.dart';
 export 'src/engine.dart';
 export 'src/exercise_runner.dart';
+export 'src/images.dart';
 export 'src/outbox.dart';
 export 'src/registry.dart';
 export 'src/result.dart';
