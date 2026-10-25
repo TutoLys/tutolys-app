@@ -35,33 +35,38 @@ class InMemoryImageResolver implements ImageResolver {
   }) async => _bytes['$exerciseId/$ref'];
 }
 
-/// Puts an [ImageResolver] above an engine, so pictures resolve without
-/// threading a resolver through every engine's constructor.
+/// Puts an [ImageResolver] and the exercise it resolves for above an
+/// engine. An engine's view never sees the exercise id, and assets belong to
+/// the whole envelope (every question in a série shares them), so the host
+/// binds both once, where it knows the envelope.
 class ImageResolverScope extends InheritedWidget {
   const ImageResolverScope({
     required this.resolver,
+    required this.exerciseId,
     required super.child,
     super.key,
   });
 
   final ImageResolver resolver;
+  final String exerciseId;
 
-  static ImageResolver? maybeOf(BuildContext context) => context
-      .dependOnInheritedWidgetOfExactType<ImageResolverScope>()
-      ?.resolver;
+  static ImageResolverScope? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<ImageResolverScope>();
 
   @override
   bool updateShouldNotify(ImageResolverScope oldWidget) =>
-      resolver != oldWidget.resolver;
+      resolver != oldWidget.resolver || exerciseId != oldWidget.exerciseId;
 }
 
 /// Draws one `image_ref`, or [fallback] while it loads, when it isn't
-/// synced, or when there is no [ImageResolverScope] above it. A picture
-/// that hasn't arrived therefore never blanks a tile: pass the item's label
-/// (or emoji) as the fallback.
+/// synced, when its bytes don't decode, or when there is no
+/// [ImageResolverScope] above it. A picture that hasn't arrived therefore
+/// never blanks a tile: pass the item's label (or emoji) as the fallback.
+///
+/// It imposes no size: it fills its parent's constraints with [fit], so the
+/// caller gives it a box (an undecoded image is 0px tall otherwise).
 class ContentImage extends StatefulWidget {
   const ContentImage({
-    required this.exerciseId,
     required this.ref,
     required this.fallback,
     this.fit = BoxFit.contain,
@@ -69,7 +74,6 @@ class ContentImage extends StatefulWidget {
     super.key,
   });
 
-  final String exerciseId;
   final String ref;
   final Widget fallback;
   final BoxFit fit;
@@ -84,14 +88,16 @@ class ContentImage extends StatefulWidget {
 
 class _ContentImageState extends State<ContentImage> {
   ImageResolver? _resolver;
+  String? _exerciseId;
   Future<MemoryImage?>? _image;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final resolver = ImageResolverScope.maybeOf(context);
-    if (resolver != _resolver) {
-      _resolver = resolver;
+    final scope = ImageResolverScope.maybeOf(context);
+    if (scope?.resolver != _resolver || scope?.exerciseId != _exerciseId) {
+      _resolver = scope?.resolver;
+      _exerciseId = scope?.exerciseId;
       _image = _load();
     }
   }
@@ -99,14 +105,15 @@ class _ContentImageState extends State<ContentImage> {
   @override
   void didUpdateWidget(ContentImage old) {
     super.didUpdateWidget(old);
-    if (old.exerciseId != widget.exerciseId || old.ref != widget.ref) {
-      _image = _load();
-    }
+    if (old.ref != widget.ref) _image = _load();
   }
 
   Future<MemoryImage?> _load() async {
-    final bytes = await _resolver?.bytesFor(
-      exerciseId: widget.exerciseId,
+    final resolver = _resolver;
+    final exerciseId = _exerciseId;
+    if (resolver == null || exerciseId == null) return null;
+    final bytes = await resolver.bytesFor(
+      exerciseId: exerciseId,
       ref: widget.ref,
     );
     // MemoryImage keys on the bytes' identity, so holding one instance per

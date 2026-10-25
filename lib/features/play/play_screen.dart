@@ -59,6 +59,9 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     ref.read(localDatabaseProvider),
   );
 
+  /// Every question in the exercise shares its envelope's `assets[]`.
+  String get _exerciseId => widget.envelope['exercise_id'] as String;
+
   // Runtime path.
   ActivitySessionController? _controller;
   StreamSubscription<RuntimeEvent>? _autoRead;
@@ -339,6 +342,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       return Scaffold(
         body: ImageResolverScope(
           resolver: _images,
+          exerciseId: _exerciseId,
           child: LearningActivityView(
             controller: c,
             locale: locale,
@@ -358,6 +362,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     return Scaffold(
       body: ImageResolverScope(
         resolver: _images,
+        exerciseId: _exerciseId,
         child: LegacyEngineHost(
           envelope: widget.envelope,
           registry: ref.watch(engineRegistryProvider),

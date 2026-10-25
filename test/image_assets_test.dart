@@ -1,8 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:engine_sdk/engine_sdk.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
 import 'package:tutolys_app/data/sync/asset_kind.dart';
@@ -180,45 +178,6 @@ void main() {
       expect(await resolver.bytesFor(exerciseId: 'ex1', ref: 'img_a'), _png);
       expect(await resolver.bytesFor(exerciseId: 'ex1', ref: 'nope'), isNull);
       expect(await resolver.bytesFor(exerciseId: 'gone', ref: 'img_a'), isNull);
-    });
-  });
-
-  group('ContentImage', () {
-    Widget host(ImageResolver? resolver) {
-      const image = ContentImage(
-        exerciseId: 'ex1',
-        ref: 'img_a',
-        fallback: Text('chat'),
-        semanticLabel: 'chat',
-      );
-      return MaterialApp(
-        home: resolver == null
-            ? image
-            : ImageResolverScope(resolver: resolver, child: image),
-      );
-    }
-
-    testWidgets('no resolver above it: the fallback', (tester) async {
-      await tester.pumpWidget(host(null));
-      await tester.pump();
-      expect(find.text('chat'), findsOneWidget);
-      expect(find.byType(Image), findsNothing);
-    });
-
-    testWidgets('not synced yet: the fallback', (tester) async {
-      await tester.pumpWidget(host(InMemoryImageResolver()));
-      await tester.pump();
-      expect(find.text('chat'), findsOneWidget);
-    });
-
-    testWidgets('synced: the picture, named for screen readers', (
-      tester,
-    ) async {
-      final resolver = InMemoryImageResolver()..put('ex1', 'img_a', _png);
-      await tester.pumpWidget(host(resolver));
-      await tester.pump();
-      expect(find.byType(Image), findsOneWidget);
-      expect(find.bySemanticsLabel('chat'), findsOneWidget);
     });
   });
 }

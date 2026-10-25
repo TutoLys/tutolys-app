@@ -43,7 +43,10 @@ player, as audio.
   - `ImageResolver`, the same shape as `AudioResolver`;
   - `InMemoryImageResolver` for tests;
   - `ImageResolverScope`, an InheritedWidget the play screen puts above
-    every engine, legacy and new runtime alike;
+    every engine, legacy and new runtime alike. It carries the exercise id
+    as well as the resolver: an engine's view never sees the id, and
+    assets belong to the whole envelope, so every question in a série
+    shares them;
   - `ContentImage`, which draws a ref, or a fallback while it loads or
     when it's missing.
 
