@@ -6,60 +6,14 @@ import 'quest_board.dart';
 import 'quests_model.dart';
 import 'quests_screen.dart';
 
-/// Opens the streak detail the way the design does: a 380px card over the
-/// dimmed page on wider screens, full screen on a phone.
-Future<void> showStreakDetail(
-  BuildContext context, {
-  required int? streakDays,
-  required int? freezesAvailable,
-  required PlayedDays played,
-  QuestBoard? board,
-  VoidCallback? onOpenPath,
-}) {
-  final phone = MediaQuery.sizeOf(context).width < Breakpoints.compact;
-
-  Widget detail(BuildContext routeContext) => StreakDetail(
-    streakDays: streakDays,
-    freezesAvailable: freezesAvailable,
-    played: played,
-    board: board,
-    onClose: () => Navigator.of(routeContext).pop(),
-    onOpenPath: onOpenPath == null
-        ? null
-        : () {
-            Navigator.of(routeContext).pop();
-            onOpenPath();
-          },
-  );
-
-  if (phone) {
-    return Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        fullscreenDialog: true,
-        builder: (c) => Scaffold(
-          backgroundColor: VillagePalette.of(c).surface,
-          body: detail(c),
-        ),
-      ),
-    );
-  }
-  return showDialog<void>(
-    context: context,
-    builder: (c) => Dialog(
-      backgroundColor: VillagePalette.of(c).surface,
-      clipBehavior: Clip.antiAlias,
-      insetPadding: const EdgeInsets.all(Space.lg),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 380),
-        child: detail(c),
-      ),
-    ),
-  );
-}
-
-/// "Série": the gold hero, a nudge when today is not played yet, the month
-/// calendar, the goal bar and the three streak rewards.
+/// "Série", as a page inside Quêtes rather than the design's modal (Hafid,
+/// 2026-10-25): the shell's sidebar, header and nav stay put, a back arrow
+/// returns to the quest list. The content is the design's — the gold hero,
+/// a nudge when today is not played yet, the month calendar, the goal bar
+/// and the three streak rewards — laid out in two columns when there is
+/// room (calendar | goal + rewards), one column on a phone.
+///
+/// It does not scroll itself; [QuestsScreen] hosts it in its own scroll.
 ///
 /// The rewards are earned on the real streak and recorded once, never taken
 /// back ([QuestBoard.unlocked]): the chest opens at 3 days, "Gardien de la
@@ -121,105 +75,148 @@ class _StreakDetailState extends State<StreakDetail> {
   @override
   Widget build(BuildContext context) {
     final t = context.s;
+    final p = VillagePalette.of(context);
     final streak = widget.streakDays;
     final freezes = widget.freezesAvailable;
+    const gap = SizedBox(height: 18, width: 18);
 
-    return SingleChildScrollView(
+    final calendar = _Panel(
+      title: t.streakDetailCalendar,
+      child: _Calendar(
+        month: _month,
+        played: widget.played,
+        onPrev: _month.isAfter(_earliest) ? () => _shift(-1) : null,
+        onNext: _month.isBefore(_current) ? () => _shift(1) : null,
+      ),
+    );
+    final goal = streak == null
+        ? null
+        : _Panel(
+            title: t.streakDetailGoal,
+            child: _GoalTrack(streak: streak),
+          );
+    final rewards = _Panel(
+      title: t.streakDetailRewards,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _Hero(streakDays: streak, onClose: widget.onClose),
-          if (!widget.played.playedToday)
-            Transform.translate(
-              offset: const Offset(0, -10),
-              child: _Nudge(onOpenPath: widget.onOpenPath),
-            )
-          else
-            const SizedBox(height: 18),
-          _Section(
-            title: t.streakDetailCalendar,
-            child: _Calendar(
-              month: _month,
-              played: widget.played,
-              onPrev: _month.isAfter(_earliest) ? () => _shift(-1) : null,
-              onNext: _month.isBefore(_current) ? () => _shift(1) : null,
+          _RewardCard(
+            key: const ValueKey('reward-chest'),
+            leading: Image.asset(
+              'assets/images/asset-chest.webp',
+              width: 42,
+              height: 42,
             ),
+            title: t.chestTitle,
+            body: (widget.board?.has(Achievement.streak3) ?? false)
+                ? t.chestBody
+                : t.chestBodyLocked,
+            tag: (widget.board?.has(Achievement.streak3) ?? false)
+                ? _Tag.ok(t.rewardObtained)
+                : _Tag.pending(t.rewardDaysLeft(3 - (streak ?? 0).clamp(0, 2))),
           ),
-          if (streak != null)
-            _Section(
-              title: t.streakDetailGoal,
-              child: _GoalTrack(streak: streak),
+          if (freezes != null) ...[
+            const SizedBox(height: 10),
+            _RewardCard(
+              key: const ValueKey('reward-shield'),
+              leading: Image.asset(
+                'assets/images/asset-badge.webp',
+                width: 42,
+                height: 42,
+              ),
+              title: t.streakShieldTitle,
+              body: t.streakShieldBody,
+              tag: freezes > 0
+                  ? _Tag.ok(t.streakShieldBalance(freezes))
+                  : _Tag.pending(t.streakShieldNone),
             ),
-          _Section(
-            title: t.streakDetailRewards,
-            child: Column(
-              children: [
-                _RewardCard(
-                  key: const ValueKey('reward-chest'),
-                  leading: Image.asset(
-                    'assets/images/asset-chest.webp',
-                    width: 42,
-                    height: 42,
-                  ),
-                  title: t.chestTitle,
-                  body: (widget.board?.has(Achievement.streak3) ?? false)
-                      ? t.chestBody
-                      : t.chestBodyLocked,
-                  tag: (widget.board?.has(Achievement.streak3) ?? false)
-                      ? _Tag.ok(t.rewardObtained)
-                      : _Tag.pending(
-                          t.rewardDaysLeft(3 - (streak ?? 0).clamp(0, 2)),
-                        ),
-                ),
-                if (freezes != null) ...[
-                  const SizedBox(height: 10),
-                  _RewardCard(
-                    key: const ValueKey('reward-shield'),
-                    leading: Image.asset(
-                      'assets/images/asset-badge.webp',
-                      width: 42,
-                      height: 42,
-                    ),
-                    title: t.streakShieldTitle,
-                    body: t.streakShieldBody,
-                    tag: freezes > 0
-                        ? _Tag.ok(t.streakShieldBalance(freezes))
-                        : _Tag.pending(t.streakShieldNone),
-                  ),
-                ],
-                const SizedBox(height: 10),
-                _RewardCard(
-                  key: const ValueKey('reward-title'),
-                  leading: _RoundLeading(
-                    child: Icon(
-                      Icons.receipt_long_outlined,
-                      size: 20,
-                      color: VillagePalette.of(context).quebecBlueBright,
-                    ),
-                  ),
-                  title: '${t.flameKeeperTitlePrefix}${t.flameKeeperTitle}',
-                  body: t.flameKeeperBody,
-                  tag: (widget.board?.has(Achievement.streak7) ?? false)
-                      ? _Tag.active(t.rewardActive)
-                      : _Tag.pending(
-                          t.rewardDaysLeft(7 - (streak ?? 0).clamp(0, 6)),
-                        ),
-                ),
-              ],
+          ],
+          const SizedBox(height: 10),
+          _RewardCard(
+            key: const ValueKey('reward-title'),
+            leading: _RoundLeading(
+              child: Icon(
+                Icons.receipt_long_outlined,
+                size: 20,
+                color: VillagePalette.of(context).quebecBlueBright,
+              ),
             ),
+            title: '${t.flameKeeperTitlePrefix}${t.flameKeeperTitle}',
+            body: t.flameKeeperBody,
+            tag: (widget.board?.has(Achievement.streak7) ?? false)
+                ? _Tag.active(t.rewardActive)
+                : _Tag.pending(t.rewardDaysLeft(7 - (streak ?? 0).clamp(0, 6))),
           ),
-          SizedBox(height: Space.xs + MediaQuery.paddingOf(context).bottom),
         ],
       ),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: p.shadow,
+                blurRadius: 40,
+                offset: const Offset(0, 16),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: _Hero(streakDays: streak, onBack: widget.onClose),
+          ),
+        ),
+        if (!widget.played.playedToday)
+          Transform.translate(
+            offset: const Offset(0, -12),
+            child: _Nudge(onOpenPath: widget.onOpenPath),
+          )
+        else
+          gap,
+        LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth < 720) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  calendar,
+                  if (goal != null) ...[gap, goal],
+                  gap,
+                  rewards,
+                ],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: calendar),
+                gap,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (goal != null) ...[goal, gap],
+                      rewards,
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ],
     );
   }
 }
 
 class _Hero extends StatelessWidget {
-  const _Hero({required this.streakDays, required this.onClose});
+  const _Hero({required this.streakDays, required this.onBack});
 
   final int? streakDays;
-  final VoidCallback onClose;
+  final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
@@ -231,12 +228,7 @@ class _Hero extends StatelessWidget {
     final eyebrowInk = p.isDark ? p.goldLight : const Color(0xFF8A6A1B);
 
     return Container(
-      padding: EdgeInsets.fromLTRB(
-        20,
-        20 + MediaQuery.paddingOf(context).top,
-        20,
-        26,
-      ),
+      padding: EdgeInsets.fromLTRB(20, 20, 20, 26),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -254,19 +246,19 @@ class _Hero extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: Semantics(
                   button: true,
-                  label: t.closeLabel,
+                  label: t.backToQuests,
                   child: Material(
                     color: Colors.white.withValues(alpha: 0.75),
                     shape: const CircleBorder(),
                     child: InkWell(
-                      key: const ValueKey('streak-detail-close'),
+                      key: const ValueKey('streak-detail-back'),
                       customBorder: const CircleBorder(),
-                      onTap: onClose,
+                      onTap: onBack,
                       child: SizedBox(
                         width: 32,
                         height: 32,
                         child: Icon(
-                          Icons.close,
+                          Icons.arrow_back,
                           size: 15,
                           color: VillageColors.ink,
                         ),
@@ -499,8 +491,10 @@ class _Nudge extends StatelessWidget {
   }
 }
 
-class _Section extends StatelessWidget {
-  const _Section({required this.title, required this.child});
+/// A titled white card on the page, the same `.quest-panel` the quest list
+/// uses.
+class _Panel extends StatelessWidget {
+  const _Panel({required this.title, required this.child});
 
   final String title;
   final Widget child;
@@ -508,8 +502,7 @@ class _Section extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = VillagePalette.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+    return QuestPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

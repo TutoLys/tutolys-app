@@ -229,8 +229,8 @@ abstract class Strings {
   String get streakShieldBody;
   String streakShieldBalance(int count);
   String get streakShieldNone;
-  String get closeLabel;
   String get streakTabPersonal;
+  String get backToQuests;
 
   /// A label only: the design's greyed-out tab. No social feature (#12).
   String get streakTabFriends;
@@ -776,11 +776,12 @@ class _FrenchStrings extends Strings {
   @override
   String get streakShieldNone => 'Tu en gagnes un chaque semaine.';
 
-  @override
-  String get closeLabel => 'Fermer';
 
   @override
   String get streakTabPersonal => 'Personnelle';
+
+  @override
+  String get backToQuests => 'Retour aux quêtes';
 
   @override
   String get streakTabFriends => 'Entre amis';
@@ -1366,11 +1367,12 @@ class _EnglishStrings extends Strings {
   @override
   String get streakShieldNone => 'You earn one every week.';
 
-  @override
-  String get closeLabel => 'Close';
 
   @override
   String get streakTabPersonal => 'Personal';
+
+  @override
+  String get backToQuests => 'Back to quests';
 
   @override
   String get streakTabFriends => 'With friends';

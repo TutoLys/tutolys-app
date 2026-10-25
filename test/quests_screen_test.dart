@@ -312,7 +312,7 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('opens as a dialog on wide screens, and closes', (
+    testWidgets('opens as a page in the tab, not a dialog, and goes back', (
       tester,
     ) async {
       _wide(tester);
@@ -320,26 +320,49 @@ void main() {
       await tester.pumpAndSettle();
       await open(tester);
 
-      expect(find.byType(Dialog), findsOneWidget);
+      expect(find.byType(Dialog), findsNothing);
+      // Same screen, other view: nothing was pushed over it.
+      expect(find.byType(QuestsScreen), findsOneWidget);
+      expect(find.text(fr.villageQuestsTitle), findsNothing);
       expect(find.text(fr.streakDetailHeadline(4)), findsOneWidget);
       expect(find.text(fr.monthYear(2026, 10).toUpperCase()), findsOneWidget);
       expect(find.byKey(const ValueKey('goal-4-7')), findsOneWidget);
 
-      await tester.tap(find.byKey(const ValueKey('streak-detail-close')));
+      await tester.tap(find.byKey(const ValueKey('streak-detail-back')));
       await tester.pumpAndSettle();
-      expect(find.byType(Dialog), findsNothing);
+      expect(find.text(fr.villageQuestsTitle), findsOneWidget);
+      expect(find.text(fr.streakDetailHeadline(4)), findsNothing);
     });
 
-    testWidgets('opens full screen on a phone', (tester) async {
+    testWidgets('wide: calendar beside the goal and rewards', (tester) async {
+      _wide(tester);
+      await tester.pumpWidget(_app(progress: _snapshot()));
+      await tester.pumpAndSettle();
+      await open(tester);
+
+      final cal = tester.getTopLeft(find.text(fr.streakDetailCalendar));
+      final goal = tester.getTopLeft(find.text(fr.streakDetailGoal));
+      expect(goal.dx, greaterThan(cal.dx));
+      expect(goal.dy, closeTo(cal.dy, 1));
+    });
+
+    testWidgets('phone: one column, no overflow', (tester) async {
       _phone(tester);
       await tester.pumpWidget(_app(progress: _snapshot()));
       await tester.pumpAndSettle();
       await open(tester);
 
+      expect(tester.takeException(), isNull);
       expect(find.byType(Dialog), findsNothing);
       expect(find.text(fr.streakDetailHeadline(4)), findsOneWidget);
-      // A pushed route covers the page rather than floating over it.
-      expect(find.byType(QuestsScreen), findsNothing);
+      final cal = tester.getTopLeft(find.text(fr.streakDetailCalendar));
+      await tester.scrollUntilVisible(
+        find.text(fr.streakDetailGoal),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      final goal = tester.getTopLeft(find.text(fr.streakDetailGoal));
+      expect(goal.dx, closeTo(cal.dx, 1));
     });
 
     testWidgets('the nudge appears only while today is unplayed, and leads '
@@ -363,7 +386,8 @@ void main() {
       await tester.tap(find.text(fr.streakDetailNudgeCta.toUpperCase()));
       await tester.pumpAndSettle();
       expect(opened, 1);
-      expect(find.byType(Dialog), findsNothing);
+      // Leaving for the Carte resets the tab to its quest list.
+      expect(find.text(fr.villageQuestsTitle), findsOneWidget);
     });
 
     testWidgets('no nudge once today is played', (tester) async {

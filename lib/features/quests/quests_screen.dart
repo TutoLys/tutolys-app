@@ -19,7 +19,7 @@ import 'streak_detail.dart';
 /// The streak number is the backend's. The week strip is this device's own
 /// play history (`played_date`), because no device-facing endpoint serves
 /// per-day play — see [StreakLocal.playedDays] for what that leaves out.
-class QuestsScreen extends ConsumerWidget {
+class QuestsScreen extends ConsumerStatefulWidget {
   const QuestsScreen({super.key, this.onOpenPath});
 
   /// Where a quest row and the streak nudge lead: the Carte, the only place
@@ -27,7 +27,20 @@ class QuestsScreen extends ConsumerWidget {
   final VoidCallback? onOpenPath;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<QuestsScreen> createState() => _QuestsScreenState();
+}
+
+/// Holds which of the two views is showing: the quest list, or the "Série"
+/// page the streak card opens. A page in the tab, not a pushed route or a
+/// dialog, so the shell stays around it.
+class _QuestsScreenState extends ConsumerState<QuestsScreen> {
+  bool _serie = false;
+
+  void _showSerie(bool show) => setState(() => _serie = show);
+
+  @override
+  Widget build(BuildContext context) {
+    final onOpenPath = widget.onOpenPath;
     final t = context.s;
     final p = VillagePalette.of(context);
     final progress = ref.watch(progressControllerProvider);
@@ -35,9 +48,38 @@ class QuestsScreen extends ConsumerWidget {
     final board = ref.watch(questBoardProvider).value;
     final compact = MediaQuery.sizeOf(context).width < Breakpoints.compact;
     final gap = compact ? Space.sm : 18.0;
+    final padding = EdgeInsets.all(compact ? Space.md : Space.lg);
+
+    if (_serie && played != null) {
+      return SingleChildScrollView(
+        // Its own key, so opening it starts at the top, not wherever the
+        // quest list was scrolled to.
+        key: const PageStorageKey('serie'),
+        padding: padding,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1040),
+            child: StreakDetail(
+              streakDays: progress.currentStreakDays,
+              freezesAvailable: progress.freezesAvailable,
+              played: played,
+              board: board,
+              onClose: () => _showSerie(false),
+              onOpenPath: onOpenPath == null
+                  ? null
+                  : () {
+                      _showSerie(false);
+                      onOpenPath();
+                    },
+            ),
+          ),
+        ),
+      );
+    }
 
     return SingleChildScrollView(
-      padding: EdgeInsets.all(compact ? Space.md : Space.lg),
+      key: const PageStorageKey('quests'),
+      padding: padding,
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1040),
@@ -70,16 +112,7 @@ class QuestsScreen extends ConsumerWidget {
                 estimated: progress.isStreakEstimated,
                 played: played,
                 compact: compact,
-                onTap: played == null
-                    ? null
-                    : () => showStreakDetail(
-                          context,
-                          streakDays: progress.currentStreakDays,
-                          freezesAvailable: progress.freezesAvailable,
-                          played: played,
-                          board: board,
-                          onOpenPath: onOpenPath,
-                        ),
+                onTap: played == null ? null : () => _showSerie(true),
               ),
               SizedBox(height: gap),
               LayoutBuilder(
@@ -98,7 +131,11 @@ class QuestsScreen extends ConsumerWidget {
                   if (constraints.maxWidth < 680) {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [list, SizedBox(height: gap), badge],
+                      children: [
+                        list,
+                        SizedBox(height: gap),
+                        badge,
+                      ],
                     );
                   }
                   return Row(
@@ -137,7 +174,11 @@ class QuestPanel extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: radius,
         boxShadow: [
-          BoxShadow(color: p.shadow, blurRadius: 40, offset: const Offset(0, 16)),
+          BoxShadow(
+            color: p.shadow,
+            blurRadius: 40,
+            offset: const Offset(0, 16),
+          ),
         ],
       ),
       child: Material(
@@ -279,8 +320,9 @@ class WeekStrip extends StatelessWidget {
     ];
     return Row(
       mainAxisSize: spread ? MainAxisSize.max : MainAxisSize.min,
-      mainAxisAlignment:
-          spread ? MainAxisAlignment.spaceBetween : MainAxisAlignment.start,
+      mainAxisAlignment: spread
+          ? MainAxisAlignment.spaceBetween
+          : MainAxisAlignment.start,
       children: [
         for (var i = 0; i < cells.length; i++) ...[
           if (i > 0 && !spread) const SizedBox(width: 6),
@@ -336,7 +378,11 @@ class _WeekCell extends StatelessWidget {
           ),
           Text(
             day.played ? '✓' : '–',
-            style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: fg),
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+              color: fg,
+            ),
           ),
         ],
       ),
@@ -471,7 +517,10 @@ class QuestItem extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: done ? _doneGreen : null,
-                border: Border.all(color: done ? _doneGreen : p.track, width: 2),
+                border: Border.all(
+                  color: done ? _doneGreen : p.track,
+                  width: 2,
+                ),
               ),
               child: done
                   ? const Icon(Icons.check, size: 11, color: Colors.white)
@@ -526,7 +575,11 @@ class QuestItem extends StatelessWidget {
                 key: const ValueKey('quest-reward'),
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Image.asset('assets/images/asset-xpstar.webp', width: 16, height: 16),
+                  Image.asset(
+                    'assets/images/asset-xpstar.webp',
+                    width: 16,
+                    height: 16,
+                  ),
                   const SizedBox(width: 3),
                   Text(
                     context.s.questRewardXp(xpReward!),

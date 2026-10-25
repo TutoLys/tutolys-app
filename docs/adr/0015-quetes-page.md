@@ -139,3 +139,20 @@ instead of drawing the element empty.
 **Known limit**: all of this history is per device, like `played_date`.
 Play on a second device does not count toward quests or badges until the
 backend owns them.
+
+## Revision — 2026-10-25: Série is a page, not a modal
+
+Hafid: "Instead of a modal, we should integrate this in the app." The streak
+card now switches the Quêtes tab to a "Série" view, a page inside the tab.
+It is not a dialog or a pushed route.
+
+- **The shell stays around it**: sidebar, header, nav and the quest badge.
+- **The close button is now a back arrow** ("Retour aux quêtes").
+- **Two columns from 720px**: the calendar beside the goal bar and the
+  rewards. One column below that.
+- **Its sections use the same white `.quest-panel` cards** as the quest
+  list, so it reads as part of the app rather than an overlay.
+
+The design's own content is unchanged: hero, tabs, nudge, calendar, goal
+and rewards. Following the nudge to the Carte returns the tab to its quest
+list.
