@@ -4,6 +4,7 @@ import '../../data/api/progress_api.dart';
 import '../../data/local_db/streak_local.dart';
 import '../pairing/pairing_controller.dart';
 import 'grade_level.dart';
+import 'progress_cache.dart';
 import 'local_progress.dart';
 
 /// Real mastery/streak counts only — `null` streak means "couldn't read it
@@ -26,6 +27,7 @@ class ProgressState {
     this.skillsCompleted,
     this.skillsTotal,
     this.levelProgress,
+    this.stale = false,
   });
 
   final int? currentStreakDays;
@@ -70,6 +72,10 @@ class ProgressState {
   /// How far toward the next level, 0..1. Null whenever [level] is.
   final double? levelProgress;
 
+  /// The last read failed, and these are the last good values this device
+  /// saw (`ProgressCache`), never zeros. At most a subtle hint.
+  final bool stale;
+
   ProgressState withLevel(GradeLevel? g) => ProgressState(
     currentStreakDays: currentStreakDays,
     masteredCount: masteredCount,
@@ -85,6 +91,7 @@ class ProgressState {
     skillsCompleted: g?.completed,
     skillsTotal: g?.total,
     levelProgress: g?.progress,
+    stale: stale,
   );
 }
 
@@ -123,39 +130,56 @@ class ProgressController extends Notifier<ProgressState> {
       kidId: ref.read(activeKidIdProvider) ?? unpairedKidId,
     ).currentStreak();
 
-    state = switch (result) {
-      ProgressFetched(:final snapshot) => ProgressState(
-        currentStreakDays: switch (snapshot.currentStreakDays) {
-          final server? => server > local ? server : local,
-          // The server couldn't read telemetry: this device's count is
-          // still real, but a local 0 says nothing, so that stays a dash.
-          null => local > 0 ? local : null,
-        },
-        masteredCount: snapshot.masteredCount,
-        totalSkills: snapshot.masteries.length,
-        loading: false,
-        freezesAvailable: snapshot.freezesAvailable,
-        dailyQuest: snapshot.dailyQuest,
-        totalXp: snapshot.totalXp,
-        masteries: snapshot.masteries,
-      ),
-      ProgressOffline() => ProgressState(
-        loading: false,
-        offline: true,
-        currentStreakDays: local,
-        isStreakEstimated: true,
-      ),
-      // Unauthorized/failed: show nothing rather than a stale/fabricated
-      // number — the session controller handles a real 401 (token revoked)
-      // separately; this view just has nothing to show this time.
-      ProgressUnauthorized() ||
-      ProgressFailed() => const ProgressState(loading: false),
-    };
-    _server = result is ProgressFetched ? result.snapshot : null;
+    // A failed read must never look like lost progress: the last good read
+    // stands in, and fills what a degraded read left empty (ADR 0033).
+    final cache = ProgressCache(
+      ref.read(localDatabaseProvider),
+      kidId: ref.read(activeKidIdProvider) ?? unpairedKidId,
+    );
+    final cached = await cache.read();
+    final ProgressSnapshot? shown;
+    switch (result) {
+      case ProgressFetched(:final snapshot):
+        shown = mergeWithCached(snapshot, cached);
+        await cache.write(shown);
+      case ProgressOffline() || ProgressUnauthorized() || ProgressFailed():
+        shown = cached;
+    }
+    if (!ref.mounted) return;
+
+    final offline = result is ProgressOffline;
+    state = shown == null
+        // Never read successfully on this device: offline shows the local
+        // streak, anything else shows nothing rather than a made-up zero.
+        ? ProgressState(
+            loading: false,
+            offline: offline,
+            currentStreakDays: offline ? local : null,
+            isStreakEstimated: offline,
+          )
+        : ProgressState(
+            currentStreakDays: switch (shown.currentStreakDays) {
+              final server? => server > local ? server : local,
+              // Unknown on the server: this device's count is still real,
+              // but a local 0 says nothing, so that stays a dash.
+              null => local > 0 ? local : null,
+            },
+            masteredCount: shown.masteredCount,
+            totalSkills: shown.masteries.length,
+            loading: false,
+            offline: offline,
+            isStreakEstimated: result is! ProgressFetched,
+            stale: result is! ProgressFetched,
+            freezesAvailable: shown.freezesAvailable,
+            dailyQuest: shown.dailyQuest,
+            totalXp: shown.totalXp,
+            masteries: shown.masteries,
+          );
+    _server = shown;
     await _applyLevel();
   }
 
-  /// The last successful read, for its level fields.
+  /// The read being shown (fresh or cached), for its level fields.
   ProgressSnapshot? _server;
 
   /// Merges this device's completed skills with the server's (ADR 0033)

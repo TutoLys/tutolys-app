@@ -65,3 +65,24 @@ had learned, and it lagged until `award_xp` ran.
   backend counts every live leaf with a marker for that grade. These
   should agree; when they don't, the server's total wins as soon as it is
   read.
+
+## Revision 2026-10-25: a failed read never looks like lost progress
+
+Found live: `/me/progress` returned 500 for three minutes. The app showed
+XP 0, streak "–" and 0 skills mastered, and the daily challenge vanished,
+so quests fell from 3/3 to 2/2. Hafid thought his data was gone.
+
+- **The last good read is cached per kid** (`ProgressCache`, `app_state`
+  key `progress.last_snapshot`). When a read fails (500, offline, 401), it
+  stands in, and `ProgressState.stale` is set. There is no hint on screen
+  for now; there are certainly no zeros.
+- **A degraded read** (the backend sends null when it can't reach
+  telemetry) keeps the cached streak, freeze balance and daily quest
+  (`mergeWithCached`). XP is a ledger that never shrinks, so a smaller
+  total is a bad read and the larger one stands. Mastery is the server's
+  own table and is taken as read.
+- **The daily quest is per day.** A cached quest from another day is
+  dropped, not shown as today's.
+- The local-instant values (ADR 0032's per-node measure, the streak, the
+  grade level) don't depend on the read at all, so they carry the display
+  either way.

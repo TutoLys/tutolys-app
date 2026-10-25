@@ -289,6 +289,67 @@ void main() {
     });
   });
 
+  group('a failed read never looks like lost progress', () {
+    const good = ProgressFetched(
+      ProgressSnapshot(
+        masteries: [
+          SkillMasteryDto(skillNodeId: 'a', masteryPct: 95, isMastered: true),
+        ],
+        currentStreakDays: 4,
+        freezesAvailable: 1,
+        dailyQuest: DailyQuestDto(target: 3, progress: 3, completed: true),
+        totalXp: 240,
+      ),
+    );
+
+    test('a 500 after a good read keeps every value, marked stale', () async {
+      container = build();
+      api.result = good;
+      await container.read(progressControllerProvider.notifier).refresh();
+
+      api.result = const ProgressFailed('500');
+      await container.read(progressControllerProvider.notifier).refresh();
+
+      final state = container.read(progressControllerProvider);
+      expect(state.totalXp, 240);
+      expect(state.currentStreakDays, 4);
+      expect(state.masteredCount, 1);
+      expect(state.freezesAvailable, 1);
+      expect(state.dailyQuest?.completed, isTrue, reason: 'quest not dropped');
+      expect(state.stale, isTrue);
+    });
+
+    test('offline after a good read shows the last good read too', () async {
+      container = build();
+      api.result = good;
+      await container.read(progressControllerProvider.notifier).refresh();
+
+      api.result = const ProgressOffline();
+      await container.read(progressControllerProvider.notifier).refresh();
+
+      final state = container.read(progressControllerProvider);
+      expect(state.totalXp, 240);
+      expect(state.offline, isTrue);
+    });
+
+    test('a degraded read keeps what it left empty; XP never drops', () async {
+      container = build();
+      api.result = good;
+      await container.read(progressControllerProvider.notifier).refresh();
+
+      api.result = const ProgressFetched(
+        ProgressSnapshot(masteries: [], currentStreakDays: null, totalXp: 0),
+      );
+      await container.read(progressControllerProvider.notifier).refresh();
+
+      final state = container.read(progressControllerProvider);
+      expect(state.currentStreakDays, 4);
+      expect(state.dailyQuest, isNotNull);
+      expect(state.totalXp, 240);
+      expect(state.stale, isFalse, reason: 'the read itself succeeded');
+    });
+  });
+
   test('unauthorized shows nothing rather than an error state', () async {
     container = build();
     api.result = const ProgressUnauthorized();

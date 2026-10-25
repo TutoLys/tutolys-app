@@ -20,6 +20,12 @@ class SkillMasteryDto {
   final String skillNodeId;
   final double masteryPct;
   final bool isMastered;
+
+  Map<String, Object?> toJson() => {
+    'skill_node': skillNodeId,
+    'mastery_pct': masteryPct,
+    'is_mastered': isMastered,
+  };
 }
 
 /// Today's daily-challenge progress
@@ -43,6 +49,12 @@ class DailyQuestDto {
   final int target;
   final int progress;
   final bool completed;
+
+  Map<String, Object?> toJson() => {
+    'target': target,
+    'progress': progress,
+    'completed': completed,
+  };
 }
 
 /// `GET /api/v1/me/progress`'s full body — mastery per skill, the kid's
@@ -117,6 +129,19 @@ class ProgressSnapshot {
   final int? skillsTotal;
 
   int get masteredCount => masteries.where((m) => m.isMastered).length;
+
+  /// The same shape [ProgressSnapshot.fromJson] reads, for the device's
+  /// copy of the last good read (`ProgressCache`).
+  Map<String, Object?> toJson() => {
+    'masteries': [for (final m in masteries) m.toJson()],
+    'current_streak_days': currentStreakDays,
+    'freezes_available': freezesAvailable,
+    'daily_quest': dailyQuest?.toJson(),
+    'total_xp': totalXp,
+    'level': level,
+    'skills_completed': skillsCompleted,
+    'skills_total': skillsTotal,
+  };
 }
 
 sealed class ProgressResult {
