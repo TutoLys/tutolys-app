@@ -2,6 +2,7 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/i18n/strings.dart';
+import '../../core/widgets/breathing_mascot.dart';
 
 /// One subject's building in the village.
 class VillageBuilding {
@@ -399,11 +400,7 @@ class _MascotGreeting extends StatelessWidget {
         ),
         Padding(
           padding: EdgeInsets.only(left: 24, top: 4),
-          child: Image.asset(
-            'assets/images/asset-mascot-welcome.webp',
-            height: 120,
-            fit: BoxFit.contain,
-          ),
+          child: BreathingMascot(height: 120),
         ),
       ],
     );

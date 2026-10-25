@@ -60,4 +60,62 @@ void main() {
       isTrue,
     );
   });
+
+  group('the mascot', () {
+    Widget mascotIn({required bool stillness, required bool visible}) =>
+        MediaQuery(
+          data: MediaQueryData(disableAnimations: stillness),
+          child: MaterialApp(
+            home: Scaffold(
+              body: Visibility(
+                visible: visible,
+                maintainState: true,
+                maintainAnimation: true,
+                maintainSize: true,
+                child: SizedBox(
+                  width: 900,
+                  height: 580,
+                  child: VillageScene(
+                    buildings: const [],
+                    signTitle: 'x',
+                    signSubtitle: 'y',
+                    greeting: 'Salut !',
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+
+    testWidgets('breathes when visible and motion is allowed', (tester) async {
+      await tester.pumpWidget(mascotIn(stillness: false, visible: true));
+      await tester.pump(const Duration(milliseconds: 600));
+
+      // A running ticker leaves the test with a pending frame; a stopped one
+      // does not. That is the cheapest honest probe for "is it animating".
+      expect(tester.binding.hasScheduledFrame, isTrue);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('does not breathe under reduced motion', (tester) async {
+      await tester.pumpWidget(mascotIn(stillness: true, visible: true));
+      await tester.pump(const Duration(milliseconds: 600));
+
+      expect(
+        tester.binding.hasScheduledFrame,
+        isFalse,
+        reason: 'an idle loop is the worst thing to leave running for a kid '
+            'who asked for less motion',
+      );
+    });
+
+    testWidgets('stops when the tab is hidden', (tester) async {
+      // IndexedStack keeps every tab built and does not mute tickers, so an
+      // unguarded loop would bob forever behind Carte and Profil.
+      await tester.pumpWidget(mascotIn(stillness: false, visible: false));
+      await tester.pump(const Duration(milliseconds: 600));
+
+      expect(tester.binding.hasScheduledFrame, isFalse);
+    });
+  });
 }

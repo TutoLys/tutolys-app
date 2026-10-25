@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/i18n/strings.dart';
+import '../../core/widgets/breathing_mascot.dart';
 import '../home/subject_progress.dart';
 import '../home/village_scene.dart';
 import '../home/village_screen.dart' show subjectCodeFor;
@@ -175,11 +176,7 @@ class _Hero extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Image.asset(
-          'assets/images/asset-mascot-welcome.webp',
-          height: 116,
-          fit: BoxFit.contain,
-        ),
+        const BreathingMascot(height: 116),
         const SizedBox(height: Space.xs),
         Text(
           name,

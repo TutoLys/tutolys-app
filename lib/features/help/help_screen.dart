@@ -2,6 +2,7 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/i18n/strings.dart';
+import '../../core/widgets/breathing_mascot.dart';
 
 /// One question and its answer.
 class HelpEntry {
@@ -39,11 +40,7 @@ class HelpScreen extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Image.asset(
-                    'assets/images/asset-mascot-welcome.webp',
-                    height: 86,
-                    fit: BoxFit.contain,
-                  ),
+                  const BreathingMascot(height: 86),
                   const SizedBox(width: Space.sm),
                   Expanded(
                     child: Column(
