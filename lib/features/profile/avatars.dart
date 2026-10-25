@@ -416,6 +416,26 @@ AvatarDef avatarFor(String? key) => avatarCatalog.firstWhere(
   orElse: () => avatarCatalog.first,
 );
 
+/// What a kid of [sex] wears in place of [key]. An avatar drawn for the
+/// other sex is swapped for the same character's version for theirs, when
+/// that is drawn and [unlocked], and otherwise for their default. Anything
+/// else is kept. An unspecified kid keeps whatever they wear.
+String avatarForSex(String key, KidSex sex, Set<String> unlocked) {
+  final worn = avatarFor(key);
+  if (sex == KidSex.unspecified || worn.sex == null || worn.sex == sex) {
+    return key;
+  }
+  for (final a in avatarCatalog) {
+    if (a.character == worn.character &&
+        a.sex == sex &&
+        a.asset != null &&
+        unlocked.contains(a.key)) {
+      return a.key;
+    }
+  }
+  return defaultAvatarFor(sex);
+}
+
 /// Every key of [character]: its girl and boy versions, or the one key.
 List<String> keysOf(String character) => [
   for (final a in avatarCatalog)
@@ -597,9 +617,8 @@ class AvatarState {
     this.sex = KidSex.unspecified,
   });
 
-  /// What the kid wears. It can be one the picker no longer offers: an
-  /// avatar chosen before the kid's sex was set stays on until they pick
-  /// another (ADR 0024).
+  /// What the kid wears. Once the kid's sex is known, never an avatar
+  /// drawn for the other sex ([avatarForSex], ADR 0050).
   final String selected;
   final Set<String> unlocked;
   final KidSex sex;
@@ -739,6 +758,17 @@ class AvatarController extends AsyncNotifier<AvatarState> {
       selected = remoteKey;
       await store.select(remoteKey!);
     }
+    // A girl's avatar on a boy (or the reverse) was picked before the sex
+    // was set, or set elsewhere. Once the sex is known it's swapped for
+    // their own version, here and on the backend.
+    if (selected != null) {
+      final fitted = avatarForSex(selected, sex, unlockedNow);
+      if (fitted != selected) {
+        selected = fitted;
+        await store.select(fitted);
+        await _push(fitted);
+      }
+    }
     return AvatarState(
       selected: selected ?? defaultAvatarFor(sex),
       unlocked: unlockedNow,
@@ -780,8 +810,12 @@ class AvatarController extends AsyncNotifier<AvatarState> {
     state = AsyncData(
       AvatarState(selected: key, unlocked: current.unlocked, sex: current.sex),
     );
-    // Best effort: offline, or a backend without the endpoint yet, leaves
-    // the choice local. The next pick pushes again.
+    await _push(key);
+  }
+
+  /// Best effort: offline, or a backend without the endpoint yet, leaves
+  /// the choice local. The next pick pushes again.
+  Future<void> _push(String key) async {
     final token = ref.read(sessionControllerProvider).accessToken;
     if (token != null) {
       await ref

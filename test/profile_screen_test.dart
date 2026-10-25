@@ -76,8 +76,7 @@ Widget appUnder({
     overrides: [
       // The streak reads this device's own play days (ADR 0032).
       localDatabaseProvider.overrideWithValue(LocalDatabase.memory()),
-      if (board != null)
-        questBoardProvider.overrideWith((ref) async => board),
+      if (board != null) questBoardProvider.overrideWith((ref) async => board),
       progressApiProvider.overrideWithValue(progressApi ?? _FakeProgressApi()),
       sessionControllerProvider.overrideWith(
         () => _FixedSessionController(
@@ -176,6 +175,77 @@ void main() {
     expect(find.text(Strings.fr.achExplorer), findsOneWidget);
     // A 7-day streak earned the title, so it shows under the name.
     expect(find.text(Strings.fr.flameKeeperTitle), findsOneWidget);
+  });
+
+  for (final width in [1024.0, 1440.0]) {
+    testWidgets('the badge card hugs its badges at ${width.round()}px', (
+      tester,
+    ) async {
+      tester.view.physicalSize = Size(width, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(appUnder());
+      await tester.pumpAndSettle();
+
+      final card = find
+          .ancestor(
+            of: find.byKey(const ValueKey('profile-badges')),
+            matching: find.byType(Material),
+          )
+          .first;
+      // Two rows of a 54px badge and a two-line label, plus the title: a
+      // grid with square-ish cells made this ~470px.
+      expect(tester.getSize(card).height, lessThan(260));
+      expect(tester.getSize(card).height, greaterThan(180));
+    });
+  }
+
+  testWidgets('recent activity lists the latest badges with their day', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      appUnder(
+        board: QuestBoard(
+          quests: const [],
+          weekCompleted: 0,
+          unlocked: const {'streak3': '2026-10-20', 'streak7': '2026-10-24'},
+          today: DateTime(2026, 10, 24),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final first = tester.getTopLeft(
+      find.byKey(const ValueKey('recent-activity-streak7')),
+    );
+    final second = tester.getTopLeft(
+      find.byKey(const ValueKey('recent-activity-streak3')),
+    );
+    expect(first.dy, lessThan(second.dy));
+    expect(find.text(Strings.fr.profileRecentDay(0)), findsOneWidget);
+    expect(find.text(Strings.fr.profileRecentDay(4)), findsOneWidget);
+    expect(find.text(Strings.fr.profileRecentEmpty), findsNothing);
+  });
+
+  testWidgets('recent activity says how to earn a first badge', (tester) async {
+    tester.view.physicalSize = const Size(900, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      appUnder(
+        board: QuestBoard(
+          quests: const [],
+          weekCompleted: 0,
+          unlocked: const {},
+          today: DateTime(2026, 10, 24),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text(Strings.fr.profileRecentEmpty), findsOneWidget);
   });
 
   testWidgets('no title until it is earned', (tester) async {
@@ -282,7 +352,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(Strings.fr.streakShieldBalance(2)), findsNothing);
-    expect(find.text(Strings.fr.streakShieldBalance(2).toUpperCase()), findsNothing);
+    expect(
+      find.text(Strings.fr.streakShieldBalance(2).toUpperCase()),
+      findsNothing,
+    );
   });
 
   testWidgets('shows the real XP total from the backend ledger', (
@@ -349,10 +422,10 @@ void main() {
         await tester.pumpAndSettle();
 
         // Réglages scrolls; sign-out sits at its foot, so it has to be
-      // brought into view before it can be tapped.
-      await tester.ensureVisible(find.text(Strings.fr.settingsSignOut));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(Strings.fr.settingsSignOut));
+        // brought into view before it can be tapped.
+        await tester.ensureVisible(find.text(Strings.fr.settingsSignOut));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(Strings.fr.settingsSignOut));
         await tester.pumpAndSettle();
         await tester.enterText(find.byType(TextFormField).first, '1234');
         await tester.enterText(find.byType(TextFormField).last, '9999');
@@ -404,10 +477,10 @@ void main() {
         await tester.pumpAndSettle();
 
         // Réglages scrolls; sign-out sits at its foot, so it has to be
-      // brought into view before it can be tapped.
-      await tester.ensureVisible(find.text(Strings.fr.settingsSignOut));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(Strings.fr.settingsSignOut));
+        // brought into view before it can be tapped.
+        await tester.ensureVisible(find.text(Strings.fr.settingsSignOut));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(Strings.fr.settingsSignOut));
         await tester.pumpAndSettle();
 
         expect(find.text(Strings.fr.pinGateEnterTitle), findsOneWidget);

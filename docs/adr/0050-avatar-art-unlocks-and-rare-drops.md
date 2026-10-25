@@ -181,3 +181,20 @@ The backend built the work order (backend ADR 0064, `POST`/`GET
 - **Short labels**: "5 compétences · Sciences" / "5 skills · Science", and
   "Caché · leçon parfaite" for rare ones. A test caps every condition at
   32 characters, which fits a tile's two lines in both languages.
+
+## Revision 2026-10-25: avatars follow the kid's sex
+
+Yelhan is a boy but Profil showed him a girl avatar (Hafid, via the
+manager).
+- **An avatar drawn for the other sex is replaced** once the backend
+  reports the kid's sex (`avatarForSex`). This reverses ADR 0024's rule that
+  an avatar picked before the sex was set stays on.
+  - It becomes the same character's version for their sex, when that is
+    drawn and unlocked (`captain_girl` → `captain_boy`).
+  - Otherwise it becomes their default (`kid_wavy` → `kid_curly`).
+  - The replacement is stored and pushed to the backend, so every device
+    and the portal agree.
+- It applies to the stored choice and to a choice adopted from the backend,
+  and "Qui joue ?" draws the same result.
+- Historical figures carry no sex and are kept. An unspecified kid keeps
+  whatever they wear.

@@ -12,14 +12,17 @@ import 'pairing_controller.dart';
 ///
 /// Re-read when the active kid changes theirs, so the tile matches what
 /// that kid just picked.
-final kidAvatarKeyProvider =
-    FutureProvider.family<String, String>((ref, kidId) async {
+final kidAvatarKeyProvider = FutureProvider.family<String, String>((
+  ref,
+  kidId,
+) async {
   ref.watch(selectedAvatarKeyProvider);
   final store = AvatarStore(ref.watch(localDatabaseProvider), kidId: kidId);
   final selected = await store.selected();
+  final sex = await store.sex();
   return isKnownAvatar(selected)
-      ? selected!
-      : defaultAvatarFor(await store.sex());
+      ? avatarForSex(selected!, sex, await store.unlocked())
+      : defaultAvatarFor(sex);
 });
 
 /// "Qui joue ?": one tile per kid paired on this device, plus "Ajouter un
@@ -155,7 +158,10 @@ class _Tile extends StatelessWidget {
           child: SizedBox(
             width: 150,
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: Space.md, horizontal: Space.sm),
+              padding: const EdgeInsets.symmetric(
+                vertical: Space.md,
+                horizontal: Space.sm,
+              ),
               child: Column(
                 children: [
                   child,
@@ -222,10 +228,7 @@ class _AddTile extends StatelessWidget {
       child: Container(
         width: 92,
         height: 92,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: p.track,
-        ),
+        decoration: BoxDecoration(shape: BoxShape.circle, color: p.track),
         child: Icon(Icons.add_rounded, size: 44, color: p.quebecBlue),
       ),
     );

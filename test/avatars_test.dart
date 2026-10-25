@@ -529,26 +529,65 @@ void main() {
       expect(await AvatarStore(db, kidId: 'k1').sex(), KidSex.boy);
     });
 
-    test(
-      'an avatar from before the sex was set stays on, but is not offered',
-      () async {
-        final db = LocalDatabase.memory();
-        addTearDown(db.close);
-        await AvatarStore(db, kidId: 'k1').select('kid_wavy');
-        final api = _FakeProfileApi(sex: KidSex.boy);
-        final c = _container(db: db, profileApi: api);
-        addTearDown(c.dispose);
+    test('a girl avatar on a boy is swapped for his default', () async {
+      final db = LocalDatabase.memory();
+      addTearDown(db.close);
+      // Picked before the sex was set.
+      await AvatarStore(db, kidId: 'k1').select('kid_wavy');
+      final api = _FakeProfileApi(sex: KidSex.boy);
+      final c = _container(db: db, profileApi: api);
+      addTearDown(c.dispose);
 
-        final state = await _settle(c);
-        expect(state.selected, 'kid_wavy');
-        expect(state.offered.map((a) => a.key), isNot(contains('kid_wavy')));
+      final state = await _settle(c);
+      expect(state.selected, 'kid_curly');
+      expect(await AvatarStore(db, kidId: 'k1').selected(), 'kid_curly');
+      expect(api.saved, contains('kid_curly'));
+      expect(state.offered.map((a) => a.key), isNot(contains('kid_wavy')));
+    });
 
-        // Nor can it be picked again by key.
-        await c.read(avatarControllerProvider.notifier).select('kid_glasses');
-        expect(c.read(selectedAvatarKeyProvider), 'kid_wavy');
-        expect(api.saved, isEmpty);
-      },
-    );
+    test('a character worn as a girl becomes the boy version', () async {
+      final db = LocalDatabase.memory();
+      addTearDown(db.close);
+      final store = AvatarStore(db, kidId: 'k1');
+      await store.recordUnlocked(keysOf('captain'));
+      await store.select('captain_girl');
+      final c = _container(
+        db: db,
+        profileApi: _FakeProfileApi(sex: KidSex.boy),
+      );
+      addTearDown(c.dispose);
+
+      expect((await _settle(c)).selected, 'captain_boy');
+    });
+
+    test("the backend's girl avatar is not adopted for a boy", () async {
+      final db = LocalDatabase.memory();
+      addTearDown(db.close);
+      final c = _container(
+        db: db,
+        profileApi: _FakeProfileApi(remote: 'kid_braids', sex: KidSex.boy),
+      );
+      addTearDown(c.dispose);
+
+      expect(avatarFor((await _settle(c)).selected).sex, KidSex.boy);
+    });
+
+    test('avatarForSex', () {
+      final all = {for (final a in avatarCatalog) a.key};
+      expect(avatarForSex('kid_wavy', KidSex.boy, all), 'kid_curly');
+      expect(avatarForSex('kid_curly', KidSex.girl, all), 'kid_wavy');
+      expect(avatarForSex('hero_girl', KidSex.boy, all), 'hero_boy');
+      // The boy version isn't unlocked: the default instead.
+      expect(avatarForSex('hero_girl', KidSex.boy, const {}), 'kid_curly');
+      // No boy version drawn.
+      expect(avatarForSex('mermaid', KidSex.boy, all), 'kid_curly');
+      // Unsexed and unspecified are kept.
+      expect(
+        avatarForSex('hist_rene_levesque', KidSex.girl, all),
+        'hist_rene_levesque',
+      );
+      expect(avatarForSex('kid_wavy', KidSex.unspecified, all), 'kid_wavy');
+    });
 
     test('unlocks sync with the backend as a union', () async {
       final db = LocalDatabase.memory();

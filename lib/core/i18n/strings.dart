@@ -232,7 +232,10 @@ abstract class Strings {
   String get profileBySubject;
   String get profileBadges;
   String get profileRecent;
-  String get profileRecentSoon;
+  String get profileRecentEmpty;
+
+  /// The day a badge was earned, [daysAgo] days before today.
+  String profileRecentDay(int daysAgo);
   String get profileNoSubjects;
   String get daysShort;
 
@@ -857,7 +860,15 @@ class _FrenchStrings extends Strings {
   String get profileRecent => 'Activité récente';
 
   @override
-  String get profileRecentSoon => 'L\'historique détaillé arrivera avec les badges.';
+  String get profileRecentEmpty =>
+      'Termine une quête pour gagner ton premier badge.';
+
+  @override
+  String profileRecentDay(int daysAgo) => switch (daysAgo) {
+        <= 0 => 'Aujourd’hui',
+        1 => 'Hier',
+        _ => 'Il y a $daysAgo jours',
+      };
 
   @override
   String get profileNoSubjects => 'Joue un peu et tes matières apparaîtront ici.';
@@ -1683,7 +1694,14 @@ class _EnglishStrings extends Strings {
   String get profileRecent => 'Recent activity';
 
   @override
-  String get profileRecentSoon => 'A detailed history will arrive with the badges.';
+  String get profileRecentEmpty => 'Finish a quest to earn your first badge.';
+
+  @override
+  String profileRecentDay(int daysAgo) => switch (daysAgo) {
+        <= 0 => 'Today',
+        1 => 'Yesterday',
+        _ => '$daysAgo days ago',
+      };
 
   @override
   String get profileNoSubjects => 'Play a little and your subjects will show up here.';

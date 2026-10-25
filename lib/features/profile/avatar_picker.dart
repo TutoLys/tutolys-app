@@ -68,8 +68,7 @@ class AvatarPicker extends ConsumerWidget {
     final p = VillagePalette.of(context);
     final state = ref.watch(avatarControllerProvider).value;
     final selected = state?.selected ?? defaultAvatarKey;
-    // Only what this kid's sex is offered. A worn avatar outside that list
-    // (picked before the sex was set) stays on, but isn't offered again.
+    // Only what this kid's sex is offered.
     final offered =
         state?.offered ??
         [

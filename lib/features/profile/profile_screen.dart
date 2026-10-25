@@ -26,8 +26,8 @@ import 'avatars.dart';
 /// lists under "Réussites récentes". "Gardien de la flamme" shows under the
 /// name once a 7-day streak has earned it.
 ///
-/// The recent-activity feed still says what it is waiting for: nothing
-/// records an activity history yet.
+/// "Activité récente" lists the latest badges earned, with the day each
+/// was earned, from the same record ([QuestBoard.recent]).
 ///
 /// Everything else here is real: the name, grade, level and XP ledger
 /// total, streak, badge count, and the per-subject bars — the same local
@@ -84,7 +84,8 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   _HeroStat(
                     asset: 'asset-badge.webp',
-                    value: '${Achievement.values.where((a) => board?.has(a) ?? false).length}',
+                    value:
+                        '${Achievement.values.where((a) => board?.has(a) ?? false).length}',
                     label: t.profileBadgesEarned,
                   ),
                 ],
@@ -131,9 +132,10 @@ class ProfileScreen extends ConsumerWidget {
                 title: t.profileRecent,
                 icon: Icons.history,
                 palette: p,
-                child: Text(
-                  t.profileRecentSoon,
-                  style: TextStyle(fontSize: 13, height: 1.4, color: p.inkMuted),
+                child: _RecentActivity(
+                  items: board?.recent ?? const [],
+                  today: board?.today ?? DateTime.now(),
+                  palette: p,
                 ),
               ),
               const SizedBox(height: Space.xl),
@@ -227,8 +229,9 @@ class _HeroCard extends StatelessWidget {
               ],
             );
             final meta = Column(
-              crossAxisAlignment:
-                  wide ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+              crossAxisAlignment: wide
+                  ? CrossAxisAlignment.start
+                  : CrossAxisAlignment.center,
               children: [
                 Text(
                   name,
@@ -248,8 +251,10 @@ class _HeroCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   Container(
                     key: const ValueKey('profile-title'),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: p.goldPale,
                       borderRadius: BorderRadius.circular(999),
@@ -289,9 +294,7 @@ class _HeroCard extends StatelessWidget {
               spacing: 12,
               runSpacing: 12,
               alignment: wide ? WrapAlignment.end : WrapAlignment.center,
-              children: [
-                for (final s in stats) _StatCard(stat: s, palette: p),
-              ],
+              children: [for (final s in stats) _StatCard(stat: s, palette: p)],
             );
             if (!wide) {
               return Column(
@@ -501,9 +504,7 @@ class _SubjectRow extends StatelessWidget {
               ),
             ),
           ),
-          Expanded(
-            child: VillageProgressBar(value: value),
-          ),
+          Expanded(child: VillageProgressBar(value: value)),
           const SizedBox(width: Space.xs),
           SizedBox(
             width: 44,
@@ -525,7 +526,7 @@ class _SubjectRow extends StatelessWidget {
 }
 
 /// The design's `.badges-grid`: four columns of 54px circles, the earned
-/// ones with their art, the rest dimmed behind a lock.
+/// ones with their art, the rest dimmed behind a lock. The card hugs them.
 class _BadgeGrid extends StatelessWidget {
   const _BadgeGrid({required this.earned, required this.palette});
 
@@ -536,49 +537,137 @@ class _BadgeGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.s;
     final p = palette;
-    return GridView.count(
-      crossAxisCount: 4,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 14,
-      crossAxisSpacing: 14,
-      childAspectRatio: 0.78,
+    Widget badge(Achievement a) => Column(
+      key: ValueKey(
+        'badge-${a.name}-${earned.contains(a) ? 'earned' : 'locked'}',
+      ),
       children: [
-        for (final a in Achievement.values)
-          Column(
-            key: ValueKey('badge-${a.name}-${earned.contains(a) ? 'earned' : 'locked'}'),
+        Opacity(
+          opacity: earned.contains(a) ? 1 : 0.42,
+          child: Container(
+            width: 54,
+            height: 54,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: p.surface,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: p.shadowSmall,
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: earned.contains(a)
+                ? Image.asset(
+                    'assets/images/${achievementAsset(a)}',
+                    width: 28,
+                    height: 28,
+                  )
+                : Icon(Icons.lock, size: 22, color: p.inkMuted),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          achievementName(t, a),
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          style: TextStyle(
+            fontSize: 9.5,
+            fontWeight: FontWeight.w700,
+            height: 1.25,
+            color: p.inkMuted,
+          ),
+        ),
+      ],
+    );
+    // Rows of four, each as tall as its badges. A grid cell with a fixed
+    // aspect ratio grew with the card's width and left most of each row
+    // empty on desktop.
+    const perRow = 4;
+    final all = Achievement.values;
+    return Column(
+      key: const ValueKey('profile-badges'),
+      children: [
+        for (var i = 0; i < all.length; i += perRow) ...[
+          if (i > 0) const SizedBox(height: 14),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Opacity(
-                opacity: earned.contains(a) ? 1 : 0.42,
-                child: Container(
-                  width: 54,
-                  height: 54,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: p.surface,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(color: p.shadowSmall, blurRadius: 12, offset: const Offset(0, 4)),
-                    ],
-                  ),
-                  child: earned.contains(a)
-                      ? Image.asset('assets/images/${achievementAsset(a)}', width: 28, height: 28)
-                      : Icon(Icons.lock, size: 22, color: p.inkMuted),
+              for (var j = i; j < i + perRow; j++) ...[
+                if (j > i) const SizedBox(width: 14),
+                Expanded(
+                  child: j < all.length ? badge(all[j]) : const SizedBox(),
                 ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                achievementName(t, a),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                style: TextStyle(
-                  fontSize: 9.5,
-                  fontWeight: FontWeight.w700,
-                  height: 1.25,
-                  color: p.inkMuted,
-                ),
-              ),
+              ],
             ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// The latest badges earned, newest first, with the day: what `QuestLog`
+/// records. Before the first one, it says how to earn it.
+class _RecentActivity extends StatelessWidget {
+  const _RecentActivity({
+    required this.items,
+    required this.today,
+    required this.palette,
+  });
+
+  static const shown = 5;
+
+  final List<EarnedItem> items;
+  final DateTime today;
+  final VillagePalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.s;
+    final p = palette;
+    if (items.isEmpty) {
+      return Text(
+        t.profileRecentEmpty,
+        style: TextStyle(fontSize: 13, height: 1.4, color: p.inkMuted),
+      );
+    }
+    final day = DateTime(today.year, today.month, today.day);
+    return Column(
+      children: [
+        for (final item in items.take(shown))
+          Padding(
+            key: ValueKey('recent-activity-${item.key}'),
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                Image.asset(
+                  'assets/images/${achievementAsset(item.achievement)}',
+                  width: 28,
+                  height: 28,
+                  excludeFromSemantics: true,
+                ),
+                const SizedBox(width: Space.sm),
+                Expanded(
+                  child: Text(
+                    achievementName(t, item.achievement),
+                    style: TextStyle(
+                      fontFamily: VillageType.display,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      color: p.ink,
+                    ),
+                  ),
+                ),
+                if (DateTime.tryParse(item.day) case final earned?)
+                  Text(
+                    t.profileRecentDay(day.difference(earned).inDays),
+                    style: TextStyle(fontSize: 12, color: p.inkMuted),
+                  ),
+              ],
+            ),
           ),
       ],
     );
