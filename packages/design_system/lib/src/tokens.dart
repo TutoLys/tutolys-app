@@ -133,13 +133,16 @@ abstract final class VillageMetrics {
 /// The display typeface the design specifies: **Baloo 2**, weights 600-800,
 /// with the system stack for body text.
 ///
-/// Not yet bundled. It has to ship as a real font asset rather than a Google
-/// Fonts CDN call — this app is offline-first, and a runtime network
-/// dependency for type would mean a kid on a plane gets fallback glyphs.
-/// That tradeoff is ADR 0004's own open question, and the design answers the
-/// *which font* half of it without answering the *how delivered* half.
+/// Bundled in this package (`fonts/`, ADR 0018): cut from the exact woff2
+/// the design embeds, never fetched from a CDN — the app is offline-first,
+/// and a kid on a plane must not get fallback glyphs. That closes ADR 0004's
+/// "how delivered" question.
+///
+/// A font declared by a package is only reachable under its
+/// `packages/<name>/` prefix, which is why this is not the bare family name.
+/// Every widget that names [display] picks the bundled font up for free.
 abstract final class VillageType {
-  static const String display = 'Baloo2';
+  static const String display = 'packages/design_system/Baloo2';
 }
 
 /// Spacing scale. A 4pt base, so every gap is a multiple and layouts line up
