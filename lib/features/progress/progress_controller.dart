@@ -77,6 +77,8 @@ class ProgressState {
 class ProgressController extends Notifier<ProgressState> {
   @override
   ProgressState build() {
+    // Rebuilt, and so reloaded, when "Qui joue ?" switches kid.
+    ref.watch(activeKidIdProvider);
     // Same reasoning as HomeController/PathController: build() must stay
     // synchronous, so the screen shows a loading state until `_load` ends.
     Future.microtask(_load);

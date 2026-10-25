@@ -58,6 +58,8 @@ class PathState {
 class PathController extends Notifier<PathState> {
   @override
   PathState build() {
+    // Rebuilt, and so reloaded, when "Qui joue ?" switches kid.
+    ref.watch(activeKidIdProvider);
     // Deliberately not awaited here: `build` must be synchronous (same
     // reasoning as `SessionController.build`'s own `restore()` deferral).
     // The screen shows a loading state until `_load` finishes.

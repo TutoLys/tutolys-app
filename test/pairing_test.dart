@@ -95,6 +95,18 @@ class FakeSessionStore extends SessionStore {
     cleared = true;
     storedToken = null;
   }
+
+  // One kid at most, as before multi-kid: every test here is single-kid.
+  // The multi-kid paths run against the real store (multi_kid_test.dart).
+  @override
+  Future<List<PairedKid>> pairedKids() async =>
+      storedToken == null ? const [] : [(await pairedKid())!];
+
+  @override
+  Future<String?> deviceTokenFor(String kidId) async => storedToken;
+
+  @override
+  Future<void> setActiveKid(String kidId) async {}
 }
 
 class FakePairingApi extends PairingApi {

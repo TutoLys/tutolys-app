@@ -9,6 +9,7 @@ import '../../data/sync/outbox_flusher_provider.dart';
 import '../../features/launch/launch_flow.dart';
 import '../../features/pairing/pairing_controller.dart';
 import '../../features/pairing/pairing_screen.dart';
+import '../../features/pairing/who_is_playing_screen.dart';
 import '../../features/settings/settings_controller.dart';
 import 'paired_router.dart';
 
@@ -133,7 +134,22 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
         _ when !ready => const _Splash(),
         SessionStatus.checking => const _Splash(),
         SessionStatus.unpaired => const PairingScreen(),
-        SessionStatus.paired => const _PairedShell(),
+        SessionStatus.paired => switch (session.stage) {
+            ProfileStage.choosing => const WhoIsPlayingScreen(
+                key: ValueKey('who-is-playing'),
+              ),
+            ProfileStage.adding => PairingScreen(
+                key: const ValueKey('add-profile'),
+                onCancel: ref
+                    .read(sessionControllerProvider.notifier)
+                    .chooseProfile,
+              ),
+            // Keyed on the kid: switching kid builds a fresh router and
+            // fresh pages, so no screen keeps the last kid's state.
+            ProfileStage.none => _PairedShell(
+                key: ValueKey('paired-${session.kid?.id}'),
+              ),
+          },
       });
   }
 
@@ -170,7 +186,7 @@ class _Splash extends StatelessWidget {
 /// every time this branch is (re-)entered, the same way it already does for
 /// `PairingScreen`/`PathScreen` themselves.
 class _PairedShell extends StatefulWidget {
-  const _PairedShell();
+  const _PairedShell({super.key});
 
   @override
   State<_PairedShell> createState() => _PairedShellState();

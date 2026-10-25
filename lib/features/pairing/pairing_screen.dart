@@ -17,8 +17,14 @@ import 'pairing_controller.dart';
 ///   problems, and conflating them has a kid retyping a code that was fine.
 /// - One widget tree, two layouts. Wide screens put the fox beside the form;
 ///   narrow screens stack. Logic is never forked (plan §6.3).
+///
+/// [onCancel] makes it the "add a profile" screen, opened from "Qui joue ?"
+/// on a device that already has a kid: a back button appears, and the
+/// subtitle says a parent's code adds a child rather than signing in.
 class PairingScreen extends ConsumerStatefulWidget {
-  const PairingScreen({super.key});
+  const PairingScreen({this.onCancel, super.key});
+
+  final VoidCallback? onCancel;
 
   @override
   ConsumerState<PairingScreen> createState() => _PairingScreenState();
@@ -79,9 +85,22 @@ class _PairingScreenState extends ConsumerState<PairingScreen> {
       },
       onCompleted: (_) => _submit(),
       onSubmit: _submit,
+      subtitle: widget.onCancel == null ? null : s.addProfileHint,
     );
 
     return Scaffold(
+      appBar: widget.onCancel == null
+          ? null
+          : AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              leading: IconButton(
+                key: const ValueKey('pairing-cancel'),
+                tooltip: s.addProfileCancel,
+                icon: const Icon(Icons.arrow_back_rounded),
+                onPressed: widget.onCancel,
+              ),
+            ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -173,6 +192,7 @@ class _PairingForm extends StatelessWidget {
     required this.onChanged,
     required this.onCompleted,
     required this.onSubmit,
+    this.subtitle,
   });
 
   final String alphabet;
@@ -184,6 +204,9 @@ class _PairingForm extends StatelessWidget {
   final ValueChanged<String> onChanged;
   final ValueChanged<String> onCompleted;
   final VoidCallback onSubmit;
+
+  /// Replaces the default subtitle, when adding a profile.
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -212,7 +235,7 @@ class _PairingForm extends StatelessWidget {
             ),
             const SizedBox(height: Space.xs),
             Text(
-              s.pairingSubtitle,
+              subtitle ?? s.pairingSubtitle,
               textAlign: TextAlign.center,
               style: context.text.bodyLarge?.copyWith(color: extras.mutedText),
             ),

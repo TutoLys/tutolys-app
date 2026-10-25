@@ -67,7 +67,11 @@ class _FakeProgressApi extends ProgressApi {
       result;
 }
 
-Widget appUnder({ProgressApi? progressApi, QuestBoard? board}) {
+Widget appUnder({
+  ProgressApi? progressApi,
+  QuestBoard? board,
+  VoidCallback? onSwitchProfile,
+}) {
   return ProviderScope(
     overrides: [
       if (board != null)
@@ -94,7 +98,7 @@ Widget appUnder({ProgressApi? progressApi, QuestBoard? board}) {
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        home: const ProfileScreen(),
+        home: ProfileScreen(onSwitchProfile: onSwitchProfile),
       ),
     ),
   );
@@ -237,6 +241,20 @@ void main() {
       find.image(const AssetImage('assets/images/asset-mascot-welcome.webp')),
       findsNothing,
     );
+  });
+
+  testWidgets('"Changer de profil" opens Qui joue ?, only when wired', (
+    tester,
+  ) async {
+    await tester.pumpWidget(appUnder());
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('profile-switch')), findsNothing);
+
+    var opened = 0;
+    await tester.pumpWidget(appUnder(onSwitchProfile: () => opened++));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(Strings.fr.switchProfile));
+    expect(opened, 1);
   });
 
   testWidgets('sign-out button is still present', (tester) async {

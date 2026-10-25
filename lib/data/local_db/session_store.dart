@@ -17,11 +17,15 @@ class SessionStore {
 
   final FlutterSecureStorage _storage;
 
+  // The four single-pairing keys from before multi-kid. Read only by the
+  // migration in [pairings].
   static const _deviceTokenKey = 'device_token';
   static const _deviceIdKey = 'device_id';
   static const _kidIdKey = 'kid_id';
   static const _kidNameKey = 'kid_display_name';
   static const _gradeKey = 'grade_level';
+  static const _pairingsKey = 'pairings';
+  static const _activeKidKey = 'active_kid_id';
   static const _guardianPinSaltKey = 'guardian_pin_salt';
   static const _guardianPinHashKey = 'guardian_pin_hash';
 
@@ -39,53 +43,151 @@ class SessionStore {
     return generated;
   }
 
-  Future<String?> deviceToken() => _storage.read(key: _deviceTokenKey);
+  /// Every kid paired on this installation, in pairing order.
+  ///
+  /// One device token per kid, so attribution rides the credential, not the
+  /// UI: switching kid switches token. The backend keys `Device` on
+  /// `(kid, device_id)`, so pairing a second kid here leaves the first
+  /// one's row alone (BACKEND_WORKORDER_PROFILE.md, P3).
+  ///
+  /// Kept as one JSON list in the secure store, since it holds the tokens.
+  /// An installation from before multi-kid has the old single-pairing keys,
+  /// and they're migrated on first read.
+  Future<List<StoredPairing>> pairings() async {
+    final raw = await _storage.read(key: _pairingsKey);
+    if (raw != null) {
+      return [
+        for (final e in jsonDecode(raw) as List<dynamic>)
+          StoredPairing.fromJson((e as Map).cast<String, Object?>()),
+      ];
+    }
+    return _migrateLegacy();
+  }
+
+  Future<List<StoredPairing>> _migrateLegacy() async {
+    final token = await _storage.read(key: _deviceTokenKey);
+    final id = await _storage.read(key: _kidIdKey);
+    final name = await _storage.read(key: _kidNameKey);
+    if (token == null || token.isEmpty || id == null || name == null) {
+      return [];
+    }
+    final grade = await _storage.read(key: _gradeKey);
+    final migrated = [
+      StoredPairing(
+        kid: PairedKid(
+          id: id,
+          displayName: name,
+          gradeLevel: int.tryParse(grade ?? '') ?? 1,
+        ),
+        deviceToken: token,
+      ),
+    ];
+    // Written before the old keys go, so a crash in between leaves the
+    // pairing readable either way.
+    await _writePairings(migrated);
+    await _storage.write(key: _activeKidKey, value: id);
+    await Future.wait([
+      _storage.delete(key: _deviceTokenKey),
+      _storage.delete(key: _kidIdKey),
+      _storage.delete(key: _kidNameKey),
+      _storage.delete(key: _gradeKey),
+    ]);
+    return migrated;
+  }
+
+  Future<void> _writePairings(List<StoredPairing> list) => _storage.write(
+        key: _pairingsKey,
+        value: jsonEncode([for (final p in list) p.toJson()]),
+      );
+
+  /// Every paired kid, without their tokens.
+  Future<List<PairedKid>> pairedKids() async =>
+      [for (final p in await pairings()) p.kid];
+
+  /// The kid playing now: the last one chosen, else the first paired.
+  Future<StoredPairing?> _active() async {
+    final all = await pairings();
+    if (all.isEmpty) return null;
+    final id = await _storage.read(key: _activeKidKey);
+    return all.firstWhere((p) => p.kid.id == id, orElse: () => all.first);
+  }
+
+  /// Make [kidId] the active kid. Ignored for a kid not paired here.
+  Future<void> setActiveKid(String kidId) async {
+    if ((await pairings()).any((p) => p.kid.id == kidId)) {
+      await _storage.write(key: _activeKidKey, value: kidId);
+    }
+  }
+
+  /// The active kid's device token.
+  Future<String?> deviceToken() async => (await _active())?.deviceToken;
+
+  Future<String?> deviceTokenFor(String kidId) async {
+    for (final p in await pairings()) {
+      if (p.kid.id == kidId) return p.deviceToken;
+    }
+    return null;
+  }
 
   Future<bool> get isPaired async {
     final token = await deviceToken();
     return token != null && token.isNotEmpty;
   }
 
+  /// Adds a kid, or replaces their token when re-paired, and makes them
+  /// the active kid. Other kids' pairings are untouched.
   Future<void> savePairing({
     required String deviceToken,
     required String kidId,
     required String kidDisplayName,
     required int gradeLevel,
   }) async {
-    await Future.wait([
-      _storage.write(key: _deviceTokenKey, value: deviceToken),
-      _storage.write(key: _kidIdKey, value: kidId),
-      _storage.write(key: _kidNameKey, value: kidDisplayName),
-      _storage.write(key: _gradeKey, value: gradeLevel.toString()),
-    ]);
-  }
-
-  Future<PairedKid?> pairedKid() async {
-    final id = await _storage.read(key: _kidIdKey);
-    final name = await _storage.read(key: _kidNameKey);
-    final grade = await _storage.read(key: _gradeKey);
-    if (id == null || name == null) return null;
-    return PairedKid(
-      id: id,
-      displayName: name,
-      gradeLevel: int.tryParse(grade ?? '') ?? 1,
+    final all = await pairings();
+    final next = StoredPairing(
+      kid: PairedKid(
+        id: kidId,
+        displayName: kidDisplayName,
+        gradeLevel: gradeLevel,
+      ),
+      deviceToken: deviceToken,
     );
+    final i = all.indexWhere((p) => p.kid.id == kidId);
+    if (i < 0) {
+      all.add(next);
+    } else {
+      all[i] = next;
+    }
+    await _writePairings(all);
+    await _storage.write(key: _activeKidKey, value: kidId);
   }
 
-  /// Forget the credential and return to an unpaired state.
+  /// The active kid.
+  Future<PairedKid?> pairedKid() async => (await _active())?.kid;
+
+  /// Forget the active kid's credential. Other kids stay paired, and the
+  /// next one becomes active.
   ///
-  /// Called when the server rejects a refresh — the device was revoked or the
-  /// kid archived. The `device_id` is deliberately kept: re-pairing the same
-  /// installation should reuse its identity rather than create a second row.
-  /// The guardian PIN is cleared too — it protects *this* pairing, and the
-  /// next family to pair this device should set their own rather than
-  /// inherit one they never chose.
+  /// Called when the server rejects a refresh — that kid's device was
+  /// revoked or the kid archived — and when a guardian removes the profile.
+  /// The `device_id` is deliberately kept: re-pairing the same installation
+  /// should reuse its identity rather than create a second row. Once the
+  /// last kid goes, the guardian PIN goes too — it protects *this* family's
+  /// pairings, and the next family to pair this device should set their
+  /// own rather than inherit one they never chose.
   Future<void> clearPairing() async {
+    final active = await _active();
+    final rest = [
+      for (final p in await pairings())
+        if (p.kid.id != active?.kid.id) p,
+    ];
+    if (rest.isNotEmpty) {
+      await _writePairings(rest);
+      await _storage.write(key: _activeKidKey, value: rest.first.kid.id);
+      return;
+    }
     await Future.wait([
-      _storage.delete(key: _deviceTokenKey),
-      _storage.delete(key: _kidIdKey),
-      _storage.delete(key: _kidNameKey),
-      _storage.delete(key: _gradeKey),
+      _storage.delete(key: _pairingsKey),
+      _storage.delete(key: _activeKidKey),
       _storage.delete(key: _guardianPinSaltKey),
       _storage.delete(key: _guardianPinHashKey),
     ]);
@@ -137,4 +239,28 @@ class PairedKid {
   final String id;
   final String displayName;
   final int gradeLevel;
+}
+
+/// One kid's pairing on this installation: who, and their device token.
+class StoredPairing {
+  const StoredPairing({required this.kid, required this.deviceToken});
+
+  factory StoredPairing.fromJson(Map<String, Object?> json) => StoredPairing(
+        kid: PairedKid(
+          id: json['kid_id']! as String,
+          displayName: json['display_name']! as String,
+          gradeLevel: json['grade_level'] as int? ?? 1,
+        ),
+        deviceToken: json['device_token']! as String,
+      );
+
+  final PairedKid kid;
+  final String deviceToken;
+
+  Map<String, Object?> toJson() => {
+        'kid_id': kid.id,
+        'display_name': kid.displayName,
+        'grade_level': kid.gradeLevel,
+        'device_token': deviceToken,
+      };
 }

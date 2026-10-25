@@ -21,28 +21,63 @@ enum SessionStatus {
   paired,
 }
 
+/// What the paired shell is showing on top of the app, if anything.
+enum ProfileStage {
+  /// The app itself.
+  none,
+
+  /// "Qui joue ?": on launch when several kids share this device, and
+  /// whenever a kid opens it ("Ce n'est pas moi", "Changer de profil").
+  choosing,
+
+  /// The pairing-code screen, adding another kid to this device.
+  adding,
+}
+
 @immutable
 class SessionState {
-  const SessionState({required this.status, this.kid, this.accessToken});
+  const SessionState({
+    required this.status,
+    this.kid,
+    this.accessToken,
+    this.kids = const [],
+    this.stage = ProfileStage.none,
+  });
 
   const SessionState.checking() : this._(SessionStatus.checking);
   const SessionState.unpaired() : this._(SessionStatus.unpaired);
 
-  const SessionState._(this.status) : kid = null, accessToken = null;
+  const SessionState._(this.status)
+      : kid = null,
+        accessToken = null,
+        kids = const [],
+        stage = ProfileStage.none;
 
   final SessionStatus status;
+
+  /// The kid playing now.
   final PairedKid? kid;
   final String? accessToken;
+
+  /// Every kid paired on this device, [kid] included.
+  final List<PairedKid> kids;
+  final ProfileStage stage;
+
+  bool get hasSeveralKids => kids.length > 1;
 
   SessionState copyWith({
     SessionStatus? status,
     PairedKid? kid,
     String? accessToken,
+    List<PairedKid>? kids,
+    ProfileStage? stage,
   }) {
     return SessionState(
       status: status ?? this.status,
       kid: kid ?? this.kid,
       accessToken: accessToken ?? this.accessToken,
+      kids: kids ?? this.kids,
+      stage: stage ?? this.stage,
     );
   }
 }
@@ -145,9 +180,9 @@ class SessionController extends Notifier<SessionState> {
         );
         _scheduleRefresh(expiresIn);
       case RefreshRejected():
-        await _store.clearPairing();
         _refreshTimer?.cancel();
-        state = const SessionState.unpaired();
+        await _store.clearPairing();
+        await _resumeWithRemaining();
       case RefreshOffline() || RefreshFailed():
         // Stay paired and try again later. Offline play continues from the
         // cache; dropping the credential here would be the wrong trade.
@@ -158,13 +193,19 @@ class SessionController extends Notifier<SessionState> {
   /// On launch: if a device token exists, trade it for an access token.
   ///
   /// This is the moment revocation takes effect. The server rejects the
-  /// refresh, the stored credential is dropped, and the app returns to pairing.
+  /// refresh, that kid's stored credential is dropped, and the app moves on
+  /// to the next kid paired here, or back to pairing if there is none.
+  ///
+  /// With several kids on the device it opens on "Qui joue ?", so a sibling
+  /// never plays on the last kid's profile by default.
   Future<void> restore() async {
+    final kids = await _store.pairedKids();
     final token = await _store.deviceToken();
     if (token == null || token.isEmpty) {
       state = const SessionState.unpaired();
       return;
     }
+    final stage = kids.length > 1 ? ProfileStage.choosing : ProfileStage.none;
 
     final result = await _api.refresh(deviceToken: token);
     switch (result) {
@@ -173,26 +214,101 @@ class SessionController extends Notifier<SessionState> {
           status: SessionStatus.paired,
           kid: await _store.pairedKid(),
           accessToken: accessToken,
+          kids: kids,
+          stage: stage,
         );
         _scheduleRefresh(expiresIn);
       case RefreshRejected():
-        // Revoked or archived: forget the credential.
+        // Revoked or archived: forget that kid's credential.
         await _store.clearPairing();
-        state = const SessionState.unpaired();
-      case RefreshOffline():
+        await _resumeWithRemaining();
+      case RefreshOffline() || RefreshFailed():
         // Offline is NOT a reason to un-pair. The kid should keep playing
         // cached content; dropping the credential here would force a parent
         // to generate a new code every time the Wi-Fi drops.
         state = SessionState(
           status: SessionStatus.paired,
           kid: await _store.pairedKid(),
-        );
-      case RefreshFailed():
-        state = SessionState(
-          status: SessionStatus.paired,
-          kid: await _store.pairedKid(),
+          kids: kids,
+          stage: stage,
         );
     }
+  }
+
+  /// After a kid's pairing is dropped: the next kid paired here, or
+  /// unpaired when there is none.
+  Future<void> _resumeWithRemaining() async {
+    final kids = await _store.pairedKids();
+    final next = kids.isEmpty ? null : await _store.pairedKid();
+    if (next == null) {
+      state = const SessionState.unpaired();
+      return;
+    }
+    await switchTo(next.id, kids: kids);
+  }
+
+  /// Play as [kidId], another kid paired on this device.
+  ///
+  /// Switching kid switches token: the access token is refreshed with that
+  /// kid's own device token *before* the state changes, so nothing loads
+  /// for the new kid with the old kid's credential. Offline, the switch
+  /// still happens, with no access token, like an offline launch.
+  Future<void> switchTo(String kidId, {List<PairedKid>? kids}) async {
+    final token = await _store.deviceTokenFor(kidId);
+    if (token == null) {
+      // Not paired here (any more): nothing to switch to.
+      if ((await _store.pairedKids()).isEmpty) {
+        state = const SessionState.unpaired();
+      }
+      return;
+    }
+    _refreshTimer?.cancel();
+    await _store.setActiveKid(kidId);
+    final all = kids ?? await _store.pairedKids();
+    final kid = all.firstWhere((k) => k.id == kidId);
+    // A refresh for the previous kid may still be in flight; it must not
+    // land on this one.
+    await _inFlightRefresh;
+
+    final result = await _api.refresh(deviceToken: token);
+    switch (result) {
+      case RefreshSucceeded(:final accessToken, :final expiresIn):
+        state = SessionState(
+          status: SessionStatus.paired,
+          kid: kid,
+          accessToken: accessToken,
+          kids: all,
+        );
+        _scheduleRefresh(expiresIn);
+      case RefreshRejected():
+        await _store.clearPairing();
+        await _resumeWithRemaining();
+      case RefreshOffline() || RefreshFailed():
+        state = SessionState(
+          status: SessionStatus.paired,
+          kid: kid,
+          kids: all,
+        );
+        _scheduleRefresh(60);
+    }
+  }
+
+  /// Open "Qui joue ?".
+  void chooseProfile() {
+    if (state.status != SessionStatus.paired) return;
+    state = state.copyWith(stage: ProfileStage.choosing);
+  }
+
+  /// Open the pairing-code screen to add another kid.
+  void addProfile() {
+    if (state.status != SessionStatus.paired) return;
+    state = state.copyWith(stage: ProfileStage.adding);
+  }
+
+  /// Back to the app, as the current kid.
+  void closeProfileStage() {
+    if (state.status != SessionStatus.paired) return;
+    state = state.copyWith(stage: ProfileStage.none);
   }
 
   /// Exchange a typed code. Returns the error kind, or null on success.
@@ -222,6 +338,7 @@ class SessionController extends Notifier<SessionState> {
             gradeLevel: result.gradeLevel,
           ),
           accessToken: result.accessToken,
+          kids: await _store.pairedKids(),
         );
         _scheduleRefresh(result.expiresIn);
         return null;
@@ -236,12 +353,19 @@ class SessionController extends Notifier<SessionState> {
     }
   }
 
-  /// Unpair on this device, at the kid's or a parent's request.
+  /// Remove the current kid from this device, at a guardian's request.
+  /// Other kids paired here stay; "Qui joue ?" opens if several remain.
   Future<void> forget() async {
     _refreshTimer?.cancel();
     _refreshTimer = null;
     await _store.clearPairing();
-    state = const SessionState.unpaired();
+    final kids = await _store.pairedKids();
+    if (kids.isEmpty) {
+      state = const SessionState.unpaired();
+      return;
+    }
+    await _resumeWithRemaining();
+    if (kids.length > 1) chooseProfile();
   }
 }
 
@@ -329,10 +453,9 @@ final sessionControllerProvider =
 /// The kid whose rows the local database reads and writes right now
 /// (ADR 0014).
 ///
-/// One accessor rather than five reaches into `SessionState`, because this
-/// is exactly the seam the "Qui joue ?" switcher replaces: today it means
-/// "the paired kid", and once a device can hold several pairings it means
-/// "the selected one". Everything downstream keeps working unchanged.
+/// One accessor rather than five reaches into `SessionState`: it is the
+/// seam the "Qui joue ?" switcher turns. It means the selected kid, and
+/// everything that watches it resets when the kid changes.
 final activeKidIdProvider = Provider<String?>(
   (ref) => ref.watch(sessionControllerProvider).kid?.id,
 );

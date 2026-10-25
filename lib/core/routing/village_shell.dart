@@ -88,7 +88,10 @@ class _VillageShellState extends ConsumerState<VillageShell> {
         const PathScreen(),
         QuestsScreen(onOpenPath: () => _open(1)),
         const ProgressScreen(),
-        const ProfileScreen(),
+        ProfileScreen(
+          onSwitchProfile:
+              ref.read(sessionControllerProvider.notifier).chooseProfile,
+        ),
         SettingsScreen(
           onOpenHelp: () => _open(_helpIndex),
           onOpenAbout: () => _open(_aboutIndex),
@@ -133,7 +136,9 @@ class _VillageShellState extends ConsumerState<VillageShell> {
   @override
   Widget build(BuildContext context) {
     final t = context.s;
-    final kid = ref.watch(sessionControllerProvider).kid;
+    final session = ref.watch(sessionControllerProvider);
+    final sessionNotifier = ref.read(sessionControllerProvider.notifier);
+    final kid = session.kid;
     final progress = ref.watch(progressControllerProvider);
     final unread = ref.watch(
       notificationsControllerProvider.select((n) => n.unreadCount),
@@ -164,8 +169,12 @@ class _VillageShellState extends ConsumerState<VillageShell> {
                   ? ''
                   : t.gradeLabel(kid!.gradeLevel),
               avatarKey: ref.watch(selectedAvatarKeyProvider),
-              onIdentity: () => _open(_profilIndex),
-              identityLabel: t.navProfil,
+              // One kid: their Profil. Several: "Qui joue ?", always one
+              // tap away, so a sibling can hand the device over.
+              onIdentity: session.hasSeveralKids
+                  ? sessionNotifier.chooseProfile
+                  : () => _open(_profilIndex),
+              identityLabel: session.hasSeveralKids ? t.notMe : t.navProfil,
               compact: MediaQuery.sizeOf(context).width < Breakpoints.medium,
               // Phones only: same threshold as VillageNavShell's switch to
               // the bottom bar, which has no Réglages tab.
