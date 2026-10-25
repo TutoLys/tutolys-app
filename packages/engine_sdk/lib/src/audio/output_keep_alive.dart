@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 
+import 'audio_debug.dart';
 import 'web_audio_backend.dart';
 import 'web_audio_backend_stub.dart'
     if (dart.library.js_interop) 'web_audio_backend_js.dart';
@@ -48,12 +49,14 @@ class AudioOutputKeepAlive {
   void armOnFirstGesture() {
     if (_armed || _backend == null) return;
     _armed = true;
+    AudioDebug.log('app start: ${_backend.debugState()}');
     GestureBinding.instance.pointerRouter.addGlobalRoute(_onFirstPointer);
   }
 
   void _onFirstPointer(PointerEvent event) {
     if (event is! PointerDownEvent) return;
     GestureBinding.instance.pointerRouter.removeGlobalRoute(_onFirstPointer);
+    AudioDebug.log('first gesture: ${_backend?.debugState()}');
     acquire();
   }
 
@@ -91,11 +94,29 @@ class AudioOutputKeepAlive {
     if (backend == null) return;
     final on = active;
     backend.setKeepAlive(on);
+    if (AudioDebug.enabled) {
+      AudioDebug.log(
+        'keep-alive ${on ? 'ON' : 'OFF'} (holders $_holders, hidden '
+        '$_hidden): ${backend.debugState()}',
+      );
+    }
     if (on) {
       // Opening an activity is a tap, so the browser lets the context
       // resume now — and the output is awake before the first clip. If it
       // refuses, the next play's own resume starts the signal instead.
-      unawaited(backend.ensureRunning().then((_) {}, onError: (Object _) {}));
+      unawaited(
+        backend.ensureRunning().then(
+          (woke) {
+            if (AudioDebug.enabled) {
+              AudioDebug.log(
+                'keep-alive resume done (woke $woke): ${backend.debugState()}',
+              );
+            }
+          },
+          onError: (Object e) =>
+              AudioDebug.log('keep-alive resume refused: $e'),
+        ),
+      );
     }
   }
 }

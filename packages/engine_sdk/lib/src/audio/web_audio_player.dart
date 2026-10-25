@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'dart:typed_data';
 
+import 'audio_debug.dart';
 import 'channel_audio_coordinator.dart';
 import 'web_audio_backend.dart';
 
@@ -55,8 +56,19 @@ class WebAudioChannelPlayer implements ChannelPlayer {
     final gen = ++_generation;
     _stopVoice();
     _paused = false;
+    if (AudioDebug.enabled) {
+      AudioDebug.log(
+        'WebAudio play $cacheKey: ${bytes.length} bytes, sha '
+        '${AudioDebug.sha(bytes)}; before resume ${backend.debugState()}',
+      );
+    }
     final woke = await backend.ensureRunning();
     final buffer = await backend.decode(bytes);
+    if (AudioDebug.enabled) {
+      AudioDebug.log(
+        'decoded $cacheKey: ${backend.debugBuffer(buffer)}; context woke: $woke',
+      );
+    }
     // A context that was asleep reports running before the output has
     // settled; give it a moment so the first syllable isn't spent there.
     if (woke) await Future<void>.delayed(wakeSettle);
@@ -69,11 +81,15 @@ class WebAudioChannelPlayer implements ChannelPlayer {
     final buffer = _buffer;
     if (buffer == null) return;
     final voice = backend.start(buffer, offsetSeconds: offset, volume: _volume);
+    if (AudioDebug.enabled) {
+      AudioDebug.log('start at offset ${offset}s: ${backend.debugState()}');
+    }
     _voice = voice;
     _offset = offset;
     _startedAt = backend.currentTime;
     _endedSub = voice.ended.listen((_) {
       if (identical(_voice, voice)) {
+        AudioDebug.log('clip ended on its own');
         _voice = null;
         _buffer = null;
         _complete.add(null);

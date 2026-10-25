@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 
+import 'audio/audio_debug.dart';
 import 'audio/channel_audio_coordinator.dart';
 import 'audio/platform_channel_player.dart';
 
@@ -68,6 +69,10 @@ class ExercisePromptAudio {
   final ChannelPlayer _channel;
 
   Future<void> play(Uint8List bytes, {required String cacheKey}) async {
+    AudioDebug.log(
+      'speaker -> legacy ExercisePromptAudio.play $cacheKey via '
+      '${_channel.runtimeType}',
+    );
     try {
       await _channel.play(bytes, cacheKey: cacheKey);
     } catch (error, stack) {

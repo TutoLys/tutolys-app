@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:js_interop';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:web/web.dart' as web;
@@ -55,6 +56,48 @@ class _JsWebAudioBackend implements WebAudioBackend {
   void setKeepAlive(bool on) {
     _keepAliveWanted = on;
     _applyKeepAlive();
+  }
+
+  @override
+  Map<String, Object?> debugState() {
+    final ctx = _shared;
+    if (ctx == null) return {'context': 'not created yet'};
+    return {
+      'state': ctx.state,
+      'currentTime': ctx.currentTime.toStringAsFixed(3),
+      'baseLatency': ctx.baseLatency.toStringAsFixed(4),
+      'outputLatency': ctx.outputLatency.toStringAsFixed(4),
+      'sampleRate': ctx.sampleRate,
+      'keepAliveWanted': _keepAliveWanted,
+      'keepAliveRunning': _keepAliveSource != null,
+    };
+  }
+
+  @override
+  Map<String, Object?> debugBuffer(Object buffer) {
+    final b = buffer as web.AudioBuffer;
+    final data = b.getChannelData(0).toDart;
+    final rate = b.sampleRate;
+    final head = math.min(data.length, (rate * 0.3).round());
+    var sum = 0.0;
+    for (var i = 0; i < head; i++) {
+      sum += data[i] * data[i];
+    }
+    var firstSound = -1;
+    for (var i = 0; i < data.length; i++) {
+      if (data[i].abs() > 0.01) {
+        firstSound = i;
+        break;
+      }
+    }
+    return {
+      'durationMs': (b.duration * 1000).round(),
+      'sampleRate': rate,
+      'rmsFirst300ms': head == 0 ? 0 : math.sqrt(sum / head).toStringAsFixed(5),
+      'firstAudibleMs': firstSound < 0
+          ? 'none'
+          : (firstSound * 1000 / rate).round(),
+    };
   }
 
   void _applyKeepAlive() {

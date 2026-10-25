@@ -31,6 +31,12 @@ class FakeBackend implements WebAudioBackend {
   void setKeepAlive(bool on) => keepAlive.add(on);
 
   @override
+  Map<String, Object?> debugState() => {'state': 'running'};
+
+  @override
+  Map<String, Object?> debugBuffer(Object buffer) => {'durationMs': 0};
+
+  @override
   Future<Object> decode(Uint8List bytes) async {
     log.add('decode ${bytes.length}');
     await decodeGate?.future;
@@ -147,6 +153,11 @@ void main() {
       await tester.tapAt(const Offset(10, 10));
       k.release();
       expect(k.active, isFalse, reason: 'one hold, taken once');
+    });
+
+    test('the trace is off unless the page asked for it', () {
+      expect(AudioDebug.enabled, isFalse);
+      AudioDebug.log('not printed');
     });
 
     test('native: no backend, nothing happens', () {

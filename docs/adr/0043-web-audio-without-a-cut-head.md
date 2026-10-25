@@ -166,3 +166,40 @@ holds remain. On native it does nothing. One test: no hold before a tap,
 a hold after the first tap with the context woken inside the gesture, and
 only one hold however many taps follow. The startup call itself is one
 line in `lib/main.dart`, which belongs to the app session.
+
+### `?audiodebug=1`
+
+The keep-alive build still clipped the first tap on Hafid's machine,
+while a second tap during playback still worked. Rather than guess again,
+the web audio path now traces itself when the page URL has
+`?audiodebug=1` (`AudioDebug`; off otherwise, always off on native). Each
+console line is timestamped from startup and covers:
+
+- the context's state, clock, `baseLatency` and `outputLatency`, and
+  whether the keep-alive node runs, at app start, at the first gesture,
+  at each keep-alive change, before each clip's resume, and at its start;
+- which path served the tap: `ChannelAudioCoordinator` → which
+  `ChannelPlayer`, the legacy `ExercisePromptAudio`, or the audioplayers
+  path (logged as not expected on web);
+- each clip's byte length and **sha**, so an old cached pre-silence file
+  is recognisable;
+- the decoded clip's duration, the **RMS of its first 300 ms** and the
+  **first audible millisecond**, which shows whether the lead silence and
+  the whole head are really in the buffer.
+
+Checked in a real browser on the built app: the trace prints app start,
+first gesture, keep-alive on, and the context running with its
+keep-alive node 2 ms after the tap.
+
+Suspects checked while adding it:
+- **No web path uses audioplayers or an `<audio>` element.** The shell's
+  speaker goes through play_screen `_speak` → `ChannelAudioCoordinator` →
+  `platformChannelPlayer()` → `WebAudioChannelPlayer`, and the legacy
+  `ExercisePromptAudio` defaults to the same player.
+- **Audio re-sync after regeneration:** `generate_audio` recomputes the
+  exercise's `content_hash`, so the device does re-fetch the envelope and
+  its clip. One gap: the clip **URL doesn't change**
+  (`/media/exercise_audio/<id>/audio.wav`). If the browser's HTTP cache
+  serves the old bytes, the sha check refuses them, silently, and the old
+  cached clip keeps playing. The trace's sha and first-audible-ms will
+  show it if so.

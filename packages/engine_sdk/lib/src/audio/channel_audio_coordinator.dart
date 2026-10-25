@@ -8,6 +8,7 @@ import '../audio_file_stub.dart'
     if (dart.library.io) '../audio_file_io.dart'
     as platform_audio;
 import 'audio_contracts.dart';
+import 'audio_debug.dart';
 import 'platform_channel_player.dart';
 
 /// One player's worth of playback. An interface so the coordinator's rules
@@ -37,6 +38,7 @@ class AudioplayersChannelPlayer implements ChannelPlayer {
 
   @override
   Future<void> play(Uint8List bytes, {required String cacheKey}) async {
+    AudioDebug.log('audioplayers path served $cacheKey (not expected on web)');
     final source = kIsWeb
         ? BytesSource(bytes)
         : await platform_audio.fileSourceFor(bytes, cacheKey);
@@ -136,6 +138,10 @@ class ChannelAudioCoordinator implements AudioCoordinator {
   @override
   PlaybackHandle play(AudioRequest request) {
     final id = ++_nextId;
+    AudioDebug.log(
+      'speaker -> ChannelAudioCoordinator.play #$id on '
+      '${request.channel.name}: ${_describe(request.source)}',
+    );
     final entry = _Playing(id, request.priority);
     unawaited(_start(request, entry));
     return _Handle(
@@ -194,11 +200,13 @@ class ChannelAudioCoordinator implements AudioCoordinator {
     };
     if (!identical(_playing[channel], entry)) return; // replaced while loading
     if (bytes == null) {
+      AudioDebug.log('#${entry.requestId}: no cached bytes, nothing to play');
       _finish(channel, entry, PlaybackPhase.unavailable);
       return;
     }
 
     final player = _player(channel);
+    AudioDebug.log('#${entry.requestId}: served by ${player.runtimeType}');
     entry.completion = player.onComplete.listen(
       (_) => _finish(channel, entry, PlaybackPhase.completed),
     );
@@ -297,6 +305,13 @@ class ChannelAudioCoordinator implements AudioCoordinator {
     _players.clear();
     await _status.close();
   }
+
+  static String _describe(AudioSource s) => switch (s) {
+    PrerecordedAudio(:final exerciseId, :final ref) =>
+      'prerecorded $exerciseId/$ref',
+    EffectAudio(:final name) => 'effect $name',
+    TtsUtterance(:final locale) => 'tts $locale',
+  };
 
   static Future<bool> _safely(Future<void> Function() f) async {
     try {

@@ -31,6 +31,15 @@ abstract interface class WebAudioBackend {
 
   /// Start [buffer] now, from [offsetSeconds], at [volume].
   WebVoice start(Object buffer, {double offsetSeconds = 0, double volume = 1});
+
+  /// For `?audiodebug=1`: the context's state, clock and latencies, and
+  /// whether the keep-alive signal is running.
+  Map<String, Object?> debugState();
+
+  /// For `?audiodebug=1`: a decoded clip's duration, the RMS of its first
+  /// 300 ms, and where its first audible sample is — which says whether the
+  /// lead silence and the whole head of the clip are really in the buffer.
+  Map<String, Object?> debugBuffer(Object buffer);
 }
 
 /// One clip playing.
