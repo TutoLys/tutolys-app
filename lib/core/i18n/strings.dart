@@ -83,6 +83,10 @@ abstract class Strings {
 
   /// The skills are there, every one locked: no lesson written yet.
   String get pathNoLessonsYet;
+
+  /// The Carte's sync failed, so it shows cached lessons as of [at] (null:
+  /// never synced here). A lesson published since then reads "soon".
+  String pathStale(DateTime? at);
   String get pathLocked;
 
   /// A Carte node with no lesson yet (ADR 0032): skipped, not locked.
@@ -103,6 +107,9 @@ abstract class Strings {
   String progressLevel(int level);
   /// The level pill's tooltip: skills completed of the grade's (ADR 0033).
   String headerLevelTooltip(int completed, int total, int grade);
+
+  /// The header's XP pill: points earned, beside the level.
+  String headerXp(int xp);
 
   /// The card over the strand rows, e.g. "Mathématique — par compétence".
   String progressBySkill(String subject);
@@ -519,6 +526,20 @@ class _FrenchStrings extends Strings {
       'Les activités de cette matière sont en préparation. Reviens bientôt !';
 
   @override
+  String pathStale(DateTime? at) {
+    const months = [
+      'janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', //
+      'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.',
+    ];
+    if (at == null) {
+      return 'Impossible de joindre TutoLys. Des activités peuvent manquer.';
+    }
+    final time = '${at.hour} h ${at.minute.toString().padLeft(2, '0')}';
+    return 'Impossible de joindre TutoLys. Activités à jour au '
+        '${at.day} ${months[at.month - 1]} à $time.';
+  }
+
+  @override
   String get pathLocked => 'Pas encore débloqué';
 
   @override
@@ -543,6 +564,9 @@ class _FrenchStrings extends Strings {
   @override
   String headerLevelTooltip(int completed, int total, int grade) =>
       '$completed notions réussies sur $total en ${gradeLabel(grade)}';
+
+  @override
+  String headerXp(int xp) => '$xp XP';
 
   @override
   String progressBySkill(String subject) => '$subject — par compétence';
@@ -1358,6 +1382,21 @@ class _EnglishStrings extends Strings {
       'Activities for this subject are on their way. Come back soon!';
 
   @override
+  String pathStale(DateTime? at) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', //
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    if (at == null) {
+      return "Couldn't reach TutoLys. Some lessons may be missing.";
+    }
+    final h = at.hour % 12 == 0 ? 12 : at.hour % 12;
+    final m = at.minute.toString().padLeft(2, '0');
+    return "Couldn't reach TutoLys. Lessons as of "
+        '${months[at.month - 1]} ${at.day}, $h:$m ${at.hour < 12 ? 'AM' : 'PM'}.';
+  }
+
+  @override
   String get pathLocked => 'Not unlocked yet';
 
   @override
@@ -1382,6 +1421,9 @@ class _EnglishStrings extends Strings {
   @override
   String headerLevelTooltip(int completed, int total, int grade) =>
       '$completed of $total skills done in ${gradeLabel(grade)}';
+
+  @override
+  String headerXp(int xp) => '$xp XP';
 
   @override
   String progressBySkill(String subject) => '$subject — by skill';

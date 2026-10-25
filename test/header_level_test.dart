@@ -51,7 +51,9 @@ void main() {
   });
 
   group('the header pill', () {
-    testWidgets('shows the level with its track to the next one', (tester) async {
+    testWidgets('shows the level with its track to the next one', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         header(const [
           HeaderStat(
@@ -128,7 +130,7 @@ void main() {
       expect(find.byKey(const ValueKey('header-settings')), findsNothing);
     });
 
-    testWidgets('fits a 360px phone with all three pills', (tester) async {
+    testWidgets('fits a 360px phone with all four pills', (tester) async {
       tester.view.physicalSize = const Size(360, 800);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
@@ -143,7 +145,12 @@ void main() {
               onSettings: () {},
               settingsLabel: 'Réglages',
               stats: const [
-                HeaderStat(asset: 'asset-xpstar.webp', label: 'Niv. 12'),
+                HeaderStat(
+                  asset: 'asset-xpstar.webp',
+                  label: 'Niv. 12',
+                  progress: 0.4,
+                ),
+                HeaderStat(asset: 'asset-xpstar.webp', label: '12480 XP'),
                 HeaderStat(asset: 'asset-flame.webp', label: '14'),
                 HeaderStat(asset: 'asset-target.webp', label: '0/3 quêtes'),
               ],

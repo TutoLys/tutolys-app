@@ -154,8 +154,11 @@ class ProgressController extends Notifier<ProgressState> {
         ? ProgressState(
             loading: false,
             offline: offline,
-            currentStreakDays: offline ? local : null,
-            isStreakEstimated: offline,
+            // This device's own count is real whatever the failure; only a
+            // local 0 says nothing, and that stays a dash.
+            currentStreakDays: offline || local > 0 ? local : null,
+            isStreakEstimated: true,
+            stale: result is! ProgressFetched,
           )
         : ProgressState(
             currentStreakDays: switch (shown.currentStreakDays) {

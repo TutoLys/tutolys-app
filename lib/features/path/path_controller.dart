@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/api/content_api.dart';
 import '../../data/api/curriculum_api.dart';
 import '../../data/local_db/database.dart';
+import '../../data/sync/content_freshness.dart';
 import '../../data/sync/content_sync.dart';
 import '../../data/sync/curriculum_sync.dart';
 import '../../data/sync/lesson_key.dart';
@@ -28,6 +29,8 @@ class PathState {
     this.offline = false,
     this.error,
     this.contentLocale = 'fr-CA',
+    this.syncFailed = false,
+    this.syncedAt,
   });
 
   /// Backend subject code (`MATH`, `FR`, …) this state describes.
@@ -49,6 +52,14 @@ class PathState {
   final bool loading;
   final bool offline;
   final String? error;
+
+  /// The last sync of this subject's curriculum or lessons failed, so what
+  /// shows is the cache: a lesson published since then is missing, and its
+  /// node reads "soon". The Carte says so rather than letting it pass.
+  final bool syncFailed;
+
+  /// When this subject's lessons last synced, or null if never.
+  final DateTime? syncedAt;
 
   /// The language this subject's lessons were asked for
   /// (`contentLocaleFor`). A node whose lesson came back in another
@@ -134,7 +145,16 @@ class PathController extends Notifier<PathState> {
       subject,
       _localeOf(ref.read(settingsControllerProvider).english),
     );
-    await contentSync.sync(subject: subject, locale: locale);
+    final contentReport = await contentSync.sync(
+      subject: subject,
+      locale: locale,
+    );
+    _lastLoad = DateTime.now();
+    final freshness = ContentFreshness(ref.read(localDatabaseProvider));
+    final synced = curriculumReport.isOk && contentReport.isOk;
+    final syncedAt = synced
+        ? await freshness.markSynced(subject, kid.gradeLevel)
+        : await freshness.lastSynced(subject, kid.gradeLevel);
 
     final leaves = await curriculumSync.cachedLeaves(
       subject: subject,
@@ -160,10 +180,24 @@ class PathController extends Notifier<PathState> {
       offline: curriculumReport.offline,
       error: curriculumReport.error,
       contentLocale: locale,
+      syncFailed: !synced,
+      syncedAt: syncedAt,
     );
   }
 
+  DateTime? _lastLoad;
+
   Future<void> refresh() => _load();
+
+  /// Re-syncs when the Carte is shown again and the last attempt is older
+  /// than [maxAge], so a lesson published meanwhile appears without a
+  /// subject switch or a restart.
+  Future<void> refreshIfStale({Duration maxAge = const Duration(minutes: 2)}) {
+    final last = _lastLoad;
+    if (state.loading || last == null) return Future.value();
+    if (DateTime.now().difference(last) < maxAge) return Future.value();
+    return _load();
+  }
 
   /// Switches the Carte to another subject and loads it.
   Future<void> selectSubject(String subject) {

@@ -187,8 +187,8 @@ class _VillageShellState extends ConsumerState<VillageShell> {
               notificationsLabel: t.notificationsBellLabel(unread),
               stats: [
                 // The design's "Niv. 14" pill: the school year's level and
-                // its track to the next one (ADR 0033). Before any grade can
-                // be measured, the raw XP total stands in.
+                // its track to the next one (ADR 0033), i.e. how far through
+                // the ~5 skills the next level needs.
                 if (progress.level case final level?)
                   HeaderStat(
                     asset: 'asset-xpstar.webp',
@@ -203,12 +203,14 @@ class _VillageShellState extends ConsumerState<VillageShell> {
                         t.headerLevelTooltip(done, total, grade),
                       _ => null,
                     },
-                  )
-                else
-                  HeaderStat(
-                    asset: 'asset-xpstar.webp',
-                    label: '${progress.totalXp}',
                   ),
+                // XP beside the level, always: the level counts skills, so
+                // without this the points a kid just earned show nowhere
+                // up here (Hafid: "Why is the XP not showing?").
+                HeaderStat(
+                  asset: 'asset-xpstar.webp',
+                  label: t.headerXp(progress.totalXp),
+                ),
                 HeaderStat(
                   asset: 'asset-flame.webp',
                   label: progress.currentStreakDays == null

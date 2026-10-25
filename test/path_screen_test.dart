@@ -52,9 +52,12 @@ class _FixedProgress extends ProgressController {
   Future<void> refresh() async {}
 }
 
-class _FakeContentApi extends ContentApi {
-  _FakeContentApi(this.content) : super(dio: Dio());
+class FakeContentApi extends ContentApi {
+  FakeContentApi(this.content) : super(dio: Dio());
   final Map<String, Map<String, Object?>> content;
+
+  /// The server answers 500 to the manifest, as on Hafid's play-test.
+  bool failing = false;
 
   @override
   Future<ManifestResult> fetchManifest({
@@ -62,6 +65,7 @@ class _FakeContentApi extends ContentApi {
     String? subject,
     String? locale,
   }) async {
+    if (failing) return const ManifestFailed('500');
     final entries = content.values
         .map(
           (e) => ManifestEntry(
@@ -131,6 +135,8 @@ Widget appUnder({
   List<SkillMasteryDto> masteries = const [],
   FakeCurriculumApi? curriculum,
   LocalDatabase? db,
+  ProgressState? progress,
+  FakeContentApi? contentApi,
 }) {
   final router = buildPairedRouter();
   addTearDown(router.dispose);
@@ -142,10 +148,13 @@ Widget appUnder({
         curriculum ?? FakeCurriculumApi({'MATH': leaves, ...otherSubjects}),
       ),
       progressControllerProvider.overrideWith(
-        () =>
-            _FixedProgress(ProgressState(loading: false, masteries: masteries)),
+        () => _FixedProgress(
+          progress ?? ProgressState(loading: false, masteries: masteries),
+        ),
       ),
-      contentApiProvider.overrideWithValue(_FakeContentApi(content)),
+      contentApiProvider.overrideWithValue(
+        contentApi ?? FakeContentApi(content),
+      ),
       sessionControllerProvider.overrideWith(
         () => _FixedSessionController(
           const SessionState(
@@ -525,90 +534,191 @@ void main() {
     });
   });
 
-  group('the pills and strand title stay pinned (Hafid: "like a freeze row")', () {
-    // Two areas of eight nodes: the path is far taller than the screen.
-    final leaves = [
-      for (var i = 1; i <= 8; i++)
-        CurriculumLeaf(
-          id: 'n$i',
-          labelFr: 'Nombre $i',
-          labelEn: '',
-          stableKey: 'mathematique/sens-et-ecriture-des-nombres/b:A/o:$i',
-        ),
-      for (var i = 1; i <= 8; i++)
-        CurriculumLeaf(
-          id: 'g$i',
-          labelFr: 'Forme $i',
-          labelEn: '',
-          stableKey: 'mathematique/geometrie/b:A/o:$i',
-        ),
-    ];
-    final content = {
-      for (final l in leaves)
-        'e-${l.id}': exercise(id: 'e-${l.id}', skillNodeId: l.id),
-    };
+  group(
+    'the pills and strand title stay pinned (Hafid: "like a freeze row")',
+    () {
+      // Two areas of eight nodes: the path is far taller than the screen.
+      final leaves = [
+        for (var i = 1; i <= 8; i++)
+          CurriculumLeaf(
+            id: 'n$i',
+            labelFr: 'Nombre $i',
+            labelEn: '',
+            stableKey: 'mathematique/sens-et-ecriture-des-nombres/b:A/o:$i',
+          ),
+        for (var i = 1; i <= 8; i++)
+          CurriculumLeaf(
+            id: 'g$i',
+            labelFr: 'Forme $i',
+            labelEn: '',
+            stableKey: 'mathematique/geometrie/b:A/o:$i',
+          ),
+      ];
+      final content = {
+        for (final l in leaves)
+          'e-${l.id}': exercise(id: 'e-${l.id}', skillNodeId: l.id),
+      };
 
-    bool hittable(WidgetTester tester, Finder f) {
-      final target = tester.renderObject(f);
-      final hit = tester.hitTestOnBinding(tester.getCenter(f));
-      return hit.path.any((e) => e.target == target);
-    }
+      bool hittable(WidgetTester tester, Finder f) {
+        final target = tester.renderObject(f);
+        final hit = tester.hitTestOnBinding(tester.getCenter(f));
+        return hit.path.any((e) => e.target == target);
+      }
 
-    String strandTitle(WidgetTester tester) => tester
-        .widget<Text>(find.byKey(const ValueKey('carte-strand-title')))
-        .data!;
+      String strandTitle(WidgetTester tester) => tester
+          .widget<Text>(find.byKey(const ValueKey('carte-strand-title')))
+          .data!;
 
-    for (final (name, size) in [
-      ('desktop', const Size(1280, 800)),
-      ('mobile', const Size(400, 800)),
-    ]) {
-      testWidgets('after scrolling the path, on $name', (tester) async {
-        tester.view.physicalSize = size;
-        tester.view.devicePixelRatio = 1;
-        addTearDown(tester.view.reset);
-        final curriculum = FakeCurriculumApi({
-          'MATH': leaves,
-          'FR': const [
-            CurriculumLeaf(
-              id: 'fr-1',
-              labelFr: 'Lire',
-              labelEn: '',
-              stableKey: 'francais-langue/lire/b:A/o:1',
-            ),
-          ],
+      for (final (name, size) in [
+        ('desktop', const Size(1280, 800)),
+        ('mobile', const Size(400, 800)),
+      ]) {
+        testWidgets('after scrolling the path, on $name', (tester) async {
+          tester.view.physicalSize = size;
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.reset);
+          final curriculum = FakeCurriculumApi({
+            'MATH': leaves,
+            'FR': const [
+              CurriculumLeaf(
+                id: 'fr-1',
+                labelFr: 'Lire',
+                labelEn: '',
+                stableKey: 'francais-langue/lire/b:A/o:1',
+              ),
+            ],
+          });
+          await openCarte(
+            tester,
+            appUnder(leaves: leaves, content: content, curriculum: curriculum),
+          );
+          final pill = find.byKey(const ValueKey('subject-pill-FR'));
+          final header = tester.getRect(
+            find.byKey(const ValueKey('carte-header')),
+          );
+          expect(strandTitle(tester), 'Arithmétique');
+
+          // Down into the second area.
+          await tester.dragUntilVisible(
+            find.byKey(const ValueKey('path-orb-g6')),
+            find.byKey(const ValueKey('carte-path')),
+            const Offset(0, -200),
+          );
+          await tester.pumpAndSettle();
+
+          expect(
+            tester.getRect(find.byKey(const ValueKey('carte-header'))),
+            header,
+            reason: 'the header did not move',
+          );
+          expect(
+            hittable(tester, pill),
+            isTrue,
+            reason: 'pills still tappable',
+          );
+          expect(strandTitle(tester), 'Géométrie', reason: 'title follows');
+          // Nothing of the path draws over the header.
+          final path = tester.getRect(find.byKey(const ValueKey('carte-path')));
+          expect(path.top, greaterThanOrEqualTo(header.bottom));
+
+          await tester.tap(pill);
+          await tester.pumpAndSettle();
+          expect(curriculum.requested.last, 'FR');
+          expect(find.text('Lire'), findsOneWidget);
         });
-        await openCarte(
-          tester,
-          appUnder(leaves: leaves, content: content, curriculum: curriculum),
-        );
-        final pill = find.byKey(const ValueKey('subject-pill-FR'));
-        final header = tester.getRect(find.byKey(const ValueKey('carte-header')));
-        expect(strandTitle(tester), 'Arithmétique');
+      }
+    },
+  );
 
-        // Down into the second area.
-        await tester.dragUntilVisible(
-          find.byKey(const ValueKey('path-orb-g6')),
-          find.byKey(const ValueKey('carte-path')),
-          const Offset(0, -200),
-        );
-        await tester.pumpAndSettle();
-
-        expect(
-          tester.getRect(find.byKey(const ValueKey('carte-header'))),
-          header,
-          reason: 'the header did not move',
-        );
-        expect(hittable(tester, pill), isTrue, reason: 'pills still tappable');
-        expect(strandTitle(tester), 'Géométrie', reason: 'title follows');
-        // Nothing of the path draws over the header.
-        final path = tester.getRect(find.byKey(const ValueKey('carte-path')));
-        expect(path.top, greaterThanOrEqualTo(header.bottom));
-
-        await tester.tap(pill);
-        await tester.pumpAndSettle();
-        expect(curriculum.requested.last, 'FR');
-        expect(find.text('Lire'), findsOneWidget);
+  group('a failed sync says so (Hafid: published lessons read "soon")', () {
+    testWidgets('cached lessons after a failed sync carry a note and a retry', (
+      tester,
+    ) async {
+      final api = FakeContentApi({
+        'ex-1': exercise(id: 'ex-1', skillNodeId: 'leaf-1'),
       });
-    }
+      await openCarte(
+        tester,
+        appUnder(leaves: const [_compter], content: const {}, contentApi: api),
+      );
+      expect(find.byKey(const ValueKey('carte-stale')), findsNothing);
+
+      // The server goes down; a refresh keeps the cache and says how old.
+      api.failing = true;
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(PathScreen)),
+      );
+      await tester.runAsync(
+        () => container.read(pathControllerProvider.notifier).refresh(),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('carte-stale')), findsOneWidget);
+      expect(
+        find.textContaining('Activités à jour au'),
+        findsOneWidget,
+        reason: 'the last good sync, not "never"',
+      );
+      expect(find.byKey(const ValueKey('path-orb-leaf-1')), findsOneWidget);
+
+      // Back up: Réessayer syncs and the note goes.
+      api.failing = false;
+      await tester.tap(find.text('Réessayer'));
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 50)),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('carte-stale')), findsNothing);
+    });
+
+    testWidgets('showing the Carte again re-syncs once the last is old', (
+      tester,
+    ) async {
+      final curriculum = FakeCurriculumApi({
+        'MATH': const [_compter],
+      });
+      await openCarte(
+        tester,
+        appUnder(leaves: const [], content: const {}, curriculum: curriculum),
+      );
+      final before = curriculum.requested.length;
+      final notifier = ProviderScope.containerOf(
+        tester.element(find.byType(PathScreen)),
+      ).read(pathControllerProvider.notifier);
+
+      await tester.runAsync(notifier.refreshIfStale);
+      expect(curriculum.requested.length, before, reason: 'just synced');
+      await tester.runAsync(
+        () => notifier.refreshIfStale(maxAge: Duration.zero),
+      );
+      expect(curriculum.requested.length, before + 1);
+    });
+
+    testWidgets('never synced and failing says lessons may be missing', (
+      tester,
+    ) async {
+      final api = FakeContentApi(const {})..failing = true;
+      await openCarte(
+        tester,
+        appUnder(leaves: const [_compter], content: const {}, contentApi: api),
+      );
+      expect(
+        find.textContaining('Des activités peuvent manquer'),
+        findsOneWidget,
+      );
+    });
+  });
+
+  testWidgets('the header shows XP beside the level (Hafid: "Why is the XP '
+      'not showing?")', (tester) async {
+    await openCarte(
+      tester,
+      appUnder(
+        leaves: const [_compter],
+        content: const {},
+        progress: const ProgressState(loading: false, level: 3, totalXp: 120),
+      ),
+    );
+    expect(find.text('Niv. 3'), findsOneWidget);
+    expect(find.text('120 XP'), findsOneWidget);
   });
 }

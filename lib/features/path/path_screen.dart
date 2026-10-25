@@ -53,7 +53,11 @@ class _PathScreenState extends ConsumerState<PathScreen> {
     // The shell's IndexedStack keeps the Carte built while hidden, so
     // "opening" it is this turning true.
     final visible = Visibility.of(context);
-    if (visible && !_visible) _scrollToFocus();
+    if (visible && !_visible) {
+      _scrollToFocus();
+      // Lessons published while the kid was elsewhere show up on return.
+      ref.read(pathControllerProvider.notifier).refreshIfStale();
+    }
     _visible = visible;
   }
 
@@ -197,6 +201,16 @@ class _PathScreenState extends ConsumerState<PathScreen> {
                             child: Center(child: VillageLoader()),
                           )
                         else ...[
+                          // Cached lessons after a failed sync: a lesson
+                          // published since reads "soon", so say why.
+                          if (state.syncFailed && state.leaves.isNotEmpty)
+                            _StaleNote(
+                              text: t.pathStale(state.syncedAt),
+                              retryLabel: t.retry,
+                              onRetry: () => ref
+                                  .read(pathControllerProvider.notifier)
+                                  .refresh(),
+                            ),
                           if (carteGapOf(state) case final gap?)
                             _Empty(
                               key: ValueKey('carte-gap-${gap.name}'),
@@ -385,9 +399,7 @@ class _Sections extends ConsumerWidget {
                     continueLabel: t.villageContinueCta,
                     statusLabel: (node) {
                       final pct = ((node.masteryPct ?? 0) * 100).round();
-                      return pct > 0
-                          ? t.pathInProgress(pct)
-                          : t.pathNotStarted;
+                      return pct > 0 ? t.pathInProgress(pct) : t.pathNotStarted;
                     },
                     focusNodeId: focusNodeId,
                     focusKey: focusKey,
@@ -451,6 +463,50 @@ class _Empty extends StatelessWidget {
             style: TextStyle(fontSize: 14, color: p.inkMuted),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _StaleNote extends StatelessWidget {
+  const _StaleNote({
+    required this.text,
+    required this.retryLabel,
+    required this.onRetry,
+  });
+
+  final String text;
+  final String retryLabel;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
+    return Padding(
+      key: const ValueKey('carte-stale'),
+      padding: const EdgeInsets.only(bottom: Space.md),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: p.surface,
+          border: Border.all(color: p.line),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 8, 6, 8),
+          child: Row(
+            children: [
+              Icon(Icons.cloud_off_rounded, size: 20, color: p.inkMuted),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  text,
+                  style: TextStyle(fontSize: 13, color: p.inkMuted),
+                ),
+              ),
+              TextButton(onPressed: onRetry, child: Text(retryLabel)),
+            ],
+          ),
+        ),
       ),
     );
   }

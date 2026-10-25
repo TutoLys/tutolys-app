@@ -135,7 +135,9 @@ void main() {
       // written.
       final now = DateTime.now();
       await StreakLocal(db, kidId: 'k1', clock: () => now).recordPlayedToday();
-      await StreakLocal(db, kidId: 'k1',
+      await StreakLocal(
+        db,
+        kidId: 'k1',
         clock: () => now.subtract(const Duration(days: 1)),
       ).recordPlayedToday();
       api.result = const ProgressOffline();
@@ -349,6 +351,22 @@ void main() {
       expect(state.stale, isFalse, reason: 'the read itself succeeded');
     });
   });
+
+  test(
+    'a failed read with nothing cached still shows this device\'s streak',
+    () async {
+      container = build();
+      final now = DateTime.now();
+      await StreakLocal(db, kidId: 'k1', clock: () => now).recordPlayedToday();
+      api.result = const ProgressFailed('500');
+
+      await container.read(progressControllerProvider.notifier).refresh();
+
+      final state = container.read(progressControllerProvider);
+      expect(state.currentStreakDays, 1, reason: 'real, not a dash');
+      expect(state.stale, isTrue);
+    },
+  );
 
   test('unauthorized shows nothing rather than an error state', () async {
     container = build();
