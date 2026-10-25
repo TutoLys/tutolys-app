@@ -24,9 +24,13 @@ class AreaGroup {
   final List<CachedSkillNode> leaves;
 }
 
-/// Groups a subject's leaves by PFEQ learning area, in the ministry's order,
-/// each sorted by its `stable_key`. Leaves no area claims come last,
-/// untitled. Shared by the Carte and Progrès so their titles always agree.
+/// Groups a subject's leaves by PFEQ learning area, in the ministry's order.
+/// Inside an area, strands follow the map's own order, and leaves follow
+/// their `stable_key` within a strand. Sorting the whole area by key put
+/// strands in alphabetical order, so math opened on "opérations" instead of
+/// "sens et écriture des nombres" (Hafid, 2026-10-25). Leaves no area claims
+/// come last, untitled. Shared by the Carte and Progrès so their titles
+/// always agree.
 List<AreaGroup> groupLeavesByArea({
   required String subject,
   required List<CachedSkillNode> leaves,
@@ -37,6 +41,20 @@ List<AreaGroup> groupLeavesByArea({
     for (var i = 0; i < areas.length; i++)
       for (final strand in areas[i].strands) strand: i,
   };
+  // The strand's position in the maps, which list them in ministry order.
+  final rankOfStrand = <String, int>{
+    for (final (i, strand) in [
+      for (final area in areas) ...area.strands,
+    ].indexed)
+      strand: i,
+  };
+  int byStrandThenKey(CachedSkillNode a, CachedSkillNode b) {
+    final ra = rankOfStrand[strandOf(a.stableKey)] ?? rankOfStrand.length;
+    final rb = rankOfStrand[strandOf(b.stableKey)] ?? rankOfStrand.length;
+    return ra != rb
+        ? ra.compareTo(rb)
+        : naturalCompare(a.stableKey, b.stableKey);
+  }
 
   // -1 collects leaves no area claims; it goes last, untitled.
   final groups = <int, List<CachedSkillNode>>{};
@@ -55,8 +73,7 @@ List<AreaGroup> groupLeavesByArea({
         title: area == -1
             ? null
             : (english ? areas[area].labelEn : areas[area].labelFr),
-        leaves: groups[area]!
-          ..sort((a, b) => naturalCompare(a.stableKey, b.stableKey)),
+        leaves: groups[area]!..sort(byStrandThenKey),
       ),
   ];
 }

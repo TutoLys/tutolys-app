@@ -48,6 +48,29 @@ void main() {
     expect(sections.first.nodes.map((n) => n.id).toSet(), {'n', 'o'});
   });
 
+  test('inside an area, strands keep the ministry order, not the alphabet', () {
+    // Hafid, 2026-10-25: math opened on "opérations" and français on
+    // "accords", because the whole area was sorted by stable_key.
+    final math = build([
+      leaf('op', 'mathematique/operations-sur-des-nombres/b:A/o:1'),
+      leaf('so2', 'mathematique/sens-des-operations-sur-des-nombres/b:A/o:1'),
+      leaf('se10', 'mathematique/sens-et-ecriture-des-nombres/b:A/o:10'),
+      leaf('se2', 'mathematique/sens-et-ecriture-des-nombres/b:A/o:2'),
+    ]);
+    expect(math.single.title, 'Arithmétique');
+    expect(math.single.nodes.map((n) => n.id), ['se2', 'se10', 'so2', 'op']);
+    expect(math.single.nodes.first.state, PathNodeState.active);
+
+    const ecrire =
+        'francais-langue/competence-ecrire-des-textes-varies-section';
+    final fr = build([
+      leaf('acc', '$ecrire-accords-connaissances/b:A/o:1'),
+      leaf('conj', '$ecrire-conjugaison-connaissances/b:A/o:1'),
+      leaf('lex', '$ecrire-lexique-connaissances/b:A/o:1'),
+    ], subject: 'FR');
+    expect(fr.first.nodes.map((n) => n.id), ['lex', 'conj', 'acc']);
+  });
+
   test('titles follow the language', () {
     final sections = build([
       leaf('g', 'mathematique/geometrie/b:A/o:1', en: 'Shapes'),
