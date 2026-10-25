@@ -16,80 +16,94 @@ app's mascot and is never a kid's avatar.
 - **WebP or PNG with alpha.** Check the edge pixels for a coloured fringe;
   the brand mark had one.
 - **No text in the art.** Names come from the app, in French and English.
-- **One version only.** The app draws the locked state itself (dimmed, with
+- **One version only.** The app draws the locked state itself (a silhouette, with
   a lock and what unlocks it).
 - **File name:** `avatar-<key>.webp`, using the keys below.
 
-## Starters: free from day one
+## The catalog
 
-Six, so every child can pick one that looks like them. A choice of who you
-are is never locked behind play.
+`lib/features/profile/avatars.dart` is the source of truth; ADR 0050 has
+the reasoning. **Avatars follow the kid's sex** (Hafid, 2026-10-25): an
+adult sets it in the portal (`Kid.sex`), a girl is offered girl art, a boy
+boy art, an unspecified kid everything. A character drawn as both is one
+unlock under two keys (`<character>_girl`, `<character>_boy`); earning it
+unlocks both.
 
-**Avatars follow the kid's sex** (Hafid, 2026-10-25). An adult sets it in
-the portal (`Kid.sex`: girl, boy, or unspecified); a girl is offered girl
-avatars, a boy boy avatars, and an unspecified kid all of them. The
-default follows it too: Léa for girls, `kid_curly` for boys.
+File names are the key with `-` for `_`: `scientist_girl` →
+`avatar-scientist-girl.webp`.
 
-| # | File | Sex | Art idea |
+### Free from day one
+
+| Key | Source art |
+|---|---|
+| `kid_wavy` (girls' default) | Léa, `asset-profil.png` |
+| `kid_curly` (boys' default) | Cheerful 3D Boy in Blue Hoodie |
+| `kid_glasses` | Glossy Chibi Girl Avatar with Glasses |
+| `kid_braids` | Glossy Braided Girl Avatar |
+| `kid_freckles` | Freckled Auburn-Haired Boy Avatar-1 |
+| `kid_hijab` | **not drawn yet** |
+| `camper_girl` / `camper_boy` | Cheerful Camper Girl Avatar / Camper Adventurer Portrait |
+| `explorer_girl` / `explorer_boy` | Young Explorer Adventure Portrait / Cartoon Explorer with Map-1 |
+
+### By subject: completed skills in that subject
+
+| Keys | Subject | Skills | Source art (girl / boy) |
 |---|---|---|---|
-| 1 | `avatar-kid-wavy.webp` | girl | **The existing Léa** (`asset-profil.png`), re-exported at 512 with alpha. The girls' default. |
-| 2 | `avatar-kid-curly.webp` | boy | Boy, dark skin, short black curly hair, big smile, blue hoodie. The boys' default. |
-| 3 | `avatar-kid-glasses.webp` | girl | Girl with round glasses, straight black bob, light-tan skin, blue hoodie |
-| 4 | `avatar-kid-hijab.webp` | girl | Girl in a blue hijab, warm brown skin, blue hoodie |
-| 5 | `avatar-kid-freckles.webp` | boy | Boy, red hair, freckles, gap-toothed grin, blue hoodie |
-| 6 | `avatar-kid-braids.webp` | girl | Girl, medium-dark skin, two long braids with blue beads, blue hoodie |
+| `scientist_*` | SCI | 5 | ChatGPT 02_27_53 PM-2 / 02_27_52 PM-1 |
+| `chemist_*` | SCI | 15 | Leaping Science Girl… / Jumping Kid Scientist… |
+| `knight_*` | CCQ | 5 | Blue Crest Girl Knight-2 / Blue-Crested Knight |
+| `fleur_knight_*` | CCQ | 15 | Fleur-de-Lis Knight-1 / Knight with Sword and Shield-1 |
+| `mathematician_*` | MATH | 10 | Eureka Math Adventure / Math Adventure with a Cheerful Fox |
+| `french_teacher_*` | FR | 10 | French Teacher Adventure / French Teacher Mascot |
+| `english_*` | EN | 10 | English Learning Adventure / English Learning Classroom Mascot |
+| `historian_*` | SOC | 10 | Adventurous Young Historian Explorer / Explorer of History |
 
-**Boys are short of starters**: one drawn (`kid_curly`), one planned
-(`kid_freckles`), against four for girls. More boy starters are needed;
-each is a new key with `sex: KidSex.boy`.
+### Milestones
 
-## Unlockables: earned by playing
+| Keys | Unlocked by | Source art |
+|---|---|---|
+| `tuque_girl` | Level 2 | ChatGPT 12_42_49 PM-2 (**no boy version**) |
+| `hero_*` | 7-day streak | Flying Blue Superhero Girl-2 / Joyful Blue Superhero in Flight-2 |
+| `captain_*` | Level 10 | Girl Captain with Spyglass-2 / Young Captain with Spyglass-3 |
+| `artist_*` | 50 quests | Jumping Artist Girl / 3D Paintbrush Artist Boy |
+| `fox_hood` | Level 20 | **not drawn yet**: a hood shaped like the TutoLys fox |
 
-Each one is the kid in a costume, so it stays a "me" and not a different
-character. Unlocks are recorded once and never taken back.
+Levels are the school year's 1–99 (ADR 0033).
 
-They have **no sex in the catalog yet**, so every kid is offered them. When
-the art comes, either draw one neutral version, or draw a girl and a boy
-version as two keys (`astronaut_girl`, `astronaut_boy`) with the same
-unlock rule and tag each.
+### Rare: found on a perfect lesson
 
-| # | File | Name (FR) | Unlocked by | Art idea |
-|---|---|---|---|---|
-| 7 | `avatar-tuque.webp` | Tuque d'hiver | Level 2 | Knitted blue-and-white tuque with a pompom, scarf, rosy cheeks |
-| 8 | `avatar-camper.webp` | Campeur | 3-day streak | Camping cap, holding a small glowing lantern (the flame theme) |
-| 9 | `avatar-astronaut.webp` | Astronaute | Level 3 | Round space helmet, visor up, blue mission patch |
-| 10 | `avatar-explorer.webp` | Explorateur | Played all subjects | Explorer hat, binoculars round the neck, a little map |
-| 11 | `avatar-captain.webp` | Capitaine | Level 5 | Sailor-captain hat, striped collar, a spyglass |
-| 12 | `avatar-knight.webp` | Chevalier | Quest master (every quest in one day) | Shiny helmet with a blue plume, the visor open |
-| 13 | `avatar-hero.webp` | Super-héros | 7-day streak | Blue cape and mask, like the fox's cape: "Gardien de la flamme" |
-| 14 | `avatar-wizard.webp` | Magicien | Level 10 | Starry blue wizard hat, a small wand |
-| 15 | `avatar-scientist.webp` | Scientifique | Every subject 50 % | Lab goggles pushed up, lab coat, a bubbling flask |
-| 16 | `avatar-artist.webp` | Artiste | 50 quests | Beret, a paint smudge on the cheek, a brush behind the ear |
-| 17 | `avatar-fox-hood.webp` | Capuche de renard | Level 20 | Hood shaped like the TutoLys fox (white and blue ears). The rarest one. |
+About one perfect lesson in 20 reveals one, deterministically per kid and
+lesson; shown as "?" until found.
 
-Levels use the backend's `LevelCurve`, which is 100 XP per level today, so
-level 2 comes in the first session and level 20 is about 1,900 XP. The
-achievement unlocks reuse the eight achievements in Quêtes
-(`quest_board.dart`), so an avatar and its badge always unlock together.
+| Keys | Source art |
+|---|---|
+| `wizard_*` | Joyful Girl Wizard Casting Magic-1 / Joyful Wizard Boy Casting Magic-2 |
+| `astronaut_*` | Girl Astronaut Portrait-1 (black backdrop removed) / ChatGPT 12_58_25 PM-2 |
+| `coder_*` | Cheerful Cyber Coder Adventure / Young Cyber Coder Adventure |
+| `mermaid` (girls) | ChatGPT 02_44_27 PM-2 |
+| `pirate` (boys) | Cheerful Pirate Captain Adventure |
 
-## Status
+### Not used from the 2026-10-25 delivery
 
-Delivered 2026-10-25 (source art in `Lab/Tutolys/Assets/imgs/avatars/`,
-never edited in place): **#1 `kid_wavy`, #2 `kid_curly`, #3
-`kid_glasses`.** The other 14 show a neutral face until drawn.
+Group pictures and character sets (Costume Collage, Mascot Quartet, Science
+Squad, Kids' Chemistry, the three Character Sets), duplicates of faces
+already in the catalog (the extra Léas, Red-Haired Boy, Freckled Boy-3,
+the second girl astronaut and the binoculars explorer, which has a
+checkerboard baked in), alternates of the same character (other captains,
+wizards, scientists, knights, the map explorer boy), and the adult
+"Québec Statesman", who isn't a kid in a costume.
 
-The same delivery had four more images, which are **not in the catalog**
-because they repeat a face that's already there: "ChatGPT Image … AM-1"
-is the curly-haired boy again, and "… AM-2", "Cheerful Girl in Blue
-Hoodie" and "Léa's Cheerful Blue Hoodie Avatar" are all Léa. Still
-missing from the starters: #4 hijab, #5 freckles, #6 braids.
+**Still wanted**: `kid_hijab`, `fox_hood`, a boy tuque, and more boy
+starters (two against four for girls).
 
 ## Adding an avatar
 
 1. Keep the original in `Assets/imgs/avatars/`.
-2. Export a square 512×512 webp with alpha (quality about 86, which is
-   about 40–50 KB) to `tutolys-app/assets/images/avatar-<key>.webp`.
-   Don't ship the 1.2–1.5 MB PNGs: they go in every build, web included.
+2. Add a line to `tool/export_avatars.py`: the source file and a square
+   crop around the head and shoulders (full-body art must be cropped; the
+   circle is 30 px in the phone header). Run `python3 -I
+   tool/export_avatars.py`: 512 px webp under 120 KB into `assets/images/`.
+   Don't ship the 1.2–2.8 MB PNGs: they go in every build, web included.
 3. Add or fill one line in `avatarCatalog`
    (`lib/features/profile/avatars.dart`): the key, the unlock rule, the
    sex (`sex: KidSex.girl` / `KidSex.boy`, or none for everyone), and the

@@ -107,7 +107,7 @@ The work order's P3 pins it with tests.
   by an achievement on another device isn't known here until it is earned
   here too. Level unlocks follow the server's level, so those do carry
   over.
-- **Avatar art**: 16 of 17 avatars are still to be drawn.
+- **Avatar art**: delivered 2026-10-25; ADR 0050 adds it with subject unlocks and rare drops.
 - **Live verification is API-level only.** `dev-stack/scripts/e2e_profile.py`
   (2026-10-25, 22/22) pairs two kids on one `device_id` and checks
   `/me/profile` GET/PATCH and per-kid token refresh against the real
