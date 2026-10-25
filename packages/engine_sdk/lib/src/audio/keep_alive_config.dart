@@ -9,7 +9,9 @@
 ///
 /// Every field can be overridden from the page URL, so variants are tried
 /// on the one machine that shows the bug without a rebuild:
-/// `?audiokeepalive=tone|noise|dc|off&audiolevel=0.001&audiopreroll=300`.
+/// `?audiokeepalive=tone|noise|dc|off&audiolevel=0.001&audiopreroll=300`
+/// `&audiotonehz=50`. The tone stays between 15 and 200 Hz on purpose: a
+/// high "inaudible" tone (17 kHz+) is not inaudible to children.
 class KeepAliveConfig {
   const KeepAliveConfig({
     this.kind = KeepAliveKind.tone,
@@ -39,21 +41,34 @@ class KeepAliveConfig {
   /// signal running the sink should already be awake.
   final int preRollMs;
 
+  /// The leading number of a URL value, ignoring anything after it — a
+  /// pasted link often arrives with junk appended ("0.002%20(").
+  static double? _number(String? raw) {
+    final m = RegExp(r'^\s*([0-9]*\.?[0-9]+)').firstMatch(raw ?? '');
+    return m == null ? null : double.tryParse(m.group(1)!);
+  }
+
   static KeepAliveConfig fromQuery(Map<String, String> q) {
-    final kind = switch (q['audiokeepalive']) {
+    final kind = switch (_word(q['audiokeepalive'])) {
       'noise' => KeepAliveKind.noise,
       'dc' => KeepAliveKind.dc,
       'off' => KeepAliveKind.off,
       _ => KeepAliveKind.tone,
     };
-    final level = double.tryParse(q['audiolevel'] ?? '');
-    final preRoll = int.tryParse(q['audiopreroll'] ?? '');
+    final level = _number(q['audiolevel']);
+    final preRoll = _number(q['audiopreroll']);
+    final hz = _number(q['audiotonehz']);
     return KeepAliveConfig(
       kind: kind,
       level: level == null ? defaultLevel : level.clamp(0, 0.05).toDouble(),
-      preRollMs: preRoll == null ? 0 : preRoll.clamp(0, 2000),
+      toneHz: hz == null ? defaultToneHz : hz.clamp(15, 200).toDouble(),
+      preRollMs: preRoll == null ? 0 : preRoll.round().clamp(0, 2000),
     );
   }
+
+  /// The leading word of a URL value, lowercased, ignoring junk after it.
+  static String? _word(String? raw) =>
+      RegExp(r'^\s*([a-zA-Z]+)').firstMatch(raw ?? '')?.group(1)?.toLowerCase();
 
   @override
   String toString() =>

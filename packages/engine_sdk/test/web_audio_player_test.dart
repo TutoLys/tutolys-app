@@ -129,6 +129,39 @@ void main() {
       );
     });
 
+    test('junk after a value in a pasted link is ignored', () {
+      final c = KeepAliveConfig.fromQuery(const {
+        'audiokeepalive': 'noise (2)',
+        'audiolevel': '0.002 (',
+        'audiopreroll': '400ms',
+        'audiotonehz': '50Hz',
+      });
+      expect(c.kind, KeepAliveKind.noise);
+      expect(c.level, 0.002);
+      expect(c.preRollMs, 400);
+      expect(c.toneHz, 50);
+    });
+
+    test('the tone stays low: never a high whine a child would hear', () {
+      expect(
+        KeepAliveConfig.fromQuery(const {'audiotonehz': '18000'}).toneHz,
+        200,
+      );
+    });
+
+    test(
+      'pausing during the pre-roll resumes from the start of the clip',
+      () async {
+        final b = FakeBackend()..config = const KeepAliveConfig(preRollMs: 400);
+        final p = WebAudioChannelPlayer(b);
+        await p.play(bytes(4), cacheKey: 'q');
+        b.now = 0.2; // still inside the pre-roll
+        await p.pause();
+        await p.resume();
+        expect(b.log.last, 'start buffer-4 @0.0');
+      },
+    );
+
     test('a pre-roll delays a clip\'s first sample, never a resume', () async {
       final b = FakeBackend()..config = const KeepAliveConfig(preRollMs: 300);
       final p = WebAudioChannelPlayer(b);

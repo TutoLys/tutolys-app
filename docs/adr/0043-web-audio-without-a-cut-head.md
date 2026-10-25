@@ -246,3 +246,43 @@ Verification:
   named in the trace.
 - Whether the codec keeps the headset awake can only be shown on
   Bluetooth hardware, so it's Hafid's test.
+
+### What Hafid's trace showed, and the threshold ladder
+
+Hafid's `?audiodebug=1` trace, on Bluetooth with Chrome on Linux, ruled
+out everything on the browser side:
+- the new clip played, with the first audible sample at 277 ms, which is
+  the lead silence, and sha `de0bb64fbfc5`;
+- the context was running before and during playback;
+- the keep-alive ran;
+- the whole head was decoded, and playback started at offset 0.
+
+(`outputLatency` read 0.168 s, which is a Bluetooth path.) So the browser
+emits the whole clip, and the first words are lost downstream, in the
+headset's or PipeWire's Bluetooth path. The likeliest explanation is a
+noise gate or auto-volume soft start that still reads −60 dBFS at 25 Hz as
+silence. "A second tap during playback works" fits a gate held open by
+the first clip.
+
+Changes:
+- The trace's start line now says the pre-roll and the context time
+  scheduled for the first sample. It previously logged only the offset,
+  which read as if the pre-roll were ignored. It wasn't: in the browser
+  harness, a 600 ms clip with a 400 ms pre-roll ended 1003 ms after
+  `start()` on the audio clock.
+- Pausing inside the pre-roll could compute a negative offset. That's
+  fixed (a test caught it), and the clip's clock now starts at its first
+  sample, not at `start()`.
+- URL values tolerate trailing junk ("0.002%20(" from a pasted link
+  broke one of Hafid's runs).
+- **`&audiotonehz=` (15–200 Hz).** A headset's DSP may filter 25 Hz out
+  before its gate sees it. The range is capped on purpose, because a
+  "high inaudible" tone (17 kHz and up) is plainly audible to children.
+
+The levels are being laddered on Hafid's headset to find its gate
+threshold: 0.005, 0.01 and 0.02 at 25 Hz; 0.01 at 50 Hz; and an 800 ms
+pre-roll. If one works, it becomes the web default, as a named constant
+here. If nothing short of audible works, the fallback is honest rather
+than clever: a longer lead silence for web only (600–800 ms), or a soft,
+intentional chime before each read-aloud, so the gate opens on a sound
+the child is meant to hear.

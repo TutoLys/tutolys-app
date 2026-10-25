@@ -80,20 +80,27 @@ class WebAudioChannelPlayer implements ChannelPlayer {
   void _startAt(double offset) {
     final buffer = _buffer;
     if (buffer == null) return;
-    final preRoll = backend.keepAliveConfig.preRollMs / 1000;
+    // Only a clip's first start gets the pre-roll; a resume continues.
+    final delay = offset == 0 ? backend.keepAliveConfig.preRollMs / 1000 : 0.0;
+    final now = backend.currentTime;
     final voice = backend.start(
       buffer,
       offsetSeconds: offset,
       volume: _volume,
-      // Only a clip's first start gets the pre-roll; a resume continues.
-      delaySeconds: offset == 0 ? preRoll : 0,
+      delaySeconds: delay,
     );
     if (AudioDebug.enabled) {
-      AudioDebug.log('start at offset ${offset}s: ${backend.debugState()}');
+      AudioDebug.log(
+        'start: offset ${offset}s, pre-roll ${(delay * 1000).round()} ms, '
+        'first sample scheduled at context time '
+        '${(now + delay).toStringAsFixed(3)} (now ${now.toStringAsFixed(3)}): '
+        '${backend.debugState()}',
+      );
     }
     _voice = voice;
     _offset = offset;
-    _startedAt = backend.currentTime;
+    // The clip's own clock starts when its first sample does.
+    _startedAt = now + delay;
     _endedSub = voice.ended.listen((_) {
       if (identical(_voice, voice)) {
         AudioDebug.log('clip ended on its own');
@@ -123,7 +130,9 @@ class WebAudioChannelPlayer implements ChannelPlayer {
   @override
   Future<void> pause() async {
     if (_voice == null || _paused) return;
-    _offset += backend.currentTime - _startedAt;
+    // Paused inside the pre-roll: nothing has played yet.
+    final played = backend.currentTime - _startedAt;
+    _offset += played > 0 ? played : 0;
     _paused = true;
     _stopVoice();
   }
