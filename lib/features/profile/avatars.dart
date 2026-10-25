@@ -606,11 +606,50 @@ class AvatarState {
 
   bool isUnlocked(String key) => unlocked.contains(key);
 
-  /// The catalog as the picker shows it to this kid.
-  List<AvatarDef> get offered => [
-    for (final a in avatarCatalog)
-      if (offeredTo(a, sex)) a,
-  ];
+  /// The catalog as the picker shows it to this kid: one tile per
+  /// character, and only avatars that are drawn (a placeholder face reads
+  /// as broken, so an avatar without art waits until it has some).
+  ///
+  /// A girl or a boy is only offered their own version, so there's one
+  /// already. An unspecified kid could be offered both versions of a
+  /// character; the tile shows the one they wear, else the version
+  /// matching the sex of their current avatar, else the girl's
+  /// ([alternateOf] gives the other once it's unlocked).
+  List<AvatarDef> get offered {
+    final preferred = avatarFor(selected).sex ?? KidSex.girl;
+    final byCharacter = <String, List<AvatarDef>>{};
+    for (final a in avatarCatalog) {
+      if (a.asset == null || !offeredTo(a, sex)) continue;
+      byCharacter.putIfAbsent(a.character, () => []).add(a);
+    }
+    return [
+      for (final versions in byCharacter.values)
+        versions.firstWhere(
+          (a) => a.key == selected,
+          orElse: () => versions.firstWhere(
+            (a) => a.sex == preferred,
+            orElse: () => versions.first,
+          ),
+        ),
+    ];
+  }
+
+  /// The other version of [a]'s character this kid may wear instead, once
+  /// it's unlocked: only ever for an unspecified kid, whose tile shows one
+  /// version of a girl/boy pair.
+  AvatarDef? alternateOf(AvatarDef a) {
+    if (a.group == null || !isUnlocked(a.key)) return null;
+    for (final other in avatarCatalog) {
+      if (other.character == a.character &&
+          other.key != a.key &&
+          other.asset != null &&
+          offeredTo(other, sex) &&
+          isUnlocked(other.key)) {
+        return other;
+      }
+    }
+    return null;
+  }
 }
 
 final profileApiProvider = Provider<ProfileApi>(
@@ -709,13 +748,12 @@ class AvatarController extends AsyncNotifier<AvatarState> {
 
   /// Posts this device's unlocks and drops, and records whatever the
   /// backend adds. Offline or without the endpoint, the local set stands.
-  Future<Set<String>> _syncUnlocks(
-    AvatarStore store,
-    Set<String> local,
-  ) async {
+  Future<Set<String>> _syncUnlocks(AvatarStore store, Set<String> local) async {
     final token = ref.read(sessionControllerProvider).accessToken;
     if (token == null) return local;
-    final remote = await ref.read(profileApiProvider).mergeAvatarUnlocks(
+    final remote = await ref
+        .read(profileApiProvider)
+        .mergeAvatarUnlocks(
           accessToken: token,
           unlocked: local,
           drops: await store.drops(),

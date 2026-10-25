@@ -342,7 +342,8 @@ abstract class Strings {
   /// What unlocks a level avatar: "Niveau 5".
   String avatarAtLevel(int level);
 
-  /// What unlocks a subject avatar: "Termine 5 compétences en sciences".
+  /// What unlocks a subject avatar, short enough for a tile's two lines:
+  /// "5 compétences · Sciences".
   /// [subject] is a `pathSubjects` code.
   String avatarForSubject(String subject, int skills);
 
@@ -1117,20 +1118,20 @@ class _FrenchStrings extends Strings {
 
   @override
   String avatarForSubject(String subject, int skills) {
-    final where = switch (subject) {
-      'MATH' => 'en maths',
-      'FR' => 'en français',
-      'EN' => 'en anglais',
-      'SCI' => 'en sciences',
-      'SOC' => 'en univers social',
-      'CCQ' => 'en culture et citoyenneté',
-      _ => '',
+    final short = switch (subject) {
+      'MATH' => 'Maths',
+      'FR' => 'Français',
+      'EN' => 'Anglais',
+      'SCI' => 'Sciences',
+      'SOC' => 'Univers social',
+      'CCQ' => 'Culture QC',
+      _ => subject,
     };
-    return 'Termine $skills compétences $where'.trimRight();
+    return '$skills compétences · $short';
   }
 
   @override
-  String get avatarRareHint => 'Une leçon parfaite peut le révéler';
+  String get avatarRareHint => 'Caché · leçon parfaite';
 
   @override
   String get avatarRareFound => 'Avatar rare trouvé !';
@@ -1139,7 +1140,7 @@ class _FrenchStrings extends Strings {
   String get avatarHistorical => 'Personnages historiques';
 
   @override
-  String get avatarHistoricalHint => 'Une leçon de CCQ parfaite peut le révéler';
+  String get avatarHistoricalHint => 'Caché · leçon de CCQ parfaite';
 
   @override
   String? avatarCaption(String key) => switch (key) {
@@ -1941,20 +1942,20 @@ class _EnglishStrings extends Strings {
 
   @override
   String avatarForSubject(String subject, int skills) {
-    final where = switch (subject) {
-      'MATH' => 'in math',
-      'FR' => 'in French',
-      'EN' => 'in English',
-      'SCI' => 'in science',
-      'SOC' => 'in social studies',
-      'CCQ' => 'in culture & citizenship',
-      _ => '',
+    final short = switch (subject) {
+      'MATH' => 'Math',
+      'FR' => 'French',
+      'EN' => 'English',
+      'SCI' => 'Science',
+      'SOC' => 'Social studies',
+      'CCQ' => 'Québec culture',
+      _ => subject,
     };
-    return 'Finish $skills skills $where'.trimRight();
+    return '$skills skills · $short';
   }
 
   @override
-  String get avatarRareHint => 'A perfect lesson may reveal it';
+  String get avatarRareHint => 'Hidden · perfect lesson';
 
   @override
   String get avatarRareFound => 'Rare avatar found!';
@@ -1963,7 +1964,7 @@ class _EnglishStrings extends Strings {
   String get avatarHistorical => 'Historical figures';
 
   @override
-  String get avatarHistoricalHint => 'A perfect CCQ lesson may reveal it';
+  String get avatarHistoricalHint => 'Hidden · perfect CCQ lesson';
 
   @override
   String? avatarCaption(String key) => switch (key) {

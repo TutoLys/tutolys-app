@@ -70,7 +70,12 @@ class AvatarPicker extends ConsumerWidget {
     final selected = state?.selected ?? defaultAvatarKey;
     // Only what this kid's sex is offered. A worn avatar outside that list
     // (picked before the sex was set) stays on, but isn't offered again.
-    final offered = state?.offered ?? avatarCatalog;
+    final offered =
+        state?.offered ??
+        [
+          for (final a in avatarCatalog)
+            if (a.asset != null) a,
+        ];
     final starters = offered.where((a) => a.unlock is AvatarFree);
     final bySubject = offered.where((a) => a.unlock is AvatarForSubject);
     final milestones = offered.where(
@@ -92,6 +97,9 @@ class AvatarPicker extends ConsumerWidget {
             unlocked: state?.isUnlocked(a.key) ?? a.unlock is AvatarFree,
             onTap: () =>
                 ref.read(avatarControllerProvider.notifier).select(a.key),
+            alternate: state?.alternateOf(a),
+            onSwap: (key) =>
+                ref.read(avatarControllerProvider.notifier).select(key),
           ),
       ],
     );
@@ -184,7 +192,7 @@ class AvatarPicker extends ConsumerWidget {
 }
 
 /// What unlocks [a], in the kid's language: "Niveau 5", "Série de 3 jours",
-/// "Termine 5 compétences en sciences".
+/// "5 compétences · Sciences".
 String avatarCondition(Strings t, AvatarDef a) => switch (a.unlock) {
   AvatarFree() => '',
   AvatarAtLevel(:final level) => t.avatarAtLevel(level),
@@ -203,12 +211,19 @@ class _AvatarChoice extends StatelessWidget {
     required this.selected,
     required this.unlocked,
     required this.onTap,
+    this.alternate,
+    this.onSwap,
   });
 
   final AvatarDef avatar;
   final bool selected;
   final bool unlocked;
   final VoidCallback onTap;
+
+  /// The other version of this character (girl or boy), when the kid may
+  /// wear it too. Shown as a small swap button that wears it.
+  final AvatarDef? alternate;
+  final ValueChanged<String>? onSwap;
 
   @override
   Widget build(BuildContext context) {
@@ -255,11 +270,45 @@ class _AvatarChoice extends StatelessWidget {
                     if (!unlocked && avatar.unlock is! AvatarRare)
                       Positioned.fill(
                         child: Center(
-                          // Light on the dark silhouette.
-                          child: Icon(
-                            Icons.lock_rounded,
-                            size: 24,
-                            color: p.surface,
+                          // A chip in ink, so the lock reads on the veil in
+                          // both themes.
+                          child: Container(
+                            padding: const EdgeInsets.all(5),
+                            decoration: BoxDecoration(
+                              color: p.ink.withValues(alpha: 0.82),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.lock_rounded,
+                              size: 16,
+                              color: p.surface,
+                            ),
+                          ),
+                        ),
+                      ),
+                    if (alternate case final other?)
+                      Positioned(
+                        left: -2,
+                        bottom: -2,
+                        child: Tooltip(
+                          message: t.avatarName(other.key),
+                          child: InkWell(
+                            key: ValueKey('avatar-swap-${avatar.key}'),
+                            customBorder: const CircleBorder(),
+                            onTap: () => onSwap?.call(other.key),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: p.surface,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: p.line, width: 1.5),
+                              ),
+                              padding: const EdgeInsets.all(3),
+                              child: Icon(
+                                Icons.swap_horiz_rounded,
+                                size: 16,
+                                color: p.quebecBlue,
+                              ),
+                            ),
                           ),
                         ),
                       ),

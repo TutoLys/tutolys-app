@@ -356,6 +356,59 @@ void main() {
     });
   });
 
+  group('AvatarState.offered', () {
+    AvatarState state(String selected, {KidSex sex = KidSex.unspecified}) =>
+        AvatarState(
+          selected: selected,
+          unlocked: {for (final a in avatarCatalog) a.key},
+          sex: sex,
+        );
+
+    test('one tile per character, and only drawn avatars', () {
+      final offered = state(defaultAvatarKey).offered;
+      final characters = offered.map((a) => a.character).toList();
+      expect(characters.toSet(), hasLength(characters.length));
+      expect(offered.where((a) => a.asset == null), isEmpty);
+    });
+
+    test('an unspecified kid sees the version matching what they wear', () {
+      // Only characters drawn as both a girl and a boy have a choice.
+      bool paired(AvatarDef a) =>
+          a.group != null && keysOf(a.character).length > 1;
+      Set<KidSex?> sexes(String selected) => {
+        for (final a in state(selected).offered)
+          if (paired(a)) a.sex,
+      };
+      // Léa is a girl's avatar, so the girl versions; else the boy's.
+      expect(sexes('kid_wavy'), {KidSex.girl});
+      expect(sexes('kid_curly'), {KidSex.boy});
+      // The tile of a worn character is the worn version.
+      expect(
+        state('captain_boy').offered.map((a) => a.key),
+        allOf(contains('captain_boy'), contains('hero_boy')),
+      );
+      expect(
+        state('kid_wavy').alternateOf(avatarFor('hero_girl'))?.key,
+        'hero_boy',
+      );
+    });
+
+    test('a girl or a boy never gets an alternate', () {
+      final girl = state('kid_wavy', sex: KidSex.girl);
+      expect(girl.alternateOf(avatarFor('hero_girl')), isNull);
+    });
+
+    test('every condition fits a tile\'s two lines, in both languages', () {
+      for (final a in avatarCatalog.where((a) => a.unlock is! AvatarFree)) {
+        for (final t in [Strings.fr, Strings.en]) {
+          final c = avatarCondition(t, a);
+          // About 16 characters a line at the tile's size: two lines.
+          expect(c.length, lessThanOrEqualTo(32), reason: '${a.key}: $c');
+        }
+      }
+    });
+  });
+
   group('AvatarStore', () {
     test('unlocks are monotonic and kid-scoped', () async {
       final db = LocalDatabase.memory();
@@ -622,12 +675,43 @@ void main() {
     ) async {
       final c = await pumpPicker(tester, level: 1);
 
-      expect(find.text(Strings.fr.avatarAtLevel(20)), findsOneWidget);
-      await tester.ensureVisible(find.byKey(const ValueKey('avatar-fox_hood')));
-      await tester.tap(find.byKey(const ValueKey('avatar-fox_hood')));
+      // One captain tile, even for a kid with no sex set.
+      expect(find.text(Strings.fr.avatarAtLevel(10)), findsOneWidget);
+      final captain = find.byKey(const ValueKey('avatar-captain_girl'));
+      await tester.ensureVisible(captain);
+      await tester.tap(captain);
       await tester.pumpAndSettle();
 
       expect(c.read(selectedAvatarKeyProvider), defaultAvatarKey);
+    });
+
+    testWidgets('an avatar with no art is never shown', (tester) async {
+      await pumpPicker(tester, level: 99);
+
+      expect(find.byKey(const ValueKey('avatar-kid_hijab')), findsNothing);
+      expect(find.byKey(const ValueKey('avatar-fox_hood')), findsNothing);
+      expect(find.byIcon(Icons.face_rounded), findsNothing);
+    });
+
+    testWidgets('an unlocked pair can be swapped to the other version', (
+      tester,
+    ) async {
+      final c = await pumpPicker(tester, level: 10);
+
+      final swap = find.byKey(const ValueKey('avatar-swap-captain_girl'));
+      await tester.ensureVisible(swap);
+      await tester.tap(swap);
+      await tester.pumpAndSettle();
+
+      expect(c.read(selectedAvatarKeyProvider), 'captain_boy');
+      // The tile now shows the version worn, still only one of them.
+      expect(find.byKey(const ValueKey('avatar-captain_boy')), findsOneWidget);
+      expect(find.byKey(const ValueKey('avatar-captain_girl')), findsNothing);
+      // A locked pair offers no swap.
+      expect(
+        find.byKey(const ValueKey('avatar-swap-chemist_girl')),
+        findsNothing,
+      );
     });
 
     testWidgets('an unlocked one shows its name, and a tap wears it', (

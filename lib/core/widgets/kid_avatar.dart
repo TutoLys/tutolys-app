@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
@@ -8,9 +10,10 @@ import '../../features/profile/avatars.dart';
 ///
 /// An avatar whose art isn't drawn yet shows a neutral face in its place,
 /// so the catalog and picker work before `docs/design/AVATARS.md` is
-/// delivered. For the picker, [locked] draws it as a dark silhouette (the
-/// shape still reads, so a kid sees what they're playing towards) and
-/// [hidden] draws a "?" instead, for a rare avatar not found yet.
+/// delivered. For the picker, [locked] draws it blurred under a dim veil
+/// in the theme's surface colour, so a kid can tell roughly what they're
+/// playing towards without seeing it clearly, and [hidden] draws a "?"
+/// instead, for a rare avatar not found yet.
 class KidAvatar extends StatelessWidget {
   const KidAvatar({
     required this.avatarKey,
@@ -61,15 +64,22 @@ class KidAvatar extends StatelessWidget {
         ],
       ),
       clipBehavior: Clip.antiAlias,
+      // A tint keyed to the art's alpha left ragged white edges in the dark
+      // theme. A uniform blur and a veil look the same on cut-out art and
+      // on scene art, in both themes.
       child: locked && !hidden
-          // srcATop keeps the art's own alpha, so the figure keeps its
-          // outline; 15% of the art shows through.
-          ? ColorFiltered(
-              colorFilter: ColorFilter.mode(
-                p.ink.withValues(alpha: 0.85),
-                BlendMode.srcATop,
-              ),
-              child: art,
+          ? Stack(
+              fit: StackFit.expand,
+              children: [
+                ImageFiltered(
+                  imageFilter: ui.ImageFilter.blur(
+                    sigmaX: size * 0.07,
+                    sigmaY: size * 0.07,
+                  ),
+                  child: art,
+                ),
+                ColoredBox(color: p.surface.withValues(alpha: 0.55)),
+              ],
             )
           : art,
     );

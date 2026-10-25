@@ -157,3 +157,27 @@ The backend built the work order (backend ADR 0064, `POST`/`GET
 - **Subject unlocks still count this device's own play.** What they unlock
   is now kept and shared across devices, but the counts toward the next one
   are not.
+
+## Revision 2026-10-25: the picker, after Hafid's dark-theme screenshot
+
+- **Locked avatars are blurred under a veil** in the theme's surface colour,
+  with the lock in an ink chip. The silhouette tint followed the art's
+  alpha, which left ragged white edges in the dark theme, and scene art
+  (mostly opaque) became a flat disc. A uniform blur looks the same on both
+  kinds of art, in both themes.
+- **An avatar with no art is hidden** until it has some. Today that's
+  `kid_hijab` and `fox_hood`. A placeholder face read as broken. The
+  placeholder in `KidAvatar` now only covers a worn key whose art is
+  missing.
+- **One tile per character.** A girl or a boy was already offered only
+  their own version. For an unspecified kid, the tile shows:
+  - the version they wear, if they wear one of the two;
+  - otherwise, the version matching the sex of their current avatar;
+  - otherwise, the girl's.
+
+  Once both versions are unlocked, a small swap button on the tile wears
+  the other one (`AvatarState.alternateOf`). Both keys still unlock
+  together, so nothing changes about earning.
+- **Short labels**: "5 compétences · Sciences" / "5 skills · Science", and
+  "Caché · leçon parfaite" for rare ones. A test caps every condition at
+  32 characters, which fits a tile's two lines in both languages.

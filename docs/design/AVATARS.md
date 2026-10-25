@@ -105,6 +105,9 @@ the second girl astronaut and the binoculars explorer, which has a
 checkerboard baked in), and alternates of the same character (other
 captains, wizards, scientists, knights, the map explorer boy).
 
+An avatar with no art is **hidden from the picker** until its art lands, so a
+new key can sit in the catalog safely.
+
 **Still wanted**: `kid_hijab`, `fox_hood`, a boy tuque, and more boy
 starters (two against four for girls).
 
