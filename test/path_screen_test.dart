@@ -297,17 +297,37 @@ void main() {
     expect(find.byType(PathScreen), findsOneWidget);
   });
 
-  testWidgets('shows the empty state when there is nothing synced', (
-    tester,
-  ) async {
+  testWidgets('a subject with no skills at this grade says so', (tester) async {
     await openCarte(tester, appUnder(leaves: const [], content: const {}));
 
     expect(find.byType(PlayScreen), findsNothing);
     expect(
-      find.text("Il n'y a pas encore d'activités. Reviens bientôt !"),
+      find.text("Il n'y a rien dans cette matière pour la 1re année."),
       findsOneWidget,
     );
     // The pills stay, so a kid can still go to a subject that has content.
     expect(find.byKey(const ValueKey('subject-pill-FR')), findsOneWidget);
+  });
+
+  testWidgets('skills with no lessons yet: "en préparation", map locked', (
+    tester,
+  ) async {
+    await openCarte(
+      tester,
+      appUnder(leaves: const [_compter], content: const {}),
+    );
+
+    expect(
+      find.byKey(const ValueKey('carte-gap-noLessonsYet')),
+      findsOneWidget,
+    );
+    expect(
+      find.text(
+        'Les activités de cette matière sont en préparation. Reviens bientôt !',
+      ),
+      findsOneWidget,
+    );
+    // The skill still shows, so the kid sees what's coming.
+    expect(find.byKey(ValueKey('path-orb-${_compter.id}')), findsOneWidget);
   });
 }

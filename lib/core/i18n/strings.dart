@@ -74,6 +74,15 @@ abstract class Strings {
   // --- path --------------------------------------------------------------
   String get pathTitle;
   String get pathEmpty;
+
+  /// The Carte has nothing to show because nothing could be downloaded.
+  String get pathEmptyOffline;
+
+  /// The curriculum has no skills in this subject at the kid's grade.
+  String pathEmptyAtGrade(int grade);
+
+  /// The skills are there, every one locked: no lesson written yet.
+  String get pathNoLessonsYet;
   String get pathLocked;
 
   /// The active node's card. French puts a space before "%", English does not.
@@ -465,6 +474,18 @@ class _FrenchStrings extends Strings {
   String get pathEmpty => "Il n'y a pas encore d'activités. Reviens bientôt !";
 
   @override
+  String get pathEmptyOffline =>
+      'Connecte-toi à Internet pour charger cette matière.';
+
+  @override
+  String pathEmptyAtGrade(int grade) =>
+      "Il n'y a rien dans cette matière pour la ${gradeLabel(grade)}.";
+
+  @override
+  String get pathNoLessonsYet =>
+      'Les activités de cette matière sont en préparation. Reviens bientôt !';
+
+  @override
   String get pathLocked => 'Pas encore débloqué';
 
   @override
@@ -776,7 +797,8 @@ class _FrenchStrings extends Strings {
   String greeting(String name) => name.isEmpty ? 'Salut !' : 'Salut $name !';
 
   @override
-  String gradeLabel(int grade) => '${grade}e année';
+  // « 1re », then « 2e », « 3e »…
+  String gradeLabel(int grade) => '$grade${grade == 1 ? 're' : 'e'} année';
 
   @override
   String streakQuestTitle(int target) => '$target bonnes réponses de suite';
@@ -1214,6 +1236,18 @@ class _EnglishStrings extends Strings {
 
   @override
   String get pathEmpty => "There are no activities yet. Come back soon!";
+
+  @override
+  String get pathEmptyOffline =>
+      'Connect to the internet to load this subject.';
+
+  @override
+  String pathEmptyAtGrade(int grade) =>
+      "There's nothing in this subject for ${gradeLabel(grade)}.";
+
+  @override
+  String get pathNoLessonsYet =>
+      'Activities for this subject are on their way. Come back soon!';
 
   @override
   String get pathLocked => 'Not unlocked yet';

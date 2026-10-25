@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/i18n/strings.dart';
 import '../../data/local_db/node_progress_local.dart';
 import '../../core/routing/paired_router.dart';
+import '../pairing/pairing_controller.dart';
 import '../progress/progress_controller.dart';
 import 'carte_model.dart';
 import 'node_lessons.dart';
@@ -53,10 +54,27 @@ class PathScreen extends ConsumerWidget {
                     padding: EdgeInsets.all(Space.xl),
                     child: Center(child: VillageLoader()),
                   )
-                else if (state.leaves.isEmpty)
-                  _Empty(text: t.pathEmpty)
-                else
-                  _Sections(state: state, compact: compact),
+                else ...[
+                  if (carteGapOf(state) case final gap?)
+                    _Empty(
+                      key: ValueKey('carte-gap-${gap.name}'),
+                      text: switch (gap) {
+                        CarteGap.offline => t.pathEmptyOffline,
+                        CarteGap.noSkillsAtGrade => t.pathEmptyAtGrade(
+                          ref
+                                  .watch(sessionControllerProvider)
+                                  .kid
+                                  ?.gradeLevel ??
+                              1,
+                        ),
+                        CarteGap.noLessonsYet => t.pathNoLessonsYet,
+                      },
+                    ),
+                  // Skills with no lessons yet still show, locked: the kid
+                  // sees what's coming.
+                  if (state.leaves.isNotEmpty)
+                    _Sections(state: state, compact: compact),
+                ],
               ],
             ),
           );
@@ -184,7 +202,7 @@ class _Sections extends ConsumerWidget {
 }
 
 class _Empty extends StatelessWidget {
-  const _Empty({required this.text});
+  const _Empty({required this.text, super.key});
 
   final String text;
 

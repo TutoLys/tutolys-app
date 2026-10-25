@@ -58,6 +58,29 @@ class PathState {
       lessonsByNodeId.containsKey(leaf.id);
 }
 
+/// Why the Carte has nothing to play, so the message can say which.
+enum CarteGap {
+  /// Nothing cached and the sync couldn't reach the server.
+  offline,
+
+  /// The curriculum has no skills in this subject at the kid's grade.
+  noSkillsAtGrade,
+
+  /// The skills exist but no lesson is written for any of them yet.
+  noLessonsYet,
+}
+
+/// Null while loading, and whenever at least one lesson is playable.
+CarteGap? carteGapOf(PathState state) {
+  if (state.loading || state.lessonsByNodeId.isNotEmpty) return null;
+  final unreachable = state.offline || state.error != null;
+  // Unreachable with nothing cached says nothing about the content itself.
+  if (unreachable) return CarteGap.offline;
+  return state.leaves.isEmpty
+      ? CarteGap.noSkillsAtGrade
+      : CarteGap.noLessonsYet;
+}
+
 class PathController extends Notifier<PathState> {
   @override
   PathState build() {

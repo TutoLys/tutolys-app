@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tutolys_app/core/i18n/strings.dart';
 import 'package:tutolys_app/data/api/content_api.dart';
 import 'package:tutolys_app/data/api/curriculum_api.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
@@ -188,40 +189,36 @@ void main() {
     );
   });
 
-  test(
-    'a node keeps all its lessons, the lowest rank first',
-    () async {
-      container = build();
-      curriculumApi.leaves = const [
-        CurriculumLeaf(
-          id: 'leaf-1',
-          labelFr: 'Compter',
-          labelEn: '',
-          stableKey: 'math/1',
-        ),
-      ];
-      contentApi.content['ex-2'] = exercise(
-        id: 'ex-2',
-        skillNodeId: 'leaf-1',
-        rank: 2,
-      );
-      contentApi.content['ex-1'] = exercise(
-        id: 'ex-1',
-        skillNodeId: 'leaf-1',
-        rank: 0,
-      );
+  test('a node keeps all its lessons, the lowest rank first', () async {
+    container = build();
+    curriculumApi.leaves = const [
+      CurriculumLeaf(
+        id: 'leaf-1',
+        labelFr: 'Compter',
+        labelEn: '',
+        stableKey: 'math/1',
+      ),
+    ];
+    contentApi.content['ex-2'] = exercise(
+      id: 'ex-2',
+      skillNodeId: 'leaf-1',
+      rank: 2,
+    );
+    contentApi.content['ex-1'] = exercise(
+      id: 'ex-1',
+      skillNodeId: 'leaf-1',
+      rank: 0,
+    );
 
-      await container.read(pathControllerProvider.notifier).refresh();
+    await container.read(pathControllerProvider.notifier).refresh();
 
-      final state = container.read(pathControllerProvider);
-      expect(state.exerciseByNodeId['leaf-1']!['exercise_id'], 'ex-1');
-      expect(
-        state.lessonsByNodeId['leaf-1']!.map((e) => e['exercise_id']),
-        ['ex-1', 'ex-2'],
-        reason: 'every lesson on the node stays reachable, in rank order',
-      );
-    },
-  );
+    final state = container.read(pathControllerProvider);
+    expect(state.exerciseByNodeId['leaf-1']!['exercise_id'], 'ex-1');
+    expect(state.lessonsByNodeId['leaf-1']!.map((e) => e['exercise_id']), [
+      'ex-1',
+      'ex-2',
+    ], reason: 'every lesson on the node stays reachable, in rank order');
+  });
 
   test(
     'no paired kid: stays non-loading with nothing to show, no network calls',
@@ -304,5 +301,69 @@ void main() {
         );
       },
     );
+  });
+
+  group('why the Carte is empty', () {
+    const leaf = CachedSkillNode(
+      id: 'leaf-1',
+      labelFr: 'Compter',
+      labelEn: '',
+      stableKey: 'math/1',
+      subject: 'MATH',
+      grade: 1,
+    );
+
+    test('nothing to say while loading, or once a lesson is playable', () {
+      expect(carteGapOf(const PathState()), isNull);
+      expect(
+        carteGapOf(
+          PathState(
+            loading: false,
+            leaves: const [leaf],
+            lessonsByNodeId: {
+              'leaf-1': [exercise(id: 'ex-1', skillNodeId: 'leaf-1')],
+            },
+          ),
+        ),
+        isNull,
+      );
+    });
+
+    test('no skills at this grade is not the same as no lessons yet', () {
+      expect(
+        carteGapOf(const PathState(loading: false)),
+        CarteGap.noSkillsAtGrade,
+      );
+      expect(
+        carteGapOf(const PathState(loading: false, leaves: [leaf])),
+        CarteGap.noLessonsYet,
+      );
+    });
+
+    test('offline with nothing cached says offline, not "no content"', () {
+      expect(
+        carteGapOf(const PathState(loading: false, offline: true)),
+        CarteGap.offline,
+      );
+      expect(
+        carteGapOf(const PathState(loading: false, error: 'boom')),
+        CarteGap.offline,
+      );
+    });
+
+    test('the grade is named in both languages', () {
+      expect(
+        Strings.fr.pathEmptyAtGrade(3),
+        "Il n'y a rien dans cette matière pour la 3e année.",
+      );
+      expect(
+        Strings.fr.pathEmptyAtGrade(1),
+        "Il n'y a rien dans cette matière pour la 1re année.",
+      );
+      expect(
+        Strings.en.pathEmptyAtGrade(3),
+        "There's nothing in this subject for Grade 3.",
+      );
+    });
   });
 }
