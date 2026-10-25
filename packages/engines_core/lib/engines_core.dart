@@ -25,3 +25,4 @@ export 'src/timeline/timeline_order_engine.dart';
 export 'src/find_it/find_it_engine.dart';
 export 'src/timeline/timeline_axis_engine.dart';
 export 'src/timeline/timeline_calendar_engine.dart';
+export 'src/data_graph/data_graph_engine.dart';
