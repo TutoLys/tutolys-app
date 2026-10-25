@@ -82,6 +82,7 @@ abstract class Strings {
   /// The active node's card when the kid has not played it yet — "0 %
   /// maîtrisé" would read as a score rather than a beginning.
   String get pathNotStarted;
+  String lessonLanguage(String locale);
 
   // --- progrès -------------------------------------------------------------
   String progressLevel(int level);
@@ -311,6 +312,25 @@ abstract class Strings {
   String get rewardActive;
   String rewardDaysLeft(int days);
 
+  String get avatarEdit;
+  String get avatarPickerTitle;
+  String get avatarStarters;
+  String get avatarUnlockables;
+
+  /// What unlocks a level avatar: "Niveau 5".
+  String avatarAtLevel(int level);
+
+  /// Read by screen readers on a locked avatar.
+  String avatarLocked(String condition);
+  String avatarName(String key);
+
+  String get switchProfile;
+  String get whoIsPlaying;
+  String get notMe;
+  String get addProfile;
+  String get addProfileHint;
+  String get addProfileCancel;
+
   static const Strings fr = _FrenchStrings();
   static const Strings en = _EnglishStrings();
 
@@ -448,6 +468,10 @@ class _FrenchStrings extends Strings {
 
   @override
   String get pathNotStarted => 'À découvrir';
+
+  @override
+  String lessonLanguage(String locale) =>
+      locale.startsWith('en') ? 'Leçon en anglais' : 'Leçon en français';
 
   @override
   String progressLevel(int level) => 'Niv. $level';
@@ -1005,6 +1029,59 @@ class _FrenchStrings extends Strings {
   String rewardDaysLeft(int days) =>
       days == 1 ? 'Encore 1 jour' : 'Encore $days jours';
 
+  @override
+  String get avatarEdit => 'Modifier l\'avatar';
+
+  @override
+  String get avatarPickerTitle => 'Choisis ton avatar';
+
+  @override
+  String get avatarStarters => 'Pour commencer';
+
+  @override
+  String get avatarUnlockables => 'À débloquer en jouant';
+
+  @override
+  String avatarAtLevel(int level) => 'Niveau $level';
+
+  @override
+  String avatarLocked(String condition) => 'Verrouillé : $condition';
+
+  @override
+  String avatarName(String key) => switch (key) {
+        'tuque' => 'Tuque d\'hiver',
+        'camper' => 'Campeur',
+        'astronaut' => 'Astronaute',
+        'explorer' => 'Explorateur',
+        'captain' => 'Capitaine',
+        'knight' => 'Chevalier',
+        'hero' => 'Super-héros',
+        'wizard' => 'Magicien',
+        'scientist' => 'Scientifique',
+        'artist' => 'Artiste',
+        'fox_hood' => 'Capuche de renard',
+        _ => 'Avatar',
+      };
+
+  @override
+  String get switchProfile => 'Changer de profil';
+
+  @override
+  String get whoIsPlaying => 'Qui joue ?';
+
+  @override
+  String get notMe => 'Ce n\'est pas moi';
+
+  @override
+  String get addProfile => 'Ajouter un profil';
+
+  @override
+  String get addProfileHint =>
+      'Demande à un parent un code de jumelage pour ajouter un enfant.';
+
+  @override
+  String get addProfileCancel => 'Retour';
+
 }
 
 class _EnglishStrings extends Strings {
@@ -1136,6 +1213,10 @@ class _EnglishStrings extends Strings {
 
   @override
   String get pathNotStarted => 'Up next';
+
+  @override
+  String lessonLanguage(String locale) =>
+      locale.startsWith('en') ? 'Lesson in English' : 'Lesson in French';
 
   @override
   String progressLevel(int level) => 'Lvl $level';
@@ -1686,6 +1767,59 @@ class _EnglishStrings extends Strings {
   @override
   String rewardDaysLeft(int days) =>
       days == 1 ? '1 more day' : '$days more days';
+
+  @override
+  String get avatarEdit => 'Change avatar';
+
+  @override
+  String get avatarPickerTitle => 'Choose your avatar';
+
+  @override
+  String get avatarStarters => 'To start';
+
+  @override
+  String get avatarUnlockables => 'Unlock by playing';
+
+  @override
+  String avatarAtLevel(int level) => 'Level $level';
+
+  @override
+  String avatarLocked(String condition) => 'Locked: $condition';
+
+  @override
+  String avatarName(String key) => switch (key) {
+        'tuque' => 'Winter tuque',
+        'camper' => 'Camper',
+        'astronaut' => 'Astronaut',
+        'explorer' => 'Explorer',
+        'captain' => 'Captain',
+        'knight' => 'Knight',
+        'hero' => 'Superhero',
+        'wizard' => 'Wizard',
+        'scientist' => 'Scientist',
+        'artist' => 'Artist',
+        'fox_hood' => 'Fox hood',
+        _ => 'Avatar',
+      };
+
+  @override
+  String get switchProfile => 'Switch profile';
+
+  @override
+  String get whoIsPlaying => 'Who\'s playing?';
+
+  @override
+  String get notMe => 'That\'s not me';
+
+  @override
+  String get addProfile => 'Add a profile';
+
+  @override
+  String get addProfileHint =>
+      'Ask a parent for a pairing code to add a child.';
+
+  @override
+  String get addProfileCancel => 'Back';
 
 }
 

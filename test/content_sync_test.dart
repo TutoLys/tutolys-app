@@ -29,6 +29,9 @@ class FakeContentServer extends ContentApi {
   int? failFetchAfter;
 
   int manifestCalls = 0;
+
+  /// The locale the last manifest asked for.
+  String? lastLocale;
   int fetchCalls = 0;
   final List<String> requestedIds = [];
 
@@ -49,13 +52,31 @@ class FakeContentServer extends ContentApi {
   Future<ManifestResult> fetchManifest({
     required String accessToken,
     String? subject,
+    String? locale,
   }) async {
     manifestCalls++;
+    lastLocale = locale;
     if (offline) return const ManifestOffline();
     if (unauthorized) return const ManifestUnauthorized();
 
-    final entries = content.values
-        .where((e) => subject == null || e['subject'] == subject)
+    // Like the backend (ADR 0026): one version per lesson (node + rank), in
+    // the asked-for language where it exists, else the authored one.
+    final asked = locale ?? 'fr-CA';
+    final byLesson =
+        <(Object?, Object?, Object?), List<Map<String, Object?>>>{};
+    for (final e in content.values) {
+      if (subject != null && e['subject'] != subject) continue;
+      byLesson
+          .putIfAbsent((e['subject'], e['skill_node_id'], e['rank']), () => [])
+          .add(e);
+    }
+    final entries = byLesson.values
+        .map(
+          (versions) => versions.firstWhere(
+            (e) => e['locale'] == asked,
+            orElse: () => versions.first,
+          ),
+        )
         .map(
           (e) => ManifestEntry(
             exerciseId: e['exercise_id'] as String,
@@ -67,6 +88,7 @@ class FakeContentServer extends ContentApi {
             subject: e['subject'] as String,
             grade: e['grade'] as int,
             rank: e['rank'] as int,
+            locale: e['locale'] as String,
           ),
         )
         .toList();
@@ -123,17 +145,19 @@ void main() {
     String prompt = 'Combien font 2 + 2 ?',
     String? audioRef,
     List<Object?> assets = const [],
+    String locale = 'fr-CA',
+    String node = 'ad24bcba-93d0-5b4e-ab56-ec76e3409a53',
   }) => {
     'schema_version': 1,
     'exercise_id': id,
     'version': version,
     'engine_key': 'mcq',
     'engine_min_version': 1,
-    'skill_node_id': 'ad24bcba-93d0-5b4e-ab56-ec76e3409a53',
+    'skill_node_id': node,
     'subject': subject,
     'grade': 1,
     'rank': rank,
-    'locale': 'fr-CA',
+    'locale': locale,
     'prompt': {'text': prompt, 'audio_ref': audioRef, 'image_ref': null},
     'config': {
       'options': [
@@ -659,7 +683,9 @@ void main() {
       required int grade,
       required String subject,
     }) async {
-      await db.into(db.exerciseCacheTable).insert(
+      await db
+          .into(db.exerciseCacheTable)
+          .insert(
             ExerciseCacheTableCompanion.insert(
               exerciseId: id,
               version: 1,
@@ -689,8 +715,9 @@ void main() {
         reason: 'the sibling\'s row is not "withdrawn", it is not mine',
       );
 
-      final ids =
-          (await db.select(db.exerciseCacheTable).get()).map((r) => r.exerciseId);
+      final ids = (await db.select(db.exerciseCacheTable).get()).map(
+        (r) => r.exerciseId,
+      );
       expect(
         ids,
         containsAll(<String>['noah-ex', 'lea-ex']),
@@ -716,23 +743,80 @@ void main() {
       expect(await sync.cachedCount(), 0);
     });
 
-    test("a subject sync does not withdraw the same kid's other subjects",
-        () async {
-      final math = exercise('m1', rank: 0);
-      final french = exercise('f1', rank: 0, subject: 'FR');
-      server.content['m1'] = math;
-      server.content['f1'] = french;
-      await sync.sync();
-      expect(await sync.cachedCount(), 2);
+    test(
+      "a subject sync does not withdraw the same kid's other subjects",
+      () async {
+        final math = exercise('m1', rank: 0);
+        final french = exercise('f1', rank: 0, subject: 'FR');
+        server.content['m1'] = math;
+        server.content['f1'] = french;
+        await sync.sync();
+        expect(await sync.cachedCount(), 2);
 
-      final report = await sync.sync(subject: 'MATH');
+        final report = await sync.sync(subject: 'MATH');
 
-      expect(report.removed, 0);
+        expect(report.removed, 0);
+        expect(
+          await sync.cachedCount(),
+          2,
+          reason: 'a MATH-only manifest says nothing about FR',
+        );
+      },
+    );
+  });
+
+  group('lesson language (backend ADR 0026)', () {
+    test('asks for the locale it is given', () async {
+      server.content['m1'] = exercise('m1');
+      await sync.sync(subject: 'MATH', locale: 'en-CA');
+      expect(server.lastLocale, 'en-CA');
+    });
+
+    test('switching language keeps the other version for a sibling', () async {
+      server.content['fr'] = exercise('fr', locale: 'fr-CA');
+      server.content['en'] = exercise('en', locale: 'en-CA');
+
+      await sync.sync(subject: 'MATH', locale: 'fr-CA');
+      await sync.sync(subject: 'MATH', locale: 'en-CA');
+
+      final cached = {
+        for (final e in await sync.cachedExercises(subject: 'MATH'))
+          e['exercise_id'],
+      };
       expect(
-        await sync.cachedCount(),
-        2,
-        reason: 'a MATH-only manifest says nothing about FR',
+        cached,
+        {'fr', 'en'},
+        reason:
+            'deleting the French version would make a French sibling '
+            're-download it, and the two thrash',
       );
+    });
+
+    test('a lesson withdrawn in every language does go', () async {
+      server.content['fr'] = exercise('fr', locale: 'fr-CA');
+      server.content['en'] = exercise('en', locale: 'en-CA');
+      await sync.sync(subject: 'MATH', locale: 'fr-CA');
+      await sync.sync(subject: 'MATH', locale: 'en-CA');
+
+      server.content.clear();
+      await sync.sync(subject: 'MATH', locale: 'en-CA');
+      expect(await sync.cachedExercises(subject: 'MATH'), isEmpty);
+    });
+
+    test('a newer id in the same language replaces the old one', () async {
+      server.content['fr-v1'] = exercise('fr-v1', locale: 'fr-CA');
+      await sync.sync(subject: 'MATH', locale: 'fr-CA');
+
+      server.content
+        ..remove('fr-v1')
+        ..['fr-v2'] = exercise('fr-v2', locale: 'fr-CA');
+      await sync.sync(subject: 'MATH', locale: 'fr-CA');
+
+      final ids = [
+        for (final e in await sync.cachedExercises(subject: 'MATH'))
+          e['exercise_id'],
+      ];
+      expect(ids, ['fr-v2']);
     });
   });
 }

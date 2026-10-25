@@ -47,6 +47,7 @@ class _OfflineContentApi extends ContentApi {
   Future<ManifestResult> fetchManifest({
     required String accessToken,
     String? subject,
+    String? locale,
   }) async => const ManifestOffline();
 }
 

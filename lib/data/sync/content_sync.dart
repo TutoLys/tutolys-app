@@ -100,7 +100,9 @@ class ContentSync {
 
   final DateTime Function() _now;
 
-  Future<SyncReport> sync({String? subject}) async {
+  /// [locale] is the language to ask for; see `subject_language.dart` for
+  /// which one a subject wants.
+  Future<SyncReport> sync({String? subject, String? locale}) async {
     final token = accessToken();
     if (token == null || token.isEmpty) {
       return const SyncReport.unauthorized();
@@ -109,11 +111,15 @@ class ContentSync {
     final manifestResult = await api.fetchManifest(
       accessToken: token,
       subject: subject,
+      locale: locale,
     );
 
     return switch (manifestResult) {
-      ManifestFetched(:final manifest) =>
-        _applyManifest(manifest, token, subject: subject),
+      ManifestFetched(:final manifest) => _applyManifest(
+        manifest,
+        token,
+        subject: subject,
+      ),
       // Offline is not an error: cached content stays playable, which is the
       // entire point of caching it.
       ManifestOffline() => Future.value(const SyncReport.offline()),
@@ -147,12 +153,22 @@ class ContentSync {
       cachedQuery.where((t) => t.subject.equals(subject));
     }
 
+    final cachedRows = await cachedQuery.get();
     final cached = {
-      for (final row in await cachedQuery.get())
-        row.exerciseId: row.contentHash,
+      for (final row in cachedRows) row.exerciseId: row.contentHash,
     };
 
     final wanted = {for (final e in manifest.entries) e.exerciseId: e};
+
+    // The same lesson can be cached in two languages: a translation is
+    // another exercise on the same node and rank (backend ADR 0026). Keyed
+    // here by (node, rank) → the locales this manifest wants it in.
+    final wantedLocales = <(String, int), Set<String>>{};
+    for (final e in manifest.entries) {
+      wantedLocales
+          .putIfAbsent((e.skillNodeId, e.rank), () => {})
+          .add(e.locale);
+    }
 
     // Stale or missing — the only things worth bytes.
     final toFetch = manifest.entries
@@ -161,9 +177,20 @@ class ContentSync {
         .toList();
 
     // Cached but no longer offered: retired, or outside this kid's grade now.
-    final toRemove = cached.keys
-        .where((id) => !wanted.containsKey(id))
-        .toList();
+    //
+    // Except a lesson's version in *another* language. Siblings on one
+    // device share this cache and may have chosen different languages, and
+    // one kid can switch back: deleting the French version because this
+    // manifest asked for English would make the two re-download each other
+    // forever. A version goes only when its lesson is wanted in no language
+    // at all, or is wanted in its own language under a newer id.
+    final toRemove = [
+      for (final row in cachedRows)
+        if (!wanted.containsKey(row.exerciseId))
+          if (wantedLocales[(row.skillNodeId, row.rank)] case final locales
+              when locales == null || locales.contains(_localeOf(row.payload)))
+            row.exerciseId,
+    ];
 
     final upToDate = manifest.entries.length - toFetch.length;
 
@@ -353,6 +380,18 @@ class ContentSync {
     return rows
         .map((row) => jsonDecode(row.payload) as Map<String, Object?>)
         .toList(growable: false);
+  }
+
+  /// The language a cached envelope is in. Envelopes have always carried
+  /// `locale`; anything older or malformed counts as French, the default.
+  static String _localeOf(String payload) {
+    try {
+      return ((jsonDecode(payload) as Map<String, Object?>)['locale']
+              as String?) ??
+          'fr-CA';
+    } on Object {
+      return 'fr-CA';
+    }
   }
 
   /// One cached exercise, or null if it was never downloaded.

@@ -82,7 +82,10 @@ List<PathSection> buildCarteSections({
   required List<SkillMasteryDto> masteries,
   required Locale appLocale,
   Set<String> completed = const {},
+  Map<String, String> lessonLocales = const {},
+  String Function(String locale)? describeLanguage,
 }) {
+  final asked = contentLocaleFor(subject, appLocale);
   final masteryOf = {for (final m in masteries) m.skillNodeId: m};
   final english = appLocale.languageCode == 'en';
   // Français and English keep their own language's skill names whatever
@@ -124,11 +127,24 @@ List<PathSection> buildCarteSections({
                     : leaf.labelFr,
                 state: state,
                 masteryPct: mastery == null ? null : mastery.masteryPct / 100,
+                otherLanguage: _otherLanguage(lessonLocales[leaf.id], asked),
+                otherLanguageLabel:
+                    _otherLanguage(lessonLocales[leaf.id], asked) == null
+                    ? null
+                    : describeLanguage?.call(lessonLocales[leaf.id]!),
               );
             }(),
         ],
       ),
   ];
+}
+
+/// `'FR'` when a lesson came back in French though English was asked for
+/// (and the reverse); null when it is in the language asked for.
+String? _otherLanguage(String? lessonLocale, String asked) {
+  if (lessonLocale == null) return null;
+  final lesson = lessonLocale.split('-').first;
+  return lesson == asked.split('-').first ? null : lesson.toUpperCase();
 }
 
 /// Orders `o:2` before `o:10`, which a plain string compare gets backwards —

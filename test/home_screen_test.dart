@@ -54,6 +54,7 @@ class _EmptyContentApi extends ContentApi {
   Future<ManifestResult> fetchManifest({
     required String accessToken,
     String? subject,
+    String? locale,
   }) async => ManifestFetched(
     ContentManifest(grade: 1, manifestHash: 'm', entries: const []),
   );
@@ -129,7 +130,9 @@ void main() {
     (tester) async {
       final db = LocalDatabase.memory();
       addTearDown(db.close);
-      await HomeStats(db, kidId: 'k1',
+      await HomeStats(
+        db,
+        kidId: 'k1',
         clock: DateTime.now,
       ).recordExerciseCompleted(elapsedMs: 120000);
 

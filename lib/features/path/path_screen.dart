@@ -78,8 +78,8 @@ class _Sections extends ConsumerWidget {
     final masteries = ref.watch(progressControllerProvider).masteries;
     // Finished on this device: refreshed by the play screen after every
     // completed exercise, so the map changes the moment the kid is back.
-    final completed = ref.watch(nodeProgressProvider).value?.keys.toSet() ??
-        const <String>{};
+    final completed =
+        ref.watch(nodeProgressProvider).value?.keys.toSet() ?? const <String>{};
 
     final sections = buildCarteSections(
       subject: state.subject,
@@ -88,6 +88,11 @@ class _Sections extends ConsumerWidget {
       masteries: masteries,
       appLocale: Localizations.localeOf(context),
       completed: completed,
+      lessonLocales: {
+        for (final MapEntry(:key, :value) in state.exerciseByNodeId.entries)
+          key: (value['locale'] as String?) ?? 'fr-CA',
+      },
+      describeLanguage: t.lessonLanguage,
     );
 
     return Column(

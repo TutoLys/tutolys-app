@@ -17,11 +17,23 @@ class PathNode {
     required this.label,
     required this.state,
     this.masteryPct,
+    this.otherLanguage,
+    this.otherLanguageLabel,
   });
 
   final String id;
   final String label;
   final PathNodeState state;
+
+  /// Set when this node's lesson is in another language than the subject
+  /// asked for: `'FR'` for a French lesson in an English-mode maths path.
+  /// The backend serves the authored version rather than nothing, so
+  /// switching language never empties the map; the app must not pass it off
+  /// as translated, so it wears a small language tag.
+  final String? otherLanguage;
+
+  /// Read to screen readers with the tag ("Lesson in French").
+  final String? otherLanguageLabel;
 
   /// 0..1 from the backend, shown on the active node's ring and card. Null
   /// when the kid has never played it — which is not the same as zero.
@@ -192,11 +204,14 @@ class SkillPath extends StatelessWidget {
                     if (nodes[i].state == PathNodeState.active) ...[
                       _mascotFor(xOf(i), tops[i], w, m),
                       Positioned(
-                        left: (xOf(i) - m.cardWidth / 2)
-                            .clamp(0.0, math.max(0.0, w - m.cardWidth)),
+                        left: (xOf(i) - m.cardWidth / 2).clamp(
+                          0.0,
+                          math.max(0.0, w - m.cardWidth),
+                        ),
                         top: tops[i] + m.cardTop,
                         width: m.cardWidth,
                         child: _ActiveCard(
+                          languageTag: nodes[i].otherLanguage,
                           status: statusLabel(nodes[i]),
                           title: nodes[i].label,
                           cta: continueLabel,
@@ -260,13 +275,26 @@ class _Node extends StatelessWidget {
       children: [
         Semantics(
           button: !locked,
-          label: node.label,
-          child: _Orb(
-            key: ValueKey('path-orb-${node.id}'),
-            node: node,
-            metrics: m,
-            palette: p,
-            onTap: onTap,
+          label: [node.label, ?node.otherLanguageLabel].join('. '),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              _Orb(
+                key: ValueKey('path-orb-${node.id}'),
+                node: node,
+                metrics: m,
+                palette: p,
+                onTap: onTap,
+              ),
+              if (node.otherLanguage case final tag?)
+                Positioned(
+                  top: -4,
+                  right: -10,
+                  child: ExcludeSemantics(
+                    child: LanguageTag(tag: tag, palette: p),
+                  ),
+                ),
+            ],
           ),
         ),
         const SizedBox(height: 7),
@@ -339,7 +367,8 @@ class _OrbState extends State<_Orb> with SingleTickerProviderStateMixin {
 
     final pulses = node.state == PathNodeState.available;
     _syncTicker(
-      shouldRun: pulses &&
+      shouldRun:
+          pulses &&
           !MediaQuery.disableAnimationsOf(context) &&
           Visibility.of(context),
     );
@@ -354,11 +383,17 @@ class _OrbState extends State<_Orb> with SingleTickerProviderStateMixin {
     final icon = switch (node.state) {
       PathNodeState.mastered => _Check(size: m.icon, color: p.gold),
       // Done here, not yet mastered on the server: the same check, in blue.
-      PathNodeState.completed => _Check(size: m.icon, color: p.quebecBlueBright),
+      PathNodeState.completed => _Check(
+        size: m.icon,
+        color: p.quebecBlueBright,
+      ),
       PathNodeState.active => _Target(size: m.activeIcon),
       PathNodeState.available => _Target(size: m.activeIcon - 4),
-      PathNodeState.locked =>
-        Icon(Icons.lock_outline_rounded, size: m.icon, color: p.inkMuted),
+      PathNodeState.locked => Icon(
+        Icons.lock_outline_rounded,
+        size: m.icon,
+        color: p.inkMuted,
+      ),
     };
 
     final orb = AnimatedBuilder(
@@ -438,6 +473,7 @@ class _OrbState extends State<_Orb> with SingleTickerProviderStateMixin {
 /// "En cours · 60 % maîtrisé", the skill's name, and the gold CTA.
 class _ActiveCard extends StatelessWidget {
   const _ActiveCard({
+    this.languageTag,
     required this.status,
     required this.title,
     required this.cta,
@@ -446,6 +482,7 @@ class _ActiveCard extends StatelessWidget {
     required this.onTap,
   });
 
+  final String? languageTag;
   final String status;
   final String title;
   final String cta;
@@ -475,14 +512,24 @@ class _ActiveCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              status.toUpperCase(),
-              style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.5,
-                color: p.quebecBlueBright,
-              ),
+            Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    status.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                      color: p.quebecBlueBright,
+                    ),
+                  ),
+                ),
+                if (languageTag case final tag?) ...[
+                  const SizedBox(width: 6),
+                  LanguageTag(tag: tag, palette: p),
+                ],
+              ],
             ),
             const SizedBox(height: 4),
             Text(
@@ -577,10 +624,8 @@ class _Check extends StatelessWidget {
   final Color color;
 
   @override
-  Widget build(BuildContext context) => CustomPaint(
-        size: Size.square(size),
-        painter: _CheckPainter(color),
-      );
+  Widget build(BuildContext context) =>
+      CustomPaint(size: Size.square(size), painter: _CheckPainter(color));
 }
 
 class _CheckPainter extends CustomPainter {
@@ -691,4 +736,37 @@ class _ConnectorPainter extends CustomPainter {
       old.lockedAhead != lockedAhead ||
       old.solid != solid ||
       old.dotted != dotted;
+}
+
+/// A lesson's language, when it is not the one its subject asked for: a
+/// small muted pill ("FR"), quiet but never silent (app ADR 0023).
+class LanguageTag extends StatelessWidget {
+  const LanguageTag({required this.tag, required this.palette, super.key});
+
+  final String tag;
+  final VillagePalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = palette;
+    return Container(
+      key: const ValueKey('lesson-language-tag'),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+      decoration: BoxDecoration(
+        color: p.surface,
+        border: Border.all(color: p.line),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        tag,
+        style: TextStyle(
+          fontSize: 8.5,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.4,
+          color: p.inkMuted,
+          height: 1.1,
+        ),
+      ),
+    );
+  }
 }

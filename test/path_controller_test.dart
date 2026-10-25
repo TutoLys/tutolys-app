@@ -8,6 +8,7 @@ import 'package:tutolys_app/data/local_db/session_store.dart';
 import 'package:tutolys_app/data/sync/content_hash.dart';
 import 'package:tutolys_app/features/pairing/pairing_controller.dart';
 import 'package:tutolys_app/features/path/path_controller.dart';
+import 'package:tutolys_app/features/settings/settings_controller.dart';
 
 class _FixedSessionController extends SessionController {
   _FixedSessionController(this._state);
@@ -39,11 +40,16 @@ class _FakeContentApi extends ContentApi {
   /// exercise_id -> envelope.
   final Map<String, Map<String, Object?>> content = {};
 
+  /// Every (subject, locale) a manifest was asked for, in order.
+  final List<(String?, String?)> asked = [];
+
   @override
   Future<ManifestResult> fetchManifest({
     required String accessToken,
     String? subject,
+    String? locale,
   }) async {
+    asked.add((subject, locale));
     final entries = content.values
         .map(
           (e) => ManifestEntry(
@@ -245,5 +251,53 @@ void main() {
     expect(state.leaves.map((l) => l.id), [
       'leaf-1',
     ], reason: 'offline must not clear the cache');
+  });
+
+  group('lesson language', () {
+    test(
+      'maths asks for the app\'s language, and re-syncs when it changes',
+      () async {
+        container = build();
+        await container.read(pathControllerProvider.notifier).refresh();
+        expect(contentApi.asked.last, ('MATH', 'fr-CA'));
+
+        container.listen(pathControllerProvider, (_, _) {});
+        await container
+            .read(settingsControllerProvider.notifier)
+            .setEnglish(true);
+        await pumpEventQueue();
+
+        expect(contentApi.asked.last, (
+          'MATH',
+          'en-CA',
+        ), reason: 'a language change is a new manifest');
+      },
+    );
+
+    test(
+      'Français stays French in an English app, and needs no re-sync',
+      () async {
+        container = build();
+        container.listen(pathControllerProvider, (_, _) {});
+        await container
+            .read(settingsControllerProvider.notifier)
+            .setEnglish(true);
+        await container
+            .read(pathControllerProvider.notifier)
+            .selectSubject('FR');
+        expect(contentApi.asked.last, ('FR', 'fr-CA'));
+
+        final before = contentApi.asked.length;
+        await container
+            .read(settingsControllerProvider.notifier)
+            .setEnglish(false);
+        await pumpEventQueue();
+        expect(
+          contentApi.asked.length,
+          before,
+          reason: 'Français asks for French either way',
+        );
+      },
+    );
   });
 }

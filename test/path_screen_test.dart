@@ -59,6 +59,7 @@ class _FakeContentApi extends ContentApi {
   Future<ManifestResult> fetchManifest({
     required String accessToken,
     String? subject,
+    String? locale,
   }) async {
     final entries = content.values
         .map(
@@ -138,9 +139,8 @@ Widget appUnder({
         curriculum ?? FakeCurriculumApi({'MATH': leaves, ...otherSubjects}),
       ),
       progressControllerProvider.overrideWith(
-        () => _FixedProgress(
-          ProgressState(loading: false, masteries: masteries),
-        ),
+        () =>
+            _FixedProgress(ProgressState(loading: false, masteries: masteries)),
       ),
       contentApiProvider.overrideWithValue(_FakeContentApi(content)),
       sessionControllerProvider.overrideWith(
@@ -275,7 +275,6 @@ void main() {
     expect(find.text('Compter'), findsNothing);
   });
 
-
   testWidgets('a locked node (no synced exercise) has no way to play', (
     tester,
   ) async {
@@ -304,8 +303,10 @@ void main() {
     await openCarte(tester, appUnder(leaves: const [], content: const {}));
 
     expect(find.byType(PlayScreen), findsNothing);
-    expect(find.text("Il n'y a pas encore d'activités. Reviens bientôt !"),
-        findsOneWidget);
+    expect(
+      find.text("Il n'y a pas encore d'activités. Reviens bientôt !"),
+      findsOneWidget,
+    );
     // The pills stay, so a kid can still go to a subject that has content.
     expect(find.byKey(const ValueKey('subject-pill-FR')), findsOneWidget);
   });

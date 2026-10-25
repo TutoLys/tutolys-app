@@ -15,6 +15,7 @@ class ManifestEntry {
     required this.subject,
     required this.grade,
     required this.rank,
+    this.locale = 'fr-CA',
   });
 
   factory ManifestEntry.fromJson(Map<String, Object?> json) {
@@ -28,6 +29,7 @@ class ManifestEntry {
       subject: json['subject'] as String,
       grade: json['grade'] as int,
       rank: json['rank'] as int,
+      locale: (json['locale'] as String?) ?? 'fr-CA',
     );
   }
 
@@ -43,6 +45,11 @@ class ManifestEntry {
   final String subject;
   final int grade;
   final int rank;
+
+  /// The language this lesson is actually in. Not necessarily the one asked
+  /// for: a lesson with no version in the requested language is still
+  /// served, in the language it was authored in (backend ADR 0026).
+  final String locale;
 }
 
 class ContentManifest {
@@ -50,11 +57,19 @@ class ContentManifest {
     required this.grade,
     required this.manifestHash,
     required this.entries,
+    this.locale = 'fr-CA',
+    this.locales = const [],
   });
 
   final int grade;
+
+  /// Folds each entry's locale in, so a language change is a new manifest.
   final String manifestHash;
   final List<ManifestEntry> entries;
+
+  /// The locale asked for, and the locales the entries are really in.
+  final String locale;
+  final List<String> locales;
 }
 
 sealed class ManifestResult {
@@ -129,14 +144,17 @@ class ContentApi {
   /// enough to finish on a weak connection and to resume cheaply if it fails.
   static const fetchChunkSize = 25;
 
+  /// [locale] is the language to ask for (`fr-CA`, `en-CA`); absent means
+  /// `fr-CA` on the server.
   Future<ManifestResult> fetchManifest({
     required String accessToken,
     String? subject,
+    String? locale,
   }) async {
     try {
       final response = await dio.get<Map<String, dynamic>>(
         '/api/v1/content/manifest',
-        queryParameters: {'subject': ?subject},
+        queryParameters: {'subject': ?subject, 'locale': ?locale},
         options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
       );
 
@@ -151,6 +169,8 @@ class ContentApi {
           grade: body['grade'] as int,
           manifestHash: body['manifest_hash'] as String,
           entries: entries,
+          locale: (body['locale'] as String?) ?? locale ?? 'fr-CA',
+          locales: ((body['locales'] as List?) ?? const []).cast<String>(),
         ),
       );
     } on DioException catch (error) {
