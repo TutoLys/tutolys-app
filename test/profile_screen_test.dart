@@ -12,6 +12,7 @@ import 'package:tutolys_app/data/local_db/database.dart';
 import 'package:tutolys_app/features/profile/profile_screen.dart';
 import 'package:tutolys_app/features/settings/settings_screen.dart';
 import 'package:tutolys_app/features/progress/progress_controller.dart';
+import 'package:tutolys_app/features/quests/quest_board.dart';
 
 class _FixedSessionController extends SessionController {
   _FixedSessionController(this._state);
@@ -66,9 +67,11 @@ class _FakeProgressApi extends ProgressApi {
       result;
 }
 
-Widget appUnder({ProgressApi? progressApi}) {
+Widget appUnder({ProgressApi? progressApi, QuestBoard? board}) {
   return ProviderScope(
     overrides: [
+      if (board != null)
+        questBoardProvider.overrideWith((ref) async => board),
       progressApiProvider.overrideWithValue(progressApi ?? _FakeProgressApi()),
       sessionControllerProvider.overrideWith(
         () => _FixedSessionController(
@@ -144,6 +147,37 @@ Widget _widgetFor(ProviderContainer container) {
 }
 
 void main() {
+  testWidgets('the badge grid shows the eight, earned ones unlocked', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      appUnder(
+        board: QuestBoard(
+          quests: const [],
+          weekCompleted: 0,
+          unlocked: const {'streak3': '2026-10-20', 'streak7': '2026-10-24'},
+          today: DateTime(2026, 10, 24),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('badge-streak3-earned')), findsOneWidget);
+    expect(find.byKey(const ValueKey('badge-level10-locked')), findsOneWidget);
+    expect(find.text(Strings.fr.achExplorer), findsOneWidget);
+    // A 7-day streak earned the title, so it shows under the name.
+    expect(find.text(Strings.fr.flameKeeperTitle), findsOneWidget);
+  });
+
+  testWidgets('no title until it is earned', (tester) async {
+    await tester.pumpWidget(appUnder());
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('profile-title')), findsNothing);
+  });
+
   testWidgets('shows the kid name and grade', (tester) async {
     await tester.pumpWidget(appUnder());
     await tester.pumpAndSettle();

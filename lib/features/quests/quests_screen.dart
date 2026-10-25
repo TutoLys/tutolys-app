@@ -4,22 +4,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/i18n/strings.dart';
 import '../progress/progress_controller.dart';
+import 'quest_board.dart';
 import 'quests_model.dart';
 import 'streak_detail.dart';
 
 /// Quêtes, as the design draws it: the streak card with its week strip,
-/// then "Quêtes du jour".
+/// "Quêtes du jour" beside "Badge de la semaine", then "Réussites récentes".
 ///
-/// Three things the design draws are **not** here, each for a reason that
-/// is not "later":
-/// - **Three quests.** Exactly one quest type exists — the daily challenge
-///   (backend ADR 0019). Teacher-assigned and bonus-review quests need
-///   school plumbing (open item #11). One real row, not three.
-/// - **"+15 XP" on each quest.** The daily challenge awards no XP; XP comes
-///   per question answered (ADR 0022). A reward chip would promise one.
-/// - **"Badge de la semaine" and "Réussites récentes".** Badges are open
-///   item #3. Profil already says so in words; drawing a locked badge here
-///   would imply a system a kid could unlock.
+/// Every number is measured, never mocked — see [questBoardProvider] for
+/// what each quest and achievement is counted on. Two things the design
+/// draws stay out: the coin reward (no currency exists; every reward chip is
+/// XP) and the streak modal's *Entre amis* tab (open item #12, out).
 ///
 /// The streak number is the backend's. The week strip is this device's own
 /// play history (`played_date`), because no device-facing endpoint serves
@@ -37,13 +32,15 @@ class QuestsScreen extends ConsumerWidget {
     final p = VillagePalette.of(context);
     final progress = ref.watch(progressControllerProvider);
     final played = ref.watch(playedDaysProvider).value;
+    final board = ref.watch(questBoardProvider).value;
     final compact = MediaQuery.sizeOf(context).width < Breakpoints.compact;
+    final gap = compact ? Space.sm : 18.0;
 
     return SingleChildScrollView(
       padding: EdgeInsets.all(compact ? Space.md : Space.lg),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 880),
+          constraints: const BoxConstraints(maxWidth: 1040),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -80,11 +77,42 @@ class QuestsScreen extends ConsumerWidget {
                           streakDays: progress.currentStreakDays,
                           freezesAvailable: progress.freezesAvailable,
                           played: played,
+                          board: board,
                           onOpenPath: onOpenPath,
                         ),
               ),
-              SizedBox(height: compact ? Space.sm : 18),
-              _QuestListCard(progress: progress, onOpenPath: onOpenPath),
+              SizedBox(height: gap),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final list = QuestListCard(
+                    quests: board?.quests,
+                    onOpenPath: onOpenPath,
+                  );
+                  final badge = WeeklyBadgeCard(
+                    done: board?.weekCompleted ?? 0,
+                    earned: board?.weeklyBadgeEarned ?? false,
+                    compact: compact,
+                  );
+                  // The design's `.quetes-grid`: 1fr + 300px side by side,
+                  // stacked once there is no room for both.
+                  if (constraints.maxWidth < 680) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [list, SizedBox(height: gap), badge],
+                    );
+                  }
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: list),
+                      const SizedBox(width: 18),
+                      SizedBox(width: 300, child: badge),
+                    ],
+                  );
+                },
+              ),
+              SizedBox(height: gap),
+              RecentAchievementsCard(earned: board?.recent ?? const []),
               const SizedBox(height: Space.xl),
             ],
           ),
@@ -318,39 +346,27 @@ class _WeekCell extends StatelessWidget {
   }
 }
 
-class _QuestListCard extends StatelessWidget {
-  const _QuestListCard({required this.progress, this.onOpenPath});
+/// "Quêtes du jour": the board's quests, one row each. Null while the board
+/// is still being read.
+class QuestListCard extends StatelessWidget {
+  const QuestListCard({super.key, required this.quests, this.onOpenPath});
 
-  final ProgressState progress;
+  final List<DailyQuestItem>? quests;
   final VoidCallback? onOpenPath;
 
   @override
   Widget build(BuildContext context) {
     final t = context.s;
     final p = VillagePalette.of(context);
-    final quest = progress.dailyQuest;
+    final items = quests;
 
     return QuestPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Image.asset('assets/images/asset-target.webp', width: 18),
-              const SizedBox(width: 7),
-              Text(
-                t.villageQuestsTitle,
-                style: TextStyle(
-                  fontFamily: VillageType.display,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14.5,
-                  color: p.ink,
-                ),
-              ),
-            ],
-          ),
+          PanelTitle(asset: 'asset-target.webp', title: t.villageQuestsTitle),
           const SizedBox(height: Space.xs),
-          if (quest == null)
+          if (items == null || items.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: Space.xs),
               child: Text(
@@ -359,23 +375,62 @@ class _QuestListCard extends StatelessWidget {
               ),
             )
           else
-            QuestItem(
-              // The daily challenge has one fixed shape, so its title is
-              // derived from the target rather than transported.
-              title: t.streakQuestTitle(quest.target),
-              done: quest.completed,
-              current: quest.progress,
-              target: quest.target,
-              onTap: quest.completed ? null : onOpenPath,
-            ),
+            for (var i = 0; i < items.length; i++) ...[
+              if (i > 0) Divider(height: 1, thickness: 1, color: p.line),
+              QuestItem(
+                key: ValueKey('quest-${items[i].key}'),
+                title: questTitle(t, items[i]),
+                done: items[i].done,
+                current: items[i].progress,
+                target: items[i].target,
+                xpReward: items[i].xpReward,
+                onTap: items[i].done ? null : onOpenPath,
+              ),
+            ],
         ],
       ),
     );
   }
 }
 
-/// One quest: check circle, icon tile, title, and — until it is done — a
-/// progress track with "3 / 5" under it.
+/// A quest's title in the reader's language — the quest carries its shape,
+/// never its words.
+String questTitle(Strings t, DailyQuestItem q) => switch (q.kind) {
+  QuestKind.challenge => t.streakQuestTitle(q.target),
+  QuestKind.exercises => t.questExercisesTitle(q.target),
+  QuestKind.minutes => t.questMinutesTitle(q.target),
+};
+
+/// The design's `.quest-panel h2`: an 18px icon and a 14.5px display title.
+class PanelTitle extends StatelessWidget {
+  const PanelTitle({super.key, required this.asset, required this.title});
+
+  final String asset;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
+    return Row(
+      children: [
+        Image.asset('assets/images/$asset', width: 18, height: 18),
+        const SizedBox(width: 7),
+        Text(
+          title,
+          style: TextStyle(
+            fontFamily: VillageType.display,
+            fontWeight: FontWeight.w700,
+            fontSize: 14.5,
+            color: p.ink,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// One quest: check circle, icon tile, title, a progress track with "3 / 5"
+/// until it is done, and the reward chip.
 class QuestItem extends StatelessWidget {
   const QuestItem({
     super.key,
@@ -383,13 +438,17 @@ class QuestItem extends StatelessWidget {
     required this.done,
     required this.current,
     required this.target,
+    this.icon = 'asset-target.webp',
+    this.xpReward,
     this.onTap,
   });
 
   final String title;
+  final String icon;
   final bool done;
   final int current;
   final int target;
+  final int? xpReward;
   final VoidCallback? onTap;
 
   static const _doneGreen = Color(0xFF3DBE7A);
@@ -397,6 +456,7 @@ class QuestItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = VillagePalette.of(context);
+    final struck = done ? TextDecoration.lineThrough : null;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -423,10 +483,10 @@ class QuestItem extends StatelessWidget {
               height: 36,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: p.line,
+                color: p.surface,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Image.asset('assets/images/asset-target.webp', width: 20),
+              child: Image.asset('assets/images/$icon', width: 20, height: 20),
             ),
             const SizedBox(width: Space.sm),
             Expanded(
@@ -440,7 +500,7 @@ class QuestItem extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
                       color: done ? p.inkMuted : p.ink,
-                      decoration: done ? TextDecoration.lineThrough : null,
+                      decoration: struck,
                     ),
                   ),
                   if (!done) ...[
@@ -460,7 +520,211 @@ class QuestItem extends StatelessWidget {
                 ],
               ),
             ),
+            if (xpReward != null) ...[
+              const SizedBox(width: Space.xs),
+              Row(
+                key: const ValueKey('quest-reward'),
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.asset('assets/images/asset-xpstar.webp', width: 16, height: 16),
+                  const SizedBox(width: 3),
+                  Text(
+                    context.s.questRewardXp(xpReward!),
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: done ? p.inkMuted : p.gold,
+                      decoration: struck,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "Badge de la semaine": the badge art, the rule, and a track counting
+/// this week's finished quests toward [weeklyBadgeTarget].
+class WeeklyBadgeCard extends StatelessWidget {
+  const WeeklyBadgeCard({
+    super.key,
+    required this.done,
+    required this.earned,
+    this.compact = false,
+  });
+
+  final int done;
+  final bool earned;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.s;
+    final p = VillagePalette.of(context);
+    final shown = done.clamp(0, weeklyBadgeTarget);
+    return QuestPanel(
+      child: Column(
+        children: [
+          Opacity(
+            opacity: earned ? 1 : 0.9,
+            child: Image.asset(
+              'assets/images/asset-badge.webp',
+              width: compact ? 72 : 92,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            t.weeklyBadgeTitle,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: VillageType.display,
+              fontWeight: FontWeight.w700,
+              fontSize: compact ? 13.5 : 15,
+              color: p.ink,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            t.weeklyBadgeBody(weeklyBadgeTarget),
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 11.5, color: p.inkMuted),
+          ),
+          const SizedBox(height: 10),
+          GradientTrack(value: shown / weeklyBadgeTarget),
+          const SizedBox(height: 5),
+          Text(
+            earned
+                ? t.weeklyBadgeEarned
+                : t.weeklyBadgeProgress(shown, weeklyBadgeTarget),
+            key: const ValueKey('weekly-badge-progress'),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: earned ? p.success : p.inkMuted,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The art and the name of each earned thing.
+String achievementAsset(Achievement? a) => switch (a) {
+  Achievement.streak3 || Achievement.streak7 => 'asset-flame.webp',
+  Achievement.questMaster || Achievement.quests50 => 'asset-quetes.png',
+  Achievement.level10 || Achievement.level20 => 'asset-xpstar.webp',
+  Achievement.allSubjects50 => 'asset-progres.png',
+  Achievement.explorer => 'asset-carte.png',
+  null => 'asset-badge.webp',
+};
+
+String achievementName(Strings t, Achievement? a) => switch (a) {
+  Achievement.streak3 => t.achStreak3,
+  Achievement.questMaster => t.achQuestMaster,
+  Achievement.level10 => t.achLevel10,
+  Achievement.streak7 => t.achStreak7,
+  Achievement.allSubjects50 => t.achAllSubjects50,
+  Achievement.level20 => t.achLevel20,
+  Achievement.quests50 => t.achQuests50,
+  Achievement.explorer => t.achExplorer,
+  null => t.weeklyBadgeTitle,
+};
+
+/// "Réussites récentes": five round slots, the latest earned first, the
+/// rest locked — as many locked as there is room for, like the design.
+class RecentAchievementsCard extends StatelessWidget {
+  const RecentAchievementsCard({super.key, required this.earned});
+
+  static const slots = 5;
+
+  final List<EarnedItem> earned;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.s;
+    final p = VillagePalette.of(context);
+    final shown = earned.take(slots).toList();
+    return QuestPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          PanelTitle(asset: 'asset-target.webp', title: t.recentTitle),
+          const SizedBox(height: Space.sm),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              for (final item in shown)
+                _RoundIcon(
+                  key: ValueKey('recent-${item.key}'),
+                  label: achievementName(t, item.achievement),
+                  palette: p,
+                  child: Image.asset(
+                    'assets/images/${achievementAsset(item.achievement)}',
+                    width: 24,
+                    height: 24,
+                  ),
+                ),
+              for (var i = shown.length; i < slots; i++)
+                _RoundIcon(
+                  key: ValueKey('recent-locked-$i'),
+                  label: t.lockedLabel,
+                  palette: p,
+                  locked: true,
+                  child: Icon(Icons.lock, size: 20, color: p.inkMuted),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RoundIcon extends StatelessWidget {
+  const _RoundIcon({
+    super.key,
+    required this.label,
+    required this.child,
+    required this.palette,
+    this.locked = false,
+  });
+
+  final String label;
+  final Widget child;
+  final VillagePalette palette;
+  final bool locked;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: label,
+      child: Semantics(
+        label: label,
+        child: Opacity(
+          opacity: locked ? 0.4 : 1,
+          child: Container(
+            width: 46,
+            height: 46,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: palette.surface,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: palette.shadowSmall,
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: child,
+          ),
         ),
       ),
     );

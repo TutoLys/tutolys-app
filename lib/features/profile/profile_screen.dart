@@ -9,6 +9,8 @@ import '../home/village_scene.dart';
 import '../home/village_screen.dart' show subjectCodeFor;
 import '../pairing/pairing_controller.dart';
 import '../progress/progress_controller.dart';
+import '../quests/quest_board.dart';
+import '../quests/quests_screen.dart' show achievementAsset, achievementName;
 
 /// Profil, as the design draws it: an avatar hero, three stat tiles, and
 /// per-subject progress.
@@ -17,12 +19,13 @@ import '../progress/progress_controller.dart';
 /// sits in Quêtes' streak detail as the design's "Bouclier de série", which
 /// is where the design puts streak detail (app ADR 0015).
 ///
-/// Two of the design's sections are **not** rendered as mockups of
-/// themselves. Badges and the recent-activity feed have no mechanism behind
-/// them — badges are open item #3 ("do not build"), and nothing records an
-/// activity history. Rather than draw eight permanently-locked badges,
-/// which would imply a system a kid could unlock by playing, each section
-/// says what it is waiting for.
+/// The badge grid is the design's eight, earned on real data and recorded
+/// once ([questBoardProvider], app ADR 0015) — the same achievements Quêtes
+/// lists under "Réussites récentes". "Gardien de la flamme" shows under the
+/// name once a 7-day streak has earned it.
+///
+/// The recent-activity feed still says what it is waiting for: nothing
+/// records an activity history yet.
 ///
 /// Everything else here is real: the name, grade, XP ledger total, streak,
 /// mastered count, and the per-subject bars — the same local join the
@@ -38,6 +41,7 @@ class ProfileScreen extends ConsumerWidget {
     final progress = ref.watch(progressControllerProvider);
     final bySubject =
         ref.watch(subjectProgressProvider).value ?? const <String, double>{};
+    final board = ref.watch(questBoardProvider).value;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(Space.lg),
@@ -50,6 +54,9 @@ class ProfileScreen extends ConsumerWidget {
               _Hero(
                 name: kid?.displayName ?? '',
                 grade: kid?.gradeLevel,
+                title: (board?.has(Achievement.streak7) ?? false)
+                    ? t.flameKeeperTitle
+                    : null,
                 palette: p,
               ),
               const SizedBox(height: Space.md),
@@ -114,9 +121,12 @@ class ProfileScreen extends ConsumerWidget {
                 title: t.profileBadges,
                 icon: Icons.workspace_premium_outlined,
                 palette: p,
-                child: Text(
-                  t.profileBadgesSoon,
-                  style: TextStyle(fontSize: 13, height: 1.4, color: p.inkMuted),
+                child: _BadgeGrid(
+                  earned: {
+                    for (final a in Achievement.values)
+                      if (board?.has(a) ?? false) a,
+                  },
+                  palette: p,
                 ),
               ),
               const SizedBox(height: Space.md),
@@ -139,10 +149,18 @@ class ProfileScreen extends ConsumerWidget {
 }
 
 class _Hero extends StatelessWidget {
-  const _Hero({required this.name, required this.grade, required this.palette});
+  const _Hero({
+    required this.name,
+    required this.grade,
+    required this.palette,
+    this.title,
+  });
 
   final String name;
   final int? grade;
+
+  /// An earned title ("Gardien de la flamme"), or null.
+  final String? title;
   final VillagePalette palette;
 
   @override
@@ -165,6 +183,26 @@ class _Hero extends StatelessWidget {
             context.s.gradeLabel(grade!),
             style: TextStyle(fontSize: 13, color: palette.inkMuted),
           ),
+        if (title != null) ...[
+          const SizedBox(height: 6),
+          Container(
+            key: const ValueKey('profile-title'),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            decoration: BoxDecoration(
+              color: palette.goldPale,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              title!,
+              style: TextStyle(
+                fontFamily: VillageType.display,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: palette.ink,
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -327,6 +365,67 @@ class _SubjectRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The design's `.badges-grid`: four columns of 54px circles, the earned
+/// ones with their art, the rest dimmed behind a lock.
+class _BadgeGrid extends StatelessWidget {
+  const _BadgeGrid({required this.earned, required this.palette});
+
+  final Set<Achievement> earned;
+  final VillagePalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.s;
+    final p = palette;
+    return GridView.count(
+      crossAxisCount: 4,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 14,
+      crossAxisSpacing: 14,
+      childAspectRatio: 0.78,
+      children: [
+        for (final a in Achievement.values)
+          Column(
+            key: ValueKey('badge-${a.name}-${earned.contains(a) ? 'earned' : 'locked'}'),
+            children: [
+              Opacity(
+                opacity: earned.contains(a) ? 1 : 0.42,
+                child: Container(
+                  width: 54,
+                  height: 54,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: p.surface,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(color: p.shadowSmall, blurRadius: 12, offset: const Offset(0, 4)),
+                    ],
+                  ),
+                  child: earned.contains(a)
+                      ? Image.asset('assets/images/${achievementAsset(a)}', width: 28, height: 28)
+                      : Icon(Icons.lock, size: 22, color: p.inkMuted),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                achievementName(t, a),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                style: TextStyle(
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w700,
+                  height: 1.25,
+                  color: p.inkMuted,
+                ),
+              ),
+            ],
+          ),
+      ],
     );
   }
 }

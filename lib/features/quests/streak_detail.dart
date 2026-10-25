@@ -2,6 +2,7 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/i18n/strings.dart';
+import 'quest_board.dart';
 import 'quests_model.dart';
 import 'quests_screen.dart';
 
@@ -12,6 +13,7 @@ Future<void> showStreakDetail(
   required int? streakDays,
   required int? freezesAvailable,
   required PlayedDays played,
+  QuestBoard? board,
   VoidCallback? onOpenPath,
 }) {
   final phone = MediaQuery.sizeOf(context).width < Breakpoints.compact;
@@ -20,6 +22,7 @@ Future<void> showStreakDetail(
         streakDays: streakDays,
         freezesAvailable: freezesAvailable,
         played: played,
+        board: board,
         onClose: () => Navigator.of(routeContext).pop(),
         onOpenPath: onOpenPath == null
             ? null
@@ -56,16 +59,19 @@ Future<void> showStreakDetail(
 }
 
 /// "Série": the gold hero, a nudge when today is not played yet, the month
-/// calendar, the goal bar and the streak shield.
+/// calendar, the goal bar and the three streak rewards.
 ///
-/// Left out of what the design draws, on purpose:
-/// - **The "Personnelle / Entre amis" tabs.** Social features are out (open
-///   item #12), and one tab alone is not a tab bar.
-/// - **"Coffre de série" and "Titre : Gardien de la flamme".** No chest and
-///   no titles exist; both would be rewards a kid could never receive.
-/// - **"Rechargé dans 3 jours".** Shields (streak freezes) are granted
-///   weekly by a backend job the app cannot see the schedule of; it shows
-///   the real balance instead.
+/// The rewards are earned on the real streak and recorded once, never taken
+/// back ([QuestBoard.unlocked]): the chest opens at 3 days, "Gardien de la
+/// flamme" activates at 7 and shows on Profil, and the shield is the real
+/// streak-freeze balance (backend ADR 0019).
+///
+/// Left out, on purpose:
+/// - **The *Entre amis* tab.** Social features are out (open item #12), and
+///   one tab alone is not a tab bar.
+/// - **"Rechargé dans 3 jours".** The backend grants a shield a week after
+///   its last grant and does not serve that date; until it does (work order Q2,
+///   `Platforms/BACKEND_WORKORDER_QUESTS.md`), the tag shows the real balance.
 class StreakDetail extends StatefulWidget {
   const StreakDetail({
     super.key,
@@ -73,12 +79,14 @@ class StreakDetail extends StatefulWidget {
     required this.freezesAvailable,
     required this.played,
     required this.onClose,
+    this.board,
     this.onOpenPath,
   });
 
   final int? streakDays;
   final int? freezesAvailable;
   final PlayedDays played;
+  final QuestBoard? board;
   final VoidCallback onClose;
   final VoidCallback? onOpenPath;
 
@@ -141,11 +149,48 @@ class _StreakDetailState extends State<StreakDetail> {
               title: t.streakDetailGoal,
               child: _GoalTrack(streak: streak),
             ),
-          if (freezes != null)
-            _Section(
-              title: t.streakDetailRewards,
-              child: _ShieldCard(count: freezes),
+          _Section(
+            title: t.streakDetailRewards,
+            child: Column(
+              children: [
+                _RewardCard(
+                  key: const ValueKey('reward-chest'),
+                  leading: Image.asset('assets/images/asset-chest.webp', width: 42, height: 42),
+                  title: t.chestTitle,
+                  body: (widget.board?.has(Achievement.streak3) ?? false)
+                      ? t.chestBody
+                      : t.chestBodyLocked,
+                  tag: (widget.board?.has(Achievement.streak3) ?? false)
+                      ? _Tag.ok(t.rewardObtained)
+                      : _Tag.pending(t.rewardDaysLeft(3 - (streak ?? 0).clamp(0, 2))),
+                ),
+                if (freezes != null) ...[
+                  const SizedBox(height: 10),
+                  _RewardCard(
+                    key: const ValueKey('reward-shield'),
+                    leading: Image.asset('assets/images/asset-badge.webp', width: 42, height: 42),
+                    title: t.streakShieldTitle,
+                    body: t.streakShieldBody,
+                    tag: freezes > 0
+                        ? _Tag.ok(t.streakShieldBalance(freezes))
+                        : _Tag.pending(t.streakShieldNone),
+                  ),
+                ],
+                const SizedBox(height: 10),
+                _RewardCard(
+                  key: const ValueKey('reward-title'),
+                  leading: _RoundLeading(
+                    child: Icon(Icons.receipt_long_outlined, size: 20, color: VillagePalette.of(context).quebecBlueBright),
+                  ),
+                  title: '${t.flameKeeperTitlePrefix}${t.flameKeeperTitle}',
+                  body: t.flameKeeperBody,
+                  tag: (widget.board?.has(Achievement.streak7) ?? false)
+                      ? _Tag.active(t.rewardActive)
+                      : _Tag.pending(t.rewardDaysLeft(7 - (streak ?? 0).clamp(0, 6))),
+                ),
+              ],
             ),
+          ),
           SizedBox(height: Space.xs + MediaQuery.paddingOf(context).bottom),
         ],
       ),
@@ -546,15 +591,71 @@ class _GoalTrack extends StatelessWidget {
 }
 
 /// "Bouclier de série" — the real streak freeze, under the design's name.
-class _ShieldCard extends StatelessWidget {
-  const _ShieldCard({required this.count});
+enum _TagKind { ok, pending, active }
 
-  final int count;
+/// The design's `.sm-reward-tag`: green for earned, blue for still to come,
+/// a green pill for an active title.
+class _Tag {
+  const _Tag.ok(this.text) : kind = _TagKind.ok;
+  const _Tag.pending(this.text) : kind = _TagKind.pending;
+  const _Tag.active(this.text) : kind = _TagKind.active;
+
+  final String text;
+  final _TagKind kind;
+}
+
+class _RoundLeading extends StatelessWidget {
+  const _RoundLeading({required this.child});
+
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    final t = context.s;
     final p = VillagePalette.of(context);
+    return Container(
+      width: 42,
+      height: 42,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: p.surface,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(color: p.shadowSmall, blurRadius: 12, offset: const Offset(0, 4)),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+/// The design's `.sm-reward-card`.
+class _RewardCard extends StatelessWidget {
+  const _RewardCard({
+    super.key,
+    required this.leading,
+    required this.title,
+    required this.body,
+    required this.tag,
+  });
+
+  final Widget leading;
+  final String title;
+  final String body;
+  final _Tag tag;
+
+  static const _okGreen = Color(0xFF2E9E5B);
+  static const _okPale = Color(0xFFDFF3E6);
+
+  @override
+  Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
+    final tagStyle = TextStyle(
+      fontSize: 9.5,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 0.38,
+      color: tag.kind == _TagKind.pending ? p.quebecBlueBright : _okGreen,
+    );
+    final tagText = Text(tag.text.toUpperCase(), style: tagStyle);
     return Container(
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
@@ -564,25 +665,14 @@ class _ShieldCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: p.surface,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(color: p.shadowSmall, blurRadius: 12, offset: const Offset(0, 4)),
-              ],
-            ),
-            child: Icon(Icons.shield_outlined, size: 20, color: p.quebecBlueBright),
-          ),
+          SizedBox(width: 42, height: 42, child: leading),
           const SizedBox(width: 13),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  t.streakShieldTitle,
+                  title,
                   style: TextStyle(
                     fontFamily: VillageType.display,
                     fontWeight: FontWeight.w700,
@@ -592,20 +682,21 @@ class _ShieldCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  t.streakShieldBody,
+                  body,
                   style: TextStyle(fontSize: 11.5, height: 1.4, color: p.inkMuted),
                 ),
                 const SizedBox(height: 5),
-                Text(
-                  (count > 0 ? t.streakShieldBalance(count) : t.streakShieldNone)
-                      .toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.38,
-                    color: count > 0 ? p.success : p.quebecBlueBright,
-                  ),
-                ),
+                if (tag.kind == _TagKind.active)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: _okPale,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: tagText,
+                  )
+                else
+                  tagText,
               ],
             ),
           ),

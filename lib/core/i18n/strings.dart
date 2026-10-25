@@ -175,7 +175,6 @@ abstract class Strings {
   String get profileStreakLabel;
   String get profileBySubject;
   String get profileBadges;
-  String get profileBadgesSoon;
   String get profileRecent;
   String get profileRecentSoon;
   String get profileNoSubjects;
@@ -231,6 +230,44 @@ abstract class Strings {
   String streakShieldBalance(int count);
   String get streakShieldNone;
   String get closeLabel;
+
+  // --- quêtes: the full board (app ADR 0015, revised) ------------------------
+  String questExercisesTitle(int target);
+  String questMinutesTitle(int target);
+  String questRewardXp(int xp);
+
+  /// "N quêtes t'attendent" — the fox's line while quests are open.
+  String villageGreetingQuests(int open);
+  String get headerQuestsLabel;
+
+  String get weeklyBadgeTitle;
+  String weeklyBadgeBody(int target);
+  String weeklyBadgeProgress(int done, int target);
+  String get weeklyBadgeEarned;
+  String get recentTitle;
+  String get lockedLabel;
+
+  /// The eight achievements, in the design's badge-grid order.
+  String get achStreak3;
+  String get achQuestMaster;
+  String get achLevel10;
+  String get achStreak7;
+  String get achAllSubjects50;
+  String get achLevel20;
+  String get achQuests50;
+  String get achExplorer;
+
+  String get chestTitle;
+  String get chestBody;
+  String get chestBodyLocked;
+  String get flameKeeperTitle;
+
+  /// "Titre : " — French puts a space before the colon.
+  String get flameKeeperTitlePrefix;
+  String get flameKeeperBody;
+  String get rewardObtained;
+  String get rewardActive;
+  String rewardDaysLeft(int days);
 
   static const Strings fr = _FrenchStrings();
   static const Strings en = _EnglishStrings();
@@ -599,8 +636,6 @@ class _FrenchStrings extends Strings {
   @override
   String get profileBadges => 'Badges';
 
-  @override
-  String get profileBadgesSoon => 'Les badges arrivent bientôt. Rien n\'est encore à gagner, alors rien n\'est affiché comme verrouillé.';
 
   @override
   String get profileRecent => 'Activité récente';
@@ -739,6 +774,94 @@ class _FrenchStrings extends Strings {
 
   @override
   String get closeLabel => 'Fermer';
+
+  @override
+  String questExercisesTitle(int target) => 'Résous $target exercices';
+
+  @override
+  String questMinutesTitle(int target) => 'Joue $target minutes';
+
+  @override
+  String questRewardXp(int xp) => '+$xp XP';
+
+  @override
+  String villageGreetingQuests(int open) => open == 1
+      ? '1 quête t\'attend aujourd\'hui 🎯'
+      : '$open quêtes t\'attendent aujourd\'hui 🎯';
+
+  @override
+  String get headerQuestsLabel => 'quêtes';
+
+  @override
+  String get weeklyBadgeTitle => 'Badge de la semaine';
+
+  @override
+  String weeklyBadgeBody(int target) => 'Termine $target quêtes avant dimanche';
+
+  @override
+  String weeklyBadgeProgress(int done, int target) => '$done / $target quêtes';
+
+  @override
+  String get weeklyBadgeEarned => 'Badge obtenu !';
+
+  @override
+  String get recentTitle => 'Réussites récentes';
+
+  @override
+  String get lockedLabel => 'Verrouillé';
+
+  @override
+  String get achStreak3 => 'Série de 3 jours';
+
+  @override
+  String get achQuestMaster => 'Maître des quêtes';
+
+  @override
+  String get achLevel10 => 'Niveau 10';
+
+  @override
+  String get achStreak7 => 'Série de 7 jours';
+
+  @override
+  String get achAllSubjects50 => 'Toutes matières 50 %';
+
+  @override
+  String get achLevel20 => 'Niveau 20';
+
+  @override
+  String get achQuests50 => '50 quêtes';
+
+  @override
+  String get achExplorer => 'Explorateur';
+
+  @override
+  String get chestTitle => 'Coffre de série · 3 jours';
+
+  @override
+  String get chestBody => 'Bravo, tu as atteint une série de 3 jours !';
+
+  @override
+  String get chestBodyLocked => 'Atteins une série de 3 jours pour l\'ouvrir.';
+
+  @override
+  String get flameKeeperTitle => 'Gardien de la flamme';
+
+  @override
+  String get flameKeeperTitlePrefix => 'Titre : ';
+
+  @override
+  String get flameKeeperBody =>
+      'Affiche ce titre sur ton profil pour montrer ta régularité.';
+
+  @override
+  String get rewardObtained => 'Récompense obtenue';
+
+  @override
+  String get rewardActive => 'Activé';
+
+  @override
+  String rewardDaysLeft(int days) =>
+      days == 1 ? 'Encore 1 jour' : 'Encore $days jours';
 
 }
 
@@ -1099,8 +1222,6 @@ class _EnglishStrings extends Strings {
   @override
   String get profileBadges => 'Badges';
 
-  @override
-  String get profileBadgesSoon => 'Badges are coming soon. There is nothing to earn yet, so nothing is shown as locked.';
 
   @override
   String get profileRecent => 'Recent activity';
@@ -1237,6 +1358,94 @@ class _EnglishStrings extends Strings {
 
   @override
   String get closeLabel => 'Close';
+
+  @override
+  String questExercisesTitle(int target) => 'Solve $target exercises';
+
+  @override
+  String questMinutesTitle(int target) => 'Play for $target minutes';
+
+  @override
+  String questRewardXp(int xp) => '+$xp XP';
+
+  @override
+  String villageGreetingQuests(int open) => open == 1
+      ? '1 quest is waiting for you today 🎯'
+      : '$open quests are waiting for you today 🎯';
+
+  @override
+  String get headerQuestsLabel => 'quests';
+
+  @override
+  String get weeklyBadgeTitle => 'Badge of the week';
+
+  @override
+  String weeklyBadgeBody(int target) => 'Finish $target quests by Sunday';
+
+  @override
+  String weeklyBadgeProgress(int done, int target) => '$done / $target quests';
+
+  @override
+  String get weeklyBadgeEarned => 'Badge earned!';
+
+  @override
+  String get recentTitle => 'Recent achievements';
+
+  @override
+  String get lockedLabel => 'Locked';
+
+  @override
+  String get achStreak3 => '3-day streak';
+
+  @override
+  String get achQuestMaster => 'Quest master';
+
+  @override
+  String get achLevel10 => 'Level 10';
+
+  @override
+  String get achStreak7 => '7-day streak';
+
+  @override
+  String get achAllSubjects50 => 'All subjects 50%';
+
+  @override
+  String get achLevel20 => 'Level 20';
+
+  @override
+  String get achQuests50 => '50 quests';
+
+  @override
+  String get achExplorer => 'Explorer';
+
+  @override
+  String get chestTitle => 'Streak chest · 3 days';
+
+  @override
+  String get chestBody => 'Well done, you reached a 3-day streak!';
+
+  @override
+  String get chestBodyLocked => 'Reach a 3-day streak to open it.';
+
+  @override
+  String get flameKeeperTitle => 'Keeper of the flame';
+
+  @override
+  String get flameKeeperTitlePrefix => 'Title: ';
+
+  @override
+  String get flameKeeperBody =>
+      'Show this title on your profile to show how steady you are.';
+
+  @override
+  String get rewardObtained => 'Reward earned';
+
+  @override
+  String get rewardActive => 'Active';
+
+  @override
+  String rewardDaysLeft(int days) =>
+      days == 1 ? '1 more day' : '$days more days';
 
 }
 

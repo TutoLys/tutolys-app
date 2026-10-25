@@ -5,11 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/i18n/strings.dart';
 
 import '../pairing/pairing_controller.dart';
-import '../progress/progress_controller.dart';
 import 'subject_progress.dart';
 import 'subject_strip.dart';
 import '../../core/widgets/breathing_mascot.dart';
 import 'village_scene.dart';
+import '../quests/quest_board.dart';
+import '../quests/quests_screen.dart' show questTitle;
 
 /// Village — the learner's home.
 ///
@@ -35,7 +36,7 @@ class VillageScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final kid = ref.watch(sessionControllerProvider).kid;
-    final progress = ref.watch(progressControllerProvider);
+    final board = ref.watch(questBoardProvider).value;
     // Per-subject mastery, joined locally from the per-skill figures the
     // backend already sends plus the cached curriculum's own subject per
     // node — no extra endpoint, and it works offline.
@@ -70,7 +71,7 @@ class VillageScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       _MobileGreeting(
-                        text: _greetingFor(t, kid?.displayName, progress),
+                        text: _greetingFor(t, kid?.displayName, board),
                       ),
                       const SizedBox(height: Space.md),
                       SubjectStrip(
@@ -79,7 +80,7 @@ class VillageScreen extends ConsumerWidget {
                         onTapBuilding: (_) => onOpenPath?.call(),
                       ),
                       const SizedBox(height: Space.md),
-                      _QuestPanel(progress: progress, onOpenPath: onOpenPath),
+                      _QuestPanel(quests: board?.quests, onOpenPath: onOpenPath),
                     ],
                   );
                 }
@@ -92,12 +93,12 @@ class VillageScreen extends ConsumerWidget {
                     signSubtitle: kid?.gradeLevel == null
                         ? ''
                         : t.gradeLabel(kid!.gradeLevel),
-                    greeting: _greetingFor(t, kid?.displayName, progress),
+                    greeting: _greetingFor(t, kid?.displayName, board),
                     onTapBuilding: (_) => onOpenPath?.call(),
                   ),
                 );
                 final panel = _QuestPanel(
-                  progress: progress,
+                  quests: board?.quests,
                   onOpenPath: onOpenPath,
                 );
 
@@ -147,13 +148,12 @@ String subjectCodeFor(String asset) => switch (asset) {
   _ => '',
 };
 
-/// What the fox says. Built from the real daily quest when there is one,
+/// What the fox says. Built from the real open-quest count when there is one,
 /// so it is never a line of flavour text pretending to know something.
-String _greetingFor(Strings t, String? name, ProgressState progress) {
+String _greetingFor(Strings t, String? name, QuestBoard? board) {
   final hello = t.greeting(name ?? '');
-  final line = progress.dailyQuest == null
-      ? t.villageGreetingReady
-      : t.villageGreetingQuest;
+  final open = board?.openCount ?? 0;
+  final line = open == 0 ? t.villageGreetingReady : t.villageGreetingQuests(open);
   return '$hello $line';
 }
 
@@ -254,21 +254,17 @@ class _RecommendBar extends StatelessWidget {
 
 /// "Quêtes du jour" — the design's right-hand panel.
 ///
-/// The design mocks three quests. Exactly one real quest type exists (the
-/// daily challenge, `tutolys-backend` ADR 0019); teacher-assigned and
-/// bonus-review quests need school plumbing and are open item #11. So this
-/// renders the real one and says plainly that it is the only one, rather
-/// than padding the list to three.
+/// The same three quests Quêtes lists, from [questBoardProvider].
 class _QuestPanel extends StatelessWidget {
-  const _QuestPanel({required this.progress, this.onOpenPath});
+  const _QuestPanel({required this.quests, this.onOpenPath});
 
-  final ProgressState progress;
+  final List<DailyQuestItem>? quests;
   final VoidCallback? onOpenPath;
 
   @override
   Widget build(BuildContext context) {
     final p = VillagePalette.of(context);
-    final quest = progress.dailyQuest;
+    final items = quests;
 
     return Container(
       padding: EdgeInsets.all(18),
@@ -301,7 +297,7 @@ class _QuestPanel extends StatelessWidget {
             ],
           ),
           const SizedBox(height: Space.sm),
-          if (quest == null)
+          if (items == null || items.isEmpty)
             Padding(
               padding: EdgeInsets.symmetric(vertical: Space.sm),
               child: Text(
@@ -310,16 +306,15 @@ class _QuestPanel extends StatelessWidget {
               ),
             )
           else
-            _QuestRow(
-              onTap: onOpenPath,
-              // `DailyQuestDto` carries no title — the daily challenge is
-              // one fixed quest type ("N correct in a row, today", backend
-              // ADR 0019), so its name is derived rather than transported.
-              title: context.s.streakQuestTitle(quest.target),
-              done: quest.completed,
-              current: quest.progress,
-              target: quest.target,
-            ),
+            for (final q in items)
+              _QuestRow(
+                key: ValueKey('village-quest-${q.key}'),
+                onTap: q.done ? null : onOpenPath,
+                title: questTitle(context.s, q),
+                done: q.done,
+                current: q.progress,
+                target: q.target,
+              ),
         ],
       ),
     );
@@ -328,6 +323,7 @@ class _QuestPanel extends StatelessWidget {
 
 class _QuestRow extends StatelessWidget {
   const _QuestRow({
+    super.key,
     required this.title,
     required this.done,
     required this.current,

@@ -8,6 +8,7 @@ import '../../features/profile/profile_screen.dart';
 import '../../features/about/about_screen.dart';
 import '../../features/progress/progress_controller.dart';
 import '../../features/progress/progress_screen.dart';
+import '../../features/quests/quest_board.dart';
 import '../../features/quests/quests_screen.dart';
 import '../../features/help/help_screen.dart';
 import '../../features/settings/settings_screen.dart';
@@ -63,9 +64,8 @@ class _VillageShellState extends ConsumerState<VillageShell> {
   /// Réglages is deliberately not among the primary five — it is the
   /// secondary section on desktop and tablet, and a header icon on mobile.
   ///
-  /// Quêtes carries a badge counting today's quests still open — 1 while
-  /// the daily challenge is unfinished, none once it is or when it is
-  /// unknown. Not the design's "3": there is one quest to count.
+  /// Quêtes carries a badge counting today's quests still open, from the
+  /// same board the page draws — none once all are done or while unknown.
   static List<VillageDestination> _primary(Strings s, {int openQuests = 0}) => [
         VillageDestination(label: s.navVillage, asset: 'asset-village.png'),
         VillageDestination(label: s.navCarte, asset: 'asset-carte.png'),
@@ -94,6 +94,7 @@ class _VillageShellState extends ConsumerState<VillageShell> {
     final t = context.s;
     final kid = ref.watch(sessionControllerProvider).kid;
     final progress = ref.watch(progressControllerProvider);
+    final board = ref.watch(questBoardProvider).value;
     return Scaffold(
       // Transparent: the shell paints the sky gradient, and a scaffold
       // colour underneath it would only show through at the edges.
@@ -101,7 +102,7 @@ class _VillageShellState extends ConsumerState<VillageShell> {
       body: VillageNavShell(
         destinations: _primary(
           t,
-          openQuests: progress.dailyQuest?.completed == false ? 1 : 0,
+          openQuests: board?.openCount ?? 0,
         ),
         secondary: _secondary(t),
         currentIndex: _index,
@@ -133,6 +134,13 @@ class _VillageShellState extends ConsumerState<VillageShell> {
                       : '${progress.isStreakEstimated ? '~' : ''}'
                           '${progress.currentStreakDays}',
                 ),
+                // The design's "2/3 quêtes" pill: today's quests done.
+                if (board != null && board.quests.isNotEmpty)
+                  HeaderStat(
+                    asset: 'asset-target.webp',
+                    label: '${board.doneCount}/${board.quests.length} '
+                        '${t.headerQuestsLabel}',
+                  ),
               ],
             ),
             Expanded(

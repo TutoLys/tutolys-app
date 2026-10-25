@@ -1,7 +1,7 @@
 # ADR 0015 — Quêtes: only the parts of the design that have real data
 
 Date: 2026-10-24
-Status: accepted
+Status: accepted — decisions 1, 3 and 6 superseded 2026-10-25 (see Revision)
 
 ## Context
 
@@ -89,3 +89,49 @@ Some of this has real data behind it and some does not. In order:
   layout change, only more rows and cards.
 - The header still leaves out the design's "2/3 quêtes" counter. With
   one quest it would always read 0/1 or 1/1.
+
+## Revision — 2026-10-25: the whole design, on real data
+
+Hafid's correction: build everything the design draws for Quêtes. The
+first pass left things out because no system existed behind them. This
+pass builds each of those systems on data the app already records,
+instead of drawing the element empty.
+
+- **Three daily quests** (`quest_board.dart`):
+  - the daily challenge (backend);
+  - "Résous 5 exercices" (`HomeStats` count today);
+  - "Joue 10 minutes" (`HomeStats` play time today).
+
+  Each completion is written once to `QuestLog` (`app_state`, per kid,
+  never pruned).
+- **Reward chips**: +15 / +15 / +20 XP, as drawn. The design's third
+  reward is coins; that one is XP too, because no currency exists (#3).
+  **The XP is not credited yet.** That needs the backend:
+  `Platforms/BACKEND_WORKORDER_QUESTS.md` Q1.
+- **Badge de la semaine**: 15 quests finished Monday to Sunday, counted
+  from `QuestLog` and recorded as `week:<monday>` once reached.
+- **Eight achievements**, the design's badge grid in its order:
+  - Série de 3 jours and Série de 7 jours (streak);
+  - Maître des quêtes (every quest done in one day);
+  - Niveau 10 and Niveau 20 (the server level);
+  - Toutes matières 50 % (the per-subject join);
+  - 50 quêtes (the `QuestLog` total);
+  - Explorateur (a skill played in each of the five subjects).
+
+  They are recorded once and **never revoked**. "Réussites récentes"
+  shows the newest five, with locked slots after them. Profil's badge
+  grid shows all eight.
+- **Streak rewards**:
+  - the chest opens at 3 days;
+  - "Gardien de la flamme" activates at 7 days and shows under the name
+    on Profil;
+  - the shield is the real freeze balance. "Rechargé dans N jours" needs
+    the grant date (work order Q2).
+- **Shared by the header, the nav badge and Village**: the "2/3 quêtes"
+  pill, the badge counting open quests, and the Village panel and greeting
+  all read the same `questBoardProvider`.
+- **Still out**: the *Entre amis* tab (open item #12, Hafid's own ruling).
+
+**Known limit**: all of this history is per device, like `played_date`.
+Play on a second device does not count toward quests or badges until the
+backend owns them.

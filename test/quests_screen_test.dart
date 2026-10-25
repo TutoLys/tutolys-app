@@ -9,6 +9,7 @@ import 'package:tutolys_app/data/api/progress_api.dart';
 import 'package:tutolys_app/data/local_db/session_store.dart';
 import 'package:tutolys_app/features/pairing/pairing_controller.dart';
 import 'package:tutolys_app/features/progress/progress_controller.dart';
+import 'package:tutolys_app/features/quests/quest_board.dart';
 import 'package:tutolys_app/features/quests/quests_model.dart';
 import 'package:tutolys_app/features/quests/quests_screen.dart';
 
@@ -46,9 +47,23 @@ ProgressResult _snapshot({
   ),
 );
 
+QuestBoard _board({
+  List<DailyQuestItem>? quests,
+  int week = 0,
+  Map<String, String> unlocked = const {},
+}) => QuestBoard(
+  quests:
+      quests ??
+      buildDailyQuests(challenge: null, exercisesToday: 0, msToday: 0),
+  weekCompleted: week,
+  unlocked: unlocked,
+  today: _today,
+);
+
 Widget _app({
   required ProgressResult progress,
   Set<DateTime>? played,
+  QuestBoard? board,
   VoidCallback? onOpenPath,
 }) {
   final days =
@@ -63,6 +78,7 @@ Widget _app({
       playedDaysProvider.overrideWith(
         (ref) async => PlayedDays(today: _today, days: days),
       ),
+      questBoardProvider.overrideWith((ref) async => board ?? _board()),
     ],
     // Inside the app, not around it: a bare MediaQueryData has zero size,
     // which would send every test down the phone layout.
@@ -161,16 +177,23 @@ void main() {
   });
 
   group('quêtes du jour', () {
-    testWidgets('one real quest, with its progress', (tester) async {
+    testWidgets('three quests, each with its progress and XP reward', (
+      tester,
+    ) async {
       _wide(tester);
       var opened = 0;
       await tester.pumpWidget(
         _app(
-          progress: _snapshot(
-            quest: const DailyQuestDto(
-              target: 3,
-              progress: 2,
-              completed: false,
+          progress: _snapshot(),
+          board: _board(
+            quests: buildDailyQuests(
+              challenge: const DailyQuestDto(
+                target: 3,
+                progress: 2,
+                completed: false,
+              ),
+              exercisesToday: 3,
+              msToday: 4 * 60000,
             ),
           ),
           onOpenPath: () => opened++,
@@ -179,38 +202,107 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(fr.streakQuestTitle(3)), findsOneWidget);
+      expect(find.text(fr.questExercisesTitle(5)), findsOneWidget);
+      expect(find.text(fr.questMinutesTitle(10)), findsOneWidget);
       expect(find.text('2 / 3'), findsOneWidget);
-      expect(find.byKey(const ValueKey('quest-check-open')), findsOneWidget);
-      // No reward chip: the daily challenge awards no XP.
-      expect(find.textContaining('XP'), findsNothing);
+      expect(find.text('3 / 5'), findsOneWidget);
+      expect(find.text('4 / 10'), findsOneWidget);
+      expect(find.byKey(const ValueKey('quest-reward')), findsNWidgets(3));
+      expect(find.text(fr.questRewardXp(20)), findsOneWidget);
 
       await tester.tap(find.text(fr.streakQuestTitle(3)));
       expect(opened, 1);
     });
 
-    testWidgets('a finished quest is checked and loses its track', (
+    testWidgets('a finished quest is checked, struck and loses its track', (
       tester,
     ) async {
       _wide(tester);
       await tester.pumpWidget(
         _app(
-          progress: _snapshot(
-            quest: const DailyQuestDto(target: 3, progress: 3, completed: true),
+          progress: _snapshot(),
+          board: _board(
+            quests: buildDailyQuests(
+              challenge: null,
+              exercisesToday: 5,
+              msToday: 0,
+            ),
           ),
         ),
       );
       await tester.pumpAndSettle();
 
       expect(find.byKey(const ValueKey('quest-check-done')), findsOneWidget);
-      expect(find.text('3 / 3'), findsNothing);
+      expect(find.byKey(const ValueKey('quest-check-open')), findsOneWidget);
+      expect(find.text('5 / 5'), findsNothing);
     });
 
-    testWidgets('no quest data says so', (tester) async {
+    testWidgets('the weekly badge counts this week\'s quests', (tester) async {
       _wide(tester);
-      await tester.pumpWidget(_app(progress: _snapshot()));
+      await tester.pumpWidget(_app(progress: _snapshot(), board: _board(week: 7)));
       await tester.pumpAndSettle();
 
-      expect(find.text(fr.villageNoQuests), findsOneWidget);
+      expect(find.text(fr.weeklyBadgeTitle), findsOneWidget);
+      expect(find.text(fr.weeklyBadgeBody(15)), findsOneWidget);
+      expect(find.text(fr.weeklyBadgeProgress(7, 15)), findsOneWidget);
+    });
+
+    testWidgets('an earned weekly badge says so', (tester) async {
+      _wide(tester);
+      await tester.pumpWidget(
+        _app(
+          progress: _snapshot(),
+          board: _board(
+            week: 15,
+            unlocked: {weeklyBadgeKey(_today): '2026-10-22'},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(fr.weeklyBadgeEarned), findsOneWidget);
+    });
+
+    testWidgets('recent achievements: earned first, newest first, then locked', (
+      tester,
+    ) async {
+      _wide(tester);
+      await tester.pumpWidget(
+        _app(
+          progress: _snapshot(),
+          board: _board(
+            unlocked: {'streak3': '2026-10-20', 'questMaster': '2026-10-21'},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(fr.recentTitle), findsOneWidget);
+      final master = tester.getTopLeft(find.byKey(const ValueKey('recent-questMaster')));
+      final streak = tester.getTopLeft(find.byKey(const ValueKey('recent-streak3')));
+      expect(master.dx, lessThan(streak.dx));
+      for (final i in [2, 3, 4]) {
+        expect(find.byKey(ValueKey('recent-locked-$i')), findsOneWidget);
+      }
+    });
+
+    testWidgets('lays out on a phone without overflow', (tester) async {
+      _phone(tester);
+      await tester.pumpWidget(
+        _app(
+          progress: _snapshot(),
+          board: _board(
+            quests: buildDailyQuests(
+              challenge: const DailyQuestDto(target: 3, progress: 1, completed: false),
+              exercisesToday: 1,
+              msToday: 0,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.text(fr.weeklyBadgeTitle), findsOneWidget);
     });
   });
 
@@ -340,9 +432,42 @@ void main() {
       await open(tester);
 
       expect(find.text(fr.streakShieldTitle), findsNothing);
-      // Nor the design's rewards that have no system behind them, nor the
-      // social tab (open item #12).
-      expect(find.text(fr.streakDetailRewards), findsNothing);
+      // The other two rewards stay; the social tab (open item #12) does not.
+      expect(find.byKey(const ValueKey('reward-chest')), findsOneWidget);
+      expect(find.text('Entre amis'), findsNothing);
+    });
+
+    testWidgets('chest and title: pending until the streak earns them', (
+      tester,
+    ) async {
+      _wide(tester);
+      await tester.pumpWidget(_app(progress: _snapshot(streak: 2)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(fr.questsStreakDays(2)));
+      await tester.pumpAndSettle();
+
+      expect(find.text(fr.chestBodyLocked), findsOneWidget);
+      expect(find.text(fr.rewardDaysLeft(1).toUpperCase()), findsOneWidget);
+      expect(find.text(fr.rewardDaysLeft(5).toUpperCase()), findsOneWidget);
+    });
+
+    testWidgets('chest obtained and title active once earned', (tester) async {
+      _wide(tester);
+      await tester.pumpWidget(
+        _app(
+          progress: _snapshot(streak: 8),
+          board: _board(
+            unlocked: {'streak3': '2026-10-17', 'streak7': '2026-10-21'},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(fr.questsStreakDays(8)));
+      await tester.pumpAndSettle();
+
+      expect(find.text(fr.chestBody), findsOneWidget);
+      expect(find.text(fr.rewardObtained.toUpperCase()), findsOneWidget);
+      expect(find.text(fr.rewardActive.toUpperCase()), findsOneWidget);
     });
   });
 }
