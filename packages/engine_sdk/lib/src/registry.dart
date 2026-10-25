@@ -1,3 +1,4 @@
+import 'contracts/envelope.dart';
 import 'engine.dart';
 
 /// Maps an engine key to its implementation.
@@ -34,10 +35,26 @@ class EngineRegistry {
   /// heard of this engine" (the app is too old) from "we have it but not this
   /// version" (the app is too old in a different way). Both need an update
   /// prompt; neither should crash a child's session.
+  ///
+  /// [minAppVersion] is the envelope's floor (the backend's
+  /// `Engine.min_app_version`); it's checked only when the host also passes
+  /// its own [appVersion]. A floor that doesn't parse is ignored rather than
+  /// treated as "too old" — a typo in content must not lock every child out.
   EngineResolution resolve({
     required String engineKey,
     required int minimumVersion,
+    String? minAppVersion,
+    AppVersion? appVersion,
   }) {
+    if (minAppVersion != null && appVersion != null) {
+      final floor = AppVersion.tryParse(minAppVersion);
+      if (floor != null && appVersion < floor) {
+        return EngineResolution.appTooOld(
+          required: floor.toString(),
+          current: appVersion.toString(),
+        );
+      }
+    }
     final engine = _byKey[engineKey];
     if (engine == null) {
       return EngineResolution.unknownEngine(engineKey);
@@ -65,6 +82,11 @@ sealed class EngineResolution {
     required int available,
     required int required,
   }) = EngineVersionTooOld;
+
+  factory EngineResolution.appTooOld({
+    required String required,
+    required String current,
+  }) = AppVersionTooOld;
 }
 
 class ResolvedEngine extends EngineResolution {
@@ -87,4 +109,11 @@ class EngineVersionTooOld extends EngineResolution {
   final String engineKey;
   final int available;
   final int required;
+}
+
+class AppVersionTooOld extends EngineResolution {
+  const AppVersionTooOld({required this.required, required this.current});
+
+  final String required;
+  final String current;
 }

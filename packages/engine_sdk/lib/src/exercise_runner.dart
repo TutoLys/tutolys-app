@@ -184,7 +184,7 @@ class _ExerciseRunnerState extends State<ExerciseRunner> {
           'This activity needs an app update.',
         ),
       ),
-      EngineVersionTooOld() => _fallback(
+      EngineVersionTooOld() || AppVersionTooOld() => _fallback(
         context,
         _t(
           "Cette activité a besoin d'une mise à jour de l'application.",
