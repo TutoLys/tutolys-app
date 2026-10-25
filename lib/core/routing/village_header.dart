@@ -38,6 +38,9 @@ class VillageHeader extends StatelessWidget {
     this.compact = false,
     this.onSettings,
     this.settingsLabel = '',
+    this.onNotifications,
+    this.unreadNotifications = 0,
+    this.notificationsLabel = '',
     super.key,
   });
 
@@ -55,6 +58,15 @@ class VillageHeader extends StatelessWidget {
   /// The gear's tooltip and screen-reader name.
   final String settingsLabel;
 
+  /// The design's `.bell-btn`: opens the inbox. Null hides it.
+  final VoidCallback? onNotifications;
+
+  /// Drawn as the red badge on the bell; 0 draws none.
+  final int unreadNotifications;
+
+  /// The bell's tooltip and screen-reader name, unread count included.
+  final String notificationsLabel;
+
   @override
   Widget build(BuildContext context) {
     final p = VillagePalette.of(context);
@@ -71,7 +83,9 @@ class VillageHeader extends StatelessWidget {
           // What the pills may take: everything but the avatar, the gear and
           // a name at least ~90px wide.
           final avatar = compact ? 36.0 : 52.0;
-          final gear = onSettings == null ? 0.0 : 50.0;
+          final gear =
+              (onSettings == null ? 0.0 : 50.0) +
+              (onNotifications == null ? 0.0 : 50.0);
           final maxStatsWidth =
               (box.maxWidth - avatar - gear - Space.sm * 2 - 90).clamp(
                 0.0,
@@ -134,11 +148,26 @@ class VillageHeader extends StatelessWidget {
                   ),
                 ),
               ),
+              if (onNotifications != null) ...[
+                SizedBox(width: compact ? 4 : Space.xs),
+                _RoundButton(
+                  key: const ValueKey('header-notifications'),
+                  onPressed: onNotifications!,
+                  label: notificationsLabel,
+                  asset: 'asset-bell.webp',
+                  size: compact ? 32 : 38,
+                  badge: unreadNotifications,
+                  palette: p,
+                ),
+              ],
               if (onSettings != null) ...[
-                const SizedBox(width: 6),
-                _GearButton(
+                const SizedBox(width: 4),
+                _RoundButton(
+                  key: const ValueKey('header-settings'),
                   onPressed: onSettings!,
                   label: settingsLabel,
+                  asset: 'asset-reglages.png',
+                  size: 32,
                   palette: p,
                 ),
               ],
@@ -214,17 +243,25 @@ class _StatPill extends StatelessWidget {
   }
 }
 
-/// `.phone-gear-btn`: 32px round, the surface colour with a hairline and the
-/// small shadow, holding the Réglages art. The tap target is 44px around it.
-class _GearButton extends StatelessWidget {
-  const _GearButton({
+/// `.bell-btn` / `.phone-gear-btn`: a round surface button with a hairline
+/// and the small shadow, holding a piece of the design's art, with an
+/// optional red count badge. The tap target is 44px around it.
+class _RoundButton extends StatelessWidget {
+  const _RoundButton({
     required this.onPressed,
     required this.label,
+    required this.asset,
+    required this.size,
     required this.palette,
+    this.badge = 0,
+    super.key,
   });
 
   final VoidCallback onPressed;
   final String label;
+  final String asset;
+  final double size;
+  final int badge;
   final VillagePalette palette;
 
   @override
@@ -235,35 +272,67 @@ class _GearButton extends StatelessWidget {
       child: Semantics(
         button: true,
         label: label,
+        excludeSemantics: true,
         child: InkResponse(
-          key: const ValueKey('header-settings'),
           onTap: onPressed,
           radius: 22,
           child: SizedBox(
             width: 44,
             height: 44,
             child: Center(
-              child: Container(
-                width: 32,
-                height: 32,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: p.surface,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: p.line),
-                  boxShadow: [
-                    BoxShadow(
-                      color: p.shadowSmall,
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: size,
+                    height: size,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: p.surface,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: p.line),
+                      boxShadow: [
+                        BoxShadow(
+                          color: p.shadowSmall,
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: Image.asset(
-                  'assets/images/asset-reglages.png',
-                  width: 17,
-                  height: 17,
-                ),
+                    child: Image.asset(
+                      'assets/images/$asset',
+                      width: size * 0.47,
+                      height: size * 0.47,
+                    ),
+                  ),
+                  if (badge > 0)
+                    Positioned(
+                      top: -3,
+                      right: -3,
+                      child: Container(
+                        key: const ValueKey('header-badge'),
+                        constraints: const BoxConstraints(minWidth: 16),
+                        height: 16,
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        alignment: Alignment.center,
+                        decoration: const BoxDecoration(
+                          // The nav badge's own red.
+                          color: Color(0xFFEF4444),
+                          borderRadius: BorderRadius.all(Radius.circular(999)),
+                        ),
+                        child: Text(
+                          badge > 9 ? '9+' : '$badge',
+                          style: const TextStyle(
+                            fontFamily: VillageType.display,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            height: 1,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),

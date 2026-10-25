@@ -19,6 +19,7 @@ import 'package:tutolys_app/data/local_db/session_store.dart';
 import 'package:tutolys_app/data/sync/drift_event_outbox.dart';
 import 'package:tutolys_app/data/sync/outbox_flusher.dart';
 import 'package:tutolys_app/data/sync/outbox_flusher_provider.dart';
+import 'package:tutolys_app/features/notifications/notifications_controller.dart';
 import 'package:tutolys_app/features/pairing/pairing_controller.dart';
 import 'package:tutolys_app/features/pairing/pairing_screen.dart';
 import 'package:tutolys_app/features/path/path_controller.dart';
@@ -184,6 +185,7 @@ ProviderContainer containerWith({
       // Same reasoning: OutboxFlusher's 30s periodic timer would otherwise
       // fail the pending-timer check too.
       outboxFlusherAutoStartProvider.overrideWithValue(false),
+      notificationsPollingProvider.overrideWithValue(false),
       localDatabaseProvider.overrideWithValue(LocalDatabase.memory()),
       curriculumApiProvider.overrideWithValue(_OfflineCurriculumApi()),
       contentApiProvider.overrideWithValue(_OfflineContentApi()),

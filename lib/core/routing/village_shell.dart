@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/home/village_screen.dart';
+import '../../features/notifications/notifications_controller.dart';
+import '../../features/notifications/notifications_panel.dart';
 import '../../features/path/path_controller.dart';
 import '../../features/path/path_screen.dart';
 import '../../features/profile/profile_screen.dart';
@@ -131,6 +133,9 @@ class _VillageShellState extends ConsumerState<VillageShell> {
     final t = context.s;
     final kid = ref.watch(sessionControllerProvider).kid;
     final progress = ref.watch(progressControllerProvider);
+    final unread = ref.watch(
+      notificationsControllerProvider.select((n) => n.unreadCount),
+    );
     final board = ref.watch(questBoardProvider).value;
     return Scaffold(
       // Transparent: the shell paints the sky gradient, and a scaffold
@@ -163,6 +168,9 @@ class _VillageShellState extends ConsumerState<VillageShell> {
                   ? () => _open(_primary(t).length)
                   : null,
               settingsLabel: t.navReglages,
+              onNotifications: () => showNotificationsPanel(context),
+              unreadNotifications: unread,
+              notificationsLabel: t.notificationsBellLabel(unread),
               stats: [
                 // The design's "Niv. 14" pill with its XP track. Offline
                 // there is no level (the app never computes one itself, so it
