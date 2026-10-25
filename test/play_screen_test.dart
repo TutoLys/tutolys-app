@@ -314,9 +314,10 @@ void main() {
       await settle(tester);
       expect(find.text('Bravo !'), findsOneWidget);
       expect(
-        find.text('+1'),
+        find.text('+3'),
         findsOneWidget,
-        reason: 'XP shows on the right answer: 1 per question',
+        reason: 'the right answer that finishes the lesson pays its bonus '
+            'too, so the game ends on the celebration\'s number',
       );
       await tester.tap(find.text('CONTINUER'));
       await settle(tester);

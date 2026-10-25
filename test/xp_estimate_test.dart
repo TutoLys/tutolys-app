@@ -50,4 +50,29 @@ void main() {
   test('the daily challenge is worth 10', () {
     expect(xpDailyChallenge, 10);
   });
+
+  group('the running total, as the ledger pays it (backend ADR 0047)', () {
+    test('a clean 5-question lesson pays 1, 1, 1, 1, then 4', () {
+      final runs = [q(), q(), q(), q(), q()];
+      expect(
+        [
+          for (var i = 1; i <= 5; i++)
+            xpSoFar(runs.sublist(0, i), questions: 5),
+        ],
+        [1, 2, 3, 4, 8],
+      );
+    });
+
+    test('one retry: the last question pays 3', () {
+      final runs = [q(), q(attempts: 2), q(), q(), q()];
+      expect(xpSoFar(runs.sublist(0, 4), questions: 5), 4);
+      expect(xpSoFar(runs, questions: 5), 7);
+    });
+
+    test('a replay pays 0 until the last question, which pays half', () {
+      final runs = [q(), q(), q(), q(), q()];
+      expect(xpSoFar(runs.sublist(0, 4), questions: 5, replay: true), 0);
+      expect(xpSoFar(runs, questions: 5, replay: true), 2);
+    });
+  });
 }

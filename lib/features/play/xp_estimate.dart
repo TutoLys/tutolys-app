@@ -37,3 +37,26 @@ int estimateXp(ExerciseResult result, {bool replay = false}) {
   }
   return xp;
 }
+
+/// The running total after [results], out of a lesson of [questions]:
+/// 1 per question; the question that finishes the lesson adds the lesson
+/// bonus (+2, +1 if all first try). On a replay each question pays 0 and
+/// the finishing one pays half the lesson. Ends equal to [estimateXp].
+int xpSoFar(
+  List<ExerciseResult> results, {
+  required int questions,
+  bool replay = false,
+}) {
+  final finished = results.length >= questions;
+  if (!finished) return replay ? 0 : results.length * xpPerQuestion;
+  return estimateXp(
+    ExerciseResult(
+      outcome: ExerciseOutcome.completed,
+      attempts: results.fold(0, (s, r) => s + r.attempts),
+      correct: results.length,
+      elapsedMs: 0,
+      questionResults: results.length > 1 ? results : const [],
+    ),
+    replay: replay,
+  );
+}

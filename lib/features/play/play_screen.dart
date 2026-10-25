@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:engine_sdk/engine_sdk.dart';
 import 'package:engines_core/engines_core.dart';
@@ -14,6 +15,7 @@ import '../../data/local_db/node_progress_local.dart';
 import '../../data/local_db/streak_local.dart';
 import '../../data/sync/drift_audio_resolver.dart';
 import '../../data/sync/drift_image_resolver.dart';
+import '../../data/sync/lesson_key.dart';
 import '../../data/sync/outbox_flusher_provider.dart';
 import '../pairing/pairing_controller.dart';
 import '../profile/avatars.dart';
@@ -85,13 +87,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   @override
   void initState() {
     super.initState();
-    final lessonId = widget.envelope['exercise_id'] as String?;
-    unawaited(
-      ref.read(nodeProgressProvider.future).then((done) {
-        final ids = done[widget.node.id]?.exerciseIds;
-        _replay = lessonId != null && (ids?.contains(lessonId) ?? false);
-      }),
-    );
+    unawaited(_readReplay());
     final parsed = QuestionEnvelope.parse(widget.envelope).valueOrNull;
     final learning = ref.read(learningEngineRegistryProvider);
 
@@ -241,19 +237,55 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   /// XP so far: every finished question, plus the one just answered right
   /// — shown the moment the banner says "Bravo", not a tap later.
   /// Question XP only: the lesson bonuses arrive with the celebration.
+  /// XP so far, question by question as the backend's ledger pays it
+  /// (backend ADR 0047): the question that finishes the lesson carries the
+  /// lesson bonus, or on a replay the half, so the counter ends on exactly
+  /// the celebration's number.
   int _runtimeXp() {
     final c = _controller!;
-    var solved = _questionResults.where((q) => q.correct > 0).length;
+    final results = [..._questionResults];
     final s = c.state;
     if (s.phase == SessionPhase.feedback && s.lastOutcome == Outcome.correct) {
-      solved++;
+      results.add(
+        ExerciseResult(
+          outcome: ExerciseOutcome.completed,
+          attempts: s.attempts,
+          correct: 1,
+          elapsedMs: 0,
+        ),
+      );
     }
-    return questionXp(solved, replay: _replay);
+    return xpSoFar(
+      results,
+      questions: c.envelope.questions.length,
+      replay: _replay,
+    );
   }
 
-  /// This kid already finished this lesson here: half question XP, no
-  /// lesson bonus (XP option A). Read once, when the screen opens.
+  /// This kid already finished this lesson, in any language (the backend
+  /// keys a replay on `lesson_group`): no lesson bonus, half the questions.
   bool _replay = false;
+
+  Future<void> _readReplay() async {
+    final done = (await ref.read(nodeProgressProvider.future))[widget.node.id]
+        ?.exerciseIds;
+    if (done == null || done.isEmpty) return;
+    final key = lessonKeyOf(widget.envelope);
+    if (done.contains(widget.envelope['exercise_id'])) {
+      _replay = true;
+      return;
+    }
+    // Another language version of the same lesson counts too.
+    final db = ref.read(localDatabaseProvider);
+    final rows = await (db.select(
+      db.exerciseCacheTable,
+    )..where((t) => t.skillNodeId.equals(widget.node.id))).get();
+    _replay = rows.any(
+      (r) =>
+          done.contains(r.exerciseId) &&
+          lessonKeyOf(jsonDecode(r.payload) as Map<String, Object?>) == key,
+    );
+  }
 
   void _onRuntimeDone() {
     final c = _controller!;
