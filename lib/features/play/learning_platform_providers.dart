@@ -22,6 +22,7 @@ final learningEngineRegistryProvider = Provider<LearningEngineRegistry>(
     eraseEngine(const ComposeSlotsEngine()),
     eraseEngine(const SortBucketsEngine()),
     eraseEngine(const TimelineOrderEngine()),
+    eraseEngine(const FindItEngine()),
   ]),
 );
 
@@ -34,6 +35,7 @@ final evaluatorRegistryProvider = Provider<EvaluatorRegistry>(
     ComposeBuildEvaluator(),
     SortBucketsEvaluator(),
     TimelineOrderEvaluator(),
+    FindItEvaluator(),
   ]),
 );
 

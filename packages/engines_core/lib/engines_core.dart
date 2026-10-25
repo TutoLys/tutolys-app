@@ -22,3 +22,4 @@ export 'src/speed_tap/timed_choice_engine.dart';
 export 'src/shell/activity_complete_view.dart';
 export 'src/sort_buckets/sort_buckets_engine.dart';
 export 'src/timeline/timeline_order_engine.dart';
+export 'src/find_it/find_it_engine.dart';
