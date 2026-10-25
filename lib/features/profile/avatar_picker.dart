@@ -7,16 +7,48 @@ import '../../core/widgets/kid_avatar.dart';
 import '../quests/quests_screen.dart' show achievementName;
 import 'avatars.dart';
 
+/// Below this width the picker is a bottom sheet; at or above it, a
+/// centred dialog. A sheet on a desktop window sat pinned to the bottom
+/// with an empty band above it and its end cut off.
+const avatarDialogMinWidth = 768.0;
+
 /// Opens the avatar picker from Profil's edit dot.
-Future<void> showAvatarPicker(BuildContext context) => showModalBottomSheet<void>(
+Future<void> showAvatarPicker(BuildContext context) {
+  final p = VillagePalette.of(context);
+  if (MediaQuery.sizeOf(context).width >= avatarDialogMinWidth) {
+    return showDialog<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: VillagePalette.of(context).surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      builder: (context) => Dialog(
+        backgroundColor: p.surface,
+        insetPadding: const EdgeInsets.all(Space.lg),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        clipBehavior: Clip.antiAlias,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: 640,
+            maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+          ),
+          child: const AvatarPicker(),
+        ),
       ),
-      builder: (_) => const AvatarPicker(),
     );
+  }
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    backgroundColor: p.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    ),
+    builder: (context) => ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+      ),
+      child: const AvatarPicker(),
+    ),
+  );
+}
 
 /// The free avatars, then what play unlocks: by subject, by milestone,
 /// and the rare ones. A locked avatar is shown as a silhouette with what
@@ -25,7 +57,8 @@ Future<void> showAvatarPicker(BuildContext context) => showModalBottomSheet<void
 /// finding it is a surprise.
 ///
 /// Tapping an unlocked avatar wears it at once. There's no save button,
-/// like Réglages.
+/// like Réglages. The title and close button stay put while the avatars
+/// scroll beneath them; the caller bounds the height.
 class AvatarPicker extends ConsumerWidget {
   const AvatarPicker({super.key});
 
@@ -43,84 +76,108 @@ class AvatarPicker extends ConsumerWidget {
     final milestones = offered.where(
       (a) => a.unlock is AvatarAtLevel || a.unlock is AvatarForAchievement,
     );
-    final rares = offered.where((a) => a.unlock is AvatarRare);
+    final rares = offered.where(
+      (a) => a.unlock is AvatarRare && !a.isHistorical,
+    );
+    final historical = offered.where((a) => a.isHistorical);
 
     Widget grid(Iterable<AvatarDef> avatars) => Wrap(
-          spacing: Space.sm,
-          runSpacing: Space.sm,
-          children: [
-            for (final a in avatars)
-              _AvatarChoice(
-                avatar: a,
-                selected: a.key == selected,
-                unlocked: state?.isUnlocked(a.key) ?? a.unlock is AvatarFree,
-                onTap: () =>
-                    ref.read(avatarControllerProvider.notifier).select(a.key),
-              ),
-          ],
-        );
+      spacing: Space.sm,
+      runSpacing: Space.sm,
+      children: [
+        for (final a in avatars)
+          _AvatarChoice(
+            avatar: a,
+            selected: a.key == selected,
+            unlocked: state?.isUnlocked(a.key) ?? a.unlock is AvatarFree,
+            onTap: () =>
+                ref.read(avatarControllerProvider.notifier).select(a.key),
+          ),
+      ],
+    );
 
     TextStyle section() => TextStyle(
-          fontFamily: VillageType.display,
-          fontWeight: FontWeight.w700,
-          fontSize: 13,
-          color: p.inkMuted,
-        );
+      fontFamily: VillageType.display,
+      fontWeight: FontWeight.w700,
+      fontSize: 13,
+      color: p.inkMuted,
+    );
 
     return SafeArea(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(context).height * 0.85,
-        ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(Space.lg, Space.md, Space.lg, Space.lg),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 640),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+      top: false,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              Space.lg,
+              Space.md,
+              Space.sm,
+              Space.xs,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    t.avatarPickerTitle,
+                    style: TextStyle(
+                      fontFamily: VillageType.display,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 20,
+                      color: p.ink,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: t.cancel,
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  icon: Icon(Icons.close_rounded, color: p.inkMuted),
+                ),
+              ],
+            ),
+          ),
+          Flexible(
+            child: SingleChildScrollView(
+              key: const ValueKey('avatar-picker-scroll'),
+              padding: const EdgeInsets.fromLTRB(
+                Space.lg,
+                Space.sm,
+                Space.lg,
+                Space.lg,
+              ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 640),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          t.avatarPickerTitle,
-                          style: TextStyle(
-                            fontFamily: VillageType.display,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 20,
-                            color: p.ink,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: t.cancel,
-                        onPressed: () => Navigator.of(context).maybePop(),
-                        icon: Icon(Icons.close_rounded, color: p.inkMuted),
-                      ),
+                      Text(t.avatarStarters, style: section()),
+                      const SizedBox(height: Space.sm),
+                      grid(starters),
+                      const SizedBox(height: Space.lg),
+                      Text(t.avatarSubjects, style: section()),
+                      const SizedBox(height: Space.sm),
+                      grid(bySubject),
+                      const SizedBox(height: Space.lg),
+                      Text(t.avatarUnlockables, style: section()),
+                      const SizedBox(height: Space.sm),
+                      grid(milestones),
+                      const SizedBox(height: Space.lg),
+                      Text(t.avatarRares, style: section()),
+                      const SizedBox(height: Space.sm),
+                      grid(rares),
+                      const SizedBox(height: Space.lg),
+                      Text(t.avatarHistorical, style: section()),
+                      const SizedBox(height: Space.sm),
+                      grid(historical),
                     ],
                   ),
-                  const SizedBox(height: Space.sm),
-                  Text(t.avatarStarters, style: section()),
-                  const SizedBox(height: Space.sm),
-                  grid(starters),
-                  const SizedBox(height: Space.lg),
-                  Text(t.avatarSubjects, style: section()),
-                  const SizedBox(height: Space.sm),
-                  grid(bySubject),
-                  const SizedBox(height: Space.lg),
-                  Text(t.avatarUnlockables, style: section()),
-                  const SizedBox(height: Space.sm),
-                  grid(milestones),
-                  const SizedBox(height: Space.lg),
-                  Text(t.avatarRares, style: section()),
-                  const SizedBox(height: Space.sm),
-                  grid(rares),
-                ],
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -129,13 +186,16 @@ class AvatarPicker extends ConsumerWidget {
 /// What unlocks [a], in the kid's language: "Niveau 5", "Série de 3 jours",
 /// "Termine 5 compétences en sciences".
 String avatarCondition(Strings t, AvatarDef a) => switch (a.unlock) {
-      AvatarFree() => '',
-      AvatarAtLevel(:final level) => t.avatarAtLevel(level),
-      AvatarForAchievement(:final achievement) => achievementName(t, achievement),
-      AvatarForSubject(:final subject, :final skills) =>
-        t.avatarForSubject(subject, skills),
-      AvatarRare() => t.avatarRareHint,
-    };
+  AvatarFree() => '',
+  AvatarAtLevel(:final level) => t.avatarAtLevel(level),
+  AvatarForAchievement(:final achievement) => achievementName(t, achievement),
+  AvatarForSubject(:final subject, :final skills) => t.avatarForSubject(
+    subject,
+    skills,
+  ),
+  AvatarRare() when a.isHistorical => t.avatarHistoricalHint,
+  AvatarRare() => t.avatarRareHint,
+};
 
 class _AvatarChoice extends StatelessWidget {
   const _AvatarChoice({
@@ -156,6 +216,7 @@ class _AvatarChoice extends StatelessWidget {
     final p = VillagePalette.of(context);
     final condition = avatarCondition(t, avatar);
     final name = t.avatarName(avatar.key);
+    final caption = unlocked ? t.avatarCaption(avatar.key) : null;
     return Semantics(
       button: unlocked,
       selected: selected,
@@ -178,7 +239,9 @@ class _AvatarChoice extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: selected ? p.quebecBlueBright : Colors.transparent,
+                          color: selected
+                              ? p.quebecBlueBright
+                              : Colors.transparent,
                           width: 3,
                         ),
                       ),
@@ -193,7 +256,11 @@ class _AvatarChoice extends StatelessWidget {
                       Positioned.fill(
                         child: Center(
                           // Light on the dark silhouette.
-                          child: Icon(Icons.lock_rounded, size: 24, color: p.surface),
+                          child: Icon(
+                            Icons.lock_rounded,
+                            size: 24,
+                            color: p.surface,
+                          ),
                         ),
                       ),
                     if (selected)
@@ -207,7 +274,11 @@ class _AvatarChoice extends StatelessWidget {
                             border: Border.all(color: p.surface, width: 2),
                           ),
                           padding: const EdgeInsets.all(2),
-                          child: const Icon(Icons.check_rounded, size: 14, color: Colors.white),
+                          child: const Icon(
+                            Icons.check_rounded,
+                            size: 14,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                   ],
@@ -224,6 +295,18 @@ class _AvatarChoice extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                       height: 1.2,
                       color: unlocked ? p.ink : p.inkMuted,
+                    ),
+                  ),
+                // Who a historical figure was, once found.
+                if (caption != null)
+                  Text(
+                    caption,
+                    textAlign: TextAlign.center,
+                    maxLines: 3,
+                    style: TextStyle(
+                      fontSize: 9.5,
+                      height: 1.2,
+                      color: p.inkMuted,
                     ),
                   ),
               ],

@@ -19,8 +19,9 @@ Before this, 16 of the 17 avatars in the catalog had no art.
   - group collages and character sets, because an avatar is one character;
   - byte-identical duplicates, and near-repeats of a face already in the
     catalog (four Léas, a second red-haired boy);
-  - a late-added adult "Québec statesman". He is not a kid in a costume,
-    and he looks like a real public figure.
+  - at first, the late-added "Québec statesman", as an adult and a real
+    public figure. Hafid then asked for him as René Lévesque; see the
+    revision below.
 - Full-body and scene art is cropped to the head and shoulders, because the
   app shows avatars as circles as small as 30 px.
 - Crops live in `tool/export_avatars.py`, which also re-exports everything:
@@ -110,3 +111,31 @@ kids see everything.
 - **Not checked live in a browser.** The picker was rendered in a widget
   test with the real art, and a perfect lesson's drop is covered by
   controller tests.
+
+## Revision 2026-10-25: historical figures, and the picker as a dialog
+
+**Historical figures** (Hafid, via the manager): René Lévesque and Thérèse
+Casgrain.
+- They are rare avatars that only a perfect **CCQ** lesson can reveal:
+  `AvatarRare(subject: 'CCQ')`. The play screen passes the lesson's
+  subject to `rareDropFor`, with the same 5 % gate and the same
+  per-kid-and-lesson roll.
+- They are real people, not "me" characters, so they carry no sex and
+  every kid is offered them. They sit in their own "Personnages
+  historiques" section, with a one-line factual caption once found, and
+  that caption also appears on the find card.
+- The keys are `hist_rene_levesque` and `hist_therese_casgrain`.
+- **Their likeness needs a counsel check before launch.** The manager has
+  flagged it to Hafid; it doesn't block the build.
+
+**The picker on wide screens.** At 1920×1040 the bottom sheet sat pinned
+to the bottom, with an empty band above it and its end cut off (Hafid's
+screenshot).
+- From 768 px wide (`avatarDialogMinWidth`), the picker is a centred
+  dialog, at most 640 wide and 85 % of the window tall.
+- Below that, it stays a bottom sheet with a drag handle, at the same
+  maximum height.
+- In both, the title and close button are fixed and the avatars scroll
+  under them.
+- Widget tests pin this at 1920×1040 (centred, bounded, header fixed while
+  scrolling) and at 400×800 (a sheet).

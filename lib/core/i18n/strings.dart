@@ -352,6 +352,15 @@ abstract class Strings {
   /// The moment a perfect lesson reveals a rare avatar.
   String get avatarRareFound;
 
+  /// The picker section of real historical figures.
+  String get avatarHistorical;
+
+  /// Under a historical figure not found yet.
+  String get avatarHistoricalHint;
+
+  /// Who a historical figure was, in one factual line; null for others.
+  String? avatarCaption(String key);
+
   /// Read by screen readers on a locked avatar.
   String avatarLocked(String condition);
   String avatarName(String key);
@@ -1127,6 +1136,20 @@ class _FrenchStrings extends Strings {
   String get avatarRareFound => 'Avatar rare trouvé !';
 
   @override
+  String get avatarHistorical => 'Personnages historiques';
+
+  @override
+  String get avatarHistoricalHint => 'Une leçon de CCQ parfaite peut le révéler';
+
+  @override
+  String? avatarCaption(String key) => switch (key) {
+        'hist_therese_casgrain' =>
+          'A lutté pour le droit de vote des femmes au Québec',
+        'hist_rene_levesque' => 'Premier ministre du Québec de 1976 à 1985',
+        _ => null,
+      };
+
+  @override
   String avatarLocked(String condition) => 'Verrouillé : $condition';
 
   @override
@@ -1159,6 +1182,8 @@ class _FrenchStrings extends Strings {
         'coder_girl' => 'Codeuse',
         'coder_boy' => 'Codeur',
         'mermaid' => 'Sirène',
+        'hist_therese_casgrain' => 'Thérèse Casgrain',
+        'hist_rene_levesque' => 'René Lévesque',
         'pirate' => 'Pirate',
         _ => 'Avatar',
       };
@@ -1935,6 +1960,20 @@ class _EnglishStrings extends Strings {
   String get avatarRareFound => 'Rare avatar found!';
 
   @override
+  String get avatarHistorical => 'Historical figures';
+
+  @override
+  String get avatarHistoricalHint => 'A perfect CCQ lesson may reveal it';
+
+  @override
+  String? avatarCaption(String key) => switch (key) {
+        'hist_therese_casgrain' =>
+          'Fought for women\'s right to vote in Québec',
+        'hist_rene_levesque' => 'Premier of Québec from 1976 to 1985',
+        _ => null,
+      };
+
+  @override
   String avatarLocked(String condition) => 'Locked: $condition';
 
   @override
@@ -1959,6 +1998,8 @@ class _EnglishStrings extends Strings {
         'astronaut' => 'Astronaut',
         'coder' => 'Coder',
         'mermaid' => 'Mermaid',
+        'hist_therese_casgrain' => 'Thérèse Casgrain',
+        'hist_rene_levesque' => 'René Lévesque',
         'pirate' => 'Pirate',
         _ => 'Avatar',
       };

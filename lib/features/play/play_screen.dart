@@ -295,7 +295,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       unawaited(
         ref
             .read(avatarControllerProvider.notifier)
-            .rollRareDrop(lessonId)
+            .rollRareDrop(lessonId, subject: widget.node.subject)
             .then((key) {
               if (key != null && mounted) {
                 setState(() => _rareAvatarKey = key);

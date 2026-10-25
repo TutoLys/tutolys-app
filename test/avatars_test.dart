@@ -169,11 +169,7 @@ void main() {
         groups.putIfAbsent(a.group!, () => []).add(a);
       }
       for (final MapEntry(key: group, value: defs) in groups.entries) {
-        expect(
-          defs.map((a) => a.unlock).toSet(),
-          hasLength(1),
-          reason: group,
-        );
+        expect(defs.map((a) => a.unlock).toSet(), hasLength(1), reason: group);
         expect(
           defs.map((a) => a.sex).toSet(),
           hasLength(defs.length),
@@ -290,6 +286,44 @@ void main() {
           if (a.unlock is AvatarRare && a.sex != KidSex.boy) a.key,
       };
       expect(lessons.map((l) => roll(l, unlocked: owned)).nonNulls, isEmpty);
+    });
+  });
+
+  group('historical figures', () {
+    final lessons = [for (var i = 0; i < 4000; i++) 'lesson-$i'];
+    String? roll(String lesson, String? subject, {KidSex sex = KidSex.girl}) =>
+        rareDropFor(
+          kidId: 'k1',
+          lessonId: lesson,
+          sex: sex,
+          unlocked: const {},
+          subject: subject,
+        );
+
+    test('drop only from a CCQ lesson', () {
+      bool historical(String? c) => c != null && c.startsWith('hist_');
+      expect(lessons.map((l) => roll(l, 'MATH')).where(historical), isEmpty);
+      expect(lessons.map((l) => roll(l, null)).where(historical), isEmpty);
+      final ccq = lessons.map((l) => roll(l, 'CCQ')).where(historical).toSet();
+      expect(ccq, {'hist_therese_casgrain', 'hist_rene_levesque'});
+    });
+
+    test('are offered to every kid, and say who they were', () {
+      final hist = avatarCatalog.where((a) => a.isHistorical).toList();
+      expect(hist.map((a) => a.key), [
+        'hist_therese_casgrain',
+        'hist_rene_levesque',
+      ]);
+      for (final a in hist) {
+        expect(a.unlock, isA<AvatarRare>());
+        expect((a.unlock as AvatarRare).subject, 'CCQ');
+        for (final sex in KidSex.values) {
+          expect(offeredTo(a, sex), isTrue, reason: '${a.key} $sex');
+        }
+        expect(Strings.fr.avatarCaption(a.key), isNotNull, reason: a.key);
+        expect(Strings.en.avatarCaption(a.key), isNotNull, reason: a.key);
+      }
+      expect(Strings.fr.avatarCaption('wizard_girl'), isNull);
     });
   });
 
@@ -530,10 +564,90 @@ void main() {
       await pumpPicker(tester, level: 1, sex: KidSex.girl);
 
       expect(find.text(Strings.fr.avatarForSubject('SCI', 5)), findsOneWidget);
-      // Four rare characters for a girl, none named before it's found.
-      expect(find.text('?'), findsNWidgets(4));
+      // Four rare characters for a girl and the two historical figures,
+      // none named before it's found.
+      expect(find.text('?'), findsNWidgets(6));
+      expect(find.text(Strings.fr.avatarHistoricalHint), findsNWidgets(2));
       expect(find.text(Strings.fr.avatarRareHint), findsNWidgets(4));
       expect(find.text(Strings.fr.avatarName('wizard_girl')), findsNothing);
+    });
+
+    Future<void> openFrom(WidgetTester tester, Size size) async {
+      tester.view
+        ..physicalSize = size
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final db = LocalDatabase.memory();
+      addTearDown(db.close);
+      final c = _container(db: db, level: 1);
+      addTearDown(c.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: c,
+          child: MaterialApp(
+            theme: TutolysTheme.village(),
+            locale: const Locale('fr', 'CA'),
+            supportedLocales: const [Locale('fr', 'CA'), Locale('en', 'CA')],
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () => showAvatarPicker(context),
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('on desktop it is a centred dialog with a bounded height', (
+      tester,
+    ) async {
+      const screen = Size(1920, 1040);
+      await openFrom(tester, screen);
+
+      expect(find.byType(Dialog), findsOneWidget);
+      expect(find.byType(BottomSheet), findsNothing);
+      final box = tester.getRect(find.byType(AvatarPicker));
+      expect(box.width, lessThanOrEqualTo(640));
+      expect(box.height, lessThanOrEqualTo(screen.height * 0.85 + 0.5));
+      expect(box.center.dx, closeTo(screen.width / 2, 1));
+      expect(box.center.dy, closeTo(screen.height / 2, 1));
+
+      // The avatars scroll inside it; the title and close button stay.
+      final title = find.text(Strings.fr.avatarPickerTitle);
+      final before = tester.getTopLeft(title);
+      await tester.drag(
+        find.byKey(const ValueKey('avatar-picker-scroll')),
+        const Offset(0, -400),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(title), before);
+      expect(tester.getRect(find.byType(AvatarPicker)), box);
+    });
+
+    testWidgets('on a phone it is a bottom sheet with a drag handle', (
+      tester,
+    ) async {
+      const screen = Size(400, 800);
+      await openFrom(tester, screen);
+
+      expect(find.byType(BottomSheet), findsOneWidget);
+      expect(find.byType(Dialog), findsNothing);
+      expect(
+        tester.widget<BottomSheet>(find.byType(BottomSheet)).showDragHandle,
+        isTrue,
+      );
+      final box = tester.getRect(find.byType(AvatarPicker));
+      expect(box.height, lessThanOrEqualTo(screen.height * 0.85 + 0.5));
     });
 
     testWidgets('a boy is shown only boy starters', (tester) async {

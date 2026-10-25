@@ -20,9 +20,10 @@ class RareAvatarFound extends StatelessWidget {
     final p = VillagePalette.of(context);
     final still = MediaQuery.disableAnimationsOf(context);
     final avatar = KidAvatar(avatarKey: avatarKey, size: 88);
+    final caption = t.avatarCaption(avatarKey);
     return Semantics(
       liveRegion: true,
-      label: '${t.avatarRareFound} ${t.avatarName(avatarKey)}',
+      label: [t.avatarRareFound, t.avatarName(avatarKey), ?caption].join(' '),
       child: ExcludeSemantics(
         child: Container(
           key: const ValueKey('rare-avatar-found'),
@@ -70,6 +71,11 @@ class RareAvatarFound extends StatelessWidget {
                         color: p.inkMuted,
                       ),
                     ),
+                    if (caption != null)
+                      Text(
+                        caption,
+                        style: TextStyle(fontSize: 13, color: p.inkMuted),
+                      ),
                   ],
                 ),
               ),

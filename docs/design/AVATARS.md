@@ -83,15 +83,27 @@ lesson; shown as "?" until found.
 | `mermaid` (girls) | ChatGPT 02_44_27 PM-2 |
 | `pirate` (boys) | Cheerful Pirate Captain Adventure |
 
+### Historical figures: rare, on a perfect CCQ lesson
+
+**These are real people** (Hafid, 2026-10-25). Using their likeness is
+flagged to Hafid for a counsel check before launch. They aren't a "me"
+character, so every kid is offered them whatever their sex, in their own
+picker section. Each has a one-line factual caption
+(`Strings.avatarCaption`), shown once found. Keys start with `hist_`.
+
+| Key | Caption (FR) | Source art |
+|---|---|---|
+| `hist_therese_casgrain` | A lutté pour le droit de vote des femmes au Québec | Thérèse Casgrain_ Vote for Equality |
+| `hist_rene_levesque` | Premier ministre du Québec de 1976 à 1985 | Québec Statesman with Flag and Fleur-de-Lis |
+
 ### Not used from the 2026-10-25 delivery
 
 Group pictures and character sets (Costume Collage, Mascot Quartet, Science
 Squad, Kids' Chemistry, the three Character Sets), duplicates of faces
 already in the catalog (the extra Léas, Red-Haired Boy, Freckled Boy-3,
 the second girl astronaut and the binoculars explorer, which has a
-checkerboard baked in), alternates of the same character (other captains,
-wizards, scientists, knights, the map explorer boy), and the adult
-"Québec Statesman", who isn't a kid in a costume.
+checkerboard baked in), and alternates of the same character (other
+captains, wizards, scientists, knights, the map explorer boy).
 
 **Still wanted**: `kid_hijab`, `fox_hood`, a boy tuque, and more boy
 starters (two against four for girls).

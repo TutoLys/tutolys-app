@@ -32,6 +32,8 @@ P = {
  'wizard-girl':('Joyful Girl Wizard Casting Magic-1.png',(170,120,170)), 'wizard-boy':('Joyful Wizard Boy Casting Magic-2.png',(145,105,170)),
  'astronaut-girl':('Cheerful Girl Astronaut Portrait-1.png',None), 'astronaut-boy':('ChatGPT Image Oct 25, 2026, 12_58_25 PM-2.png',None),
  'coder-girl':('Cheerful Cyber Coder Adventure.png',(100,115,150)), 'coder-boy':('Young Cyber Coder Adventure.png',(100,85,150)),
+ 'hist-therese-casgrain':('Thérèse Casgrain_ Vote for Equality.png',(125,65,110)),
+ 'hist-rene-levesque':('Québec Statesman with Flag and Fleur-de-Lis.png',(165,68,120)),
  'pirate':('Cheerful Pirate Captain Adventure.png',(115,110,160)), 'mermaid':('ChatGPT Image Oct 25, 2026, 02_44_27 PM-2.png',(160,90,160)),
 }
 def knock_out_black(im):
