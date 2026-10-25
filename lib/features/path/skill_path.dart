@@ -6,7 +6,9 @@ import 'package:flutter/material.dart';
 import '../../core/widgets/breathing_mascot.dart';
 
 /// Where a node sits in a kid's progress through a strand.
-enum PathNodeState { mastered, active, available, locked }
+/// `completed` is local and immediate (the kid finished it on this device);
+/// `mastered` is the server's verdict and outranks it.
+enum PathNodeState { mastered, completed, active, available, locked }
 
 /// One stop on the path.
 class PathNode {
@@ -344,11 +346,15 @@ class _OrbState extends State<_Orb> with SingleTickerProviderStateMixin {
 
     final ring = switch (node.state) {
       PathNodeState.mastered => p.gold,
-      PathNodeState.active || PathNodeState.available => p.quebecBlueBright,
+      PathNodeState.completed ||
+      PathNodeState.active ||
+      PathNodeState.available => p.quebecBlueBright,
       PathNodeState.locked => p.track,
     };
     final icon = switch (node.state) {
       PathNodeState.mastered => _Check(size: m.icon, color: p.gold),
+      // Done here, not yet mastered on the server: the same check, in blue.
+      PathNodeState.completed => _Check(size: m.icon, color: p.quebecBlueBright),
       PathNodeState.active => _Target(size: m.activeIcon),
       PathNodeState.available => _Target(size: m.activeIcon - 4),
       PathNodeState.locked =>

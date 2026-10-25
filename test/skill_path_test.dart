@@ -85,6 +85,25 @@ void main() {
     expect(find.text('Continuer →'), findsOneWidget);
   });
 
+  testWidgets('a completed orb can be replayed, and carries no card', (
+    tester,
+  ) async {
+    final tapped = <String>[];
+    await tester.pumpWidget(
+      pathIn(
+        stillness: true,
+        onTap: (n) => tapped.add(n.id),
+        nodes: const [
+          PathNode(id: 'd', label: 'Compter', state: PathNodeState.completed),
+        ],
+      ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('path-orb-d')));
+    expect(tapped, ['d']);
+    expect(find.text('Continuer →'), findsNothing);
+  });
+
   testWidgets('a locked orb ignores taps and shows no click cursor', (
     tester,
   ) async {

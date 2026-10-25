@@ -1,7 +1,10 @@
+import 'package:flutter/widgets.dart' show Locale;
+
 import '../../data/api/progress_api.dart';
 import '../../data/local_db/database.dart';
 import 'learning_areas.dart';
 import 'skill_path.dart';
+import 'subject_language.dart';
 
 /// One titled stretch of path: a learning area and its leaves, in order.
 class PathSection {
@@ -62,10 +65,14 @@ List<AreaGroup> groupLeavesByArea({
 ///
 /// Every state is real or absent:
 /// - **mastered** — the backend says so (`is_mastered`, ADR 0009's 80% rule).
-/// - **active** — the first playable, unmastered node in path order: where
-///   the kid is. Exactly one per subject, which is what lets the mascot and
-///   the "Continuer" card mean something.
-/// - **available** — playable, unmastered, further along.
+/// - **completed** — the kid finished its exercise on this device
+///   ([completed], from `nodeProgressProvider`). Immediate, unlike mastery,
+///   which waits on telemetry and a scheduled job. Never shown as mastered,
+///   and it counts toward no percentage: those stay the server's.
+/// - **active** — the first playable node neither mastered nor completed, in
+///   path order: where the kid is. Exactly one per subject, which is what
+///   lets the mascot and the "Continuer" card mean something.
+/// - **available** — playable, not yet done, further along.
 /// - **locked** — nothing synced to play yet. That is the only real reason a
 ///   node is closed today; nothing gates on order.
 List<PathSection> buildCarteSections({
@@ -73,9 +80,14 @@ List<PathSection> buildCarteSections({
   required List<CachedSkillNode> leaves,
   required Set<String> playable,
   required List<SkillMasteryDto> masteries,
-  required bool english,
+  required Locale appLocale,
+  Set<String> completed = const {},
 }) {
   final masteryOf = {for (final m in masteries) m.skillNodeId: m};
+  final english = appLocale.languageCode == 'en';
+  // Français and English keep their own language's skill names whatever
+  // the app is set to (subject_language.dart).
+  final englishLabels = showsEnglishLabels(subject, appLocale);
   var frontierTaken = false;
 
   return [
@@ -95,6 +107,8 @@ List<PathSection> buildCarteSections({
                 state = PathNodeState.mastered;
               } else if (!playable.contains(leaf.id)) {
                 state = PathNodeState.locked;
+              } else if (completed.contains(leaf.id)) {
+                state = PathNodeState.completed;
               } else if (!frontierTaken) {
                 frontierTaken = true;
                 state = PathNodeState.active;
@@ -105,7 +119,7 @@ List<PathSection> buildCarteSections({
                 id: leaf.id,
                 // A missing English label is a content gap, not a reason to
                 // show nothing — fall back to French.
-                label: english && leaf.labelEn.isNotEmpty
+                label: englishLabels && leaf.labelEn.isNotEmpty
                     ? leaf.labelEn
                     : leaf.labelFr,
                 state: state,

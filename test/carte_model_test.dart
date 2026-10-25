@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tutolys_app/data/api/progress_api.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
@@ -23,12 +24,15 @@ List<PathSection> build(
   Set<String>? playable,
   List<SkillMasteryDto> masteries = const [],
   bool english = false,
+  Set<String> completed = const {},
+  String subject = 'MATH',
 }) => buildCarteSections(
-  subject: 'MATH',
+  subject: subject,
   leaves: leaves,
   playable: playable ?? leaves.map((l) => l.id).toSet(),
   masteries: masteries,
-  english: english,
+  appLocale: Locale(english ? 'en' : 'fr', 'CA'),
+  completed: completed,
 );
 
 void main() {
@@ -45,19 +49,17 @@ void main() {
   });
 
   test('titles follow the language', () {
-    final sections = build(
-      [leaf('g', 'mathematique/geometrie/b:A/o:1', en: 'Shapes')],
-      english: true,
-    );
+    final sections = build([
+      leaf('g', 'mathematique/geometrie/b:A/o:1', en: 'Shapes'),
+    ], english: true);
     expect(sections.single.title, 'Geometry');
     expect(sections.single.nodes.single.label, 'Shapes');
   });
 
   test('a missing English label falls back to French, never to nothing', () {
-    final sections = build(
-      [leaf('g', 'mathematique/geometrie/b:A/o:1')],
-      english: true,
-    );
+    final sections = build([
+      leaf('g', 'mathematique/geometrie/b:A/o:1'),
+    ], english: true);
     expect(sections.single.nodes.single.label, 'fr-g');
   });
 
@@ -129,5 +131,82 @@ void main() {
       'geometrie',
     );
     expect(strandOf('math'), isNull);
+  });
+
+  group('completed on this device', () {
+    final three = [
+      leaf('a', 'mathematique/mesure/b:A/o:1'),
+      leaf('b', 'mathematique/mesure/b:A/o:2'),
+      leaf('c', 'mathematique/mesure/b:A/o:3'),
+    ];
+
+    test('a finished node is completed, and the fox moves past it', () {
+      final nodes = build(three, completed: {'a'}).single.nodes;
+      expect(nodes.map((n) => n.state), [
+        PathNodeState.completed,
+        PathNodeState.active,
+        PathNodeState.available,
+      ]);
+    });
+
+    test('mastery outranks completion: gold stays the server\'s', () {
+      final nodes = build(
+        three,
+        completed: {'a'},
+        masteries: [mastery('a', 90, mastered: true)],
+      ).single.nodes;
+      expect(nodes.first.state, PathNodeState.mastered);
+      expect(nodes[1].state, PathNodeState.active);
+    });
+
+    test('everything finished: no active node, nothing invented', () {
+      final nodes = build(three, completed: {'a', 'b', 'c'}).single.nodes;
+      expect(nodes.every((n) => n.state == PathNodeState.completed), isTrue);
+    });
+
+    test('nothing synced to play stays locked, even if once finished', () {
+      final nodes = build(
+        three,
+        playable: {'b', 'c'},
+        completed: {'a'},
+      ).single.nodes;
+      expect(
+        nodes.first.state,
+        PathNodeState.locked,
+        reason: 'a completed node with no exercise could not be replayed',
+      );
+    });
+  });
+
+  group('skill names follow the subject\'s language', () {
+    test('maths follows the app: English when the app is', () {
+      final node = build([
+        leaf('a', 'mathematique/mesure/b:A/o:1', en: 'Measure'),
+      ], english: true).single.nodes.single;
+      expect(node.label, 'Measure');
+    });
+
+    test('a missing English name falls back to French, never blank', () {
+      final node = build([
+        leaf('a', 'mathematique/mesure/b:A/o:1'),
+      ], english: true).single.nodes.single;
+      expect(node.label, 'fr-a');
+    });
+
+    test('Français stays French in an English app', () {
+      final node = build(
+        [leaf('a', 'francais-langue/lire/b:A/o:1', en: 'Read')],
+        english: true,
+        subject: 'FR',
+      ).expand((s) => s.nodes).single;
+      expect(node.label, 'fr-a');
+    });
+
+    test('English stays English in a French app', () {
+      final node = build([
+        leaf('a', 'english-language-arts/reading/b:A/o:1', en: 'Read'),
+      ], subject: 'EN').expand((s) => s.nodes).single;
+      expect(node.label, 'Read');
+    });
   });
 }

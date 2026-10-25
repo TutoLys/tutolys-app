@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/i18n/strings.dart';
+import '../../data/local_db/node_progress_local.dart';
 import '../../core/routing/paired_router.dart';
 import '../progress/progress_controller.dart';
 import 'carte_model.dart';
@@ -75,13 +76,18 @@ class _Sections extends ConsumerWidget {
     final p = VillagePalette.of(context);
     final t = context.s;
     final masteries = ref.watch(progressControllerProvider).masteries;
+    // Finished on this device: refreshed by the play screen after every
+    // completed exercise, so the map changes the moment the kid is back.
+    final completed = ref.watch(nodeProgressProvider).value?.keys.toSet() ??
+        const <String>{};
 
     final sections = buildCarteSections(
       subject: state.subject,
       leaves: state.leaves,
       playable: state.exerciseByNodeId.keys.toSet(),
       masteries: masteries,
-      english: Localizations.localeOf(context).languageCode == 'en',
+      appLocale: Localizations.localeOf(context),
+      completed: completed,
     );
 
     return Column(
