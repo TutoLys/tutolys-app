@@ -13,6 +13,7 @@ import 'package:tutolys_app/data/local_db/node_progress_local.dart';
 import 'package:tutolys_app/features/pairing/pairing_controller.dart';
 import 'package:tutolys_app/features/play/learning_platform_providers.dart';
 import 'package:tutolys_app/features/play/play_screen.dart';
+import 'package:tutolys_app/data/local_db/app_settings.dart';
 import 'package:tutolys_motion/tutolys_motion.dart';
 
 /// Records what would have been played; plays nothing.
@@ -97,6 +98,28 @@ const _composeEnvelope = <String, Object?>{
     ],
     'target': ['b2', 'b5'],
     'ordered': false,
+  },
+};
+
+/// A `passage_reader` lesson: two sentences voiced, one not (ADR 0044).
+const _passageEnvelope = <String, Object?>{
+  'exercise_id': '1c0b9d1e-2f3a-4b5c-8d7e-9f0a1b2c3d4e',
+  'version': 1,
+  'engine_key': 'passage_reader',
+  'engine_min_version': 1,
+  'skill_node_id': 'ad24bcba-93d0-5b4e-ab56-ec76e3409a53',
+  'subject': 'FR',
+  'grade': 1,
+  'rank': 0,
+  'prompt': {'text': 'Où dort Pompon ?'},
+  'config': {
+    'title': 'Le chat de Léa',
+    'sentences': [
+      {'id': 's1', 'text': 'Léa a un petit chat gris.', 'audio_ref': 'a/s1'},
+      {'id': 's2', 'text': 'Pompon dort sur le lit.', 'audio_ref': 'a/s2'},
+      {'id': 's3', 'text': 'Le matin, il boit du lait.'},
+    ],
+    'correct_ids': ['s2'],
   },
 };
 
@@ -482,4 +505,52 @@ void main() {
       expect(find.text('TRY AGAIN'), findsOneWidget);
     },
   );
+
+  group('a passage sentence is read when its speaker is tapped (ADR 0044)', () {
+    testWidgets('plays that sentence on the narration channel', (
+      tester,
+    ) async {
+      await tester.pumpWidget(app(_passageEnvelope));
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await settle(tester);
+
+      expect(audio.requests, isEmpty, reason: 'nothing reads by itself');
+      expect(find.byKey(const ValueKey('passage-speak-1')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('passage-speak-3')),
+        findsNothing,
+        reason: 'no audio, no speaker',
+      );
+
+      await tester.tap(find.byKey(const ValueKey('passage-speak-2')));
+      await settle(tester);
+
+      final request = audio.requests.single;
+      expect(request.channel, AudioChannel.narration);
+      final source = request.source as PrerecordedAudio;
+      expect(source.exerciseId, _passageEnvelope['exercise_id']);
+      expect(source.ref, 'a/s2');
+    });
+
+    testWidgets('with read-aloud off, no sentence has a speaker', (
+      tester,
+    ) async {
+      // Stored before the app reads it, as Réglages would have left it.
+      await tester.runAsync(
+        () => AppSettingsStore(
+          db,
+          kidId: 'kid-lea',
+        ).write(const AppSettings().copyWith(readAloud: false)),
+      );
+      await tester.pumpWidget(app(_passageEnvelope));
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await settle(tester);
+
+      expect(find.text('Pompon dort sur le lit.'), findsOneWidget);
+      expect(find.byKey(const ValueKey('passage-speak-1')), findsNothing);
+      expect(find.byKey(const ValueKey('passage-speak-2')), findsNothing);
+    });
+  });
 }

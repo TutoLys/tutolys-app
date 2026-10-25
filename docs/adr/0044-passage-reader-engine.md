@@ -73,8 +73,11 @@ explicit submit (VALIDER).
   `PrerecordedAudio(exerciseId, audioRef)` on the narration channel, does
   nothing when read-aloud is off, and records the request
   (`recordAudioRequest`, with the sentence id). This is about 10 lines
-  beside the existing `speakPrompt`. Until then, no sentence speakers are
-  drawn.
+  beside the existing `speakPrompt`. **Done (2026-10-25):** the request is
+  logged as `SpeechPart.prompt` with the sentence id as `part_id`, since
+  the passage belongs to the prompt and `SpeechPart` has no part of its
+  own for it. With read-aloud off, no scope is provided, so no speakers
+  are drawn (`play_screen_test`).
 - **Backend audio (backend session):** `fill_missing_audio` voices prompts
   only. It needs to voice each `passage_reader` sentence too. This is item
   LE-B6 in `Platforms/BACKEND_WORKORDER_LEARNING_ENGINE.md`.

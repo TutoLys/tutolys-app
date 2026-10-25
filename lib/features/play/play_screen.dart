@@ -210,6 +210,27 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     );
   }
 
+  /// The speaker an engine draws beside its own parts (a `passage_reader`
+  /// sentence, app ADR 0044). With read-aloud off there is no scope, so the
+  /// engine draws no speaker at all. The request is logged as part of the
+  /// prompt, under the part's id.
+  Widget _contentSpeaker(ActivitySessionController c, Widget child) {
+    if (!ref.watch(settingsControllerProvider).readAloud) return child;
+    return ContentSpeakerScope(
+      speaker: _ContentSpeaker((audioRef, partId) {
+        unawaited(c.recordAudioRequest(SpeechPart.prompt, partId: partId));
+        _audio.play(
+          AudioRequest(
+            source: PrerecordedAudio(exerciseId: _exerciseId, ref: audioRef),
+            channel: AudioChannel.narration,
+            priority: 10,
+          ),
+        );
+      }),
+      child: child,
+    );
+  }
+
   /// XP so far: every finished question, plus the one just answered right
   /// — shown the moment the banner says "Bravo", not a tap later.
   int _runtimeXp() {
@@ -367,17 +388,20 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
         body: ImageResolverScope(
           resolver: _images,
           exerciseId: _exerciseId,
-          child: LearningActivityView(
-            controller: c,
-            locale: locale,
-            character: stage,
-            onDone: _onRuntimeDone,
-            xpEarned: _runtimeXp,
-            speakPrompt: (q) {
-              final plan = _planFor(c, q.index);
-              if (plan == null || plan.promptSource() == null) return null;
-              return () => _speak(c, plan);
-            },
+          child: _contentSpeaker(
+            c,
+            LearningActivityView(
+              controller: c,
+              locale: locale,
+              character: stage,
+              onDone: _onRuntimeDone,
+              xpEarned: _runtimeXp,
+              speakPrompt: (q) {
+                final plan = _planFor(c, q.index);
+                if (plan == null || plan.promptSource() == null) return null;
+                return () => _speak(c, plan);
+              },
+            ),
           ),
         ),
       );
@@ -401,4 +425,14 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       ),
     );
   }
+}
+
+class _ContentSpeaker implements ContentSpeaker {
+  const _ContentSpeaker(this._speak);
+
+  final void Function(String audioRef, String partId) _speak;
+
+  @override
+  void speak({required String audioRef, required String partId}) =>
+      _speak(audioRef, partId);
 }
