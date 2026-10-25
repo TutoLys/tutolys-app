@@ -6,6 +6,7 @@ import '../../data/api/curriculum_api.dart';
 import '../../data/local_db/database.dart';
 import '../../data/sync/content_sync.dart';
 import '../../data/sync/curriculum_sync.dart';
+import '../../data/sync/lesson_key.dart';
 import '../pairing/pairing_controller.dart';
 import '../settings/settings_controller.dart';
 import 'subject_language.dart';
@@ -172,21 +173,21 @@ class PathController extends Notifier<PathState> {
   }
 }
 
-/// Every lesson per node, rank order, in the kid's language where it exists.
+/// Every lesson per node, in the kid's language where it exists.
 ///
-/// [envelopes] are rank-ordered (`ContentSync.cachedExercises`) and may hold
-/// one lesson in two languages: siblings share the cache, and a translation
-/// is another exercise on the same node and rank. For each (node, rank) this
-/// takes the version in [locale], else French, else whatever was authored.
+/// [envelopes] may hold one lesson in several languages: siblings share the
+/// cache, and a translation is another exercise of the same lesson
+/// (`lessonKey`: its `translation_group`, else node + engine + rank). Per
+/// lesson this takes the version in [locale], else French, else whatever
+/// was authored. Distinct exercises are never merged, so none is hidden;
+/// lessons are ordered by (rank, engine, exercise id).
 Map<String, List<Map<String, Object?>>> pickLessons(
   List<Map<String, Object?>> envelopes, {
   required String locale,
 }) {
-  final byLesson = <(String, int), List<Map<String, Object?>>>{};
+  final byLesson = <String, List<Map<String, Object?>>>{};
   for (final e in envelopes) {
-    byLesson
-        .putIfAbsent((e['skill_node_id'] as String, e['rank'] as int), () => [])
-        .add(e);
+    byLesson.putIfAbsent(lessonKeyOf(e), () => []).add(e);
   }
   Map<String, Object?> choose(List<Map<String, Object?>> versions) =>
       versions.firstWhere(
@@ -198,11 +199,24 @@ Map<String, List<Map<String, Object?>>> pickLessons(
       );
 
   final picked = <String, List<Map<String, Object?>>>{};
-  for (final MapEntry(key: (node, _), value: versions) in byLesson.entries) {
-    // Map insertion follows rank order, so each list is too.
-    picked.putIfAbsent(node, () => []).add(choose(versions));
+  for (final versions in byLesson.values) {
+    final lesson = choose(versions);
+    picked.putIfAbsent(lesson['skill_node_id'] as String, () => []).add(lesson);
+  }
+  for (final lessons in picked.values) {
+    lessons.sort(_lessonOrder);
   }
   return picked;
+}
+
+int _lessonOrder(Map<String, Object?> a, Map<String, Object?> b) {
+  final byRank = (a['rank'] as int).compareTo(b['rank'] as int);
+  if (byRank != 0) return byRank;
+  final byEngine = (a['engine_key'] as String).compareTo(
+    b['engine_key'] as String,
+  );
+  if (byEngine != 0) return byEngine;
+  return (a['exercise_id'] as String).compareTo(b['exercise_id'] as String);
 }
 
 /// Each node's first lesson only ([pickLessons]'s rank 0).

@@ -7,6 +7,7 @@ import 'package:tutolys_app/features/path/path_controller.dart';
 Map<String, Object?> lesson(String id, int rank, [String locale = 'fr-CA']) => {
   'exercise_id': id,
   'skill_node_id': 'n',
+  'engine_key': 'mcq',
   'rank': rank,
   'locale': locale,
 };

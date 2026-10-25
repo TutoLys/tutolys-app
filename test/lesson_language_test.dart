@@ -13,11 +13,15 @@ Map<String, Object?> lesson(
   String node,
   String locale, {
   int rank = 0,
+  String engine = 'mcq',
+  String? group,
 }) => {
   'exercise_id': id,
   'skill_node_id': node,
+  'engine_key': engine,
   'rank': rank,
   'locale': locale,
+  'translation_group': ?group,
 };
 
 void main() {
@@ -68,6 +72,34 @@ void main() {
         lesson('r1', 'a', 'fr-CA', rank: 1),
       ], locale: 'fr-CA');
       expect(picked['a']!['exercise_id'], 'r0');
+    });
+  });
+
+  group('no distinct lesson is ever hidden (D10)', () {
+    test('two lessons on one node sharing a rank, different engines', () {
+      final picked = pickLessons([
+        lesson('b', 'n', 'fr-CA', engine: 'pair_match'),
+        lesson('a', 'n', 'fr-CA'),
+      ], locale: 'fr-CA');
+      expect(picked['n']!.map((e) => e['exercise_id']), ['a', 'b']);
+    });
+
+    test('ordered by rank, then engine, then id', () {
+      final picked = pickLessons([
+        lesson('z', 'n', 'fr-CA', rank: 1),
+        lesson('y', 'n', 'fr-CA', engine: 'speed_tap'),
+        lesson('x', 'n', 'fr-CA', engine: 'speed_tap', group: 'g2'),
+      ], locale: 'fr-CA');
+      expect(picked['n']!.map((e) => e['exercise_id']), ['x', 'y', 'z']);
+    });
+
+    test('translation_group makes one lesson of its language versions', () {
+      final picked = pickLessons([
+        lesson('fr', 'n', 'fr-CA', group: 'g1'),
+        lesson('en', 'n', 'en-CA', rank: 4, engine: 'pair_match', group: 'g1'),
+        lesson('other', 'n', 'fr-CA', group: 'g2'),
+      ], locale: 'en-CA');
+      expect(picked['n']!.map((e) => e['exercise_id']), ['other', 'en']);
     });
   });
 

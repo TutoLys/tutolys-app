@@ -59,15 +59,19 @@ class FakeContentServer extends ContentApi {
     if (offline) return const ManifestOffline();
     if (unauthorized) return const ManifestUnauthorized();
 
-    // Like the backend (ADR 0026): one version per lesson (node + rank), in
-    // the asked-for language where it exists, else the authored one.
+    // Like the backend (ADR 0026): one version per lesson, in the
+    // asked-for language where it exists, else the authored one. A lesson
+    // is its translation_group, else (node, engine, rank).
     final asked = locale ?? 'fr-CA';
-    final byLesson =
-        <(Object?, Object?, Object?), List<Map<String, Object?>>>{};
+    final byLesson = <Object, List<Map<String, Object?>>>{};
     for (final e in content.values) {
       if (subject != null && e['subject'] != subject) continue;
       byLesson
-          .putIfAbsent((e['subject'], e['skill_node_id'], e['rank']), () => [])
+          .putIfAbsent(
+            e['translation_group'] ??
+                (e['subject'], e['skill_node_id'], e['engine_key'], e['rank']),
+            () => [],
+          )
           .add(e);
     }
     final entries = byLesson.values
@@ -89,6 +93,7 @@ class FakeContentServer extends ContentApi {
             grade: e['grade'] as int,
             rank: e['rank'] as int,
             locale: e['locale'] as String,
+            translationGroup: e['translation_group'] as String?,
           ),
         )
         .toList();
@@ -147,11 +152,14 @@ void main() {
     List<Object?> assets = const [],
     String locale = 'fr-CA',
     String node = 'ad24bcba-93d0-5b4e-ab56-ec76e3409a53',
+    String engine = 'mcq',
+    String? group,
   }) => {
     'schema_version': 1,
     'exercise_id': id,
     'version': version,
-    'engine_key': 'mcq',
+    'engine_key': engine,
+    'translation_group': ?group,
     'engine_min_version': 1,
     'skill_node_id': node,
     'subject': subject,
@@ -818,5 +826,44 @@ void main() {
       ];
       expect(ids, ['fr-v2']);
     });
+
+    test(
+      'two lessons sharing a rank on one node are both kept (D10)',
+      () async {
+        server.content['a'] = exercise('a', engine: 'mcq');
+        server.content['b'] = exercise('b', engine: 'pair_match');
+
+        await sync.sync(subject: 'MATH', locale: 'fr-CA');
+        await sync.sync(subject: 'MATH', locale: 'fr-CA');
+
+        final ids = {
+          for (final e in await sync.cachedExercises(subject: 'MATH'))
+            e['exercise_id'],
+        };
+        expect(ids, {'a', 'b'});
+      },
+    );
+
+    test(
+      'translation_group pairs versions even when their ranks differ',
+      () async {
+        server.content['fr'] = exercise('fr', group: 'g1');
+        server.content['en'] = exercise(
+          'en',
+          locale: 'en-CA',
+          rank: 3,
+          group: 'g1',
+        );
+
+        await sync.sync(subject: 'MATH', locale: 'fr-CA');
+        await sync.sync(subject: 'MATH', locale: 'en-CA');
+
+        final ids = {
+          for (final e in await sync.cachedExercises(subject: 'MATH'))
+            e['exercise_id'],
+        };
+        expect(ids, {'fr', 'en'}, reason: 'the French version stays');
+      },
+    );
   });
 }

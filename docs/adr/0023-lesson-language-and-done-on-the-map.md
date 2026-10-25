@@ -138,3 +138,20 @@ lessons 2..N were synced but unreachable.
 A lesson is identified by exercise id, so finishing the French version
 does not count for the English one on the same rank. Rare, and the honest
 reading: the kid hasn't played that version.
+
+## Revision 2026-10-25: what counts as one lesson (QA D10)
+
+Grouping a node's exercises by (node, rank) hid one of two lessons whenever
+they shared a rank, which the backend allowed (ranks were per node *and
+engine*). That also made the "2/4" count wrong. Now one rule,
+`lib/data/sync/lesson_key.dart`, serves both the Carte (`pickLessons`) and
+the sync's keep-other-language removal:
+
+- With the backend's **`translation_group`** (agreed with the backend
+  session; on the envelope and on each manifest entry), all language
+  versions sharing it are one lesson.
+- Without it, the fallback is **(node, engine, rank)**, the backend's own
+  uniqueness key. Two distinct exercises never share it, so none is
+  hidden, and a translation, which keeps all three, still pairs with its
+  original.
+- A node's lessons are ordered by (rank, engine, exercise id).

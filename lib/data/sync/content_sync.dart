@@ -6,6 +6,7 @@ import '../api/content_api.dart';
 import '../local_db/database.dart';
 import 'asset_kind.dart';
 import 'content_hash.dart';
+import 'lesson_key.dart';
 
 /// What a sync did, so the UI and the logs can say something specific.
 class SyncReport {
@@ -161,13 +162,21 @@ class ContentSync {
 
     final wanted = {for (final e in manifest.entries) e.exerciseId: e};
 
-    // The same lesson can be cached in two languages: a translation is
-    // another exercise on the same node and rank (backend ADR 0026). Keyed
-    // here by (node, rank) → the locales this manifest wants it in.
-    final wantedLocales = <(String, int), Set<String>>{};
+    // The same lesson can be cached in two languages, each its own
+    // exercise (backend ADR 0026). Keyed by lesson (`lessonKey`) → the
+    // locales this manifest wants it in.
+    final wantedLocales = <String, Set<String>>{};
     for (final e in manifest.entries) {
       wantedLocales
-          .putIfAbsent((e.skillNodeId, e.rank), () => {})
+          .putIfAbsent(
+            lessonKey(
+              skillNodeId: e.skillNodeId,
+              engineKey: e.engineKey,
+              rank: e.rank,
+              translationGroup: e.translationGroup,
+            ),
+            () => {},
+          )
           .add(e.locale);
     }
 
@@ -188,7 +197,7 @@ class ContentSync {
     final toRemove = [
       for (final row in cachedRows)
         if (!wanted.containsKey(row.exerciseId))
-          if (wantedLocales[(row.skillNodeId, row.rank)] case final locales
+          if (wantedLocales[_lessonKeyOfRow(row)] case final locales
               when locales == null || locales.contains(_localeOf(row.payload)))
             row.exerciseId,
     ];
@@ -490,6 +499,25 @@ class ContentSync {
     return rows
         .map((row) => jsonDecode(row.payload) as Map<String, Object?>)
         .toList(growable: false);
+  }
+
+  /// [lessonKey] for a cached row; a payload that won't parse still gets
+  /// the fallback key from its columns.
+  static String _lessonKeyOfRow(CachedExercise row) {
+    String? group;
+    try {
+      group =
+          (jsonDecode(row.payload) as Map<String, Object?>)['translation_group']
+              as String?;
+    } on Object {
+      group = null;
+    }
+    return lessonKey(
+      skillNodeId: row.skillNodeId,
+      engineKey: row.engineKey,
+      rank: row.rank,
+      translationGroup: group,
+    );
   }
 
   /// The language a cached envelope is in. Envelopes have always carried
