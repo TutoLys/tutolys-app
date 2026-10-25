@@ -123,6 +123,11 @@ class _Sections extends ConsumerWidget {
       },
       describeLanguage: t.lessonLanguage,
       describeLessons: t.pathLessonsDone,
+      describeState: (state) => switch (state) {
+        PathNodeState.locked => t.pathLocked,
+        PathNodeState.soon => t.pathSoon,
+        _ => null,
+      },
     );
 
     return Column(

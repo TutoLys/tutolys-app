@@ -85,6 +85,9 @@ abstract class Strings {
   String get pathNoLessonsYet;
   String get pathLocked;
 
+  /// A Carte node with no lesson yet (ADR 0032): skipped, not locked.
+  String get pathSoon;
+
   /// The active node's card. French puts a space before "%", English does not.
   String pathInProgress(int pct);
 
@@ -491,6 +494,9 @@ class _FrenchStrings extends Strings {
 
   @override
   String get pathLocked => 'Pas encore débloqué';
+
+  @override
+  String get pathSoon => 'Bientôt';
 
   @override
   String pathInProgress(int pct) => 'En cours · $pct % maîtrisé';
@@ -1259,6 +1265,9 @@ class _EnglishStrings extends Strings {
 
   @override
   String get pathLocked => 'Not unlocked yet';
+
+  @override
+  String get pathSoon => 'Soon';
 
   @override
   String pathInProgress(int pct) => 'In progress · $pct% mastered';

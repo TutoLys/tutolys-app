@@ -7,8 +7,11 @@ import '../../core/widgets/breathing_mascot.dart';
 
 /// Where a node sits in a kid's progress through a strand.
 /// `completed` is local and immediate (the kid finished it on this device);
-/// `mastered` is the server's verdict and outranks it.
-enum PathNodeState { mastered, completed, active, available, locked }
+/// `mastered` is the server's verdict and outranks it. `locked` waits for
+/// the nodes before it; `soon` has no lesson yet and is skipped (ADR 0032).
+/// The Carte no longer produces `available` (unlocking is sequential), but
+/// the widget still draws it.
+enum PathNodeState { mastered, completed, active, available, locked, soon }
 
 /// One stop on the path.
 class PathNode {
@@ -21,6 +24,7 @@ class PathNode {
     this.otherLanguageLabel,
     this.lessons,
     this.lessonsLabel,
+    this.stateLabel,
   });
 
   final String id;
@@ -43,6 +47,10 @@ class PathNode {
 
   /// Read to screen readers with the count ("2 of 4 lessons done").
   final String? lessonsLabel;
+
+  /// Why the node can't be played ("Pas encore débloqué", "Bientôt"), read
+  /// to screen readers; a `soon` node also shows it under its caption.
+  final String? stateLabel;
 
   /// 0..1 from the backend, shown on the active node's ring and card. Null
   /// when the kid has never played it — which is not the same as zero.
@@ -185,7 +193,8 @@ class SkillPath extends StatelessWidget {
                         centres: centres,
                         lockedAhead: [
                           for (var i = 1; i < nodes.length; i++)
-                            nodes[i].state == PathNodeState.locked,
+                            nodes[i].state == PathNodeState.locked ||
+                                nodes[i].state == PathNodeState.soon,
                         ],
                         solid: p.quebecBlueBright,
                         // The design's `--track` itself is invisible on the
@@ -205,7 +214,9 @@ class SkillPath extends StatelessWidget {
                         node: nodes[i],
                         metrics: m,
                         palette: p,
-                        onTap: nodes[i].state == PathNodeState.locked
+                        onTap:
+                            nodes[i].state == PathNodeState.locked ||
+                                nodes[i].state == PathNodeState.soon
                             ? null
                             : () => onTapNode?.call(nodes[i]),
                       ),
@@ -277,7 +288,8 @@ class _Node extends StatelessWidget {
   Widget build(BuildContext context) {
     final m = metrics;
     final p = palette;
-    final locked = node.state == PathNodeState.locked;
+    final locked =
+        node.state == PathNodeState.locked || node.state == PathNodeState.soon;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -288,6 +300,7 @@ class _Node extends StatelessWidget {
             node.label,
             ?node.otherLanguageLabel,
             ?node.lessonsLabel,
+            ?node.stateLabel,
           ].join('. '),
           child: Stack(
             clipBehavior: Clip.none,
@@ -305,6 +318,38 @@ class _Node extends StatelessWidget {
                   right: -10,
                   child: ExcludeSemantics(
                     child: LanguageTag(tag: tag, palette: p),
+                  ),
+                ),
+              if (node.state == PathNodeState.soon && node.stateLabel != null)
+                Positioned(
+                  bottom: -6,
+                  left: -12,
+                  right: -12,
+                  child: Center(
+                    child: ExcludeSemantics(
+                      child: Container(
+                        key: ValueKey('soon-tag-${node.id}'),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 1.5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: p.surface,
+                          border: Border.all(color: p.line),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          node.stateLabel!.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.4,
+                            color: p.inkMuted,
+                            height: 1.1,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               if (node.lessons case (final done, final total)? when !locked)
@@ -407,7 +452,7 @@ class _OrbState extends State<_Orb> with SingleTickerProviderStateMixin {
       PathNodeState.completed ||
       PathNodeState.active ||
       PathNodeState.available => p.quebecBlueBright,
-      PathNodeState.locked => p.track,
+      PathNodeState.locked || PathNodeState.soon => p.track,
     };
     final icon = switch (node.state) {
       PathNodeState.mastered => _Check(size: m.icon, color: p.gold),
@@ -420,6 +465,13 @@ class _OrbState extends State<_Orb> with SingleTickerProviderStateMixin {
       PathNodeState.available => _Target(size: m.activeIcon - 4),
       PathNodeState.locked => Icon(
         Icons.lock_outline_rounded,
+        size: m.icon,
+        color: p.inkMuted,
+      ),
+      // No lesson yet: an hourglass, not a lock, so it never reads as the
+      // reason the kid is stuck.
+      PathNodeState.soon => Icon(
+        Icons.hourglass_empty_rounded,
         size: m.icon,
         color: p.inkMuted,
       ),
@@ -477,7 +529,10 @@ class _OrbState extends State<_Orb> with SingleTickerProviderStateMixin {
 
     return Opacity(
       // `.path-node.locked .orb { opacity: .5 }`
-      opacity: node.state == PathNodeState.locked ? 0.5 : 1,
+      opacity:
+          node.state == PathNodeState.locked || node.state == PathNodeState.soon
+          ? 0.5
+          : 1,
       child: MouseRegion(
         cursor: widget.onTap == null
             ? SystemMouseCursors.basic

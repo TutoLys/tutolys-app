@@ -72,9 +72,13 @@ List<AreaGroup> groupLeavesByArea({
 /// - **active** — the first playable node neither mastered nor completed, in
 ///   path order: where the kid is. Exactly one per subject, which is what
 ///   lets the mascot and the "Continuer" card mean something.
-/// - **available** — playable, not yet done, further along.
-/// - **locked** — nothing synced to play yet. That is the only real reason a
-///   node is closed today; nothing gates on order.
+/// - **locked** — playable, but after the active node. Unlocking is strictly
+///   sequential (ADR 0032): a node opens only once every playable node
+///   before it is done, so "if the game is not done, we don't go to the
+///   next" (Hafid, 2026-10-25).
+/// - **soon** — no lesson published for it yet. Not locked and not a
+///   step in the sequence: it is skipped, so a missing lesson never looks
+///   like the reason the kid is stuck.
 List<PathSection> buildCarteSections({
   required String subject,
   required List<CachedSkillNode> leaves,
@@ -86,6 +90,7 @@ List<PathSection> buildCarteSections({
   Map<String, (int done, int total)> lessonCounts = const {},
   String Function(String locale)? describeLanguage,
   String Function(int done, int total)? describeLessons,
+  String? Function(PathNodeState state)? describeState,
 }) {
   final asked = contentLocaleFor(subject, appLocale);
   final masteryOf = {for (final m in masteries) m.skillNodeId: m};
@@ -111,14 +116,14 @@ List<PathSection> buildCarteSections({
               if (mastery?.isMastered ?? false) {
                 state = PathNodeState.mastered;
               } else if (!playable.contains(leaf.id)) {
-                state = PathNodeState.locked;
+                state = PathNodeState.soon;
               } else if (completed.contains(leaf.id)) {
                 state = PathNodeState.completed;
               } else if (!frontierTaken) {
                 frontierTaken = true;
                 state = PathNodeState.active;
               } else {
-                state = PathNodeState.available;
+                state = PathNodeState.locked;
               }
               return PathNode(
                 id: leaf.id,
@@ -134,6 +139,7 @@ List<PathSection> buildCarteSections({
                   (final done, final total) when total > 1 => (done, total),
                   _ => null,
                 },
+                stateLabel: describeState?.call(state),
                 lessonsLabel: switch (lessonCounts[leaf.id]) {
                   (final done, final total) when total > 1 =>
                     describeLessons?.call(done, total),

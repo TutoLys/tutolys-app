@@ -424,6 +424,36 @@ void main() {
   );
 
   testWidgets(
+    'leaving after one of two questions records nothing as completed',
+    (tester) async {
+      await tester.pumpWidget(app(fakeEnvelope(questions: 2), runtime: true));
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await settle(tester);
+
+      // Q0 right, then the child quits before Q1.
+      await tester.tap(find.byKey(const ValueKey('option-b')));
+      await settle(tester);
+      await tester.tap(find.text('VALIDER'));
+      await settle(tester);
+      expect(find.text('Bravo !'), findsOneWidget);
+      await tester.tap(find.byTooltip("Quitter l'exercice"));
+      await settle(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text('open'), findsOneWidget);
+      final done = await tester.runAsync(
+        () => NodeProgressLocal(db, kidId: 'kid-lea').all(),
+      );
+      expect(
+        done,
+        isEmpty,
+        reason: 'only finishing every question of the série counts',
+      );
+    },
+  );
+
+  testWidgets(
     'in English, the game chrome is English (content stays as authored)',
     (tester) async {
       await tester.pumpWidget(app(_mcqEnvelope, english: true));

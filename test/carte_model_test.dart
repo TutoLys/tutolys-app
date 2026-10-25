@@ -79,7 +79,7 @@ void main() {
     expect(sections.single.nodes.map((n) => n.id), ['two', 'ten']);
   });
 
-  test('states are real: mastered, one active frontier, then available', () {
+  test('states are real: mastered, one active frontier, then locked', () {
     final sections = build(
       [
         leaf('a', 'mathematique/mesure/b:A/o:1'),
@@ -95,8 +95,8 @@ void main() {
     expect(nodes.map((n) => n.state), [
       PathNodeState.mastered,
       PathNodeState.active,
-      PathNodeState.available,
       PathNodeState.locked,
+      PathNodeState.soon,
     ]);
     expect(nodes[1].masteryPct, closeTo(0.6, 1e-9));
   });
@@ -145,7 +145,7 @@ void main() {
       expect(nodes.map((n) => n.state), [
         PathNodeState.completed,
         PathNodeState.active,
-        PathNodeState.available,
+        PathNodeState.locked,
       ]);
     });
 
@@ -164,7 +164,7 @@ void main() {
       expect(nodes.every((n) => n.state == PathNodeState.completed), isTrue);
     });
 
-    test('nothing synced to play stays locked, even if once finished', () {
+    test('nothing synced to play is "soon", even if once finished', () {
       final nodes = build(
         three,
         playable: {'b', 'c'},
@@ -172,7 +172,7 @@ void main() {
       ).single.nodes;
       expect(
         nodes.first.state,
-        PathNodeState.locked,
+        PathNodeState.soon,
         reason: 'a completed node with no exercise could not be replayed',
       );
     });
@@ -228,5 +228,61 @@ void main() {
     expect(nodes[0].lessonsLabel, '2/4');
     expect(nodes[0].state, PathNodeState.active, reason: 'not all done');
     expect(nodes[1].lessons, isNull);
+  });
+
+  group('unlocking is sequential (ADR 0032)', () {
+    final four = [
+      leaf('a', 'mathematique/mesure/b:A/o:1'),
+      leaf('b', 'mathematique/mesure/b:A/o:2'),
+      leaf('c', 'mathematique/mesure/b:A/o:3'),
+      leaf('d', 'mathematique/mesure/b:A/o:4'),
+    ];
+
+    test('a node opens only once the playable one before it is done', () {
+      final nodes = build(four).single.nodes;
+      expect(nodes.map((n) => n.state), [
+        PathNodeState.active,
+        PathNodeState.locked,
+        PathNodeState.locked,
+        PathNodeState.locked,
+      ]);
+    });
+
+    test('a node with no lesson is skipped, never what blocks the path', () {
+      // Hafid's screenshot: 1 done, 2 had no lesson, 3 done, 4 next.
+      final nodes = build(
+        four,
+        playable: {'a', 'c', 'd'},
+        completed: {'a', 'c'},
+      ).single.nodes;
+      expect(nodes.map((n) => n.state), [
+        PathNodeState.completed,
+        PathNodeState.soon,
+        PathNodeState.completed,
+        PathNodeState.active,
+      ]);
+    });
+
+    test('an unfinished node keeps everything after it locked', () {
+      final nodes = build(
+        four,
+        playable: {'a', 'b', 'c', 'd'},
+        completed: {'a', 'c'},
+      ).single.nodes;
+      expect(nodes.map((n) => n.state), [
+        PathNodeState.completed,
+        PathNodeState.active,
+        PathNodeState.completed,
+        PathNodeState.locked,
+      ], reason: 'a node done earlier stays done and replayable');
+    });
+
+    test('server mastery counts as done for the sequence', () {
+      final nodes = build(
+        four,
+        masteries: [mastery('a', 95, mastered: true)],
+      ).single.nodes;
+      expect(nodes[1].state, PathNodeState.active);
+    });
   });
 }

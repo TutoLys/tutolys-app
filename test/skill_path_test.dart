@@ -204,4 +204,34 @@ void main() {
       expect(find.byKey(const ValueKey('lesson-count-a')), findsNothing);
     });
   });
+
+  testWidgets('a node with no lesson says "bientôt" and ignores taps', (
+    tester,
+  ) async {
+    var taps = 0;
+    await tester.pumpWidget(
+      pathIn(
+        stillness: true,
+        onTap: (_) => taps++,
+        nodes: const [
+          PathNode(
+            id: 's',
+            label: 'Classer des matériaux',
+            state: PathNodeState.soon,
+            stateLabel: 'Bientôt',
+          ),
+        ],
+      ),
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('soon-tag-s')),
+        matching: find.text('BIENTÔT'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byIcon(Icons.lock_outline_rounded), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('path-orb-s')));
+    expect(taps, 0);
+  });
 }
