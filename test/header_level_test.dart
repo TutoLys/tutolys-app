@@ -106,4 +106,60 @@ void main() {
       expect(find.byType(VillageProgressBar), findsNothing);
     });
   });
+
+  group('the phone gear', () {
+    testWidgets('opens Réglages', (tester) async {
+      var opened = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: TutolysTheme.village(),
+          home: Scaffold(
+            body: VillageHeader(
+              name: 'Yelhan',
+              subtitle: '',
+              stats: const [],
+              compact: true,
+              onSettings: () => opened++,
+              settingsLabel: 'Réglages',
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byKey(const ValueKey('header-settings')));
+      expect(opened, 1);
+      expect(find.byTooltip('Réglages'), findsOneWidget);
+    });
+
+    testWidgets('no gear when the nav already lists Réglages', (tester) async {
+      await tester.pumpWidget(header(const []));
+      expect(find.byKey(const ValueKey('header-settings')), findsNothing);
+    });
+
+    testWidgets('fits a 360px phone with all three pills', (tester) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: TutolysTheme.village(),
+          home: Scaffold(
+            body: VillageHeader(
+              name: 'Yelhan',
+              subtitle: '',
+              compact: true,
+              onSettings: () {},
+              settingsLabel: 'Réglages',
+              stats: const [
+                HeaderStat(asset: 'asset-xpstar.webp', label: 'Niv. 12'),
+                HeaderStat(asset: 'asset-flame.webp', label: '14'),
+                HeaderStat(asset: 'asset-target.webp', label: '0/3 quêtes'),
+              ],
+            ),
+          ),
+        ),
+      );
+      expect(tester.takeException(), isNull);
+    });
+  });
 }

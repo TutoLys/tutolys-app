@@ -157,6 +157,12 @@ class _VillageShellState extends ConsumerState<VillageShell> {
                   ? ''
                   : t.gradeLabel(kid!.gradeLevel),
               compact: MediaQuery.sizeOf(context).width < Breakpoints.medium,
+              // Phones only: same threshold as VillageNavShell's switch to
+              // the bottom bar, which has no Réglages tab.
+              onSettings: MediaQuery.sizeOf(context).width < Breakpoints.compact
+                  ? () => _open(_primary(t).length)
+                  : null,
+              settingsLabel: t.navReglages,
               stats: [
                 // The design's "Niv. 14" pill with its XP track. Offline
                 // there is no level (the app never computes one itself, so it

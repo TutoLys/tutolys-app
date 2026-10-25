@@ -36,6 +36,8 @@ class VillageHeader extends StatelessWidget {
     required this.subtitle,
     required this.stats,
     this.compact = false,
+    this.onSettings,
+    this.settingsLabel = '',
     super.key,
   });
 
@@ -43,6 +45,15 @@ class VillageHeader extends StatelessWidget {
   final String subtitle;
   final List<HeaderStat> stats;
   final bool compact;
+
+  /// The design's `.phone-gear-btn`: where Réglages lives on a phone, whose
+  /// bottom bar has room for five tabs and leaves it out. Null hides the
+  /// gear; the shell passes it only when the bottom bar is showing, since
+  /// the sidebar and rail list Réglages themselves.
+  final VoidCallback? onSettings;
+
+  /// The gear's tooltip and screen-reader name.
+  final String settingsLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -55,52 +66,85 @@ class VillageHeader extends StatelessWidget {
         color: p.surface,
         border: Border(bottom: BorderSide(color: p.line)),
       ),
-      child: Row(
-        children: [
-          Image.asset(
-            'assets/images/asset-mascot-welcome.webp',
-            height: compact ? 36 : 52,
-            fit: BoxFit.contain,
-          ),
-          const SizedBox(width: Space.sm),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: VillageType.display,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                    color: p.ink,
+      child: LayoutBuilder(
+        builder: (context, box) {
+          // What the pills may take: everything but the avatar, the gear and
+          // a name at least ~90px wide.
+          final avatar = compact ? 36.0 : 52.0;
+          final gear = onSettings == null ? 0.0 : 50.0;
+          final maxStatsWidth =
+              (box.maxWidth - avatar - gear - Space.sm * 2 - 90).clamp(
+                0.0,
+                double.infinity,
+              );
+          return Row(
+            children: [
+              Image.asset(
+                'assets/images/asset-mascot-welcome.webp',
+                height: compact ? 36 : 52,
+                fit: BoxFit.contain,
+              ),
+              const SizedBox(width: Space.sm),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: VillageType.display,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                        color: p.ink,
+                      ),
+                    ),
+                    // The design hides this line on tablet rather than letting
+                    // it squeeze the stats.
+                    if (!compact && subtitle.isNotEmpty)
+                      Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 12, color: p.inkMuted),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: Space.sm),
+              // The pills shrink as a group rather than overflow: on a narrow
+              // phone, with the gear beside them, three pills and a name do not
+              // fit at full size. The name gives way first (it ellipsizes),
+              // then the pills scale down together.
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxStatsWidth),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (final (i, stat) in stats.indexed) ...[
+                        if (i > 0) SizedBox(width: compact ? 6 : Space.xs),
+                        _StatPill(stat: stat, palette: p, compact: compact),
+                      ],
+                    ],
                   ),
                 ),
-                // The design hides this line on tablet rather than letting
-                // it squeeze the stats.
-                if (!compact && subtitle.isNotEmpty)
-                  Text(
-                    subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12, color: p.inkMuted),
-                  ),
+              ),
+              if (onSettings != null) ...[
+                const SizedBox(width: 6),
+                _GearButton(
+                  onPressed: onSettings!,
+                  label: settingsLabel,
+                  palette: p,
+                ),
               ],
-            ),
-          ),
-          const SizedBox(width: Space.sm),
-          Wrap(
-            spacing: compact ? 6 : Space.xs,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              for (final stat in stats)
-                _StatPill(stat: stat, palette: p, compact: compact),
             ],
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -167,5 +211,64 @@ class _StatPill extends StatelessWidget {
     );
     final tip = stat.tooltip;
     return tip == null ? pill : Tooltip(message: tip, child: pill);
+  }
+}
+
+/// `.phone-gear-btn`: 32px round, the surface colour with a hairline and the
+/// small shadow, holding the Réglages art. The tap target is 44px around it.
+class _GearButton extends StatelessWidget {
+  const _GearButton({
+    required this.onPressed,
+    required this.label,
+    required this.palette,
+  });
+
+  final VoidCallback onPressed;
+  final String label;
+  final VillagePalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = palette;
+    return Tooltip(
+      message: label,
+      child: Semantics(
+        button: true,
+        label: label,
+        child: InkResponse(
+          key: const ValueKey('header-settings'),
+          onTap: onPressed,
+          radius: 22,
+          child: SizedBox(
+            width: 44,
+            height: 44,
+            child: Center(
+              child: Container(
+                width: 32,
+                height: 32,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: p.surface,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: p.line),
+                  boxShadow: [
+                    BoxShadow(
+                      color: p.shadowSmall,
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Image.asset(
+                  'assets/images/asset-reglages.png',
+                  width: 17,
+                  height: 17,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
