@@ -34,6 +34,7 @@ class AnswerTile extends StatelessWidget {
     this.semanticsState,
     this.badge,
     this.imageRef,
+    this.dense = false,
     super.key,
   });
 
@@ -56,6 +57,10 @@ class AnswerTile extends StatelessWidget {
   /// a child sees until the picture has synced (when nothing is drawn in
   /// its place, so the tile never shows an empty frame).
   final String? imageRef;
+
+  /// Tight padding and a smaller state icon, for a tile in a narrow slot
+  /// (a number on a number line). The label is centred.
+  final bool dense;
 
   @override
   Widget build(BuildContext context) {
@@ -102,7 +107,10 @@ class AnswerTile extends StatelessWidget {
             // ≥48px: the frontend spec's tap-target floor.
             constraints: const BoxConstraints(minHeight: 52),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              padding: EdgeInsets.symmetric(
+                horizontal: dense ? 6 : 20,
+                vertical: 14,
+              ),
               child: Row(
                 children: [
                   if (imageRef != null)
@@ -122,6 +130,7 @@ class AnswerTile extends StatelessWidget {
                   Expanded(
                     child: Text(
                       label,
+                      textAlign: dense ? TextAlign.center : null,
                       style: TextStyle(
                         fontFamily: VillageType.display,
                         fontWeight: FontWeight.w700,
@@ -151,8 +160,8 @@ class AnswerTile extends StatelessWidget {
                       ),
                     ),
                   if (icon != null) ...[
-                    const SizedBox(width: 8),
-                    Icon(icon, size: 18, color: border),
+                    SizedBox(width: dense ? 2 : 8),
+                    Icon(icon, size: dense ? 14 : 18, color: border),
                   ],
                 ],
               ),
