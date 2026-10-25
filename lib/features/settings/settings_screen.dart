@@ -135,7 +135,7 @@ class SettingsScreen extends ConsumerWidget {
               _LinkRow(
                 icon: Icons.help_outline,
                 label: t.navHelp,
-                onTap: () => _notBuilt(context, 'Aide & support'),
+                onTap: onOpenHelp ?? () => _notBuilt(context, t.navHelp),
               ),
               const SizedBox(height: Space.xs),
               _LinkRow(
