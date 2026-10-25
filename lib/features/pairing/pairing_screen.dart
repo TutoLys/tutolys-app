@@ -148,7 +148,16 @@ class _Mascot extends StatelessWidget {
           ],
         ),
       ),
-      child: TutolysMascot(mood: mood, size: size),
+      // The real brand mark, not the hand-drawn `TutolysMascot` placeholder
+      // this screen carried since A2. `mood` is still computed above and
+      // still drives the copy; it just no longer drives a drawing, because
+      // there is one pose and a static illustration cannot act.
+      child: Image.asset(
+        'assets/images/asset-logo.webp',
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+      ),
     );
   }
 }
