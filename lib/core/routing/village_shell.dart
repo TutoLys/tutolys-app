@@ -38,7 +38,12 @@ class _VillageShellState extends ConsumerState<VillageShell> {
   /// re-trigger each screen's one-shot `build()` load — Home's and Path's
   /// controllers fetch once and expect to stay mounted.
   List<Widget> _pages(Strings s) => [
-        const VillageScreen(),
+        VillageScreen(
+          // Everything on Village that invites a tap — the CTA, a quest, a
+          // building — leads to the Carte, which is the only place a kid can
+          // actually play.
+          onOpenPath: () => setState(() => _index = 1),
+        ),
         const PathScreen(),
         _NotBuiltYet(title: s.navQuetes),
         _NotBuiltYet(title: s.navProgres),

@@ -21,7 +21,14 @@ import 'village_scene.dart';
 /// render convincing fiction on the most-looked-at screen, the buildings
 /// carry their name only and the coin pill is absent.
 class VillageScreen extends ConsumerWidget {
-  const VillageScreen({super.key});
+  const VillageScreen({this.onOpenPath, super.key});
+
+  /// Where "Continuer", a quest row and a building all lead: the Carte.
+  ///
+  /// Supplied by the shell, which owns which page is showing — the screen
+  /// does not navigate itself, same as `VillageNavShell` and
+  /// `SettingsScreen`.
+  final VoidCallback? onOpenPath;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -31,7 +38,8 @@ class VillageScreen extends ConsumerWidget {
     // backend already sends plus the cached curriculum's own subject per
     // node — no extra endpoint, and it works offline.
     final t = context.s;
-    final bySubject = ref.watch(subjectProgressProvider).value ?? <String, double>{};
+    final bySubject =
+        ref.watch(subjectProgressProvider).value ?? <String, double>{};
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -58,9 +66,13 @@ class VillageScreen extends ConsumerWidget {
                         ? ''
                         : t.gradeLabel(kid!.gradeLevel),
                     greeting: _greetingFor(t, kid?.displayName, progress),
+                    onTapBuilding: (_) => onOpenPath?.call(),
                   ),
                 );
-                final panel = _QuestPanel(progress: progress);
+                final panel = _QuestPanel(
+                  progress: progress,
+                  onOpenPath: onOpenPath,
+                );
 
                 if (constraints.maxWidth < 760) {
                   return Column(
@@ -83,7 +95,7 @@ class VillageScreen extends ConsumerWidget {
               },
             ),
             const SizedBox(height: Space.lg),
-            const _RecommendBar(),
+            _RecommendBar(onContinue: onOpenPath),
           ],
         ),
       ),
@@ -100,13 +112,13 @@ class VillageScreen extends ConsumerWidget {
 /// matching on translated display text is how a feature silently breaks the
 /// moment someone switches language.
 String subjectCodeFor(String asset) => switch (asset) {
-      'asset-bldg-math.webp' => 'MATH',
-      'asset-bldg-francais.webp' => 'FR',
-      'asset-bldg-anglais.webp' => 'EN',
-      'asset-bldg-science.webp' => 'SCI',
-      'asset-bldg-univers-social.webp' => 'SOC',
-      _ => '',
-    };
+  'asset-bldg-math.webp' => 'MATH',
+  'asset-bldg-francais.webp' => 'FR',
+  'asset-bldg-anglais.webp' => 'EN',
+  'asset-bldg-science.webp' => 'SCI',
+  'asset-bldg-univers-social.webp' => 'SOC',
+  _ => '',
+};
 
 /// What the fox says. Built from the real daily quest when there is one,
 /// so it is never a line of flavour text pretending to know something.
@@ -122,7 +134,9 @@ String _greetingFor(Strings t, String? name, ProgressState progress) {
 /// computes one — today the Carte knows what is next, this does not, so it
 /// points there rather than naming a node it has not chosen.
 class _RecommendBar extends StatelessWidget {
-  const _RecommendBar();
+  const _RecommendBar({this.onContinue});
+
+  final VoidCallback? onContinue;
 
   @override
   Widget build(BuildContext context) {
@@ -137,11 +151,7 @@ class _RecommendBar extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(
-            color: p.shadow,
-            blurRadius: 40,
-            offset: Offset(0, 16),
-          ),
+          BoxShadow(color: p.shadow, blurRadius: 40, offset: Offset(0, 16)),
         ],
       ),
       child: Row(
@@ -172,34 +182,39 @@ class _RecommendBar extends StatelessWidget {
               ],
             ),
           ),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [p.goldLight, p.gold],
-              ),
+          Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(999),
+            child: InkWell(
+              onTap: onContinue,
               borderRadius: BorderRadius.circular(999),
-              boxShadow: [
-                BoxShadow(
-                  color: p.gold.withValues(alpha: 0.35),
-                  blurRadius: 18,
-                  offset: Offset(0, 8),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [p.goldLight, p.gold],
+                  ),
+                  borderRadius: BorderRadius.circular(999),
+                  boxShadow: [
+                    BoxShadow(
+                      color: p.gold.withValues(alpha: 0.35),
+                      blurRadius: 18,
+                      offset: Offset(0, 8),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: 22,
-                vertical: 11,
-              ),
-              child: Text(
-                context.s.villageContinueCta,
-                style: TextStyle(
-                  fontFamily: VillageType.display,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13.5,
-                  color: Color(0xFF241A04),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 22, vertical: 11),
+                  child: Text(
+                    context.s.villageContinueCta,
+                    style: TextStyle(
+                      fontFamily: VillageType.display,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13.5,
+                      color: Color(0xFF241A04),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -218,9 +233,10 @@ class _RecommendBar extends StatelessWidget {
 /// renders the real one and says plainly that it is the only one, rather
 /// than padding the list to three.
 class _QuestPanel extends StatelessWidget {
-  const _QuestPanel({required this.progress});
+  const _QuestPanel({required this.progress, this.onOpenPath});
 
   final ProgressState progress;
+  final VoidCallback? onOpenPath;
 
   @override
   Widget build(BuildContext context) {
@@ -233,11 +249,7 @@ class _QuestPanel extends StatelessWidget {
         color: p.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(
-            color: p.shadow,
-            blurRadius: 40,
-            offset: Offset(0, 16),
-          ),
+          BoxShadow(color: p.shadow, blurRadius: 40, offset: Offset(0, 16)),
         ],
       ),
       child: Column(
@@ -267,14 +279,12 @@ class _QuestPanel extends StatelessWidget {
               padding: EdgeInsets.symmetric(vertical: Space.sm),
               child: Text(
                 context.s.villageNoQuests,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  color: p.inkMuted,
-                ),
+                style: TextStyle(fontSize: 12.5, color: p.inkMuted),
               ),
             )
           else
             _QuestRow(
+              onTap: onOpenPath,
               // `DailyQuestDto` carries no title — the daily challenge is
               // one fixed quest type ("N correct in a row, today", backend
               // ADR 0019), so its name is derived rather than transported.
@@ -295,7 +305,10 @@ class _QuestRow extends StatelessWidget {
     required this.done,
     required this.current,
     required this.target,
+    this.onTap,
   });
+
+  final VoidCallback? onTap;
 
   final String title;
   final bool done;
@@ -340,9 +353,7 @@ class _QuestRow extends StatelessWidget {
                     value: target == 0 ? 0 : current / target,
                     minHeight: 6,
                     backgroundColor: p.track,
-                    valueColor: AlwaysStoppedAnimation(
-                      p.quebecBlueBright,
-                    ),
+                    valueColor: AlwaysStoppedAnimation(p.quebecBlueBright),
                   ),
                 ),
               ],
@@ -353,9 +364,7 @@ class _QuestRow extends StatelessWidget {
             width: 24,
             height: 24,
             decoration: BoxDecoration(
-              color: done
-                  ? Color(0xFF3DBE7A)
-                  : p.quebecBlueBright,
+              color: done ? Color(0xFF3DBE7A) : p.quebecBlueBright,
               shape: BoxShape.circle,
             ),
             child: Icon(
