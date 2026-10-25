@@ -114,3 +114,23 @@ the frontier.
   (`Scrollable.ensureVisible`, alignment 0.5, `Motion.normal` eased, or a
   jump under reduced motion). With every node done it goes to the last
   one. A hidden tab doesn't scroll until it is shown.
+
+## Revision 2026-10-25: the pills and strand title are pinned
+
+Hafid, from :8080: once the map scrolled to the frontier, the subject pills
+and the strand title were off the top, and switching subject meant
+scrolling all the way back up. "Like a freeze row in Excel."
+
+- The Carte is now a fixed header (pills, then the subject eyebrow and the
+  current strand's title) above the path's own scroll view. Only the path
+  scrolls, at every breakpoint; on mobile the pills keep scrolling
+  sideways inside the header.
+- The header is transparent over the shell's sky gradient. The path is
+  clipped at the header's bottom edge rather than sliding under an opaque
+  band, so there's no seam in the gradient.
+- The title follows the scroll: it names the last area whose top has
+  reached the header. The first area's title is the header's own, and
+  later areas keep an in-path title that marks where they start.
+- The frontier scroll is unchanged: `ensureVisible` centres in the path's
+  own viewport, which now starts under the header, so the fox is never
+  hidden behind it.

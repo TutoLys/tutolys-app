@@ -395,6 +395,8 @@ void main() {
 
       // One Continuer card, and it plays the frontier's unfinished lesson.
       expect(find.text('Continuer →'), findsOneWidget);
+      await tester.ensureVisible(find.text('Continuer →'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Continuer →'));
       await tester.pumpAndSettle();
       final play = tester.widget<PlayScreen>(find.byType(PlayScreen));
@@ -455,7 +457,7 @@ void main() {
 
     void expectCentred(WidgetTester tester, String id) {
       final orb = find.byKey(ValueKey('path-orb-$id'));
-      final view = tester.getRect(find.byType(Scrollable).first);
+      final view = tester.getRect(find.byKey(const ValueKey('carte-path')));
       final y = tester.getCenter(orb).dy;
       expect(view.contains(tester.getCenter(orb)), isTrue, reason: id);
       expect(
@@ -491,16 +493,10 @@ void main() {
       );
       expectCentred(tester, 'n10');
 
-      // Away and back: still the frontier, not the top.
-      // The pills sit at the top, scrolled away by the step above.
+      // Away and back: still the frontier, not the top. The pills are
+      // pinned, so no scrolling up first.
       Future<void> pill(String code) async {
-        final f = find.byKey(
-          ValueKey('subject-pill-$code'),
-          skipOffstage: false,
-        );
-        await tester.ensureVisible(f);
-        await tester.pumpAndSettle();
-        await tester.tap(f);
+        await tester.tap(find.byKey(ValueKey('subject-pill-$code')));
         await tester.pumpAndSettle();
       }
 
@@ -527,5 +523,92 @@ void main() {
       await tester.pumpAndSettle();
       expectCentred(tester, 'n11');
     });
+  });
+
+  group('the pills and strand title stay pinned (Hafid: "like a freeze row")', () {
+    // Two areas of eight nodes: the path is far taller than the screen.
+    final leaves = [
+      for (var i = 1; i <= 8; i++)
+        CurriculumLeaf(
+          id: 'n$i',
+          labelFr: 'Nombre $i',
+          labelEn: '',
+          stableKey: 'mathematique/sens-et-ecriture-des-nombres/b:A/o:$i',
+        ),
+      for (var i = 1; i <= 8; i++)
+        CurriculumLeaf(
+          id: 'g$i',
+          labelFr: 'Forme $i',
+          labelEn: '',
+          stableKey: 'mathematique/geometrie/b:A/o:$i',
+        ),
+    ];
+    final content = {
+      for (final l in leaves)
+        'e-${l.id}': exercise(id: 'e-${l.id}', skillNodeId: l.id),
+    };
+
+    bool hittable(WidgetTester tester, Finder f) {
+      final target = tester.renderObject(f);
+      final hit = tester.hitTestOnBinding(tester.getCenter(f));
+      return hit.path.any((e) => e.target == target);
+    }
+
+    String strandTitle(WidgetTester tester) => tester
+        .widget<Text>(find.byKey(const ValueKey('carte-strand-title')))
+        .data!;
+
+    for (final (name, size) in [
+      ('desktop', const Size(1280, 800)),
+      ('mobile', const Size(400, 800)),
+    ]) {
+      testWidgets('after scrolling the path, on $name', (tester) async {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        final curriculum = FakeCurriculumApi({
+          'MATH': leaves,
+          'FR': const [
+            CurriculumLeaf(
+              id: 'fr-1',
+              labelFr: 'Lire',
+              labelEn: '',
+              stableKey: 'francais-langue/lire/b:A/o:1',
+            ),
+          ],
+        });
+        await openCarte(
+          tester,
+          appUnder(leaves: leaves, content: content, curriculum: curriculum),
+        );
+        final pill = find.byKey(const ValueKey('subject-pill-FR'));
+        final header = tester.getRect(find.byKey(const ValueKey('carte-header')));
+        expect(strandTitle(tester), 'Arithmétique');
+
+        // Down into the second area.
+        await tester.dragUntilVisible(
+          find.byKey(const ValueKey('path-orb-g6')),
+          find.byKey(const ValueKey('carte-path')),
+          const Offset(0, -200),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          tester.getRect(find.byKey(const ValueKey('carte-header'))),
+          header,
+          reason: 'the header did not move',
+        );
+        expect(hittable(tester, pill), isTrue, reason: 'pills still tappable');
+        expect(strandTitle(tester), 'Géométrie', reason: 'title follows');
+        // Nothing of the path draws over the header.
+        final path = tester.getRect(find.byKey(const ValueKey('carte-path')));
+        expect(path.top, greaterThanOrEqualTo(header.bottom));
+
+        await tester.tap(pill);
+        await tester.pumpAndSettle();
+        expect(curriculum.requested.last, 'FR');
+        expect(find.text('Lire'), findsOneWidget);
+      });
+    }
   });
 }
