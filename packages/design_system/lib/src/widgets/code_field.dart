@@ -20,6 +20,10 @@ import '../tokens.dart';
 /// controllers: six fields means six focus nodes, and focus hopping backwards
 /// on delete is exactly the kind of fiddly behaviour that frustrates a child.
 class TutolysCodeField extends StatefulWidget {
+  /// The widest a box grows. A form wrapping this field can size itself to
+  /// `length * maxBoxWidth + gaps` so the boxes fill it edge to edge.
+  static const double maxBoxWidth = 64;
+
   const TutolysCodeField({
     required this.length,
     required this.alphabet,
@@ -118,7 +122,8 @@ class _TutolysCodeFieldState extends State<TutolysCodeField> {
                 // Boxes shrink to fit a narrow phone instead of overflowing.
                 final gap = context.isCompact ? Space.xs : Space.sm;
                 final available = constraints.maxWidth - gap * (widget.length - 1);
-                final boxWidth = (available / widget.length).clamp(36.0, 64.0);
+                final boxWidth = (available / widget.length)
+                    .clamp(36.0, TutolysCodeField.maxBoxWidth);
 
                 return Row(
                   mainAxisAlignment: MainAxisAlignment.center,

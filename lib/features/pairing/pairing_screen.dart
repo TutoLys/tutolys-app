@@ -190,79 +190,114 @@ class _PairingForm extends StatelessWidget {
     final s = context.s;
     final extras = context.extras;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(s.pairingTitle, style: context.text.displaySmall),
-        const SizedBox(height: Space.xs),
-        Text(
-          s.pairingSubtitle,
-          style: context.text.bodyLarge?.copyWith(color: extras.mutedText),
+    // One centred column, exactly as wide as the row of code boxes at full
+    // size: title, boxes, hint and button share one axis and one width, so
+    // the eye runs straight down to the button. Left-aligned headings over
+    // centred boxes over a wider button gave three edges and no line.
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth:
+              codeLength * TutolysCodeField.maxBoxWidth +
+              (codeLength - 1) * Space.sm,
         ),
-        const SizedBox(height: Space.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              s.pairingTitle,
+              textAlign: TextAlign.center,
+              style: context.text.displaySmall,
+            ),
+            const SizedBox(height: Space.xs),
+            Text(
+              s.pairingSubtitle,
+              textAlign: TextAlign.center,
+              style: context.text.bodyLarge?.copyWith(color: extras.mutedText),
+            ),
+            const SizedBox(height: Space.xl),
 
-        TutolysCodeField(
-          length: codeLength,
-          alphabet: alphabet,
-          enabled: !isSubmitting,
-          hasError: hasError,
-          onChanged: onChanged,
-          onCompleted: onCompleted,
-        ),
+            TutolysCodeField(
+              length: codeLength,
+              alphabet: alphabet,
+              enabled: !isSubmitting,
+              hasError: hasError,
+              onChanged: onChanged,
+              onCompleted: onCompleted,
+            ),
 
-        const SizedBox(height: Space.md),
+            const SizedBox(height: Space.md),
 
-        // Reserve the message row's height so the layout does not jump when an
-        // error appears — movement under a child's finger loses their place.
-        SizedBox(
-          height: 44,
-          child: AnimatedSwitcher(
-            duration: Motion.quick,
-            child: errorText != null
-                ? Row(
-                    key: const ValueKey('error'),
-                    children: [
-                      Icon(Icons.error_outline, color: extras.danger, size: 20),
-                      const SizedBox(width: Space.xs),
-                      Expanded(
-                        child: Text(
-                          errorText!,
-                          style: context.text.bodyMedium
-                              ?.copyWith(color: extras.danger),
+            // Reserve the message row's height so the layout does not jump when an
+            // error appears — movement under a child's finger loses their place.
+            SizedBox(
+              // Two lines of hint or error, so the longer wording never pushes
+              // the button down under a child's finger.
+              height: 48,
+              child: AnimatedSwitcher(
+                duration: Motion.quick,
+                child: errorText != null
+                    ? Row(
+                        key: const ValueKey('error'),
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(top: 1),
+                            child: Icon(
+                              Icons.error_outline,
+                              color: extras.danger,
+                              size: 18,
+                            ),
+                          ),
+                          const SizedBox(width: Space.xs),
+                          Flexible(
+                            child: Text(
+                              errorText!,
+                              maxLines: 2,
+                              textAlign: TextAlign.center,
+                              style: context.text.bodyMedium?.copyWith(
+                                color: extras.danger,
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : Text(
+                        s.pairingHint,
+                        key: const ValueKey('hint'),
+                        maxLines: 2,
+                        textAlign: TextAlign.center,
+                        style: context.text.bodyMedium?.copyWith(
+                          color: extras.mutedText,
                         ),
                       ),
-                    ],
-                  )
-                : Text(
-                    s.pairingHint,
-                    key: const ValueKey('hint'),
-                    style: context.text.bodyMedium
-                        ?.copyWith(color: extras.mutedText),
-                  ),
-          ),
-        ),
+              ),
+            ),
 
-        const SizedBox(height: Space.sm),
+            const SizedBox(height: Space.sm),
 
-        FilledButton(
-          onPressed: canSubmit ? onSubmit : null,
-          child: isSubmitting
-              ? Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const SizedBox(
-                      height: 18,
-                      width: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2.5),
-                    ),
-                    const SizedBox(width: Space.sm),
-                    Text(s.pairingConnecting),
-                  ],
-                )
-              : Text(s.pairingConnect),
+            FilledButton(
+              onPressed: canSubmit ? onSubmit : null,
+              child: isSubmitting
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                        ),
+                        const SizedBox(width: Space.sm),
+                        Text(s.pairingConnecting),
+                      ],
+                    )
+                  : Text(s.pairingConnect),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

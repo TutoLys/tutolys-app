@@ -202,7 +202,7 @@ class _FrenchStrings extends Strings {
 
   @override
   String get pairingHint =>
-      'Demande ton code à un adulte. Il a six caractères.';
+      'Demande ton code à la personne responsable de ton compte.';
 
   @override
   String get pairingConnect => 'Se connecter';
@@ -212,7 +212,7 @@ class _FrenchStrings extends Strings {
 
   @override
   String get pairingCodeInvalid =>
-      "Ce code ne fonctionne pas. Demande-en un nouveau à un adulte.";
+      "Ce code ne fonctionne pas. Demande-en un nouveau à la personne responsable de ton compte.";
 
   @override
   String get pairingOffline =>
@@ -597,7 +597,7 @@ class _EnglishStrings extends Strings {
 
   @override
   String get pairingHint =>
-      'Ask a grown-up for your code. It has six characters.';
+      'Ask the person in charge of your account for your code.';
 
   @override
   String get pairingConnect => 'Connect';
@@ -607,7 +607,7 @@ class _EnglishStrings extends Strings {
 
   @override
   String get pairingCodeInvalid =>
-      "That code doesn't work. Ask a grown-up for a new one.";
+      "That code doesn't work. Ask the person in charge of your account for a new one.";
 
   @override
   String get pairingOffline => "No internet. Check the Wi-Fi and try again.";

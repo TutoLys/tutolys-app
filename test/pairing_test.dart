@@ -386,7 +386,7 @@ void main() {
       expect(find.text('Salut !'), findsOneWidget);
       expect(find.text('Entre ton code pour commencer'), findsOneWidget);
       expect(
-        find.text('Demande ton code à un adulte. Il a six caractères.'),
+        find.text('Demande ton code à la personne responsable de ton compte.'),
         findsOneWidget,
       );
     });
@@ -477,7 +477,7 @@ void main() {
 
       expect(
         find.text(
-          "Ce code ne fonctionne pas. Demande-en un nouveau à un adulte.",
+          "Ce code ne fonctionne pas. Demande-en un nouveau à la personne responsable de ton compte.",
         ),
         findsOneWidget,
       );
