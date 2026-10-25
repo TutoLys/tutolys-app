@@ -158,10 +158,28 @@ class _VillageShellState extends ConsumerState<VillageShell> {
                   : t.gradeLabel(kid!.gradeLevel),
               compact: MediaQuery.sizeOf(context).width < Breakpoints.medium,
               stats: [
-                HeaderStat(
-                  asset: 'asset-xpstar.webp',
-                  label: '${progress.totalXp}',
-                ),
+                // The design's "Niv. 14" pill with its XP track. Offline
+                // there is no level (the app never computes one itself, so it
+                // can't disagree with the server's curve): the raw XP total
+                // stands in.
+                if (progress.level case final level?)
+                  HeaderStat(
+                    asset: 'asset-xpstar.webp',
+                    label: t.progressLevel(level),
+                    progress: progress.levelProgress,
+                    tooltip: progress.xpToNextLevel == null
+                        ? null
+                        : t.headerLevelTooltip(
+                            progress.totalXp,
+                            progress.xpToNextLevel!,
+                            level + 1,
+                          ),
+                  )
+                else
+                  HeaderStat(
+                    asset: 'asset-xpstar.webp',
+                    label: '${progress.totalXp}',
+                  ),
                 HeaderStat(
                   asset: 'asset-flame.webp',
                   label: progress.currentStreakDays == null

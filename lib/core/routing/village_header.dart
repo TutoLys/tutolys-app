@@ -3,9 +3,21 @@ import 'package:flutter/material.dart';
 
 /// One stat in the header: an icon and a value.
 class HeaderStat {
-  const HeaderStat({required this.asset, required this.label});
+  const HeaderStat({
+    required this.asset,
+    required this.label,
+    this.progress,
+    this.tooltip,
+  });
   final String asset;
   final String label;
+
+  /// 0..1: draws the design's small `.xp-track` after the label (the level
+  /// pill). Hidden on compact headers, as the design hides it there.
+  final double? progress;
+
+  /// Shown on hover/long-press and read by screen readers.
+  final String? tooltip;
 }
 
 /// The design's persistent header: 92px, white, a hairline beneath, the
@@ -107,7 +119,7 @@ class _StatPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final pill = Container(
       padding: EdgeInsets.symmetric(
         horizontal: compact ? 9 : 14,
         vertical: compact ? 5 : 7,
@@ -142,8 +154,18 @@ class _StatPill extends StatelessWidget {
               color: palette.ink,
             ),
           ),
+          // `.stat-pill .xp-track`: 46 x 5, 2px after the label.
+          if (stat.progress != null && !compact) ...[
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 46,
+              child: VillageProgressBar(value: stat.progress!, height: 5),
+            ),
+          ],
         ],
       ),
     );
+    final tip = stat.tooltip;
+    return tip == null ? pill : Tooltip(message: tip, child: pill);
   }
 }

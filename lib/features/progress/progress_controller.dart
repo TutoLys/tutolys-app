@@ -21,6 +21,8 @@ class ProgressState {
     this.totalXp = 0,
     this.masteries = const [],
     this.level,
+    this.xpIntoLevel,
+    this.xpToNextLevel,
   });
 
   final int? currentStreakDays;
@@ -56,6 +58,20 @@ class ProgressState {
   /// The kid's level, from the server's own curve. Null while offline — a
   /// level computed here would be a second curve that can disagree.
   final int? level;
+
+  /// See `ProgressSnapshot.xpIntoLevel`. Null whenever [level] is.
+  final int? xpIntoLevel;
+  final int? xpToNextLevel;
+
+  /// How far through the current level, 0..1. Null when there is no level
+  /// to be through (offline, or a backend without levels).
+  double? get levelProgress {
+    final into = xpIntoLevel, next = xpToNextLevel;
+    if (level == null || into == null || next == null || into + next <= 0) {
+      return null;
+    }
+    return into / (into + next);
+  }
 }
 
 class ProgressController extends Notifier<ProgressState> {
@@ -89,6 +105,8 @@ class ProgressController extends Notifier<ProgressState> {
         totalXp: snapshot.totalXp,
         masteries: snapshot.masteries,
         level: snapshot.level,
+        xpIntoLevel: snapshot.xpIntoLevel,
+        xpToNextLevel: snapshot.xpToNextLevel,
       ),
       ProgressOffline() => ProgressState(
         loading: false,

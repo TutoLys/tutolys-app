@@ -57,6 +57,8 @@ class ProgressSnapshot {
     this.dailyQuest,
     this.totalXp = 0,
     this.level,
+    this.xpIntoLevel,
+    this.xpToNextLevel,
   });
 
   factory ProgressSnapshot.fromJson(Map<String, Object?> json) {
@@ -77,6 +79,8 @@ class ProgressSnapshot {
       // earned any yet), even when the rest of the payload degrades.
       totalXp: json['total_xp'] as int? ?? 0,
       level: json['level'] as int?,
+      xpIntoLevel: json['xp_into_level'] as int?,
+      xpToNextLevel: json['xp_to_next_level'] as int?,
     );
   }
 
@@ -103,6 +107,12 @@ class ProgressSnapshot {
   /// Off `total_xp` through the backend's admin-editable `LevelCurve` (ADR
   /// 0024). Null only from a backend that predates levels.
   final int? level;
+
+  /// XP earned inside the current level, and XP still needed for the next
+  /// one. Their sum is the level's size, so progress through it is
+  /// `into / (into + toNext)`; the backend guarantees the sum is never 0.
+  final int? xpIntoLevel;
+  final int? xpToNextLevel;
 
   int get masteredCount => masteries.where((m) => m.isMastered).length;
 }

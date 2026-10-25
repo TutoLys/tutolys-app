@@ -85,6 +85,7 @@ abstract class Strings {
 
   // --- progrès -------------------------------------------------------------
   String progressLevel(int level);
+  String headerLevelTooltip(int totalXp, int toNext, int nextLevel);
 
   /// The card over the strand rows, e.g. "Mathématique — par compétence".
   String progressBySkill(String subject);
@@ -443,6 +444,10 @@ class _FrenchStrings extends Strings {
 
   @override
   String progressLevel(int level) => 'Niv. $level';
+
+  @override
+  String headerLevelTooltip(int totalXp, int toNext, int nextLevel) =>
+      '$totalXp XP · encore $toNext XP pour le niveau $nextLevel';
 
   @override
   String progressBySkill(String subject) => '$subject — par compétence';
@@ -1092,6 +1097,10 @@ class _EnglishStrings extends Strings {
 
   @override
   String progressLevel(int level) => 'Lvl $level';
+
+  @override
+  String headerLevelTooltip(int totalXp, int toNext, int nextLevel) =>
+      '$totalXp XP · $toNext XP to level $nextLevel';
 
   @override
   String progressBySkill(String subject) => '$subject — by skill';
