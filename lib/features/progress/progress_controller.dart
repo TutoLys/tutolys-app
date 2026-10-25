@@ -20,6 +20,7 @@ class ProgressState {
     this.dailyQuest,
     this.totalXp = 0,
     this.masteries = const [],
+    this.level,
   });
 
   final int? currentStreakDays;
@@ -51,6 +52,10 @@ class ProgressState {
   /// caller can join it against the cached curriculum — which is how the
   /// Village gets a per-subject figure without a new endpoint.
   final List<SkillMasteryDto> masteries;
+
+  /// The kid's level, from the server's own curve. Null while offline — a
+  /// level computed here would be a second curve that can disagree.
+  final int? level;
 }
 
 class ProgressController extends Notifier<ProgressState> {
@@ -83,6 +88,7 @@ class ProgressController extends Notifier<ProgressState> {
         dailyQuest: snapshot.dailyQuest,
         totalXp: snapshot.totalXp,
         masteries: snapshot.masteries,
+        level: snapshot.level,
       ),
       ProgressOffline() => ProgressState(
         loading: false,

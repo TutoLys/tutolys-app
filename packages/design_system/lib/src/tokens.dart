@@ -276,6 +276,7 @@ class VillagePalette {
     required this.shadowSmall,
     required this.navActiveFill,
     required this.navHoverFill,
+    required this.goldPale,
     required this.isDark,
   });
 
@@ -296,6 +297,7 @@ class VillagePalette {
     shadow: VillageColors.shadow,
     shadowSmall: VillageColors.shadowSmall,
     navActiveFill: Color(0xFFE8F0FF),
+    goldPale: VillageColors.goldPale,
     navHoverFill: Color(0xFFF4F8FF),
     isDark: false,
   );
@@ -317,6 +319,7 @@ class VillagePalette {
     shadow: VillageDarkColors.shadow,
     shadowSmall: VillageDarkColors.shadowSmall,
     navActiveFill: VillageDarkColors.bluePale,
+    goldPale: VillageDarkColors.goldPale,
     navHoverFill: VillageDarkColors.bluePale,
     isDark: true,
   );
@@ -338,6 +341,10 @@ class VillagePalette {
   final Color shadowSmall;
   final Color navActiveFill;
   final Color navHoverFill;
+
+  /// `--gold-pale`: the ground behind gold text, e.g. a "Maîtrisé" pill. A
+  /// background, so dark mode inverts it to deep brown rather than darkening.
+  final Color goldPale;
   final bool isDark;
 
   static VillagePalette of(BuildContext context) =>

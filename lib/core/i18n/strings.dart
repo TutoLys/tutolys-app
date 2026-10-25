@@ -58,6 +58,22 @@ abstract class Strings {
   /// maîtrisé" would read as a score rather than a beginning.
   String get pathNotStarted;
 
+  // --- progrès -------------------------------------------------------------
+  String progressLevel(int level);
+
+  /// The card over the strand rows, e.g. "Mathématique — par compétence".
+  String progressBySkill(String subject);
+  String get progressStatusMastered;
+  String get progressStatusLearning;
+  String get progressStatusNew;
+
+  /// The row for leaves no known learning area claims.
+  String get progressOtherSkills;
+  String get progressNothingYet;
+
+  /// French puts a space before "%", English does not.
+  String progressPercent(int pct);
+
   // --- profile -------------------------------------------------------------
   String profileGrade(int grade);
   String get profileBadgesComingSoon;
@@ -314,6 +330,31 @@ class _FrenchStrings extends Strings {
 
   @override
   String get pathNotStarted => 'À découvrir';
+
+  @override
+  String progressLevel(int level) => 'Niv. $level';
+
+  @override
+  String progressBySkill(String subject) => '$subject — par compétence';
+
+  @override
+  String get progressStatusMastered => 'Maîtrisé';
+
+  @override
+  String get progressStatusLearning => 'En cours';
+
+  @override
+  String get progressStatusNew => 'À découvrir';
+
+  @override
+  String get progressOtherSkills => 'Autres compétences';
+
+  @override
+  String get progressNothingYet =>
+      "Rien à montrer pour cette matière pour l'instant.";
+
+  @override
+  String progressPercent(int pct) => '$pct %';
 
   @override
   String get profileTitle => 'Mon profil';
@@ -791,6 +832,30 @@ class _EnglishStrings extends Strings {
 
   @override
   String get pathNotStarted => 'Up next';
+
+  @override
+  String progressLevel(int level) => 'Lvl $level';
+
+  @override
+  String progressBySkill(String subject) => '$subject — by skill';
+
+  @override
+  String get progressStatusMastered => 'Mastered';
+
+  @override
+  String get progressStatusLearning => 'In progress';
+
+  @override
+  String get progressStatusNew => 'Not started';
+
+  @override
+  String get progressOtherSkills => 'Other skills';
+
+  @override
+  String get progressNothingYet => 'Nothing to show for this subject yet.';
+
+  @override
+  String progressPercent(int pct) => '$pct%';
 
   @override
   String get profileTitle => 'My profile';

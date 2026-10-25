@@ -7,6 +7,7 @@ import '../../features/path/path_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/about/about_screen.dart';
 import '../../features/progress/progress_controller.dart';
+import '../../features/progress/progress_screen.dart';
 import '../../features/quests/quests_screen.dart';
 import '../../features/help/help_screen.dart';
 import '../../features/settings/settings_screen.dart';
@@ -22,9 +23,7 @@ import 'village_nav.dart';
 /// locally rather than through go_router — none of them need their own URL,
 /// only `/play` does, and that is pushed on top of this whole shell.
 ///
-/// Five of the six destinations have real screens. Progrès does not yet,
-/// and renders an honest placeholder naming itself rather than a blank or a
-/// fake.
+/// All six destinations have real screens.
 class VillageShell extends ConsumerStatefulWidget {
   const VillageShell({super.key});
 
@@ -47,7 +46,7 @@ class _VillageShellState extends ConsumerState<VillageShell> {
         ),
         const PathScreen(),
         QuestsScreen(onOpenPath: () => setState(() => _index = 1)),
-        _NotBuiltYet(title: s.navProgres),
+        const ProgressScreen(),
         const ProfileScreen(),
         SettingsScreen(
           onOpenHelp: () => setState(() => _index = _helpIndex),
@@ -145,47 +144,4 @@ class _VillageShellState extends ConsumerState<VillageShell> {
     );
   }
 
-}
-
-/// A page that does not exist yet, saying so.
-class _NotBuiltYet extends StatelessWidget {
-  const _NotBuiltYet({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Image.asset(
-            'assets/images/asset-mascot-welcome.webp',
-            width: 120,
-            fit: BoxFit.contain,
-          ),
-          const SizedBox(height: Space.md),
-          Text(
-            title,
-            style: const TextStyle(
-              fontFamily: VillageType.display,
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-              color: VillageColors.quebecBlue,
-            ),
-          ),
-          const SizedBox(height: Space.xs),
-          Text(
-            context.s.comingSoonTitle,
-            style: TextStyle(
-              fontFamily: VillageType.display,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: VillageColors.inkMuted,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

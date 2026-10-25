@@ -12,6 +12,52 @@ class PathSection {
   final List<PathNode> nodes;
 }
 
+/// A learning area's leaves, in curriculum order.
+class AreaGroup {
+  const AreaGroup({required this.title, required this.leaves});
+
+  /// Null for leaves whose strand no known area claims.
+  final String? title;
+  final List<CachedSkillNode> leaves;
+}
+
+/// Groups a subject's leaves by PFEQ learning area, in the ministry's order,
+/// each sorted by its `stable_key`. Leaves no area claims come last,
+/// untitled. Shared by the Carte and Progrès so their titles always agree.
+List<AreaGroup> groupLeavesByArea({
+  required String subject,
+  required List<CachedSkillNode> leaves,
+  required bool english,
+}) {
+  final areas = learningAreas[subject] ?? const <LearningArea>[];
+  final areaOfStrand = <String, int>{
+    for (var i = 0; i < areas.length; i++)
+      for (final strand in areas[i].strands) strand: i,
+  };
+
+  // -1 collects leaves no area claims; it goes last, untitled.
+  final groups = <int, List<CachedSkillNode>>{};
+  for (final leaf in leaves) {
+    final strand = strandOf(leaf.stableKey);
+    final area = strand == null ? -1 : (areaOfStrand[strand] ?? -1);
+    groups.putIfAbsent(area, () => []).add(leaf);
+  }
+
+  final order = groups.keys.toList()
+    ..sort((a, b) => a == -1 ? 1 : (b == -1 ? -1 : a.compareTo(b)));
+
+  return [
+    for (final area in order)
+      AreaGroup(
+        title: area == -1
+            ? null
+            : (english ? areas[area].labelEn : areas[area].labelFr),
+        leaves: groups[area]!
+          ..sort((a, b) => naturalCompare(a.stableKey, b.stableKey)),
+      ),
+  ];
+}
+
 /// Lays a subject's leaves out as the Carte draws them.
 ///
 /// Every state is real or absent:
@@ -29,35 +75,19 @@ List<PathSection> buildCarteSections({
   required List<SkillMasteryDto> masteries,
   required bool english,
 }) {
-  final areas = learningAreas[subject] ?? const <LearningArea>[];
-  final areaOfStrand = <String, int>{
-    for (var i = 0; i < areas.length; i++)
-      for (final strand in areas[i].strands) strand: i,
-  };
-
-  // -1 collects leaves no area claims; it goes last, untitled.
-  final groups = <int, List<CachedSkillNode>>{};
-  for (final leaf in leaves) {
-    final strand = strandOf(leaf.stableKey);
-    final area = strand == null ? -1 : (areaOfStrand[strand] ?? -1);
-    groups.putIfAbsent(area, () => []).add(leaf);
-  }
-
   final masteryOf = {for (final m in masteries) m.skillNodeId: m};
   var frontierTaken = false;
 
-  final order = groups.keys.toList()
-    ..sort((a, b) => a == -1 ? 1 : (b == -1 ? -1 : a.compareTo(b)));
-
   return [
-    for (final area in order)
+    for (final group in groupLeavesByArea(
+      subject: subject,
+      leaves: leaves,
+      english: english,
+    ))
       PathSection(
-        title: area == -1
-            ? null
-            : (english ? areas[area].labelEn : areas[area].labelFr),
+        title: group.title,
         nodes: [
-          for (final leaf in groups[area]!
-            ..sort((a, b) => naturalCompare(a.stableKey, b.stableKey)))
+          for (final leaf in group.leaves)
             () {
               final mastery = masteryOf[leaf.id];
               final PathNodeState state;

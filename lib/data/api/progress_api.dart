@@ -56,6 +56,7 @@ class ProgressSnapshot {
     this.freezesAvailable,
     this.dailyQuest,
     this.totalXp = 0,
+    this.level,
   });
 
   factory ProgressSnapshot.fromJson(Map<String, Object?> json) {
@@ -75,6 +76,7 @@ class ProgressSnapshot {
       // telemetry, so it's always a real number (0 for a kid who hasn't
       // earned any yet), even when the rest of the payload degrades.
       totalXp: json['total_xp'] as int? ?? 0,
+      level: json['level'] as int?,
     );
   }
 
@@ -97,6 +99,10 @@ class ProgressSnapshot {
   /// question completed, so a multi-question exercise naturally earns
   /// more than a single-question one with no special handling needed here.
   final int totalXp;
+
+  /// Off `total_xp` through the backend's admin-editable `LevelCurve` (ADR
+  /// 0024). Null only from a backend that predates levels.
+  final int? level;
 
   int get masteredCount => masteries.where((m) => m.isMastered).length;
 }
