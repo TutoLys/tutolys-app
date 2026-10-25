@@ -54,13 +54,20 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < Breakpoints.compact;
+          final pad = compact ? Space.md : Space.lg;
+          // Quêtes' column: the list still scrolls edge to edge, but its
+          // content centres at `PageWidth.content` on a wide window.
+          final side = ((constraints.maxWidth - PageWidth.content) / 2).clamp(
+            pad,
+            double.infinity,
+          );
           return RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(progressLeavesProvider(_subject));
               await ref.read(progressControllerProvider.notifier).refresh();
             },
             child: ListView(
-              padding: EdgeInsets.all(compact ? Space.md : Space.lg),
+              padding: EdgeInsets.symmetric(horizontal: side, vertical: pad),
               children: [
                 // `.progress-summary`: tiles that wrap rather than squeeze.
                 Wrap(

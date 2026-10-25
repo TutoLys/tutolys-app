@@ -105,7 +105,7 @@ class _QuestsScreenState extends ConsumerState<QuestsScreen> {
         padding: padding,
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1040),
+            constraints: const BoxConstraints(maxWidth: PageWidth.content),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -136,7 +136,7 @@ class _QuestsScreenState extends ConsumerState<QuestsScreen> {
       padding: padding,
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1040),
+          constraints: const BoxConstraints(maxWidth: PageWidth.content),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -1004,4 +1004,3 @@ class TodayRing extends StatelessWidget {
     );
   }
 }
-

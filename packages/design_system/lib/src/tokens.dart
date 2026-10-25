@@ -197,6 +197,13 @@ abstract final class Motion {
   static const Curve bounce = Curves.elasticOut;
 }
 
+/// How wide a page's content column grows before it centres instead.
+abstract final class PageWidth {
+  /// Quêtes and Progrès: cards, stats and bars stop growing here, so a skill
+  /// bar never runs the width of a 2000px window.
+  static const double content = 1040;
+}
+
 /// Breakpoints.
 ///
 /// One widget tree per screen; only presentation adapts (plan §6.3). Logic is

@@ -7,6 +7,7 @@ import 'package:tutolys_app/data/api/progress_api.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
 import 'package:tutolys_app/features/progress/progress_controller.dart';
 import 'package:tutolys_app/features/progress/progress_screen.dart';
+import 'package:tutolys_app/features/path/subject_pills.dart';
 
 class _FixedProgress extends ProgressController {
   _FixedProgress(this._state);
@@ -96,7 +97,11 @@ void main() {
         progress: const ProgressState(
           loading: false,
           masteries: [
-            SkillMasteryDto(skillNodeId: 'm', masteryPct: 50, isMastered: false),
+            SkillMasteryDto(
+              skillNodeId: 'm',
+              masteryPct: 50,
+              isMastered: false,
+            ),
             SkillMasteryDto(skillNodeId: 'g', masteryPct: 90, isMastered: true),
           ],
         ),
@@ -142,5 +147,21 @@ void main() {
 
     expect(find.text('Science et techno. — par compétence'), findsOneWidget);
     expect(find.text('L’univers vivant'), findsOneWidget);
+  });
+
+  testWidgets('on a wide window the content stops at Quêtes\' width', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(2000, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      screen(progress: const ProgressState(loading: false, totalXp: 0)),
+    );
+    await tester.pumpAndSettle();
+
+    final pills = tester.getRect(find.byType(SubjectPills));
+    expect(pills.width, PageWidth.content);
+    expect(pills.center.dx, 1000, reason: 'centred, not left-aligned');
   });
 }
