@@ -129,4 +129,130 @@ void main() {
     expect(find.byType(VillageShell), findsOneWidget);
     expect(find.byType(PlayScreen), findsNothing);
   });
+
+  group('every page has its own URL', () {
+    int shownIndex(WidgetTester tester) => tester
+        .widget<IndexedStack>(
+          find.descendant(
+            of: find.byType(VillageShell),
+            matching: find.byType(IndexedStack),
+          ),
+        )
+        .index!;
+
+    testWidgets('a refresh on a page comes back to that page', (tester) async {
+      // A refresh rebuilds the router from the browser URL, which is what
+      // `initialLocation` stands in for here.
+      for (final (i, page) in VillageShell.pages.indexed) {
+        final router = GoRouter(
+          initialLocation: '/$page',
+          routes: buildPairedRouter().configuration.routes,
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(appUnder(router));
+        await tester.pumpAndSettle();
+
+        expect(shownIndex(tester), i, reason: '/$page');
+      }
+    });
+
+    testWidgets('switching pages changes the URL, and keeps the pages alive',
+        (tester) async {
+      final router = buildPairedRouter();
+      addTearDown(router.dispose);
+      await tester.pumpWidget(appUnder(router));
+      await tester.pumpAndSettle();
+      final shell = tester.state(find.byType(VillageShell));
+
+      router.go('/progres');
+      await tester.pumpAndSettle();
+
+      expect(router.state.uri.path, '/progres');
+      expect(shownIndex(tester), VillageShell.pages.indexOf('progres'));
+      expect(tester.state(find.byType(VillageShell)), same(shell),
+          reason: 'one shell for every page: rebuilding it per URL would '
+              're-fire every page\'s load');
+    });
+
+    testWidgets('a nav tap goes through the URL', (tester) async {
+      final router = buildPairedRouter();
+      addTearDown(router.dispose);
+      await tester.pumpWidget(appUnder(router));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Profil').first);
+      await tester.pumpAndSettle();
+
+      expect(router.state.uri.path, '/profil');
+    });
+
+    for (final old in ['/', '/home', '/nowhere']) {
+      testWidgets('$old lands on the Village', (tester) async {
+        final router = GoRouter(
+          initialLocation: old,
+          routes: buildPairedRouter().configuration.routes,
+          redirect: (context, state) =>
+              state.uri.path == '/' ? '/village' : null,
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(appUnder(router));
+        await tester.pumpAndSettle();
+
+        expect(router.state.uri.path, '/village');
+        expect(find.text('ACTIVITÉ RECOMMANDÉE'), findsOneWidget);
+      });
+    }
+
+    testWidgets('a refresh during a game goes to the Carte, not a crash',
+        (tester) async {
+      // The play request lives only in memory, so a reload has none.
+      final router = GoRouter(
+        initialLocation: '/play',
+        routes: buildPairedRouter().configuration.routes,
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(appUnder(router));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(router.state.uri.path, '/carte');
+      expect(find.byType(PlayScreen), findsNothing);
+    });
+  });
+
+  group('launch location (a browser refresh)', () {
+    testWidgets('the page in the URL at launch is the first page shown',
+        (tester) async {
+      rememberLaunchLocation(Uri.parse('http://127.0.0.1:8080/#/progres'));
+      final router = buildPairedRouter();
+      addTearDown(router.dispose);
+      await tester.pumpWidget(appUnder(router));
+      await tester.pumpAndSettle();
+
+      expect(router.state.uri.path, '/progres');
+    });
+
+    testWidgets('it is used once: a re-pair starts at the Village',
+        (tester) async {
+      rememberLaunchLocation(Uri.parse('http://127.0.0.1:8080/#/progres'));
+      buildPairedRouter().dispose();
+
+      final again = buildPairedRouter();
+      addTearDown(again.dispose);
+      await tester.pumpWidget(appUnder(again));
+      await tester.pumpAndSettle();
+
+      expect(again.state.uri.path, '/village');
+    });
+
+    testWidgets('no fragment (desktop) means the Village', (tester) async {
+      rememberLaunchLocation(Uri.parse('file:///home/kid/app/'));
+      final router = buildPairedRouter();
+      addTearDown(router.dispose);
+      await tester.pumpWidget(appUnder(router));
+      await tester.pumpAndSettle();
+
+      expect(router.state.uri.path, '/village');
+    });
+  });
 }

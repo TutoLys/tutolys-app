@@ -1,6 +1,7 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../features/home/village_screen.dart';
 import '../../features/path/path_screen.dart';
@@ -20,20 +21,47 @@ import 'village_nav.dart';
 /// The paired learner's shell: the design's navigation chrome wrapped around
 /// whichever page is current.
 ///
-/// Replaces the three-tab `HomeShell` from A7.2. Tabs are still switched
-/// locally rather than through go_router — none of them need their own URL,
-/// only `/play` does, and that is pushed on top of this whole shell.
+/// Replaces the three-tab `HomeShell` from A7.2.
 ///
-/// All six destinations have real screens.
+/// Every page has its own URL (`/carte`, `/progres`, …), and [page] comes
+/// from it. Holding the tab only in memory sent every refresh back to the
+/// Village, and gave the browser's back button nothing to go back to.
+/// Switching pages calls `go`, so the URL is the single source of truth;
+/// the router keeps this one shell instance across pages (see
+/// `buildPairedRouter`), so the `IndexedStack` below still keeps every page
+/// alive.
 class VillageShell extends ConsumerStatefulWidget {
-  const VillageShell({super.key});
+  const VillageShell({this.page = VillageShell.defaultPage, super.key});
+
+  /// The slug of the page to show, one of [pages].
+  final String page;
+
+  /// URL slugs, in `IndexedStack` order. French, like the labels they stand
+  /// for; never translated, so a bookmark survives a language switch.
+  static const pages = [
+    'village',
+    'carte',
+    'quetes',
+    'progres',
+    'profil',
+    'reglages',
+    'aide',
+    'a-propos',
+  ];
+
+  static const defaultPage = 'village';
 
   @override
   ConsumerState<VillageShell> createState() => _VillageShellState();
 }
 
 class _VillageShellState extends ConsumerState<VillageShell> {
-  int _index = 0;
+  int get _index {
+    final i = VillageShell.pages.indexOf(widget.page);
+    return i < 0 ? 0 : i;
+  }
+
+  void _open(int index) => context.go('/${VillageShell.pages[index]}');
 
   /// `IndexedStack`, not a rebuilt child per tab: switching must not
   /// re-trigger each screen's one-shot `build()` load — Home's and Path's
@@ -43,15 +71,15 @@ class _VillageShellState extends ConsumerState<VillageShell> {
           // Everything on Village that invites a tap — the CTA, a quest, a
           // building — leads to the Carte, which is the only place a kid can
           // actually play.
-          onOpenPath: () => setState(() => _index = 1),
+          onOpenPath: () => _open(1),
         ),
         const PathScreen(),
-        QuestsScreen(onOpenPath: () => setState(() => _index = 1)),
+        QuestsScreen(onOpenPath: () => _open(1)),
         const ProgressScreen(),
         const ProfileScreen(),
         SettingsScreen(
-          onOpenHelp: () => setState(() => _index = _helpIndex),
-          onOpenAbout: () => setState(() => _index = _aboutIndex),
+          onOpenHelp: () => _open(_helpIndex),
+          onOpenAbout: () => _open(_aboutIndex),
         ),
         const HelpScreen(),
         const AboutScreen(),
@@ -106,12 +134,10 @@ class _VillageShellState extends ConsumerState<VillageShell> {
         ),
         secondary: _secondary(t),
         currentIndex: _index,
-        onSelect: (i) => setState(() => _index = i),
-        onSecondarySelect: (i) => setState(
-          () => _index = _primary(t).length + i,
-        ),
+        onSelect: _open,
+        onSecondarySelect: (i) => _open(_primary(t).length + i),
         helpLabel: t.navHelp,
-        onHelp: () => setState(() => _index = _helpIndex),
+        onHelp: () => _open(_helpIndex),
         child: Column(
           children: [
             // Chrome, not page content: it stays put as the kid moves

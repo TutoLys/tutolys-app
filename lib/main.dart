@@ -6,6 +6,7 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/routing/app_shell.dart';
+import 'core/routing/paired_router.dart' show rememberLaunchLocation;
 import 'core/startup/release_config_guard.dart';
 import 'data/local_db/database.dart';
 import 'data/local_db/session_store.dart';
@@ -26,6 +27,10 @@ void main() {
   // once the session has resolved, so there is one splash and it ends when
   // the app can actually be used.
   FlutterNativeSplash.preserve(widgetsBinding: binding);
+
+  // The page the browser was on (`#/carte`…), read before anything can
+  // reset the URL, so a refresh reopens it instead of the Village.
+  rememberLaunchLocation(Uri.base);
 
   // Before anything else: a release build still pointed at localhost must
   // fail visibly, not silently ship broken to a real user.

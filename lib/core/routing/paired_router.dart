@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart' show ValueKey;
 import 'package:go_router/go_router.dart';
 
 import '../../data/local_db/database.dart';
@@ -15,9 +16,8 @@ class PlayRequest {
   final Map<String, Object?> envelope;
 }
 
-/// The two routes inside the paired shell (A7, A7.2): the learner's three
-/// tabs (switched locally inside `VillageShell` — none of
-/// them need their own URL), and one exercise.
+/// The routes inside the paired shell: one URL per page of the learner's
+/// shell (`/village`, `/carte`, …), and one exercise.
 ///
 /// Deliberately not the app's top-level router — `AppShell`'s own
 /// checking/unpaired/paired switch stays a plain Dart switch (its own doc
@@ -26,13 +26,38 @@ class PlayRequest {
 /// branch, nested via `Router.withConfig` rather than a second
 /// `MaterialApp.router` — so it inherits the outer `MaterialApp`'s theme and
 /// localizations instead of needing its own copy.
-GoRouter buildPairedRouter() {
+/// The in-app location the browser was showing when the app launched.
+///
+/// Captured in `main` before `runApp`, because by the time this router is
+/// built (after the splash and session restore) the outer `MaterialApp`'s
+/// own navigator has already reset the browser URL to `/`. Reading it then
+/// sent every refresh back to the Village.
+String? _launchLocation;
+
+/// Records where the app was launched, from the browser URL's `#/…`
+/// fragment (the web's hash URL strategy). A no-op on desktop, where
+/// [url] is a file path with no fragment.
+void rememberLaunchLocation(Uri url) {
+  final fragment = url.fragment;
+  if (fragment.startsWith('/') && fragment != '/') _launchLocation = fragment;
+}
+
+/// [initialLocation] defaults to the launch location, used once: a kid who
+/// forgets the device and re-pairs starts back at the Village, not on the
+/// page they had open before.
+GoRouter buildPairedRouter({String? initialLocation}) {
+  final start = initialLocation ?? _launchLocation;
+  _launchLocation = null;
   return GoRouter(
-    initialLocation: '/home',
+    initialLocation: start ?? '/${VillageShell.defaultPage}',
     routes: [
-      GoRoute(path: '/home', builder: (context, state) => const VillageShell()),
       GoRoute(
         path: '/play',
+        // A refresh during a game reloads the URL but loses `extra`, which
+        // lived only in memory. Back to the Carte, where the kid picks the
+        // node again, rather than a crash on a missing request.
+        redirect: (context, state) =>
+            state.extra is PlayRequest ? null : '/carte',
         // `extra` carries the request directly — this router is never
         // deep-linked into from outside the app, so there is no need to
         // encode it into the URL and parse it back out.
@@ -41,6 +66,27 @@ GoRouter buildPairedRouter() {
           return PlayScreen(node: request.node, envelope: request.envelope);
         },
       ),
+      GoRoute(
+        path: '/:page',
+        // Unknown pages, and `/home` from before pages had URLs, land on
+        // the Village rather than an error screen.
+        redirect: (context, state) =>
+            VillageShell.pages.contains(state.pathParameters['page'])
+                ? null
+                : '/${VillageShell.defaultPage}',
+        // One fixed page key for every page: the navigator then updates
+        // the same shell instead of building a new one per URL, so the
+        // pages in its IndexedStack stay alive and their loads don't
+        // re-fire. No transition — switching pages is not navigating away.
+        pageBuilder: (context, state) => NoTransitionPage(
+          key: const ValueKey('village-shell'),
+          child: VillageShell(page: state.pathParameters['page']!),
+        ),
+      ),
     ],
+    // `/` (a bare origin) has no page segment for the route above.
+    redirect: (context, state) => state.uri.path == '/'
+        ? '/${VillageShell.defaultPage}'
+        : null,
   );
 }
