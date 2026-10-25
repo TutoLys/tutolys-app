@@ -128,6 +128,14 @@ void main() {
       Strings.en.notificationStreakFreeze,
     );
     expect(
+      notificationText(Strings.fr, n('a', 'streak_freeze_refunded')),
+      "Tu avais joué ce jour-là : ton bouclier t'est rendu.",
+    );
+    expect(
+      notificationText(Strings.en, n('a', 'streak_freeze_refunded')),
+      'You played that day after all, so your shield is back.',
+    );
+    expect(
       notificationText(Strings.en, n('a', 'something_new')),
       'Message du serveur',
       reason: 'an unknown type falls back to the server text',

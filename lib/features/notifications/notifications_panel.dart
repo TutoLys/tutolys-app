@@ -175,13 +175,15 @@ class _NotificationsPanelState extends ConsumerState<NotificationsPanel> {
 String notificationText(Strings t, NotificationDto n) => switch (n.type) {
   'daily_quest_completed' => t.notificationDailyQuest,
   'streak_freeze_spent' => t.notificationStreakFreeze,
+  'streak_freeze_refunded' => t.notificationStreakFreezeRefunded,
   _ => n.message,
 };
 
 (String, Color) _iconFor(NotificationDto n, VillagePalette p) =>
     switch (n.type) {
       'daily_quest_completed' => ('asset-target.webp', p.goldPale),
-      'streak_freeze_spent' => ('asset-flame.webp', p.navActiveFill),
+      'streak_freeze_spent' ||
+      'streak_freeze_refunded' => ('asset-flame.webp', p.navActiveFill),
       _ => ('asset-bell.webp', p.track),
     };
 

@@ -197,6 +197,10 @@ abstract class Strings {
   String get notificationsEmptyHint;
   String get notificationDailyQuest;
   String get notificationStreakFreeze;
+
+  /// A shield spent on a day that turned out to be played (offline play
+  /// uploaded late) is given back (backend ADR 0060).
+  String get notificationStreakFreezeRefunded;
   String notificationsBellLabel(int unread);
   String notificationsAgo(Duration elapsed);
   String get villageNoQuests;
@@ -759,6 +763,10 @@ class _FrenchStrings extends Strings {
   @override
   String get notificationStreakFreeze =>
       'Ton bouclier a protégé ta série.';
+
+  @override
+  String get notificationStreakFreezeRefunded =>
+      "Tu avais joué ce jour-là : ton bouclier t'est rendu.";
 
   @override
   String notificationsBellLabel(int unread) => switch (unread) {
@@ -1519,6 +1527,10 @@ class _EnglishStrings extends Strings {
 
   @override
   String get notificationStreakFreeze => 'Your shield saved your streak.';
+
+  @override
+  String get notificationStreakFreezeRefunded =>
+      'You played that day after all, so your shield is back.';
 
   @override
   String notificationsBellLabel(int unread) => switch (unread) {
