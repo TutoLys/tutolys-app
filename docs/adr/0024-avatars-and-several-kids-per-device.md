@@ -92,4 +92,7 @@ The work order's P3 pins it with tests.
   here too. Level unlocks follow the server's level, so those do carry
   over.
 - **Avatar art**: 16 of 17 avatars are still to be drawn.
-- **Live verification** of the avatar push needs P1 on the dev-stack.
+- **Live verification is API-level only.** `dev-stack/scripts/e2e_profile.py`
+  (2026-10-25, 22/22) pairs two kids on one `device_id` and checks
+  `/me/profile` GET/PATCH and per-kid token refresh against the real
+  backend. The Flutter UI driving those calls was not run live.
