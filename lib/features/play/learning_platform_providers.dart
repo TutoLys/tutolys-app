@@ -29,6 +29,7 @@ final learningEngineRegistryProvider = Provider<LearningEngineRegistry>(
     eraseEngine(const PassageReaderEngine()),
     eraseEngine(const BalanceScaleEngine()),
     eraseEngine(const LabelImageEngine()),
+    eraseEngine(const FillBlankEngine()),
   ]),
 );
 
@@ -46,6 +47,7 @@ final evaluatorRegistryProvider = Provider<EvaluatorRegistry>(
     PassageReaderEvaluator(),
     BalanceScaleEvaluator(),
     LabelImageEvaluator(),
+    FillBlankEvaluator(),
   ]),
 );
 

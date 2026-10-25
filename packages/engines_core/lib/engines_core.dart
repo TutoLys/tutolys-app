@@ -29,3 +29,4 @@ export 'src/data_graph/data_graph_engine.dart';
 export 'src/passage_reader/passage_reader_engine.dart';
 export 'src/balance_scale/balance_scale_engine.dart';
 export 'src/label_image/label_image_engine.dart';
+export 'src/fill_blank/fill_blank_engine.dart';
