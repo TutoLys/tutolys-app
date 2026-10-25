@@ -90,3 +90,41 @@ order" then "now put them on the line" is one lesson, and LE-B5
 - All 76 exercises committed in `tutolys-backend/content/` still validate,
   with 0 warnings.
 - **Not done:** live web play and dev-stack activation (no Docker here).
+
+## Amendment, same day: numeric ranges and distractors
+
+The Questions Maker's answers came after the first version and changed two
+of its calls.
+
+- **A numeric axis is generated, not listed**:
+  `range: {min, max, step = 1, label_every = step}`. It makes one tick per
+  step, with id `v<value>`, labelled with its value only every
+  `label_every`. Items say `at: 7` instead of `tick`.
+
+  The point is the skill itself: placing 7 on a 0–20 line labelled only at
+  0, 5, 10, 15, 20 is estimating; labelling every tick turns it into
+  reading. Listed `ticks` stay for non-numeric axes (ages, moments).
+- **Up to 21 ticks** (was 11), so 0–20 by 1 fits. Later grades' 0–100 by
+  10 is 11.
+- **Distractors are allowed** (0–3). The earlier "no distractors on an
+  axis" was wrong: they don't need a "nowhere" on the line, they stay in
+  the tray.
+  - VALIDER becomes available once as many items are on the line as there
+    are to place. A counter says how many: "Placés : 2 sur 4".
+  - A distractor on a tick is wrong. A real item left off the line is
+    wrong. Score is right ÷ (items to place + distractors placed).
+- **Narrow ticks for numbers.** A tick needs 36px when every label is ≤ 2
+  characters, 52 at 3, and 96 otherwise. 21 × 36 fits the 760px activity
+  width, so a 0–20 line stays one row on a desktop.
+  `AnswerTile.dense` now stacks the state icon under the label instead of
+  beside it, so "17" plus its check fits 34px.
+
+Tests: axis 12 → 16, covering:
+- the Questions Maker's two cases: "Situer des nombres" (0–20, labels every
+  5, place 3/8/12/17) and Léo's life line (ages 0–6, birth given, a
+  distractor);
+- generated labels, a value off the grid, the 21-tick cap, `label_every`
+  not a multiple of step;
+- distractor scoring, and an unplaced item counted wrong;
+- a 0–20 line staying one row at desktop width, with a placed 17 not
+  overflowing.

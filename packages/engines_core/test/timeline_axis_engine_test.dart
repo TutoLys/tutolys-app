@@ -155,14 +155,149 @@ void main() {
       }, 'an unknown tick');
       refused({
         'distractors': [
-          {'id': 'x', 'label': 'x'},
+          {'id': 'n2', 'label': 'x'},
         ],
-      }, 'no distractors on an axis');
+      }, 'a distractor id clashing with an item');
+      refused({
+        'range': {'min': 0, 'max': 10},
+      }, 'ticks and a range together');
       refused({
         'ticks': [
           {'id': 't0', 'label': '0'},
         ],
       }, 'one tick is not an axis');
+    });
+  });
+
+  group('range: generated ticks, items by value', () {
+    // The Questions Maker's two uses.
+    const situer = <String, Object?>{
+      'mode': 'axis',
+      'range': {'min': 0, 'max': 20, 'step': 1, 'label_every': 5},
+      'items': [
+        {'id': 'n3', 'label': '3', 'at': 3},
+        {'id': 'n8', 'label': '8', 'at': 8},
+        {'id': 'n12', 'label': '12', 'at': 12},
+        {'id': 'n17', 'label': '17', 'at': 17},
+      ],
+    };
+    const leo = <String, Object?>{
+      'mode': 'axis',
+      'range': {'min': 0, 'max': 6},
+      'items': [
+        {'id': 'nait', 'label': 'Léo naît', 'at': 0, 'given': true},
+        {'id': 'marche', 'label': 'Il marche', 'at': 1},
+        {'id': 'garderie', 'label': 'La garderie', 'at': 3},
+        {'id': 'velo', 'label': 'Le vélo', 'at': 5},
+        {'id': 'ecole', 'label': 'L\'école', 'at': 6},
+      ],
+      'distractors': [
+        {'id': 'auto', 'label': 'Il conduit'},
+      ],
+    };
+
+    test('0-20 by 1, labelled every 5: 21 ticks, landmarks only', () {
+      final c = axis.parse(situer).valueOrNull!;
+      expect(c.ticks, hasLength(21));
+      expect([for (final t in c.ticks) t.label].where((l) => l.isNotEmpty), [
+        '0',
+        '5',
+        '10',
+        '15',
+        '20',
+      ]);
+      expect(c.answer['n12'], 'v12');
+    });
+
+    test(
+      'label_every defaults to every tick; a value off the grid is refused',
+      () {
+        final c = axis.parse(leo).valueOrNull!;
+        expect(c.ticks.map((t) => t.label), [
+          '0',
+          '1',
+          '2',
+          '3',
+          '4',
+          '5',
+          '6',
+        ]);
+        expect(
+          axis.parse({
+            ...situer,
+            'items': [
+              {'id': 'a', 'label': '3', 'at': 3},
+              {'id': 'b', 'label': '25', 'at': 25},
+            ],
+          }),
+          isA<ParseInvalid<AxisContent>>(),
+        );
+        expect(
+          axis.parse({
+            ...situer,
+            'range': {'min': 0, 'max': 100, 'step': 1},
+          }),
+          isA<ParseInvalid<AxisContent>>(),
+          reason: '101 ticks is past the 21-tick cap',
+        );
+        expect(
+          axis.parse({
+            ...situer,
+            'range': {'min': 0, 'max': 20, 'step': 2, 'label_every': 5},
+          }),
+          isA<ParseInvalid<AxisContent>>(),
+          reason: 'label_every must be a multiple of step',
+        );
+      },
+    );
+
+    test('distractors: right line leaves them; one on a tick is wrong', () {
+      final c = axis.parse(leo).valueOrNull!;
+      var s = axis.initialize(c, const EngineSeed(1));
+      expect(s.tray, contains('auto'));
+      expect(s.toPlace, 4);
+      void put(String i, String t) => s = axis
+          .reduce(axis.reduce(s, TapAxisItem(i)).state, TapTick(t))
+          .state;
+      put('marche', 'v1');
+      put('garderie', 'v3');
+      put('velo', 'v5');
+      put('auto', 'v6');
+      expect(s.complete, isTrue, reason: '4 on the line, whatever they are');
+      final r = const TimelineAxisEvaluator().evaluate(
+        c,
+        axis.extractAnswer(s)!,
+        ctx,
+      );
+      expect(r.outcome, Outcome.partial);
+      expect(r.itemResults['auto'], isFalse);
+      expect(r.itemResults['ecole'], isFalse, reason: 'left off the line');
+      expect(r.score, closeTo(3 / 5, 1e-9));
+      s = axis.applyFeedback(s, r);
+      expect(s.placements.containsKey('auto'), isFalse, reason: 'back to tray');
+      put('ecole', 'v6');
+      final done = const TimelineAxisEvaluator().evaluate(
+        c,
+        axis.extractAnswer(s)!,
+        ctx,
+      );
+      expect(done.outcome, Outcome.correct);
+    });
+
+    testWidgets('a 0-20 line stays one row on a desktop', (tester) async {
+      view(tester);
+      final (c, _) = controllerFor(situer);
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(app(c));
+      expect(tester.takeException(), isNull);
+      final a = tester.getTopLeft(find.byKey(const ValueKey('axis-tick-v0')));
+      final b = tester.getTopLeft(find.byKey(const ValueKey('axis-tick-v20')));
+      expect(b.dy, a.dy, reason: 'horizontal');
+      expect(find.text('Placés : 0 sur 4'), findsOneWidget);
+      await place(tester, 'n17', 'v17');
+      expect(tester.takeException(), isNull, reason: 'a placed 17 fits');
+      expect(find.text('Placés : 1 sur 4'), findsOneWidget);
+      c.dispose();
     });
   });
 

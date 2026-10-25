@@ -58,9 +58,33 @@ class AnswerTile extends StatelessWidget {
   /// its place, so the tile never shows an empty frame).
   final String? imageRef;
 
-  /// Tight padding and a smaller state icon, for a tile in a narrow slot
-  /// (a number on a number line). The label is centred.
+  /// For a narrow slot (a number on a number line): the label centred,
+  /// the state icon under it rather than beside, almost no padding. Every
+  /// state still reads without colour.
   final bool dense;
+
+  Widget _dense(Color text, IconData? icon, Color border) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          softWrap: false,
+          style: TextStyle(
+            fontFamily: VillageType.display,
+            fontWeight: FontWeight.w700,
+            fontSize: 15,
+            color: text,
+          ),
+        ),
+        if (icon != null) Icon(icon, size: 12, color: border),
+      ],
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -106,66 +130,64 @@ class AnswerTile extends StatelessWidget {
           child: ConstrainedBox(
             // ≥48px: the frontend spec's tap-target floor.
             constraints: const BoxConstraints(minHeight: 52),
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: dense ? 6 : 20,
-                vertical: 14,
-              ),
-              child: Row(
-                children: [
-                  if (imageRef != null)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 12),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(
-                          maxWidth: 56,
-                          maxHeight: 56,
+            child: dense
+                ? _dense(text, icon, border)
+                : Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    child: Row(
+                      children: [
+                        if (imageRef != null)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 12),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(
+                                maxWidth: 56,
+                                maxHeight: 56,
+                              ),
+                              child: ContentImage(
+                                ref: imageRef!,
+                                fallback: const SizedBox.shrink(),
+                              ),
+                            ),
+                          ),
+                        Expanded(
+                          child: Text(
+                            label,
+                            style: TextStyle(
+                              fontFamily: VillageType.display,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                              color: text,
+                            ),
+                          ),
                         ),
-                        child: ContentImage(
-                          ref: imageRef!,
-                          fallback: const SizedBox.shrink(),
-                        ),
-                      ),
-                    ),
-                  Expanded(
-                    child: Text(
-                      label,
-                      textAlign: dense ? TextAlign.center : null,
-                      style: TextStyle(
-                        fontFamily: VillageType.display,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                        color: text,
-                      ),
+                        if (badge != null)
+                          Container(
+                            margin: const EdgeInsets.only(left: 8),
+                            width: 22,
+                            height: 22,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: border,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              '$badge',
+                              style: const TextStyle(
+                                fontFamily: VillageType.display,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 12,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        if (icon != null) ...[
+                          const SizedBox(width: 8),
+                          Icon(icon, size: 18, color: border),
+                        ],
+                      ],
                     ),
                   ),
-                  if (badge != null)
-                    Container(
-                      margin: const EdgeInsets.only(left: 8),
-                      width: 22,
-                      height: 22,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: border,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        '$badge',
-                        style: const TextStyle(
-                          fontFamily: VillageType.display,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 12,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  if (icon != null) ...[
-                    SizedBox(width: dense ? 2 : 8),
-                    Icon(icon, size: dense ? 14 : 18, color: border),
-                  ],
-                ],
-              ),
-            ),
           ),
         ),
       ),

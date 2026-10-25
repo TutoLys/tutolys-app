@@ -26,6 +26,7 @@ class AxisContent {
     required this.items,
     required this.answer,
     this.given = const {},
+    this.distractors = const [],
     this.startLabel,
     this.endLabel,
   });
@@ -33,6 +34,13 @@ class AxisContent {
   /// In axis order, first to last.
   final List<AxisTick> ticks;
   final List<AxisItem> items;
+
+  /// Items that belong on no tick. Left in the tray when the line is right;
+  /// one put on a tick marks itself wrong.
+  final List<AxisItem> distractors;
+
+  /// How many items the child must put on the line: every item not given.
+  int get toPlace => items.length - given.length;
 
   /// item id → the tick it belongs on. One item per tick at most.
   final Map<String, String> answer;
@@ -43,7 +51,8 @@ class AxisContent {
   final String? startLabel;
   final String? endLabel;
 
-  AxisItem item(String id) => items.firstWhere((i) => i.id == id);
+  AxisItem item(String id) =>
+      items.followedBy(distractors).firstWhere((i) => i.id == id);
   AxisTick tick(String id) => ticks.firstWhere((t) => t.id == id);
   int tickIndex(String id) => ticks.indexWhere((t) => t.id == id);
 }
@@ -51,13 +60,19 @@ class AxisContent {
 class AxisState {
   const AxisState({
     required this.tray,
+    required this.toPlace,
     this.held,
     this.placements = const {},
     this.locked = const {},
   });
 
-  /// The items the child places, in tray order. Given items aren't here.
+  /// The items the child places, in tray order, distractors included.
+  /// Given items aren't here.
   final List<String> tray;
+
+  /// How many must be on the line before VALIDER. With distractors in the
+  /// tray it is fewer than [tray]'s length, and the child is told the count.
+  final int toPlace;
 
   /// The item picked up and waiting for a tick. Always an unplaced one.
   final String? held;
@@ -68,7 +83,8 @@ class AxisState {
   /// Item ids fixed on their tick: given ones, and ones checked right.
   final Set<String> locked;
 
-  bool get complete => tray.every(placements.containsKey);
+  int get placed => tray.where(placements.containsKey).length;
+  bool get complete => placed == toPlace;
 
   String? itemOn(String tickId) {
     for (final e in placements.entries) {
@@ -84,6 +100,7 @@ class AxisState {
     Set<String>? locked,
   }) => AxisState(
     tray: tray,
+    toPlace: toPlace,
     held: clearHeld ? null : (held ?? this.held),
     placements: placements ?? this.placements,
     locked: locked ?? this.locked,
@@ -127,6 +144,9 @@ class TimelineAxisEngine
     capabilities: EngineCapabilities(keyboard: true, screenReader: true),
   );
 
+  /// 0-20 in steps of 1, the longest line grade 1 needs.
+  static const _maxTicks = 21;
+
   static String? _image(Object? raw) {
     final v = raw is Map ? raw['image_ref'] : null;
     return v is String && v.isNotEmpty ? v : null;
@@ -137,17 +157,55 @@ class TimelineAxisEngine
 
   @override
   ParseResult<AxisContent> parse(Map<String, Object?> config) {
-    if (config['distractors'] != null) {
+    final range = config['range'];
+    final rawTicks = config['ticks'];
+    if ((range == null) == (rawTicks == null)) {
       return const ParseResult.invalid(
-        'An axis has no distractors: every item has a tick.',
+        'An axis has either ticks or a range, not both.',
       );
     }
-    final rawTicks = config['ticks'];
-    if (rawTicks is! List || rawTicks.length < 2 || rawTicks.length > 11) {
-      return const ParseResult.invalid('An axis needs between 2 and 11 ticks.');
-    }
     final ticks = <AxisTick>[];
-    for (final t in rawTicks) {
+    // value → tick id, for a range: items say where they go with `at`.
+    final byValue = <int, String>{};
+    if (range != null) {
+      final r = range is Map ? range : const {};
+      final min = r['min'], max = r['max'], step = r['step'] ?? 1;
+      final every = r['label_every'] ?? step;
+      if (min is! int ||
+          max is! int ||
+          step is! int ||
+          every is! int ||
+          step < 1 ||
+          max <= min ||
+          (max - min) % step != 0 ||
+          every % step != 0) {
+        return const ParseResult.invalid(
+          'range needs integer min < max, a step dividing max - min, and '
+          'label_every a multiple of step.',
+        );
+      }
+      final count = (max - min) ~/ step + 1;
+      if (count > _maxTicks) {
+        return const ParseResult.invalid(
+          'A range makes at most $_maxTicks ticks.',
+        );
+      }
+      for (var v = min; v <= max; v += step) {
+        final id = 'v$v';
+        byValue[v] = id;
+        ticks.add(AxisTick(id: id, label: (v - min) % every == 0 ? '$v' : ''));
+      }
+    }
+    final tickList = rawTicks ?? const [];
+    if (range == null &&
+        (tickList is! List ||
+            tickList.length < 2 ||
+            tickList.length > _maxTicks)) {
+      return const ParseResult.invalid(
+        'An axis needs between 2 and $_maxTicks ticks.',
+      );
+    }
+    for (final t in range == null ? tickList as List : const []) {
       final id = t is Map ? t['id'] : null;
       final label = t is Map ? t['label'] : null;
       if (id is! String || id.isEmpty || label is! String) {
@@ -170,14 +228,18 @@ class TimelineAxisEngine
     for (final i in rawItems) {
       final id = i is Map ? i['id'] : null;
       final label = i is Map ? i['label'] : null;
-      final tick = i is Map ? i['tick'] : null;
+      final at = i is Map ? i['at'] : null;
+      final tick = range != null && at is int
+          ? byValue[at] ?? 'v$at'
+          : (i is Map ? i['tick'] : null);
       if (id is! String ||
           id.isEmpty ||
           label is! String ||
           label.isEmpty ||
           tick is! String) {
         return const ParseResult.invalid(
-          'Every axis item needs an id, a label and a tick.',
+          'Every axis item needs an id, a label and a tick (or at, on a '
+          'range).',
         );
       }
       if (!tickIds.contains(tick)) {
@@ -204,12 +266,33 @@ class TimelineAxisEngine
         'At least two items must be left for the child to place.',
       );
     }
+    final distractors = <AxisItem>[];
+    final rawDistractors = config['distractors'];
+    if (rawDistractors != null) {
+      if (rawDistractors is! List || rawDistractors.length > 3) {
+        return const ParseResult.invalid('distractors allows at most 3 items.');
+      }
+      for (final d in rawDistractors) {
+        final id = d is Map ? d['id'] : null;
+        final label = d is Map ? d['label'] : null;
+        if (id is! String || id.isEmpty || label is! String || label.isEmpty) {
+          return const ParseResult.invalid(
+            'Every distractor needs an id and a label.',
+          );
+        }
+        if (answer.containsKey(id) || distractors.any((x) => x.id == id)) {
+          return const ParseResult.invalid('Item ids must be unique.');
+        }
+        distractors.add(AxisItem(id: id, label: label, imageRef: _image(d)));
+      }
+    }
     return ParseResult.ok(
       AxisContent(
         ticks: List.unmodifiable(ticks),
         items: List.unmodifiable(items),
         answer: answer,
         given: given,
+        distractors: List.unmodifiable(distractors),
         startLabel: _optionalLabel(config['start_label']),
         endLabel: _optionalLabel(config['end_label']),
       ),
@@ -221,9 +304,11 @@ class TimelineAxisEngine
     final tray = [
       for (final i in content.items)
         if (!content.given.contains(i.id)) i.id,
+      for (final d in content.distractors) d.id,
     ]..shuffle(seed.random());
     return AxisState(
       tray: List.unmodifiable(tray),
+      toPlace: content.toPlace,
       placements: {for (final g in content.given) g: content.answer[g]!},
       locked: {...content.given},
     );
@@ -284,7 +369,7 @@ class TimelineAxisEngine
 
   @override
   PlacementsAnswer? extractAnswer(AxisState s) =>
-      !s.complete || s.tray.every(s.locked.contains)
+      !s.complete || s.tray.where(s.locked.contains).length == s.toPlace
       ? null
       : PlacementsAnswer(s.placements);
 
@@ -323,13 +408,16 @@ class TimelineAxisEngine
       final placeable = {
         for (final i in content.items)
           if (!content.given.contains(i.id)) i.id,
+        for (final d in content.distractors) d.id,
       };
       if (tray.length != placeable.length || !tray.every(placeable.contains)) {
         return null;
       }
       final placements = (snap['placements'] as Map).cast<String, String>();
       final ticks = {for (final t in content.ticks) t.id};
-      if (!placements.keys.every(content.answer.containsKey) ||
+      if (!placements.keys.every(
+            (k) => content.answer.containsKey(k) || placeable.contains(k),
+          ) ||
           !placements.values.every(ticks.contains) ||
           placements.values.toSet().length != placements.length) {
         return null;
@@ -348,6 +436,7 @@ class TimelineAxisEngine
       }
       return AxisState(
         tray: List.unmodifiable(tray),
+        toPlace: content.toPlace,
         held: held,
         placements: placements,
         locked: locked,
@@ -462,7 +551,12 @@ class TimelineAxisEngine
           0,
           (m, i) => i.label.length > m ? i.label.length : m,
         );
-        final minTick = longest <= 3 ? 52.0 : _minTick;
+        // Numbers to 99 fit a 36px slot, so a 0-20 line stays one row.
+        final minTick = longest <= 2
+            ? 36.0
+            : longest <= 3
+            ? 52.0
+            : _minTick;
         if (constraints.maxWidth / n >= minTick) {
           // Left to right: a slot over each tick, the label under it.
           return Column(
@@ -487,7 +581,9 @@ class TimelineAxisEngine
                   for (var i = 0; i < n; i++)
                     Expanded(
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: minTick < 52 ? 1 : 4,
+                        ),
                         child: slot(i, dense: minTick < _minTick),
                       ),
                     ),
@@ -578,6 +674,17 @@ class TimelineAxisEngine
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  fr
+                      ? 'Placés : ${s.placed} sur ${s.toPlace}'
+                      : 'Placed: ${s.placed} of ${s.toPlace}',
+                  key: const ValueKey('axis-count'),
+                  textAlign: TextAlign.center,
+                  style: endStyle,
+                ),
+              ),
               axis,
               const SizedBox(height: 28),
               Wrap(
@@ -640,12 +747,20 @@ class TimelineAxisEvaluator
     EvaluationContext ctx,
   ) {
     final placed = answer.placements;
-    if (!content.answer.keys.every(placed.containsKey)) {
-      throw ArgumentError('An answer must place every item.');
+    final known = {
+      ...content.answer.keys,
+      for (final d in content.distractors) d.id,
+    };
+    if (!placed.keys.every(known.contains)) {
+      throw ArgumentError('An answer can only place this axis\'s items.');
     }
+    // One verdict per item to place (unplaced is wrong) and per distractor
+    // put on the line (always wrong).
     final items = {
       for (final e in content.answer.entries)
         if (!content.given.contains(e.key)) e.key: placed[e.key] == e.value,
+      for (final d in content.distractors)
+        if (placed.containsKey(d.id)) d.id: false,
     };
     final right = items.values.where((v) => v).length;
     return EvaluationResult(
