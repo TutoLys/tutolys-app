@@ -18,9 +18,11 @@ Future<void> showAvatarPicker(BuildContext context) => showModalBottomSheet<void
       builder: (_) => const AvatarPicker(),
     );
 
-/// The starters, then what play unlocks. A locked avatar is shown, dimmed,
-/// with what unlocks it, because that is the reward's whole point: a kid
-/// should see what they're playing towards.
+/// The free avatars, then what play unlocks: by subject, by milestone,
+/// and the rare ones. A locked avatar is shown as a silhouette with what
+/// unlocks it, because that is the reward's whole point: a kid should see
+/// what they're playing towards. A rare one is a "?" until found, so
+/// finding it is a surprise.
 ///
 /// Tapping an unlocked avatar wears it at once. There's no save button,
 /// like Réglages.
@@ -37,7 +39,11 @@ class AvatarPicker extends ConsumerWidget {
     // (picked before the sex was set) stays on, but isn't offered again.
     final offered = state?.offered ?? avatarCatalog;
     final starters = offered.where((a) => a.unlock is AvatarFree);
-    final unlockables = offered.where((a) => a.unlock is! AvatarFree);
+    final bySubject = offered.where((a) => a.unlock is AvatarForSubject);
+    final milestones = offered.where(
+      (a) => a.unlock is AvatarAtLevel || a.unlock is AvatarForAchievement,
+    );
+    final rares = offered.where((a) => a.unlock is AvatarRare);
 
     Widget grid(Iterable<AvatarDef> avatars) => Wrap(
           spacing: Space.sm,
@@ -99,9 +105,17 @@ class AvatarPicker extends ConsumerWidget {
                   const SizedBox(height: Space.sm),
                   grid(starters),
                   const SizedBox(height: Space.lg),
+                  Text(t.avatarSubjects, style: section()),
+                  const SizedBox(height: Space.sm),
+                  grid(bySubject),
+                  const SizedBox(height: Space.lg),
                   Text(t.avatarUnlockables, style: section()),
                   const SizedBox(height: Space.sm),
-                  grid(unlockables),
+                  grid(milestones),
+                  const SizedBox(height: Space.lg),
+                  Text(t.avatarRares, style: section()),
+                  const SizedBox(height: Space.sm),
+                  grid(rares),
                 ],
               ),
             ),
@@ -112,11 +126,15 @@ class AvatarPicker extends ConsumerWidget {
   }
 }
 
-/// What unlocks [a], in the kid's language: "Niveau 5", "Série de 3 jours".
+/// What unlocks [a], in the kid's language: "Niveau 5", "Série de 3 jours",
+/// "Termine 5 compétences en sciences".
 String avatarCondition(Strings t, AvatarDef a) => switch (a.unlock) {
       AvatarFree() => '',
       AvatarAtLevel(:final level) => t.avatarAtLevel(level),
       AvatarForAchievement(:final achievement) => achievementName(t, achievement),
+      AvatarForSubject(:final subject, :final skills) =>
+        t.avatarForSubject(subject, skills),
+      AvatarRare() => t.avatarRareHint,
     };
 
 class _AvatarChoice extends StatelessWidget {
@@ -168,12 +186,14 @@ class _AvatarChoice extends StatelessWidget {
                         avatarKey: avatar.key,
                         size: 64,
                         locked: !unlocked,
+                        hidden: !unlocked && avatar.unlock is AvatarRare,
                       ),
                     ),
-                    if (!unlocked)
+                    if (!unlocked && avatar.unlock is! AvatarRare)
                       Positioned.fill(
                         child: Center(
-                          child: Icon(Icons.lock_rounded, size: 24, color: p.ink),
+                          // Light on the dark silhouette.
+                          child: Icon(Icons.lock_rounded, size: 24, color: p.surface),
                         ),
                       ),
                     if (selected)

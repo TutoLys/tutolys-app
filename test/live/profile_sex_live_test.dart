@@ -30,8 +30,13 @@ void main() {
           for (final a in AvatarState(selected: '', unlocked: const {}, sex: s).offered)
             if (a.unlock is AvatarFree) a.key,
         ];
-    expect(offered(girl!.sex), ['kid_wavy', 'kid_glasses', 'kid_hijab', 'kid_braids']);
-    expect(offered(boy!.sex), ['kid_curly', 'kid_freckles']);
+    expect(offered(girl!.sex), [
+      'kid_wavy', 'kid_glasses', 'kid_hijab', 'kid_braids', //
+      'camper_girl', 'explorer_girl',
+    ]);
+    expect(offered(boy!.sex), [
+      'kid_curly', 'kid_freckles', 'camper_boy', 'explorer_boy',
+    ]);
     expect(defaultAvatarFor(boy.sex), 'kid_curly');
     expect(defaultAvatarFor(girl.sex), 'kid_wavy');
   }, skip: tokens == null ? 'needs E2E_TOKENS (a running dev-stack)' : false);

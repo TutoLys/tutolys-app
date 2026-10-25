@@ -16,6 +16,8 @@ import '../../data/sync/drift_audio_resolver.dart';
 import '../../data/sync/drift_image_resolver.dart';
 import '../../data/sync/outbox_flusher_provider.dart';
 import '../pairing/pairing_controller.dart';
+import '../profile/avatars.dart';
+import '../profile/rare_avatar_found.dart';
 import '../settings/settings_controller.dart';
 import 'engine_registry_provider.dart';
 import 'learning_platform_providers.dart';
@@ -69,6 +71,9 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   /// Set when the exercise is completed: the celebration replaces the
   /// exercise until the child presses Continuer.
   ActivitySummary? _summary;
+
+  /// A rare avatar this lesson revealed, shown on the celebration.
+  String? _rareAvatarKey;
 
   // Legacy path.
   TelemetryClient? _telemetry;
@@ -275,15 +280,29 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       kidId: _kidId,
     ).recordExerciseCompleted(elapsedMs: result.elapsedMs);
     StreakLocal(db, kidId: _kidId).recordPlayedToday();
+    final lessonId = widget.envelope['exercise_id'] as String?;
     unawaited(
       NodeProgressLocal(db, kidId: _kidId)
           .recordCompleted(
             widget.node.id,
             perfect: summary.perfect,
-            exerciseId: widget.envelope['exercise_id'] as String?,
+            exerciseId: lessonId,
           )
           .then((_) => ref.invalidate(nodeProgressProvider)),
     );
+    // A perfect lesson may reveal a rare avatar (ADR 0050).
+    if (summary.perfect && lessonId != null) {
+      unawaited(
+        ref
+            .read(avatarControllerProvider.notifier)
+            .rollRareDrop(lessonId)
+            .then((key) {
+              if (key != null && mounted) {
+                setState(() => _rareAvatarKey = key);
+              }
+            }),
+      );
+    }
 
     _director.cue(
       const ReactionCue(
@@ -321,6 +340,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
             size: 150,
           ),
           extraRows: [
+            if (_rareAvatarKey case final key?) RareAvatarFound(avatarKey: key),
             for (final row
                 in ref.watch(celebrationRowsProvider).value ?? const [])
               CelebrationRow(

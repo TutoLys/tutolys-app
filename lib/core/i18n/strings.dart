@@ -336,9 +336,21 @@ abstract class Strings {
   String get avatarPickerTitle;
   String get avatarStarters;
   String get avatarUnlockables;
+  String get avatarSubjects;
+  String get avatarRares;
 
   /// What unlocks a level avatar: "Niveau 5".
   String avatarAtLevel(int level);
+
+  /// What unlocks a subject avatar: "Termine 5 compétences en sciences".
+  /// [subject] is a `pathSubjects` code.
+  String avatarForSubject(String subject, int skills);
+
+  /// Under a rare avatar not found yet, which shows as "?".
+  String get avatarRareHint;
+
+  /// The moment a perfect lesson reveals a rare avatar.
+  String get avatarRareFound;
 
   /// Read by screen readers on a locked avatar.
   String avatarLocked(String condition);
@@ -1086,24 +1098,68 @@ class _FrenchStrings extends Strings {
   String get avatarUnlockables => 'À débloquer en jouant';
 
   @override
+  String get avatarSubjects => 'Par matière';
+
+  @override
+  String get avatarRares => 'Raretés';
+
+  @override
   String avatarAtLevel(int level) => 'Niveau $level';
+
+  @override
+  String avatarForSubject(String subject, int skills) {
+    final where = switch (subject) {
+      'MATH' => 'en maths',
+      'FR' => 'en français',
+      'EN' => 'en anglais',
+      'SCI' => 'en sciences',
+      'SOC' => 'en univers social',
+      'CCQ' => 'en culture et citoyenneté',
+      _ => '',
+    };
+    return 'Termine $skills compétences $where'.trimRight();
+  }
+
+  @override
+  String get avatarRareHint => 'Une leçon parfaite peut le révéler';
+
+  @override
+  String get avatarRareFound => 'Avatar rare trouvé !';
 
   @override
   String avatarLocked(String condition) => 'Verrouillé : $condition';
 
   @override
   String avatarName(String key) => switch (key) {
-        'tuque' => 'Tuque d\'hiver',
-        'camper' => 'Campeur',
-        'astronaut' => 'Astronaute',
-        'explorer' => 'Explorateur',
-        'captain' => 'Capitaine',
-        'knight' => 'Chevalier',
-        'hero' => 'Super-héros',
-        'wizard' => 'Magicien',
-        'scientist' => 'Scientifique',
-        'artist' => 'Artiste',
+        'camper_girl' => 'Campeuse',
+        'camper_boy' => 'Campeur',
+        'explorer_girl' => 'Exploratrice',
+        'explorer_boy' => 'Explorateur',
+        'scientist_girl' || 'scientist_boy' => 'Scientifique',
+        'chemist_girl' || 'chemist_boy' => 'Chimiste',
+        'knight_girl' => 'Chevalière',
+        'knight_boy' => 'Chevalier',
+        'fleur_knight_girl' => 'Chevalière à la fleur de lys',
+        'fleur_knight_boy' => 'Chevalier à la fleur de lys',
+        'mathematician_girl' => 'Mathématicienne',
+        'mathematician_boy' => 'Mathématicien',
+        'french_teacher_girl' || 'french_teacher_boy' => 'Prof de français',
+        'english_girl' || 'english_boy' => 'Prof d\'anglais',
+        'historian_girl' => 'Historienne',
+        'historian_boy' => 'Historien',
+        'tuque_girl' => 'Tuque d\'hiver',
+        'hero_girl' => 'Super-héroïne',
+        'hero_boy' => 'Super-héros',
+        'captain_girl' || 'captain_boy' => 'Capitaine',
+        'artist_girl' || 'artist_boy' => 'Artiste',
         'fox_hood' => 'Capuche de renard',
+        'wizard_girl' => 'Magicienne',
+        'wizard_boy' => 'Magicien',
+        'astronaut_girl' || 'astronaut_boy' => 'Astronaute',
+        'coder_girl' => 'Codeuse',
+        'coder_boy' => 'Codeur',
+        'mermaid' => 'Sirène',
+        'pirate' => 'Pirate',
         _ => 'Avatar',
       };
 
@@ -1850,24 +1906,60 @@ class _EnglishStrings extends Strings {
   String get avatarUnlockables => 'Unlock by playing';
 
   @override
+  String get avatarSubjects => 'By subject';
+
+  @override
+  String get avatarRares => 'Rare finds';
+
+  @override
   String avatarAtLevel(int level) => 'Level $level';
+
+  @override
+  String avatarForSubject(String subject, int skills) {
+    final where = switch (subject) {
+      'MATH' => 'in math',
+      'FR' => 'in French',
+      'EN' => 'in English',
+      'SCI' => 'in science',
+      'SOC' => 'in social studies',
+      'CCQ' => 'in culture & citizenship',
+      _ => '',
+    };
+    return 'Finish $skills skills $where'.trimRight();
+  }
+
+  @override
+  String get avatarRareHint => 'A perfect lesson may reveal it';
+
+  @override
+  String get avatarRareFound => 'Rare avatar found!';
 
   @override
   String avatarLocked(String condition) => 'Locked: $condition';
 
   @override
-  String avatarName(String key) => switch (key) {
-        'tuque' => 'Winter tuque',
+  String avatarName(String key) =>
+      switch (key.replaceFirst(RegExp(r'_(girl|boy)$'), '')) {
         'camper' => 'Camper',
-        'astronaut' => 'Astronaut',
         'explorer' => 'Explorer',
-        'captain' => 'Captain',
-        'knight' => 'Knight',
-        'hero' => 'Superhero',
-        'wizard' => 'Wizard',
         'scientist' => 'Scientist',
+        'chemist' => 'Chemist',
+        'knight' => 'Knight',
+        'fleur_knight' => 'Fleur-de-lis knight',
+        'mathematician' => 'Mathematician',
+        'french_teacher' => 'French teacher',
+        'english' => 'English teacher',
+        'historian' => 'Historian',
+        'tuque' => 'Winter tuque',
+        'hero' => 'Superhero',
+        'captain' => 'Captain',
         'artist' => 'Artist',
         'fox_hood' => 'Fox hood',
+        'wizard' => 'Wizard',
+        'astronaut' => 'Astronaut',
+        'coder' => 'Coder',
+        'mermaid' => 'Mermaid',
+        'pirate' => 'Pirate',
         _ => 'Avatar',
       };
 

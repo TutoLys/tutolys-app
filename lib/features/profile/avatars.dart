@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/api/profile_api.dart';
 import '../../data/local_db/database.dart';
 import '../pairing/pairing_controller.dart';
+import '../progress/local_progress.dart';
 import '../progress/progress_controller.dart';
 import '../quests/quest_board.dart';
 
@@ -20,7 +21,7 @@ class AvatarFree extends AvatarUnlock {
   const AvatarFree();
 }
 
-/// Reached the backend's level [level] (`LevelCurve`, backend ADR 0024).
+/// Reached level [level] of the school year (app ADR 0033).
 class AvatarAtLevel extends AvatarUnlock {
   const AvatarAtLevel(this.level);
   final int level;
@@ -30,6 +31,21 @@ class AvatarAtLevel extends AvatarUnlock {
 class AvatarForAchievement extends AvatarUnlock {
   const AvatarForAchievement(this.achievement);
   final Achievement achievement;
+}
+
+/// Completed [skills] skills of [subject] (a `pathSubjects` code), by this
+/// device's own measure: a skill is completed when every lesson on it is
+/// finished (ADR 0033). The scientist for science, the knight for CCQ.
+class AvatarForSubject extends AvatarUnlock {
+  const AvatarForSubject(this.subject, this.skills);
+  final String subject;
+  final int skills;
+}
+
+/// Found by chance on a perfect lesson ([rareDropFor]), never earned from
+/// the kid's data. Shown as "?" until found.
+class AvatarRare extends AvatarUnlock {
+  const AvatarRare();
 }
 
 /// The kid's sex, as an adult set it in the portal (`Kid.sex`). The device
@@ -51,20 +67,26 @@ enum KidSex {
 
 /// One avatar in the catalog (`docs/design/AVATARS.md`).
 class AvatarDef {
-  const AvatarDef(this.key, this.unlock, {this.sex, this.asset});
+  const AvatarDef(this.key, this.unlock, {this.sex, this.group, this.asset});
 
   /// Stored as `Kid.avatar_key` on the backend. Never renamed once shipped.
   final String key;
   final AvatarUnlock unlock;
 
-  /// Who it's offered to. Null means everyone: the unlockables, until
-  /// their art says otherwise.
+  /// Who it's offered to. Null means everyone.
   final KidSex? sex;
+
+  /// The character, when it's drawn as a girl and a boy under two keys
+  /// (`scientist_girl`, `scientist_boy`). They're one unlock: earning it
+  /// unlocks both keys, and each kid is offered the one for their sex.
+  final String? group;
 
   /// The bundled art under `assets/images/`, or null while it isn't drawn
   /// yet. `KidAvatar` draws a placeholder face for a null asset, so the
   /// picker works before the art arrives.
   final String? asset;
+
+  String get character => group ?? key;
 }
 
 const defaultAvatarKey = 'kid_wavy';
@@ -79,32 +101,118 @@ String defaultAvatarFor(KidSex sex) =>
 bool offeredTo(AvatarDef a, KidSex sex) =>
     sex == KidSex.unspecified || a.sex == null || a.sex == sex;
 
-/// The catalog, in the picker's order: starters, then unlockables from
-/// easiest to rarest. Keys match `docs/design/AVATARS.md`, which also says
-/// how to add one: a 512px webp in `assets/images/`, plus one line here.
+const _girl = KidSex.girl;
+const _boy = KidSex.boy;
+
+/// The catalog, in the picker's order: free ones, then by subject, then
+/// milestones, then the rare ones. Keys match `docs/design/AVATARS.md`,
+/// which also says how to add one (`tool/export_avatars.py` makes the art).
 /// A key is stored by the backend, so it is never renamed once shipped.
 const avatarCatalog = <AvatarDef>[
+  // Free from day one: the kid themself, then two everyday characters.
   AvatarDef(defaultAvatarKey, AvatarFree(),
-      sex: KidSex.girl, asset: 'avatar-kid-wavy.webp'),
+      sex: _girl, asset: 'avatar-kid-wavy.webp'),
   AvatarDef(_defaultBoyAvatarKey, AvatarFree(),
-      sex: KidSex.boy, asset: 'avatar-kid-curly.webp'),
+      sex: _boy, asset: 'avatar-kid-curly.webp'),
   AvatarDef('kid_glasses', AvatarFree(),
-      sex: KidSex.girl, asset: 'avatar-kid-glasses.webp'),
-  AvatarDef('kid_hijab', AvatarFree(), sex: KidSex.girl),
-  AvatarDef('kid_freckles', AvatarFree(), sex: KidSex.boy),
-  AvatarDef('kid_braids', AvatarFree(), sex: KidSex.girl),
-  AvatarDef('tuque', AvatarAtLevel(2)),
-  AvatarDef('camper', AvatarForAchievement(Achievement.streak3)),
-  AvatarDef('astronaut', AvatarAtLevel(3)),
-  AvatarDef('explorer', AvatarForAchievement(Achievement.explorer)),
-  AvatarDef('captain', AvatarAtLevel(5)),
-  AvatarDef('knight', AvatarForAchievement(Achievement.questMaster)),
-  AvatarDef('hero', AvatarForAchievement(Achievement.streak7)),
-  AvatarDef('wizard', AvatarAtLevel(10)),
-  AvatarDef('scientist', AvatarForAchievement(Achievement.allSubjects50)),
-  AvatarDef('artist', AvatarForAchievement(Achievement.quests50)),
+      sex: _girl, asset: 'avatar-kid-glasses.webp'),
+  AvatarDef('kid_hijab', AvatarFree(), sex: _girl),
+  AvatarDef('kid_freckles', AvatarFree(),
+      sex: _boy, asset: 'avatar-kid-freckles.webp'),
+  AvatarDef('kid_braids', AvatarFree(),
+      sex: _girl, asset: 'avatar-kid-braids.webp'),
+  AvatarDef('camper_girl', AvatarFree(),
+      sex: _girl, group: 'camper', asset: 'avatar-camper-girl.webp'),
+  AvatarDef('camper_boy', AvatarFree(),
+      sex: _boy, group: 'camper', asset: 'avatar-camper-boy.webp'),
+  AvatarDef('explorer_girl', AvatarFree(),
+      sex: _girl, group: 'explorer', asset: 'avatar-explorer-girl.webp'),
+  AvatarDef('explorer_boy', AvatarFree(),
+      sex: _boy, group: 'explorer', asset: 'avatar-explorer-boy.webp'),
+
+  // One per subject, two tiers where the art allows.
+  AvatarDef('scientist_girl', AvatarForSubject('SCI', 5),
+      sex: _girl, group: 'scientist', asset: 'avatar-scientist-girl.webp'),
+  AvatarDef('scientist_boy', AvatarForSubject('SCI', 5),
+      sex: _boy, group: 'scientist', asset: 'avatar-scientist-boy.webp'),
+  AvatarDef('knight_girl', AvatarForSubject('CCQ', 5),
+      sex: _girl, group: 'knight', asset: 'avatar-knight-girl.webp'),
+  AvatarDef('knight_boy', AvatarForSubject('CCQ', 5),
+      sex: _boy, group: 'knight', asset: 'avatar-knight-boy.webp'),
+  AvatarDef('mathematician_girl', AvatarForSubject('MATH', 10),
+      sex: _girl,
+      group: 'mathematician',
+      asset: 'avatar-mathematician-girl.webp'),
+  AvatarDef('mathematician_boy', AvatarForSubject('MATH', 10),
+      sex: _boy,
+      group: 'mathematician',
+      asset: 'avatar-mathematician-boy.webp'),
+  AvatarDef('french_teacher_girl', AvatarForSubject('FR', 10),
+      sex: _girl,
+      group: 'french_teacher',
+      asset: 'avatar-french-teacher-girl.webp'),
+  AvatarDef('french_teacher_boy', AvatarForSubject('FR', 10),
+      sex: _boy,
+      group: 'french_teacher',
+      asset: 'avatar-french-teacher-boy.webp'),
+  AvatarDef('english_girl', AvatarForSubject('EN', 10),
+      sex: _girl, group: 'english', asset: 'avatar-english-girl.webp'),
+  AvatarDef('english_boy', AvatarForSubject('EN', 10),
+      sex: _boy, group: 'english', asset: 'avatar-english-boy.webp'),
+  AvatarDef('historian_girl', AvatarForSubject('SOC', 10),
+      sex: _girl, group: 'historian', asset: 'avatar-historian-girl.webp'),
+  AvatarDef('historian_boy', AvatarForSubject('SOC', 10),
+      sex: _boy, group: 'historian', asset: 'avatar-historian-boy.webp'),
+  AvatarDef('chemist_girl', AvatarForSubject('SCI', 15),
+      sex: _girl, group: 'chemist', asset: 'avatar-chemist-girl.webp'),
+  AvatarDef('chemist_boy', AvatarForSubject('SCI', 15),
+      sex: _boy, group: 'chemist', asset: 'avatar-chemist-boy.webp'),
+  AvatarDef('fleur_knight_girl', AvatarForSubject('CCQ', 15),
+      sex: _girl,
+      group: 'fleur_knight',
+      asset: 'avatar-fleur-knight-girl.webp'),
+  AvatarDef('fleur_knight_boy', AvatarForSubject('CCQ', 15),
+      sex: _boy,
+      group: 'fleur_knight',
+      asset: 'avatar-fleur-knight-boy.webp'),
+
+  // Milestones: the year's level, the streak, the quests.
+  AvatarDef('tuque_girl', AvatarAtLevel(2),
+      sex: _girl, group: 'tuque', asset: 'avatar-tuque-girl.webp'),
+  AvatarDef('hero_girl', AvatarForAchievement(Achievement.streak7),
+      sex: _girl, group: 'hero', asset: 'avatar-hero-girl.webp'),
+  AvatarDef('hero_boy', AvatarForAchievement(Achievement.streak7),
+      sex: _boy, group: 'hero', asset: 'avatar-hero-boy.webp'),
+  AvatarDef('captain_girl', AvatarAtLevel(10),
+      sex: _girl, group: 'captain', asset: 'avatar-captain-girl.webp'),
+  AvatarDef('captain_boy', AvatarAtLevel(10),
+      sex: _boy, group: 'captain', asset: 'avatar-captain-boy.webp'),
+  AvatarDef('artist_girl', AvatarForAchievement(Achievement.quests50),
+      sex: _girl, group: 'artist', asset: 'avatar-artist-girl.webp'),
+  AvatarDef('artist_boy', AvatarForAchievement(Achievement.quests50),
+      sex: _boy, group: 'artist', asset: 'avatar-artist-boy.webp'),
   AvatarDef('fox_hood', AvatarAtLevel(20)),
+
+  // Rare: only ever found on a perfect lesson.
+  AvatarDef('wizard_girl', AvatarRare(),
+      sex: _girl, group: 'wizard', asset: 'avatar-wizard-girl.webp'),
+  AvatarDef('wizard_boy', AvatarRare(),
+      sex: _boy, group: 'wizard', asset: 'avatar-wizard-boy.webp'),
+  AvatarDef('astronaut_girl', AvatarRare(),
+      sex: _girl, group: 'astronaut', asset: 'avatar-astronaut-girl.webp'),
+  AvatarDef('astronaut_boy', AvatarRare(),
+      sex: _boy, group: 'astronaut', asset: 'avatar-astronaut-boy.webp'),
+  AvatarDef('coder_girl', AvatarRare(),
+      sex: _girl, group: 'coder', asset: 'avatar-coder-girl.webp'),
+  AvatarDef('coder_boy', AvatarRare(),
+      sex: _boy, group: 'coder', asset: 'avatar-coder-boy.webp'),
+  AvatarDef('mermaid', AvatarRare(), sex: _girl, asset: 'avatar-mermaid.webp'),
+  AvatarDef('pirate', AvatarRare(), sex: _boy, asset: 'avatar-pirate.webp'),
 ];
+
+/// Whether [key] is in the catalog. A key that isn't (from a newer app, or
+/// one retired before release) is worn as the kid's default instead.
+bool isKnownAvatar(String? key) => avatarCatalog.any((a) => a.key == key);
 
 /// The catalog entry for [key], or the default for an unknown or empty one:
 /// a key set by a newer app or in the portal still draws something.
@@ -113,7 +221,15 @@ AvatarDef avatarFor(String? key) => avatarCatalog.firstWhere(
       orElse: () => avatarCatalog.first,
     );
 
-/// Which avatars the kid's data earns right now. Free ones always.
+/// Every key of [character]: its girl and boy versions, or the one key.
+List<String> keysOf(String character) => [
+      for (final a in avatarCatalog)
+        if (a.character == character) a.key,
+    ];
+
+/// Which avatars the kid's data earns right now. Free ones always, rare
+/// ones never (they're found, see [rareDropFor]). Both keys of a character
+/// unlock together; the picker then offers the kid the one for their sex.
 ///
 /// [level] is null offline. That only means nothing new unlocks by level
 /// until the next online read; what unlocked before stays recorded in
@@ -121,16 +237,64 @@ AvatarDef avatarFor(String? key) => avatarCatalog.firstWhere(
 Set<String> earnedAvatars({
   required int? level,
   required bool Function(Achievement) has,
+  int Function(String subject)? completedIn,
 }) {
   bool earned(AvatarUnlock u) => switch (u) {
         AvatarFree() => true,
         AvatarAtLevel(level: final needed) => (level ?? 0) >= needed,
         AvatarForAchievement(:final achievement) => has(achievement),
+        AvatarForSubject(:final subject, :final skills) =>
+          (completedIn?.call(subject) ?? 0) >= skills,
+        AvatarRare() => false,
       };
   return {
     for (final a in avatarCatalog)
       if (earned(a.unlock)) a.key,
   };
+}
+
+/// The chance that a perfect lesson reveals a rare avatar: about one in 20.
+const rareDropPerMille = 50;
+
+/// The rare character a perfect [lessonId] reveals to [kidId], or null.
+///
+/// Deterministic per kid and lesson, so replaying a lesson can't reroll
+/// it. Whether a lesson drops never changes; [AvatarStore] also records
+/// each lesson that has dropped, so a lucky one can't be replayed for the
+/// rest of the pool. Siblings roll differently on the same lesson.
+///
+/// Only characters offered to [sex] and not yet [unlocked] can drop, so
+/// nothing is wasted on a duplicate.
+String? rareDropFor({
+  required String kidId,
+  required String lessonId,
+  required KidSex sex,
+  required Set<String> unlocked,
+}) {
+  if (stableHash('$kidId|$lessonId') % 1000 >= rareDropPerMille) return null;
+  final pool = <String>{
+    for (final a in avatarCatalog)
+      if (a.unlock is AvatarRare &&
+          offeredTo(a, sex) &&
+          !unlocked.contains(a.key))
+        a.character,
+  }.toList()
+    ..sort();
+  if (pool.isEmpty) return null;
+  return pool[stableHash('$lessonId|$kidId') % pool.length];
+}
+
+/// 32-bit FNV-1a over UTF-8, the same on every platform. `String.hashCode`
+/// isn't: it can change between runs. The multiply is split so it stays
+/// exact on web, where ints are doubles.
+int stableHash(String s) {
+  var h = 0x811c9dc5;
+  for (final b in utf8.encode(s)) {
+    h ^= b;
+    // h * 16777619 mod 2^32, with 16777619 = 2^24 + 403.
+    h = (h * 403 + (h & 0xff) * 0x1000000) & 0xffffffff;
+  }
+  return h;
 }
 
 /// The kid's chosen avatar and every avatar they've unlocked, in
@@ -149,6 +313,7 @@ class AvatarStore {
   static const _selectedKey = 'avatar.selected';
   static const _unlockedKey = 'avatar.unlocked';
   static const _sexKey = 'kid.sex';
+  static const _dropsKey = 'avatar.drops';
 
   Future<String?> selected() => _read(_selectedKey);
 
@@ -175,6 +340,23 @@ class AvatarStore {
       await _write(_unlockedKey, jsonEncode(current.toList()..sort()));
     }
     return current;
+  }
+
+  /// Lessons that have revealed a rare avatar, by lesson id, with the
+  /// character each one revealed. A lesson is in here at most once, which
+  /// is what stops a lucky lesson being replayed for the rest of the pool.
+  Future<Map<String, String>> drops() async {
+    final raw = await _read(_dropsKey);
+    if (raw == null) return {};
+    return (jsonDecode(raw) as Map<String, dynamic>).cast<String, String>();
+  }
+
+  /// Records that [lessonId] revealed [character] and unlocks its keys.
+  Future<void> recordDrop(String lessonId, String character) async {
+    final current = await drops();
+    current[lessonId] = character;
+    await _write(_dropsKey, jsonEncode(current));
+    await recordUnlocked(keysOf(character));
   }
 
   Future<String?> _read(String key) async {
@@ -224,6 +406,29 @@ final profileApiProvider = Provider<ProfileApi>(
   (ref) => ProfileApi(dio: ref.watch(dioProvider)),
 );
 
+/// Completed skills per subject code, by this device's own measure (a skill
+/// is completed when every lesson on it is finished, ADR 0033). What the
+/// subject avatars unlock on. It recomputes the moment a lesson ends,
+/// because the play screen invalidates the record it reads.
+final completedSkillsBySubjectProvider =
+    FutureProvider<Map<String, int>>((ref) async {
+  final kid = ref.watch(sessionControllerProvider).kid;
+  if (kid == null) return const {};
+  final local = await ref.watch(localNodeProgressProvider.future);
+  if (local.isEmpty) return const {};
+  final db = ref.watch(localDatabaseProvider);
+  final leaves = await (db.select(db.skillNodeTable)
+        ..where((t) => t.id.isIn(local.keys)))
+      .get();
+  final out = <String, int>{};
+  for (final leaf in leaves) {
+    if ((local[leaf.id] ?? 0) >= 1) {
+      out[leaf.subject] = (out[leaf.subject] ?? 0) + 1;
+    }
+  }
+  return out;
+});
+
 final avatarStoreProvider = Provider<AvatarStore>(
   (ref) => AvatarStore(
     ref.watch(localDatabaseProvider),
@@ -247,8 +452,15 @@ class AvatarController extends AsyncNotifier<AvatarState> {
           (b) => b,
           onError: (_) => null,
         );
+    final bySubject = await ref
+        .watch(completedSkillsBySubjectProvider.future)
+        .then<Map<String, int>>((m) => m, onError: (_) => const <String, int>{});
     final unlocked = await store.recordUnlocked(
-      earnedAvatars(level: level, has: (a) => board?.has(a) ?? false),
+      earnedAvatars(
+        level: level,
+        has: (a) => board?.has(a) ?? false,
+        completedIn: (subject) => bySubject[subject] ?? 0,
+      ),
     );
 
     // Read on every build, not only the first: an adult can set the sex
@@ -260,11 +472,14 @@ class AvatarController extends AsyncNotifier<AvatarState> {
       await store.setSex(sex);
     }
 
+    // A key the catalog doesn't know is worn as the default, not as Léa
+    // for a boy: one from a newer app, or one retired before release.
     var selected = await store.selected();
+    if (!isKnownAvatar(selected)) selected = null;
     final remoteKey = remote?.avatarKey;
-    if (selected == null && remoteKey != null && remoteKey.isNotEmpty) {
+    if (selected == null && isKnownAvatar(remoteKey)) {
       selected = remoteKey;
-      await store.select(remoteKey);
+      await store.select(remoteKey!);
     }
     return AvatarState(
       selected: selected ?? defaultAvatarFor(sex),
@@ -287,7 +502,9 @@ class AvatarController extends AsyncNotifier<AvatarState> {
     if (current == null || !current.isUnlocked(key)) return;
     if (!offeredTo(avatarFor(key), current.sex)) return;
     await ref.read(avatarStoreProvider).select(key);
-    state = AsyncData(AvatarState(selected: key, unlocked: current.unlocked));
+    state = AsyncData(
+      AvatarState(selected: key, unlocked: current.unlocked, sex: current.sex),
+    );
     // Best effort: offline, or a backend without the endpoint yet, leaves
     // the choice local. The next pick pushes again.
     final token = ref.read(sessionControllerProvider).accessToken;
@@ -296,6 +513,31 @@ class AvatarController extends AsyncNotifier<AvatarState> {
           .read(profileApiProvider)
           .saveAvatarKey(accessToken: token, avatarKey: key);
     }
+  }
+
+  /// Rolls for a rare avatar after [lessonId] was completed perfectly
+  /// ([rareDropFor]). Returns the key this kid was given, offered to their
+  /// sex, or null. Never twice for the same lesson.
+  Future<String?> rollRareDrop(String lessonId) async {
+    final store = ref.read(avatarStoreProvider);
+    final kidId = ref.read(activeKidIdProvider);
+    if (kidId == null) return null;
+    if ((await store.drops()).containsKey(lessonId)) return null;
+    final sex = await store.sex();
+    final unlocked = await store.unlocked();
+    final character = rareDropFor(
+      kidId: kidId,
+      lessonId: lessonId,
+      sex: sex,
+      unlocked: unlocked,
+    );
+    if (character == null) return null;
+    await store.recordDrop(lessonId, character);
+    ref.invalidateSelf();
+    return keysOf(character).firstWhere(
+      (k) => offeredTo(avatarFor(k), sex),
+      orElse: () => keysOf(character).first,
+    );
   }
 }
 

@@ -16,7 +16,10 @@ final kidAvatarKeyProvider =
     FutureProvider.family<String, String>((ref, kidId) async {
   ref.watch(selectedAvatarKeyProvider);
   final store = AvatarStore(ref.watch(localDatabaseProvider), kidId: kidId);
-  return await store.selected() ?? defaultAvatarFor(await store.sex());
+  final selected = await store.selected();
+  return isKnownAvatar(selected)
+      ? selected!
+      : defaultAvatarFor(await store.sex());
 });
 
 /// "Qui joue ?": one tile per kid paired on this device, plus "Ajouter un
