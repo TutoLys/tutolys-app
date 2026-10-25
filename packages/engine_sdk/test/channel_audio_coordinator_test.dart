@@ -13,9 +13,13 @@ class FakePlayer implements ChannelPlayer {
   void finish() => _complete.add(null);
 
   @override
-  Future<void> play(Uint8List bytes, {required String cacheKey}) async {
+  Future<void> play(
+    Uint8List bytes, {
+    required String cacheKey,
+    bool loop = false,
+  }) async {
     if (failPlay) throw StateError('device busy');
-    log.add('play $cacheKey');
+    log.add('play $cacheKey${loop ? ' loop' : ''}');
   }
 
   @override
@@ -259,5 +263,43 @@ void main() {
         expect(players[AudioChannel.music]!.volume, 0.5);
       },
     );
+  });
+
+  group('background music', () {
+    test(
+      'a looping request plays looped, at its own level under master',
+      () async {
+        resolver.put('app', 'song', Uint8List(4));
+        final audio = ChannelAudioCoordinator(
+          resolver: resolver,
+          playerFactory: (c) => players.putIfAbsent(c, FakePlayer.new),
+          masterVolume: () => 0.8,
+          musicVolume: 0.25,
+        );
+        audio.play(
+          const AudioRequest(
+            source: PrerecordedAudio(exerciseId: 'app', ref: 'song'),
+            channel: AudioChannel.music,
+            loop: true,
+          ),
+        );
+        await pumpEventQueue();
+        expect(players[AudioChannel.music]!.log, ['play app_song loop']);
+        expect(players[AudioChannel.music]!.volume, closeTo(0.2, 1e-9));
+      },
+    );
+
+    test('a voice still plays at the master level, unlooped', () async {
+      final audio = ChannelAudioCoordinator(
+        resolver: resolver,
+        playerFactory: (c) => players.putIfAbsent(c, FakePlayer.new),
+        masterVolume: () => 0.8,
+        musicVolume: 0.25,
+      );
+      audio.play(prompt());
+      await pumpEventQueue();
+      expect(players[AudioChannel.narration]!.log, ['play ex_audio']);
+      expect(players[AudioChannel.narration]!.volume, closeTo(0.8, 1e-9));
+    });
   });
 }

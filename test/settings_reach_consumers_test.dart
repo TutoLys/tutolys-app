@@ -19,8 +19,11 @@ class _Player implements ChannelPlayer {
   bool stopped = false;
 
   @override
-  Future<void> play(Uint8List bytes, {required String cacheKey}) async =>
-      played.add(cacheKey);
+  Future<void> play(
+    Uint8List bytes, {
+    required String cacheKey,
+    bool loop = false,
+  }) async => played.add(cacheKey);
   @override
   Stream<void> get onComplete => _complete.stream;
   @override
@@ -99,6 +102,34 @@ void main() {
     await settings().setSoundEffects(false);
     final off = play(AudioChannel.sfx, const EffectAudio('correct'));
     expect(await off.done, PlaybackPhase.stopped);
+  });
+
+  test(
+    'the shell\'s effects play at master volume, and not when off',
+    () async {
+      await settings().setVolume(50);
+      play(AudioChannel.sfx, const EffectAudio('activity_complete'));
+      await pumpEventQueue();
+      await pumpEventQueue();
+      final sfx = players[AudioChannel.sfx]!;
+      expect(sfx.played, ['sfx_activity_complete']);
+      expect(sfx.volume, closeTo(0.5, 1e-9));
+
+      await settings().setSoundEffects(false);
+      final off = play(
+        AudioChannel.sfx,
+        const EffectAudio('activity_complete'),
+      );
+      expect(await off.done, PlaybackPhase.stopped);
+      expect(sfx.played, hasLength(1));
+    },
+  );
+
+  test('background music sits at a low level under master', () async {
+    await settings().setVolume(80);
+    play(AudioChannel.music, song);
+    await pumpEventQueue();
+    expect(players[AudioChannel.music]!.volume, closeTo(0.8 * 0.35, 1e-9));
   });
 
   test('music off: nothing plays, and what was playing stops', () async {

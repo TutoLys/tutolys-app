@@ -21,6 +21,7 @@ import '../i18n/strings.dart';
 import '../../features/pairing/pairing_controller.dart';
 import 'village_header.dart';
 import 'village_nav.dart';
+import '../../features/audio/music_director.dart';
 
 /// The paired learner's shell: the design's navigation chrome wrapped around
 /// whichever page is current.
@@ -60,6 +61,21 @@ class VillageShell extends ConsumerStatefulWidget {
 }
 
 class _VillageShellState extends ConsumerState<VillageShell> {
+  // Background music belongs to the shell pages (ADR 0035).
+  late final MusicDirector _music = ref.read(musicDirectorProvider);
+
+  @override
+  void initState() {
+    super.initState();
+    _music.shellShown();
+  }
+
+  @override
+  void dispose() {
+    _music.shellGone();
+    super.dispose();
+  }
+
   int get _index {
     final i = VillageShell.pages.indexOf(widget.page);
     return i < 0 ? 0 : i;

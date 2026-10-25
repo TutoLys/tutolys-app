@@ -60,10 +60,15 @@ class AudioRequest {
     required this.source,
     required this.channel,
     this.priority = 0,
+    this.loop = false,
   });
 
   final AudioSource source;
   final AudioChannel channel;
+
+  /// Play again from the start, seamlessly, until stopped: background
+  /// music. The clip's own end never completes the handle.
+  final bool loop;
 
   /// Within the voice lane, a request of equal or higher priority replaces
   /// what is playing; a lower one is dropped. A child pressing the speaker

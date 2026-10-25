@@ -58,8 +58,9 @@ class FakeBackend implements WebAudioBackend {
     double offsetSeconds = 0,
     double volume = 1,
     double delaySeconds = 0,
+    bool loop = false,
   }) {
-    log.add('start $buffer @$offsetSeconds');
+    log.add('start $buffer @$offsetSeconds${loop ? ' loop' : ''}');
     delays.add(delaySeconds);
     final v = FakeVoice(volume);
     voices.add(v);
@@ -353,6 +354,19 @@ void main() {
       expect(b.log, ['running', 'decode 6', 'start buffer-6 @0.0']);
       await audio.stop();
       expect(b.voices.single.stopped, isTrue);
+    },
+  );
+
+  test(
+    'a looping clip is started looped, and resumes from its start',
+    () async {
+      final backend = FakeBackend();
+      final p = WebAudioChannelPlayer(backend);
+      await p.play(bytes(4), cacheKey: 'music', loop: true);
+      expect(backend.log.last, endsWith('@0.0 loop'));
+      await p.pause();
+      await p.resume();
+      expect(backend.log.last, endsWith('@0.0 loop'));
     },
   );
 }

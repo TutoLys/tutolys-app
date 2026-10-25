@@ -17,6 +17,8 @@ import '../../data/sync/drift_audio_resolver.dart';
 import '../../data/sync/drift_image_resolver.dart';
 import '../../data/sync/lesson_key.dart';
 import '../../data/sync/outbox_flusher_provider.dart';
+import '../audio/app_sounds.dart';
+import '../audio/music_director.dart';
 import '../pairing/pairing_controller.dart';
 import '../profile/avatars.dart';
 import '../profile/rare_avatar_found.dart';
@@ -88,6 +90,8 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   void initState() {
     super.initState();
     unawaited(_readReplay());
+    // No music under a question being read (ADR 0035).
+    _music.activityEntered();
     final parsed = QuestionEnvelope.parse(widget.envelope).valueOrNull;
     final learning = ref.read(learningEngineRegistryProvider);
 
@@ -158,6 +162,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
   @override
   void dispose() {
+    _music.activityLeft();
     _lifecycle.dispose();
     unawaited(_autoRead?.cancel());
     unawaited(_audio.stopChannel(AudioChannel.narration));
@@ -172,8 +177,26 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
   // ── runtime path ───────────────────────────────────────────────────────
 
+  late final MusicDirector _music = ref.read(musicDirectorProvider);
+
+  /// One of the three moments every engine shares (ADR 0035), on the SFX
+  /// channel: the Réglages toggle and volume apply there.
+  void _effect(SfxMoment moment) => _audio.play(
+    AudioRequest(
+      source: EffectAudio(moment.effectName),
+      channel: AudioChannel.sfx,
+    ),
+  );
+
   void _onRuntimeEvent(RuntimeEvent e) {
     switch (e) {
+      // VALIDER's verdict, once per check, whichever engine judged it.
+      case AnswerEvaluated(:final result):
+        _effect(
+          result.outcome == Outcome.correct
+              ? SfxMoment.answerRight
+              : SfxMoment.answerRetry,
+        );
       case QuestionPresented(:final questionIndex):
         final c = _controller!;
         final plan = _planFor(c, questionIndex);
@@ -317,6 +340,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       Navigator.of(context).pop();
       return;
     }
+    _effect(SfxMoment.activityComplete);
     final perQuestion = result.questionResults.isEmpty
         ? [result]
         : result.questionResults;

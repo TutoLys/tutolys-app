@@ -61,6 +61,11 @@ flutter:
     # the mascot are illustrations that cannot be reproduced in code; the nav
     # icons are PNGs for the same reason.
     - assets/images/
+    # The app's own sounds (ADR 0035): two background loops and the shell's
+    # effects, re-encoded small from Hafid's originals in Assets/Sounds.
+    # Fetched when first played, so not part of the web's first download.
+    - assets/sounds/music/
+    - assets/sounds/sfx/
 
 # `dart run flutter_launcher_icons` regenerates web/icons/*.png from these.
 # Scoped to web only: Linux desktop has no Flutter-tooling icon pipeline (its

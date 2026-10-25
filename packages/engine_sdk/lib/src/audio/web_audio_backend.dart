@@ -43,6 +43,7 @@ abstract interface class WebAudioBackend {
     double offsetSeconds = 0,
     double volume = 1,
     double delaySeconds = 0,
+    bool loop = false,
   });
 
   /// How the output is kept awake: the page's `?audiokeepalive=` choice,

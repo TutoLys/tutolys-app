@@ -15,7 +15,12 @@ import 'platform_channel_player.dart';
 /// are tested without a platform audio backend.
 abstract interface class ChannelPlayer {
   /// Start playing; completes once playback has begun (or failed to).
-  Future<void> play(Uint8List bytes, {required String cacheKey});
+  /// [loop] repeats the clip seamlessly until [stop].
+  Future<void> play(
+    Uint8List bytes, {
+    required String cacheKey,
+    bool loop = false,
+  });
 
   /// Fires when a playback reaches its end on its own.
   Stream<void> get onComplete;
@@ -37,12 +42,17 @@ class AudioplayersChannelPlayer implements ChannelPlayer {
   final AudioPlayer _player;
 
   @override
-  Future<void> play(Uint8List bytes, {required String cacheKey}) async {
+  Future<void> play(
+    Uint8List bytes, {
+    required String cacheKey,
+    bool loop = false,
+  }) async {
     AudioDebug.log('audioplayers path served $cacheKey (not expected on web)');
     final source = kIsWeb
         ? BytesSource(bytes)
         : await platform_audio.fileSourceFor(bytes, cacheKey);
     await _player.stop();
+    await _player.setReleaseMode(loop ? ReleaseMode.loop : ReleaseMode.stop);
     await _player.play(source);
   }
 
@@ -104,6 +114,7 @@ class ChannelAudioCoordinator implements AudioCoordinator {
     this.effectsEnabled,
     this.musicEnabled,
     this.masterVolume,
+    this.musicVolume = 1,
     this.duckedMusicVolume = 0.3,
   }) : _factory = playerFactory ?? ((_) => platformChannelPlayer());
 
@@ -123,7 +134,11 @@ class ChannelAudioCoordinator implements AudioCoordinator {
   /// Null means full volume.
   final double Function()? masterVolume;
 
-  /// Music under a voice plays at this fraction of [masterVolume].
+  /// Music's own level, as a fraction of [masterVolume]: background music
+  /// sits under everything else.
+  final double musicVolume;
+
+  /// Music under a voice plays at this fraction of its own level.
   final double duckedMusicVolume;
   bool _ducked = false;
 
@@ -142,9 +157,8 @@ class ChannelAudioCoordinator implements AudioCoordinator {
 
   double _levelFor(AudioChannel c) {
     final master = (masterVolume?.call() ?? 1).clamp(0.0, 1.0);
-    return c == AudioChannel.music && _ducked
-        ? master * duckedMusicVolume
-        : master;
+    if (c != AudioChannel.music) return master;
+    return master * musicVolume * (_ducked ? duckedMusicVolume : 1);
   }
 
   /// Re-applies [masterVolume] to every player, for a Réglages change
@@ -243,7 +257,9 @@ class ChannelAudioCoordinator implements AudioCoordinator {
       TtsUtterance() => 'tts',
     };
     await _safely(() => player.setVolume(_levelFor(channel)));
-    final ok = await _safely(() => player.play(bytes, cacheKey: key));
+    final ok = await _safely(
+      () => player.play(bytes, cacheKey: key, loop: request.loop),
+    );
     if (!ok) {
       _finish(channel, entry, PlaybackPhase.error);
       return;

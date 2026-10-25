@@ -176,9 +176,12 @@ class _JsWebAudioBackend implements WebAudioBackend {
     double offsetSeconds = 0,
     double volume = 1,
     double delaySeconds = 0,
+    bool loop = false,
   }) {
     final ctx = _ctx;
-    final src = ctx.createBufferSource()..buffer = buffer as web.AudioBuffer;
+    final src = ctx.createBufferSource()
+      ..buffer = buffer as web.AudioBuffer
+      ..loop = loop;
     final gain = ctx.createGain();
     gain.gain.value = volume;
     src.connect(gain);

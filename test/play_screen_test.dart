@@ -316,7 +316,8 @@ void main() {
       expect(
         find.text('+3'),
         findsOneWidget,
-        reason: 'the right answer that finishes the lesson pays its bonus '
+        reason:
+            'the right answer that finishes the lesson pays its bonus '
             'too, so the game ends on the celebration\'s number',
       );
       await tester.tap(find.text('CONTINUER'));
@@ -478,6 +479,67 @@ void main() {
     },
   );
 
+  group('the three shared sound moments (ADR 0035)', () {
+    List<String> effects() => [
+      for (final r in audio.requests)
+        if (r.source case EffectAudio(:final name)) '${r.channel.name}:$name',
+    ];
+
+    Future<void> openActivity(
+      WidgetTester tester,
+      Map<String, Object?> envelope, {
+      bool runtime = false,
+    }) async {
+      await tester.pumpWidget(app(envelope, runtime: runtime));
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await settle(tester);
+    }
+
+    testWidgets('the real mcq: one cue per check, one jingle at the end', (
+      tester,
+    ) async {
+      await openActivity(tester, _mcqEnvelope);
+      expect(effects(), isEmpty, reason: 'nothing before a check');
+
+      await tester.tap(find.text('10'));
+      await settle(tester);
+      await tester.tap(find.text('VALIDER'));
+      await settle(tester);
+      expect(effects(), ['sfx:answer_retry']);
+
+      await tester.tap(find.text('RÉESSAYER'));
+      await settle(tester);
+      await tester.tap(find.text('12'));
+      await settle(tester);
+      await tester.tap(find.text('VALIDER'));
+      await settle(tester);
+      expect(effects(), ['sfx:answer_retry', 'sfx:answer_right']);
+
+      await tester.tap(find.text('CONTINUER'));
+      await settle(tester);
+      await tester.pumpAndSettle();
+      expect(effects(), [
+        'sfx:answer_retry',
+        'sfx:answer_right',
+        'sfx:activity_complete',
+      ]);
+    });
+
+    testWidgets('any other engine gets the same cues, from the shell', (
+      tester,
+    ) async {
+      // The fake engine shares nothing with mcq but the runtime: the cue
+      // rides the controller's verdict, not an engine.
+      await openActivity(tester, fakeEnvelope(questions: 1), runtime: true);
+      await tester.tap(find.byKey(const ValueKey('option-b')));
+      await settle(tester);
+      await tester.tap(find.text('VALIDER'));
+      await settle(tester);
+      expect(effects(), ['sfx:answer_right']);
+    });
+  });
+
   testWidgets('a lesson already finished here earns replay XP, no bonus', (
     tester,
   ) async {
@@ -509,9 +571,7 @@ void main() {
     );
   });
 
-  testWidgets('in the dark theme, the game chrome is dark too', (
-    tester,
-  ) async {
+  testWidgets('in the dark theme, the game chrome is dark too', (tester) async {
     await tester.pumpWidget(app(_mcqEnvelope, dark: true));
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
@@ -553,9 +613,7 @@ void main() {
   );
 
   group('a passage sentence is read when its speaker is tapped (ADR 0044)', () {
-    testWidgets('plays that sentence on the narration channel', (
-      tester,
-    ) async {
+    testWidgets('plays that sentence on the narration channel', (tester) async {
       await tester.pumpWidget(app(_passageEnvelope));
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();

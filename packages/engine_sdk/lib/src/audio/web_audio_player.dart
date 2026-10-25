@@ -48,12 +48,21 @@ class WebAudioChannelPlayer implements ChannelPlayer {
   double _offset = 0;
   bool _paused = false;
 
+  /// The clip repeats until stopped. A paused loop resumes from its start:
+  /// background music has no place to keep.
+  bool _loop = false;
+
   @override
   Stream<void> get onComplete => _complete.stream;
 
   @override
-  Future<void> play(Uint8List bytes, {required String cacheKey}) async {
+  Future<void> play(
+    Uint8List bytes, {
+    required String cacheKey,
+    bool loop = false,
+  }) async {
     final gen = ++_generation;
+    _loop = loop;
     _stopVoice();
     _paused = false;
     if (AudioDebug.enabled) {
@@ -88,6 +97,7 @@ class WebAudioChannelPlayer implements ChannelPlayer {
       offsetSeconds: offset,
       volume: _volume,
       delaySeconds: delay,
+      loop: _loop,
     );
     if (AudioDebug.enabled) {
       AudioDebug.log(
@@ -142,7 +152,7 @@ class WebAudioChannelPlayer implements ChannelPlayer {
     if (!_paused) return;
     _paused = false;
     await backend.ensureRunning();
-    _startAt(_offset);
+    _startAt(_loop ? 0 : _offset);
   }
 
   @override

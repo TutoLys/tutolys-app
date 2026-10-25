@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tutolys_motion/tutolys_motion.dart';
 
+import '../audio/app_sounds.dart';
 import '../pairing/pairing_controller.dart';
 import '../../data/sync/drift_audio_resolver.dart';
 import '../settings/settings_controller.dart';
@@ -71,7 +72,8 @@ const defaultCast = CastAssignment({ActorRole.guide: 'fox'});
 
 /// Where the coordinator finds a clip's bytes: the synced audio cache.
 final audioResolverProvider = Provider<AudioResolver>(
-  (ref) => DriftAudioResolver(ref.watch(localDatabaseProvider)),
+  (ref) =>
+      AppAudioResolver(DriftAudioResolver(ref.watch(localDatabaseProvider))),
 );
 
 /// The coordinator's players. Null is the platform's own; tests put fakes
@@ -88,6 +90,9 @@ final audioCoordinatorProvider = Provider<AudioCoordinator>((ref) {
     effectsEnabled: () => ref.read(settingsControllerProvider).soundEffects,
     musicEnabled: () => ref.read(settingsControllerProvider).music,
     masterVolume: () => ref.read(settingsControllerProvider).volume / 100,
+    // Background music sits well under voices and effects (ADR 0035).
+    musicVolume: 0.35,
+    effectBytes: appEffectBytes,
   );
   // Réglages applies live: the toggles are read on every request, and
   // these two act on what is already playing.
