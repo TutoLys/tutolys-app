@@ -37,8 +37,9 @@ class _FakeProgressApi extends ProgressApi {
           masteries: const [],
           currentStreakDays: 1,
           level: level,
-          xpIntoLevel: level == null ? null : 0,
-          xpToNextLevel: level == null ? null : 100,
+          // Grade levels (app ADR 0033): 98 skills, level - 1 done.
+          skillsCompleted: level == null ? null : level! - 1,
+          skillsTotal: level == null ? null : 98,
         ),
       );
 }

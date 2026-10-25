@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/api/progress_api.dart';
 import '../../data/local_db/streak_local.dart';
 import '../pairing/pairing_controller.dart';
+import 'grade_level.dart';
+import 'local_progress.dart';
 
 /// Real mastery/streak counts only — `null` streak means "couldn't read it
 /// this time at all, not even an offline estimate", never a fabricated 0.
@@ -21,8 +23,9 @@ class ProgressState {
     this.totalXp = 0,
     this.masteries = const [],
     this.level,
-    this.xpIntoLevel,
-    this.xpToNextLevel,
+    this.skillsCompleted,
+    this.skillsTotal,
+    this.levelProgress,
   });
 
   final int? currentStreakDays;
@@ -55,23 +58,34 @@ class ProgressState {
   /// Village gets a per-subject figure without a new endpoint.
   final List<SkillMasteryDto> masteries;
 
-  /// The kid's level, from the server's own curve. Null while offline — a
-  /// level computed here would be a second curve that can disagree.
+  /// The school year's level, 1–99 (ADR 0033): this device's count of
+  /// completed skills merged with the server's, never lower than a level
+  /// already shown in this grade. Null until there's a grade to measure.
   final int? level;
 
-  /// See `ProgressSnapshot.xpIntoLevel`. Null whenever [level] is.
-  final int? xpIntoLevel;
-  final int? xpToNextLevel;
+  /// The level's numerator and denominator, as merged.
+  final int? skillsCompleted;
+  final int? skillsTotal;
 
-  /// How far through the current level, 0..1. Null when there is no level
-  /// to be through (offline, or a backend without levels).
-  double? get levelProgress {
-    final into = xpIntoLevel, next = xpToNextLevel;
-    if (level == null || into == null || next == null || into + next <= 0) {
-      return null;
-    }
-    return into / (into + next);
-  }
+  /// How far toward the next level, 0..1. Null whenever [level] is.
+  final double? levelProgress;
+
+  ProgressState withLevel(GradeLevel? g) => ProgressState(
+    currentStreakDays: currentStreakDays,
+    masteredCount: masteredCount,
+    totalSkills: totalSkills,
+    loading: loading,
+    offline: offline,
+    isStreakEstimated: isStreakEstimated,
+    freezesAvailable: freezesAvailable,
+    dailyQuest: dailyQuest,
+    totalXp: totalXp,
+    masteries: masteries,
+    level: g?.level,
+    skillsCompleted: g?.completed,
+    skillsTotal: g?.total,
+    levelProgress: g?.progress,
+  );
 }
 
 class ProgressController extends Notifier<ProgressState> {
@@ -79,6 +93,11 @@ class ProgressController extends Notifier<ProgressState> {
   ProgressState build() {
     // Rebuilt, and so reloaded, when "Qui joue ?" switches kid.
     ref.watch(activeKidIdProvider);
+    _server = null;
+    // A finished lesson moves the level at once, without a network read.
+    ref.listen(localNodeProgressProvider, (_, next) {
+      if (next.hasValue) _applyLevel();
+    });
     // Same reasoning as HomeController/PathController: build() must stay
     // synchronous, so the screen shows a loading state until `_load` ends.
     Future.microtask(_load);
@@ -119,9 +138,6 @@ class ProgressController extends Notifier<ProgressState> {
         dailyQuest: snapshot.dailyQuest,
         totalXp: snapshot.totalXp,
         masteries: snapshot.masteries,
-        level: snapshot.level,
-        xpIntoLevel: snapshot.xpIntoLevel,
-        xpToNextLevel: snapshot.xpToNextLevel,
       ),
       ProgressOffline() => ProgressState(
         loading: false,
@@ -135,6 +151,42 @@ class ProgressController extends Notifier<ProgressState> {
       ProgressUnauthorized() ||
       ProgressFailed() => const ProgressState(loading: false),
     };
+    _server = result is ProgressFetched ? result.snapshot : null;
+    await _applyLevel();
+  }
+
+  /// The last successful read, for its level fields.
+  ProgressSnapshot? _server;
+
+  /// Merges this device's completed skills with the server's (ADR 0033)
+  /// and remembers the level shown, so it never goes down within a grade.
+  Future<void> _applyLevel() async {
+    final kid = ref.read(sessionControllerProvider).kid;
+    final kidId = ref.read(activeKidIdProvider);
+    if (kid == null || kidId == null) return;
+    final db = ref.read(localDatabaseProvider);
+    final leaves = await (db.select(
+      db.skillNodeTable,
+    )..where((t) => t.grade.equals(kid.gradeLevel))).get();
+    final local = await ref.read(localNodeProgressProvider.future);
+    final store = GradeLevelStore(db, kidId: kidId, grade: kid.gradeLevel);
+    final (high, lastTotal) = await store.read();
+    final server = _server;
+    final merged = mergeGradeLevel(
+      localCompleted: leaves.where((l) => (local[l.id] ?? 0) >= 1).length,
+      localTotal: leaves.length,
+      serverCompleted: server?.skillsCompleted,
+      serverTotal: server?.skillsTotal,
+      serverLevel: server?.level,
+      lastServerTotal: lastTotal,
+      highWater: high,
+    );
+    if (!ref.mounted) return;
+    if (merged != null) {
+      await store.write(high: merged.level, total: server?.skillsTotal);
+    }
+    if (!ref.mounted) return;
+    state = state.withLevel(merged);
   }
 
   Future<void> refresh() => _load();

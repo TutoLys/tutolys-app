@@ -57,8 +57,8 @@ class ProgressSnapshot {
     this.dailyQuest,
     this.totalXp = 0,
     this.level,
-    this.xpIntoLevel,
-    this.xpToNextLevel,
+    this.skillsCompleted,
+    this.skillsTotal,
   });
 
   factory ProgressSnapshot.fromJson(Map<String, Object?> json) {
@@ -78,9 +78,12 @@ class ProgressSnapshot {
       // telemetry, so it's always a real number (0 for a kid who hasn't
       // earned any yet), even when the rest of the payload degrades.
       totalXp: json['total_xp'] as int? ?? 0,
-      level: json['level'] as int?,
-      xpIntoLevel: json['xp_into_level'] as int?,
-      xpToNextLevel: json['xp_to_next_level'] as int?,
+      // A backend from before grade levels sent an XP level under the same
+      // name; `skills_total` is what marks the new meaning, so without it
+      // the level is ignored rather than mistaken for a grade level.
+      level: json['skills_total'] == null ? null : json['level'] as int?,
+      skillsCompleted: json['skills_completed'] as int?,
+      skillsTotal: json['skills_total'] as int?,
     );
   }
 
@@ -104,15 +107,14 @@ class ProgressSnapshot {
   /// more than a single-question one with no special handling needed here.
   final int totalXp;
 
-  /// Off `total_xp` through the backend's admin-editable `LevelCurve` (ADR
-  /// 0024). Null only from a backend that predates levels.
+  /// The school year's level, 1–99, from the share of the grade's skills
+  /// completed (app ADR 0033). Null from a backend that doesn't send it.
   final int? level;
 
-  /// XP earned inside the current level, and XP still needed for the next
-  /// one. Their sum is the level's size, so progress through it is
-  /// `into / (into + toNext)`; the backend guarantees the sum is never 0.
-  final int? xpIntoLevel;
-  final int? xpToNextLevel;
+  /// Skills of the kid's grade with every published lesson finished, and
+  /// all skills of the grade: the level's numerator and denominator.
+  final int? skillsCompleted;
+  final int? skillsTotal;
 
   int get masteredCount => masteries.where((m) => m.isMastered).length;
 }

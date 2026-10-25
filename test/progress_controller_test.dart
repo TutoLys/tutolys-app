@@ -1,11 +1,15 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tutolys_app/data/api/progress_api.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
 import 'package:tutolys_app/data/local_db/session_store.dart';
+import 'package:tutolys_app/data/local_db/node_progress_local.dart';
 import 'package:tutolys_app/data/local_db/streak_local.dart';
 import 'package:tutolys_app/features/pairing/pairing_controller.dart';
+import 'package:tutolys_app/features/progress/grade_level.dart';
 import 'package:tutolys_app/features/progress/progress_controller.dart';
 
 class _FixedSessionController extends SessionController {
@@ -193,6 +197,95 @@ void main() {
         container.read(progressControllerProvider).currentStreakDays,
         isNull,
       );
+    });
+  });
+
+  group('the grade level (ADR 0033)', () {
+    /// 98 grade-1 leaves, one lesson on the first, finished on this device.
+    Future<void> seedOneSkillDone() async {
+      await db.batch((b) {
+        for (var i = 0; i < 98; i++) {
+          b.insert(
+            db.skillNodeTable,
+            SkillNodeTableCompanion.insert(
+              id: 'leaf-$i',
+              labelFr: 'n$i',
+              labelEn: '',
+              stableKey: 'mathematique/x/b:A/o:$i',
+              subject: 'MATH',
+              grade: 1,
+            ),
+          );
+        }
+      });
+      await db
+          .into(db.exerciseCacheTable)
+          .insert(
+            ExerciseCacheTableCompanion.insert(
+              exerciseId: 'ex-0',
+              version: 1,
+              payload: jsonEncode({
+                'exercise_id': 'ex-0',
+                'skill_node_id': 'leaf-0',
+                'subject': 'MATH',
+                'engine_key': 'mcq',
+                'rank': 0,
+                'locale': 'fr-CA',
+              }),
+              contentHash: 'h',
+              engineKey: 'mcq',
+              skillNodeId: 'leaf-0',
+              subject: 'MATH',
+              grade: 1,
+              rank: 0,
+              cachedAt: DateTime.utc(2026, 10, 25),
+            ),
+          );
+      await NodeProgressLocal(
+        db,
+        kidId: 'k1',
+      ).recordCompleted('leaf-0', perfect: true, exerciseId: 'ex-0');
+    }
+
+    test('a skill finished here raises the level before the server', () async {
+      container = build();
+      await seedOneSkillDone();
+      // An older backend: its XP level must not leak in as a grade level.
+      api.result = ProgressFetched(
+        ProgressSnapshot.fromJson({
+          'masteries': const [],
+          'current_streak_days': 0,
+          'total_xp': 500,
+          'level': 6,
+        }),
+      );
+
+      await container.read(progressControllerProvider.notifier).refresh();
+      await pumpEventQueue();
+
+      final state = container.read(progressControllerProvider);
+      expect(state.level, 2, reason: '1 + floor(98 × 1 / 98)');
+      expect((state.skillsCompleted, state.skillsTotal), (1, 98));
+      expect(state.totalXp, 500, reason: 'XP stays, as points only');
+    });
+
+    test('a level already shown in this grade never goes down', () async {
+      container = build();
+      await GradeLevelStore(db, kidId: 'k1', grade: 1).write(high: 5);
+      api.result = const ProgressFetched(
+        ProgressSnapshot(
+          masteries: [],
+          currentStreakDays: 0,
+          level: 1,
+          skillsCompleted: 0,
+          skillsTotal: 526,
+        ),
+      );
+
+      await container.read(progressControllerProvider.notifier).refresh();
+      await pumpEventQueue();
+
+      expect(container.read(progressControllerProvider).level, 5);
     });
   });
 

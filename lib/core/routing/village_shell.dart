@@ -186,22 +186,23 @@ class _VillageShellState extends ConsumerState<VillageShell> {
               unreadNotifications: unread,
               notificationsLabel: t.notificationsBellLabel(unread),
               stats: [
-                // The design's "Niv. 14" pill with its XP track. Offline
-                // there is no level (the app never computes one itself, so it
-                // can't disagree with the server's curve): the raw XP total
-                // stands in.
+                // The design's "Niv. 14" pill: the school year's level and
+                // its track to the next one (ADR 0033). Before any grade can
+                // be measured, the raw XP total stands in.
                 if (progress.level case final level?)
                   HeaderStat(
                     asset: 'asset-xpstar.webp',
                     label: t.progressLevel(level),
                     progress: progress.levelProgress,
-                    tooltip: progress.xpToNextLevel == null
-                        ? null
-                        : t.headerLevelTooltip(
-                            progress.totalXp,
-                            progress.xpToNextLevel!,
-                            level + 1,
-                          ),
+                    tooltip: switch ((
+                      progress.skillsCompleted,
+                      progress.skillsTotal,
+                      kid?.gradeLevel,
+                    )) {
+                      (final done?, final total?, final grade?) =>
+                        t.headerLevelTooltip(done, total, grade),
+                      _ => null,
+                    },
                   )
                 else
                   HeaderStat(

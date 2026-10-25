@@ -220,8 +220,8 @@ void main() {
           currentStreakDays: 1,
           totalXp: 135,
           level: 2,
-          xpIntoLevel: 35,
-          xpToNextLevel: 65,
+          skillsCompleted: 1,
+          skillsTotal: 98,
         ),
       );
 

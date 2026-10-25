@@ -18,55 +18,47 @@ Widget header(List<HeaderStat> stats, {bool compact = false}) => MaterialApp(
 );
 
 void main() {
-  group('level from /me/progress', () {
-    test('parses the level and the XP through it', () {
+  group('grade level from /me/progress (ADR 0033)', () {
+    test('parses the level and its skills', () {
       final s = ProgressSnapshot.fromJson({
         'masteries': const [],
         'current_streak_days': 2,
+        'total_xp': 105,
+        'level': 7,
+        'skills_completed': 33,
+        'skills_total': 526,
+      });
+      expect(s.level, 7);
+      expect(s.skillsCompleted, 33);
+      expect(s.skillsTotal, 526);
+    });
+
+    test('an older backend\'s XP level is not taken for a grade level', () {
+      final s = ProgressSnapshot.fromJson({
+        'masteries': const [],
+        'current_streak_days': null,
         'total_xp': 105,
         'level': 2,
         'xp_into_level': 5,
         'xp_to_next_level': 95,
       });
-      expect(s.level, 2);
-      expect(s.xpIntoLevel, 5);
-      expect(s.xpToNextLevel, 95);
-    });
-
-    test('progress through the level is into / (into + toNext)', () {
-      const state = ProgressState(level: 2, xpIntoLevel: 25, xpToNextLevel: 75);
-      expect(state.levelProgress, 0.25);
+      expect(s.level, isNull);
     });
 
     test('no level, no progress: never a made-up bar', () {
       expect(const ProgressState().levelProgress, isNull);
-      expect(
-        const ProgressState(xpIntoLevel: 5, xpToNextLevel: 95).levelProgress,
-        isNull,
-        reason: 'figures without a level are not shown',
-      );
-    });
-
-    test('a backend without level progress still parses', () {
-      final s = ProgressSnapshot.fromJson({
-        'masteries': const [],
-        'current_streak_days': null,
-        'total_xp': 30,
-        'level': 1,
-      });
-      expect(s.xpIntoLevel, isNull);
     });
   });
 
   group('the header pill', () {
-    testWidgets('shows the level with its XP track', (tester) async {
+    testWidgets('shows the level with its track to the next one', (tester) async {
       await tester.pumpWidget(
         header(const [
           HeaderStat(
             asset: 'asset-xpstar.webp',
             label: 'Niv. 2',
             progress: 0.25,
-            tooltip: '105 XP · encore 95 XP pour le niveau 3',
+            tooltip: '33 notions réussies sur 526 en 1re année',
           ),
         ]),
       );
@@ -77,7 +69,7 @@ void main() {
       );
       expect(bar.value, 0.25);
       expect(
-        find.byTooltip('105 XP · encore 95 XP pour le niveau 3'),
+        find.byTooltip('33 notions réussies sur 526 en 1re année'),
         findsOneWidget,
       );
     });
