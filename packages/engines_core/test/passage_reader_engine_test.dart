@@ -401,6 +401,31 @@ void main() {
       c.dispose();
     });
 
+    testWidgets('an XP total of 0 draws no chip (a replay pays nothing)', (
+      tester,
+    ) async {
+      tallView(tester);
+      for (final (xp, chips) in [(0, 0), (5, 1)]) {
+        final (c, _) = controllerFor(findConfig);
+        await tester.runAsync(c.start);
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: TutolysTheme.village(),
+            home: Scaffold(
+              body: LearningActivityView(
+                controller: c,
+                locale: fr,
+                onDone: () {},
+                xpEarned: () => xp,
+              ),
+            ),
+          ),
+        );
+        expect(find.byIcon(Icons.star_rounded), findsNWidgets(chips));
+        c.dispose();
+      }
+    });
+
     testWidgets('no speaker is drawn when the host offers none', (
       tester,
     ) async {

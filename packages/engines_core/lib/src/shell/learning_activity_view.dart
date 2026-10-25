@@ -39,7 +39,7 @@ class LearningActivityView extends StatefulWidget {
   final Widget? character;
   final bool hintsEnabled;
 
-  /// XP to show so far; null hides the pill.
+  /// XP to show so far; null or 0 hides the pill.
   final int Function()? xpEarned;
 
   @override
@@ -187,7 +187,11 @@ class _LearningActivityViewState extends State<LearningActivityView> {
         (state.questionIndex + 1).clamp(1, count),
         count,
       ),
-      xp: widget.xpEarned?.call(),
+      // No "+0" chip: a replayed question pays nothing (backend ADR 0047).
+      xp: switch (widget.xpEarned?.call()) {
+        0 || null => null,
+        final x => x,
+      },
       inARow: _inARow,
       promptText: q?.spec.prompt.text,
       promptImageRef: q?.spec.prompt.imageRef,
