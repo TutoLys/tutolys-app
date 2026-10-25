@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
 import 'package:tutolys_app/features/home/subject_progress.dart';
+import 'package:tutolys_app/features/home/village_scene.dart';
 import 'package:tutolys_app/features/home/village_screen.dart';
 import 'package:tutolys_app/features/pairing/pairing_controller.dart';
 import 'package:tutolys_app/features/quests/quest_board.dart';
@@ -33,44 +34,42 @@ const _quests = [
   ),
 ];
 
-Widget harness({VoidCallback? onOpenPath, VoidCallback? onOpenQuests}) =>
-    ProviderScope(
-      overrides: [
-        localDatabaseProvider.overrideWithValue(LocalDatabase.memory()),
-        questBoardProvider.overrideWith(
-          (ref) async => QuestBoard(
-            quests: _quests,
-            weekCompleted: 0,
-            unlocked: const {},
-            today: DateTime(2026, 10, 25),
-          ),
-        ),
-        subjectProgressProvider.overrideWith((ref) async => const {}),
-      ],
-      child: MaterialApp(
-        theme: TutolysTheme.village(),
-        locale: const Locale('fr', 'CA'),
-        supportedLocales: const [Locale('fr', 'CA'), Locale('en', 'CA')],
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        home: MediaQuery(
-          // A phone: the panel sits under the subject strip, no scene.
-          data: const MediaQueryData(
-            size: Size(390, 1400),
-            disableAnimations: true,
-          ),
-          child: Scaffold(
-            body: VillageScreen(
-              onOpenPath: onOpenPath,
-              onOpenQuests: onOpenQuests,
-            ),
-          ),
-        ),
+Widget harness({
+  VoidCallback? onOpenPath,
+  VoidCallback? onOpenQuests,
+  Size size = const Size(390, 1400),
+}) => ProviderScope(
+  overrides: [
+    localDatabaseProvider.overrideWithValue(LocalDatabase.memory()),
+    questBoardProvider.overrideWith(
+      (ref) async => QuestBoard(
+        quests: _quests,
+        weekCompleted: 0,
+        unlocked: const {},
+        today: DateTime(2026, 10, 25),
       ),
-    );
+    ),
+    subjectProgressProvider.overrideWith((ref) async => const {}),
+  ],
+  child: MaterialApp(
+    theme: TutolysTheme.village(),
+    locale: const Locale('fr', 'CA'),
+    supportedLocales: const [Locale('fr', 'CA'), Locale('en', 'CA')],
+    localizationsDelegates: const [
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: MediaQuery(
+      // A phone by default: the panel sits under the subject strip, no
+      // scene.
+      data: MediaQueryData(size: size, disableAnimations: true),
+      child: Scaffold(
+        body: VillageScreen(onOpenPath: onOpenPath, onOpenQuests: onOpenQuests),
+      ),
+    ),
+  ),
+);
 
 void main() {
   testWidgets('each quest shows its fraction, its bar and its XP', (
@@ -115,5 +114,24 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('village-quests-see-all')));
     expect(opened, 1);
+  });
+
+  testWidgets('beside the scene, the panel is exactly as tall as it', (
+    tester,
+  ) async {
+    const size = Size(2000, 1200);
+    tester.view.physicalSize = size;
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(harness(size: size));
+    await tester.pumpAndSettle();
+
+    final scene = tester.getRect(find.byType(VillageScene));
+    final panel = tester.getRect(
+      find.byKey(const ValueKey('village-quest-panel')),
+    );
+    expect(panel.top, scene.top);
+    expect(panel.bottom, scene.bottom);
+    expect(panel.left, greaterThan(scene.right), reason: 'side by side');
   });
 }

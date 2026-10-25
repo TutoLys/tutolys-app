@@ -100,11 +100,9 @@ class VillageScreen extends ConsumerWidget {
                   );
                 }
 
-                // Height follows width: the design's 580px at full size, never
-                // so short that the buildings crowd together vertically.
                 final scene = LayoutBuilder(
                   builder: (context, box) => SizedBox(
-                    height: (box.maxWidth * 0.6).clamp(400.0, 580.0),
+                    height: _sceneHeight(box.maxWidth),
                     child: VillageScene(
                       buildings: buildings,
                       signTitle: t.villageSignTitle,
@@ -135,13 +133,30 @@ class VillageScreen extends ConsumerWidget {
                     ],
                   );
                 }
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: scene),
-                    const SizedBox(width: Space.lg),
-                    SizedBox(width: 300, child: panel),
-                  ],
+                // Beside the scene the panel is exactly the scene's height,
+                // top and bottom edges aligned; more rows than fit scroll
+                // inside it.
+                final sceneWidth =
+                    constraints.maxWidth - _panelWidth - Space.lg;
+                return SizedBox(
+                  height: _sceneHeight(sceneWidth),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(child: scene),
+                      const SizedBox(width: Space.lg),
+                      SizedBox(
+                        width: _panelWidth,
+                        child: _QuestPanel(
+                          key: const ValueKey('village-quest-panel'),
+                          quests: board?.quests,
+                          onOpenPath: onOpenPath,
+                          onOpenQuests: onOpenQuests,
+                          fillHeight: true,
+                        ),
+                      ),
+                    ],
+                  ),
                 );
               },
             ),
@@ -156,6 +171,13 @@ class VillageScreen extends ConsumerWidget {
 
 /// Below this the quest panel sits under the scene rather than beside it.
 const double _sideBySideMinWidth = 1100;
+
+/// The design's `grid-template-columns: 1fr 300px`.
+const double _panelWidth = 300;
+
+/// Height follows width: the design's 580px at full size, never so short
+/// that the buildings crowd together vertically.
+double _sceneHeight(double width) => (width * 0.6).clamp(400.0, 580.0);
 
 /// What the fox says. Built from the real open-quest count when there is one,
 /// so it is never a line of flavour text pretending to know something.
@@ -270,17 +292,52 @@ class _RecommendBar extends StatelessWidget {
 /// quest's row leads to the Carte, where it is played; "Voir toutes" opens
 /// Quêtes.
 class _QuestPanel extends StatelessWidget {
-  const _QuestPanel({required this.quests, this.onOpenPath, this.onOpenQuests});
+  const _QuestPanel({
+    super.key,
+    required this.quests,
+    this.onOpenPath,
+    this.onOpenQuests,
+    this.fillHeight = false,
+  });
 
   final List<DailyQuestItem>? quests;
   final VoidCallback? onOpenPath;
   final VoidCallback? onOpenQuests;
+
+  /// Fill the height it is given and scroll the rows inside it, rather than
+  /// sizing to its rows. Set beside the scene, where the two must line up.
+  final bool fillHeight;
 
   @override
   Widget build(BuildContext context) {
     final p = VillagePalette.of(context);
     final t = context.s;
     final items = quests;
+
+    final rows = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (items == null || items.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: Space.sm),
+            child: Text(
+              t.villageNoQuests,
+              style: TextStyle(fontSize: 12.5, color: p.inkMuted),
+            ),
+          )
+        else
+          for (var i = 0; i < items.length; i++) ...[
+            if (i > 0) Divider(height: 1, thickness: 1, color: p.line),
+            _QuestRow(
+              key: ValueKey('village-quest-${items[i].key}'),
+              quest: items[i],
+              title: questTitle(t, items[i]),
+              onTap: items[i].done ? null : onOpenPath,
+            ),
+          ],
+      ],
+    );
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -297,7 +354,7 @@ class _QuestPanel extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: fillHeight ? MainAxisSize.max : MainAxisSize.min,
         children: [
           Row(
             children: [
@@ -332,24 +389,10 @@ class _QuestPanel extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 2),
-          if (items == null || items.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: Space.sm),
-              child: Text(
-                t.villageNoQuests,
-                style: TextStyle(fontSize: 12.5, color: p.inkMuted),
-              ),
-            )
+          if (fillHeight)
+            Expanded(child: SingleChildScrollView(child: rows))
           else
-            for (var i = 0; i < items.length; i++) ...[
-              if (i > 0) Divider(height: 1, thickness: 1, color: p.line),
-              _QuestRow(
-                key: ValueKey('village-quest-${items[i].key}'),
-                quest: items[i],
-                title: questTitle(t, items[i]),
-                onTap: items[i].done ? null : onOpenPath,
-              ),
-            ],
+            rows,
         ],
       ),
     );
