@@ -1,203 +1,60 @@
-import 'dart:ui' as ui;
-
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/i18n/strings.dart';
-import 'skill_path.dart';
 import '../../core/routing/paired_router.dart';
-import '../../data/local_db/database.dart';
-import '../home/home_controller.dart';
+import '../progress/progress_controller.dart';
+import 'carte_model.dart';
 import 'path_controller.dart';
+import 'skill_path.dart';
 
-/// The real skill path (A7, A7.2): this kid's math leaves at their own
-/// grade laid out along a winding path, one node per leaf — locked/available
-/// only, no "mastered" (no progress model exists yet, A7 plan's gap #5; the
-/// visual-layer-only scope decision for A7.2 keeps real mastery/XP math off
-/// the client until the server owns it).
+/// Carte — the design's skill path, one subject at a time.
+///
+/// Subject pills across the top, then the subject's leaves in titled
+/// stretches, one per learning area. Node states are real: mastery comes
+/// from `/me/progress` (the same per-skill list the Village joins), and a
+/// node is locked only when nothing is synced to play on it.
 class PathScreen extends ConsumerWidget {
   const PathScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pathState = ref.watch(pathControllerProvider);
+    final state = ref.watch(pathControllerProvider);
+    final t = context.s;
 
-    // No Scaffold or AppBar: the shell already owns the chrome, and a
-    // second app bar under the header was the duplication the Village had.
+    // No Scaffold or AppBar: the shell owns the chrome, and a second app
+    // bar under the header was the duplication the Village had.
     return SafeArea(
-      child: switch (pathState) {
-        PathState(loading: true) => const _Loading(),
-        PathState(leaves: []) => _Empty(offline: pathState.offline),
-        _ => _CartePage(state: pathState),
-      },
-    );
-  }
-}
-
-class _Loading extends StatelessWidget {
-  const _Loading();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: CircularProgressIndicator());
-  }
-}
-
-class _Empty extends StatelessWidget {
-  const _Empty({required this.offline});
-
-  final bool offline;
-
-  @override
-  Widget build(BuildContext context) {
-    final s = context.s;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(Space.lg),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TutolysMascot(
-              mood: offline ? MascotMood.thinking : MascotMood.idle,
-              size: 140,
-            ),
-            const SizedBox(height: Space.lg),
-            Text(
-              s.pathEmpty,
-              style: context.text.bodyLarge?.copyWith(
-                color: context.extras.mutedText,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// A winding path, one circular node per skill — the visual registered
-/// trademark of this *kind* of learning app, rebuilt with original Tutolys
-/// art and tokens (no Duolingo artwork, wording, or exact layout copied).
-/// Layout numbers are an original, screen-width-proportional derivation, not
-/// a port of any specific app's pixel grid.
-///
-/// Tapping a node opens an inline info card rather than navigating straight
-/// to `/play` — the general shape is a deliberate, observed pattern (tap a
-/// node, see what it is and why it's locked/unlocked, then a separate tap
-/// commits to playing), not any app's specific artwork or copy.
-class _SkillPath extends ConsumerStatefulWidget {
-  const _SkillPath({required this.state});
-
-  final PathState state;
-
-  @override
-  ConsumerState<_SkillPath> createState() => _SkillPathState();
-}
-
-class _SkillPathState extends ConsumerState<_SkillPath> {
-  int? _expandedIndex;
-
-  static const _nodeDiameter = 68.0;
-  static const _nodeSpacing = 132.0;
-  static const _topPadding = Space.xl;
-
-  Future<void> _play(
-    CachedSkillNode leaf,
-    Map<String, Object?> envelope,
-  ) async {
-    setState(() => _expandedIndex = null);
-    // Home's stat tiles only load once and never rebuild on their own
-    // (IndexedStack keeps the tab alive) — refresh it too, not just this
-    // tab's own provider, since a kid can reach `/play` from here as
-    // easily as from Home.
-    await GoRouter.of(context).push(
-      '/play',
-      extra: PlayRequest(node: leaf, envelope: envelope),
-    );
-    if (mounted) {
-      ref.read(homeControllerProvider.notifier).refresh();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final state = widget.state;
-    final leaves = state.leaves;
-
-    return RefreshIndicator(
-      onRefresh: () => ref.read(pathControllerProvider.notifier).refresh(),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final width = constraints.maxWidth;
-          final centerX = width / 2;
-          // Keep every node (plus its label) comfortably inside the
-          // scrollable width on both a phone and a wide desktop window.
-          final amplitude = (width / 2 - _nodeDiameter).clamp(32.0, 96.0);
-          final height = _topPadding * 2 + leaves.length * _nodeSpacing;
-
-          // Strict left/right alternation, not a sine wave — this is the
-          // real app's own layout rule (`nodeXForIndex` in its GamesView),
-          // confirmed from its shipped source, not guessed from a screenshot.
-          final positions = <Offset>[
-            for (var i = 0; i < leaves.length; i++)
-              Offset(
-                centerX + (i.isEven ? -amplitude : amplitude),
-                _topPadding + i * _nodeSpacing,
-              ),
-          ];
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(vertical: Space.lg),
-            child: SizedBox(
-              width: width,
-              height: height,
-              // Tapping empty canvas collapses whatever card is open. Wraps
-              // the Stack rather than sitting *inside* it as a Positioned
-              // sibling — a plain background sibling never actually won
-              // the tap in testing; a GestureDetector that's an ancestor of
-              // the real node/card InkWells correctly only fires on a miss.
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => setState(() => _expandedIndex = null),
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: CustomPaint(
-                        painter: _PathConnectorPainter(
-                          positions: positions,
-                          color: context.colors.primary,
-                        ),
-                      ),
-                    ),
-                    for (var i = 0; i < leaves.length; i++)
-                      _PathNodePlaced(
-                        position: positions[i],
-                        diameter: _nodeDiameter,
-                        leaf: leaves[i],
-                        available: state.isAvailable(leaves[i]),
-                        onTap: () => setState(
-                          () => _expandedIndex = _expandedIndex == i ? null : i,
-                        ),
-                      ),
-                    if (_expandedIndex != null)
-                      _QuestCard(
-                        pathWidth: width,
-                        nodeY: positions[_expandedIndex!].dy,
-                        nodeDiameter: _nodeDiameter,
-                        leaf: leaves[_expandedIndex!],
-                        available: state.isAvailable(leaves[_expandedIndex!]),
-                        onClose: () => setState(() => _expandedIndex = null),
-                        onPlay: () => _play(
-                          leaves[_expandedIndex!],
-                          state.exerciseByNodeId[leaves[_expandedIndex!].id]!,
-                        ),
-                      ),
-                  ],
+          final compact = constraints.maxWidth < Breakpoints.compact;
+          return RefreshIndicator(
+            onRefresh: () => Future.wait([
+              ref.read(pathControllerProvider.notifier).refresh(),
+              ref.read(progressControllerProvider.notifier).refresh(),
+            ]),
+            child: ListView(
+              padding: EdgeInsets.all(compact ? Space.md : Space.lg),
+              children: [
+                _SubjectPills(
+                  selected: state.subject,
+                  compact: compact,
+                  onSelect: (code) => ref
+                      .read(pathControllerProvider.notifier)
+                      .selectSubject(code),
                 ),
-              ),
+                if (state.loading)
+                  const Padding(
+                    padding: EdgeInsets.all(Space.xl),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (state.leaves.isEmpty)
+                  _Empty(text: t.pathEmpty)
+                else
+                  _Sections(state: state, compact: compact),
+              ],
             ),
           );
         },
@@ -206,304 +63,129 @@ class _SkillPathState extends ConsumerState<_SkillPath> {
   }
 }
 
-/// The inline card a tapped node opens — title, status, and a CTA that's
-/// either disabled (locked) or a real "Jouer" button (available).
-class _QuestCard extends StatelessWidget {
-  const _QuestCard({
-    required this.pathWidth,
-    required this.nodeY,
-    required this.nodeDiameter,
-    required this.leaf,
-    required this.available,
-    required this.onClose,
-    required this.onPlay,
+/// The subject buildings, shared with the Village, keyed by backend code.
+const _subjectArt = {
+  'MATH': 'asset-bldg-math.webp',
+  'FR': 'asset-bldg-francais.webp',
+  'EN': 'asset-bldg-anglais.webp',
+  'SCI': 'asset-bldg-science.webp',
+  'SOC': 'asset-bldg-univers-social.webp',
+};
+
+String _subjectLabel(Strings t, String code) => switch (code) {
+  'MATH' => t.subjectMath,
+  'FR' => t.subjectFrancais,
+  'EN' => t.subjectAnglais,
+  'SCI' => t.subjectScience,
+  'SOC' => t.subjectUniversSocial,
+  _ => code,
+};
+
+/// `.subject-tabs`: a scrolling row of pills, the building as each icon.
+class _SubjectPills extends StatelessWidget {
+  const _SubjectPills({
+    required this.selected,
+    required this.compact,
+    required this.onSelect,
   });
 
-  final double pathWidth;
-  final double nodeY;
-  final double nodeDiameter;
-  final CachedSkillNode leaf;
-  final bool available;
-  final VoidCallback onClose;
-  final VoidCallback onPlay;
-
-  static const _cardWidth = 260.0;
+  final String selected;
+  final bool compact;
+  final ValueChanged<String> onSelect;
 
   @override
   Widget build(BuildContext context) {
-    final s = context.s;
-    // Centered on the path, clamped so it never runs past either edge —
-    // simpler and safer than anchoring to the tapped node's own x, which
-    // would clip near-edge nodes on a narrow phone width.
-    final left = ((pathWidth - _cardWidth) / 2).clamp(
-      Space.md,
-      pathWidth - _cardWidth - Space.md,
-    );
+    final p = VillagePalette.of(context);
+    final t = context.s;
 
-    return Positioned(
-      left: left,
-      top: nodeY + nodeDiameter / 2 + Space.sm,
-      width: _cardWidth,
-      child: Material(
-        color: context.colors.surfaceContainerHighest,
-        shadowColor: Shadows.cloud,
-        elevation: Shadows.cloudElevation,
-        borderRadius: Radii.cardMd,
-        child: Padding(
-          padding: const EdgeInsets.all(Space.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(leaf.labelFr, style: context.text.titleMedium),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 18),
-                    onPressed: onClose,
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ],
+    return Padding(
+      padding: EdgeInsets.only(bottom: compact ? 14 : 18),
+      child: SizedBox(
+        height: compact ? 38 : 46,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: pathSubjects.length,
+          separatorBuilder: (_, _) => SizedBox(width: compact ? 8 : 10),
+          itemBuilder: (context, i) {
+            final code = pathSubjects[i];
+            final active = code == selected;
+            return Material(
+              // `.subject-tab.is-active { background: #E8F0FF; border: none }`
+              color: active ? p.navActiveFill : p.surface,
+              shape: StadiumBorder(
+                side: active
+                    ? BorderSide.none
+                    : BorderSide(color: p.line),
               ),
-              const SizedBox(height: Space.xs),
-              if (!available)
-                Text(
-                  s.pathLocked,
-                  style: context.text.bodyMedium?.copyWith(
-                    color: context.extras.mutedText,
+              child: InkWell(
+                key: ValueKey('subject-pill-$code'),
+                customBorder: const StadiumBorder(),
+                onTap: active ? null : () => onSelect(code),
+                mouseCursor: active
+                    ? SystemMouseCursors.basic
+                    : SystemMouseCursors.click,
+                child: Padding(
+                  padding: compact
+                      ? const EdgeInsets.fromLTRB(6, 6, 13, 6)
+                      : const EdgeInsets.fromLTRB(8, 7, 16, 7),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Image.asset(
+                        'assets/images/${_subjectArt[code]}',
+                        width: compact ? 24 : 30,
+                        height: compact ? 24 : 30,
+                        fit: BoxFit.contain,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _subjectLabel(t, code),
+                        style: TextStyle(
+                          fontFamily: VillageType.display,
+                          fontWeight: FontWeight.w700,
+                          fontSize: compact ? 12 : 13,
+                          color: active ? p.quebecBlueBright : p.inkMuted,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              const SizedBox(height: Space.sm),
-              SizedBox(
-                width: double.infinity,
-                child: available
-                    ? FilledButton(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: context.colors.secondary,
-                          foregroundColor: context.colors.onSecondary,
-                        ),
-                        onPressed: onPlay,
-                        child: Text(s.homePlay),
-                      )
-                    : OutlinedButton(
-                        onPressed: null,
-                        child: Text(s.pathLocked),
-                      ),
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
   }
 }
 
-/// The connecting line between consecutive nodes — a smooth curve through
-/// each node's centre, not straight segments, so the path reads as one
-/// continuous trail rather than a zig-zag. Thin, dashed, and fading with
-/// depth — matching the real app's own `quest-path-svg` (`stroke-width: 4`,
-/// `stroke-dasharray: 12 8`, a vertical gradient from 50% to 12% opacity),
-/// confirmed from its shipped `GamesView.vue`.
-class _PathConnectorPainter extends CustomPainter {
-  _PathConnectorPainter({required this.positions, required this.color});
-
-  final List<Offset> positions;
-  final Color color;
-
-  static const _dashOn = 12.0;
-  static const _dashOff = 8.0;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (positions.length < 2) return;
-
-    final path = Path()..moveTo(positions.first.dx, positions.first.dy);
-    for (var i = 1; i < positions.length; i++) {
-      final prev = positions[i - 1];
-      final curr = positions[i];
-      final midY = (prev.dy + curr.dy) / 2;
-      path.cubicTo(prev.dx, midY, curr.dx, midY, curr.dx, curr.dy);
-    }
-
-    final paint = Paint()
-      ..strokeWidth = 4
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..shader = ui.Gradient.linear(
-        Offset(0, positions.first.dy),
-        Offset(0, positions.last.dy),
-        [color.withValues(alpha: 0.5), color.withValues(alpha: 0.12)],
-      );
-
-    for (final metric in path.computeMetrics()) {
-      var distance = 0.0;
-      var drawing = true;
-      while (distance < metric.length) {
-        final next = (distance + (drawing ? _dashOn : _dashOff)).clamp(
-          0.0,
-          metric.length,
-        );
-        if (drawing) {
-          canvas.drawPath(metric.extractPath(distance, next), paint);
-        }
-        distance = next;
-        drawing = !drawing;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_PathConnectorPainter oldDelegate) =>
-      oldDelegate.positions != positions || oldDelegate.color != color;
-}
-
-class _PathNodePlaced extends StatelessWidget {
-  const _PathNodePlaced({
-    required this.position,
-    required this.diameter,
-    required this.leaf,
-    required this.available,
-    required this.onTap,
-  });
-
-  final Offset position;
-  final double diameter;
-  final CachedSkillNode leaf;
-  final bool available;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final s = context.s;
-
-    // Matches the real app's own `.quest-orb` states (confirmed from its
-    // shipped CSS): a neutral card-coloured disc, with the STATE carried by
-    // the border colour and a soft glow ring — never a solid state-coloured
-    // fill. Locked/available is still never color-only on top of that:
-    // the icon and label both change too.
-    final borderColor = available
-        ? context.colors.primary
-        : context.extras.mutedText.withValues(alpha: 0.4);
-    final iconColor = available
-        ? context.colors.primary
-        : context.extras.mutedText;
-
-    return Positioned(
-      left: position.dx - diameter / 2,
-      top: position.dy - diameter / 2,
-      width: diameter,
-      // One tap target for the whole node — circle *and* label — not just
-      // the circle, so the generous hit area a kid's finger actually needs
-      // matches what looks tappable.
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: Radii.cardMd,
-        child: Column(
-          children: [
-            Container(
-              width: diameter,
-              height: diameter,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: context.colors.surfaceContainerHighest,
-                border: Border.all(color: borderColor, width: 4),
-                boxShadow: [
-                  BoxShadow(
-                    color: available
-                        ? context.colors.primary.withValues(alpha: 0.22)
-                        : Shadows.cloud,
-                    blurRadius: available ? 14 : 10,
-                    spreadRadius: available ? 2 : 0,
-                  ),
-                ],
-              ),
-              child: Icon(
-                available ? Icons.play_arrow_rounded : Icons.lock_outline,
-                color: iconColor,
-                size: diameter * 0.4,
-              ),
-            ),
-            const SizedBox(height: Space.xxs),
-            SizedBox(
-              width: diameter + Space.xl,
-              child: Column(
-                children: [
-                  Text(
-                    leaf.labelFr,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.text.labelSmall?.copyWith(
-                      color: available
-                          ? context.colors.onSurface
-                          : context.extras.mutedText,
-                    ),
-                  ),
-                  if (!available)
-                    Text(
-                      s.pathLocked,
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: context.text.labelSmall?.copyWith(
-                        color: context.extras.mutedText,
-                        fontSize: 10,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Carte — the design's skill path for one subject.
-///
-/// Node states come from the only real signal this screen has: a node with a
-/// synced exercise is playable, one without is locked. Mastery per node is
-/// not modelled yet, so nothing is drawn as `mastered` — a gold star a kid
-/// cannot earn is worse than a blue one they can.
-class _CartePage extends ConsumerWidget {
-  const _CartePage({required this.state});
+class _Sections extends ConsumerWidget {
+  const _Sections({required this.state, required this.compact});
 
   final PathState state;
+  final bool compact;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final p = VillagePalette.of(context);
     final t = context.s;
+    final masteries = ref.watch(progressControllerProvider).masteries;
 
-    final nodes = [
-      for (final leaf in state.leaves)
-        PathNode(
-          id: leaf.id,
-          // The curriculum carries both labels; show the one matching the
-          // kid's language, falling back to French — a missing English
-          // label is a content gap, not a reason to show nothing.
-          label: Localizations.localeOf(context).languageCode == 'en' &&
-                  leaf.labelEn.isNotEmpty
-              ? leaf.labelEn
-              : leaf.labelFr,
-          state: state.exerciseByNodeId.containsKey(leaf.id)
-              ? PathNodeState.available
-              : PathNodeState.locked,
-        ),
-    ];
+    final sections = buildCarteSections(
+      subject: state.subject,
+      leaves: state.leaves,
+      playable: state.exerciseByNodeId.keys.toSet(),
+      masteries: masteries,
+      english: Localizations.localeOf(context).languageCode == 'en',
+    );
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(Space.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final section in sections) ...[
+          // `.carte-breadcrumb`: the subject as eyebrow, the area as title.
           Text(
-            t.subjectMath.toUpperCase(),
+            _subjectLabel(t, state.subject).toUpperCase(),
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
@@ -513,7 +195,7 @@ class _CartePage extends ConsumerWidget {
           ),
           const SizedBox(height: 3),
           Text(
-            t.pathTitle,
+            section.title ?? t.pathTitle,
             style: TextStyle(
               fontFamily: VillageType.display,
               fontWeight: FontWeight.w700,
@@ -521,31 +203,77 @@ class _CartePage extends ConsumerWidget {
               color: p.ink,
             ),
           ),
-          const SizedBox(height: Space.lg),
+          const SizedBox(height: 18),
+          // `.path-card`
           DecoratedBox(
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.4),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.6)),
+              color: p.surface.withValues(alpha: p.isDark ? 0.25 : 0.4),
+              border: Border.all(
+                color: p.surface.withValues(alpha: p.isDark ? 0.35 : 0.6),
+              ),
               borderRadius: BorderRadius.circular(24),
             ),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(10, 10, 10, 30),
+              padding: compact
+                  ? const EdgeInsets.fromLTRB(6, 6, 6, 22)
+                  : const EdgeInsets.fromLTRB(10, 10, 10, 30),
               child: SkillPath(
-                nodes: nodes,
+                nodes: section.nodes,
+                compact: compact,
+                continueLabel: t.villageContinueCta,
+                statusLabel: (node) {
+                  final pct = ((node.masteryPct ?? 0) * 100).round();
+                  return pct > 0 ? t.pathInProgress(pct) : t.pathNotStarted;
+                },
                 onTapNode: (node) => _play(context, ref, node),
               ),
             ),
           ),
           const SizedBox(height: Space.xl),
         ],
-      ),
+      ],
     );
   }
 
-  void _play(BuildContext context, WidgetRef ref, PathNode node) {
+  Future<void> _play(BuildContext context, WidgetRef ref, PathNode node) async {
     final envelope = state.exerciseByNodeId[node.id];
     if (envelope == null) return;
     final leaf = state.leaves.firstWhere((l) => l.id == node.id);
-    GoRouter.of(context).push('/play', extra: PlayRequest(node: leaf, envelope: envelope));
+    await GoRouter.of(context).push(
+      '/play',
+      extra: PlayRequest(node: leaf, envelope: envelope),
+    );
+    // The header's XP and streak, and this map's mastery, all moved. The
+    // shell keeps tabs alive, so nothing re-reads on its own.
+    ref.read(progressControllerProvider.notifier).refresh();
+  }
+}
+
+class _Empty extends StatelessWidget {
+  const _Empty({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: Space.xl),
+      child: Column(
+        children: [
+          Image.asset(
+            'assets/images/asset-mascot-welcome.webp',
+            height: 110,
+            fit: BoxFit.contain,
+          ),
+          const SizedBox(height: Space.md),
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, color: p.inkMuted),
+          ),
+        ],
+      ),
+    );
   }
 }

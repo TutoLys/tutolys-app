@@ -1,5 +1,9 @@
+import 'dart:math' as math;
+
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
+
+import '../../core/widgets/breathing_mascot.dart';
 
 /// Where a node sits in a kid's progress through a strand.
 enum PathNodeState { mastered, active, available, locked }
@@ -17,72 +21,190 @@ class PathNode {
   final String label;
   final PathNodeState state;
 
-  /// 0..1, shown on the in-progress card. Null when nothing is measured.
+  /// 0..1 from the backend, shown on the active node's ring and card. Null
+  /// when the kid has never played it — which is not the same as zero.
   final double? masteryPct;
+}
+
+/// The design's sizes, desktop and phone (`.m-path-card` overrides).
+class _Metrics {
+  const _Metrics({
+    required this.maxWidth,
+    required this.orb,
+    required this.row,
+    required this.topPad,
+    required this.capWidth,
+    required this.capSize,
+    required this.cardWidth,
+    required this.cardTop,
+    required this.cardPad,
+    required this.mascot,
+    required this.icon,
+    required this.activeIcon,
+  });
+
+  final double maxWidth;
+  final double orb;
+  final double row;
+  final double topPad;
+  final double capWidth;
+  final double capSize;
+  final double cardWidth;
+  final double cardTop;
+  final double cardPad;
+  final double mascot;
+  final double icon;
+  final double activeIcon;
+
+  /// The design gives the active row 150px and lets its card hang over the
+  /// next orb. Here the row is as tall as the card needs, so the card never
+  /// covers a node a kid might want to tap.
+  double get activeRow => cardTop + 128;
+
+  static const wide = _Metrics(
+    maxWidth: 380,
+    orb: 60,
+    row: 104,
+    topPad: 16,
+    capWidth: 96,
+    capSize: 11,
+    cardWidth: 208,
+    cardTop: 68,
+    cardPad: 13,
+    mascot: 58,
+    icon: 24,
+    activeIcon: 26,
+  );
+
+  static const compact = _Metrics(
+    maxWidth: 280,
+    orb: 50,
+    row: 86,
+    topPad: 10,
+    capWidth: 78,
+    capSize: 10,
+    cardWidth: 180,
+    cardTop: 58,
+    cardPad: 11,
+    mascot: 42,
+    icon: 20,
+    activeIcon: 22,
+  );
 }
 
 /// The design's serpentine path.
 ///
-/// Nodes alternate across four columns — 50%, 28%, 50%, 72% — repeating, at
-/// 104px a row, inside a 380px column. Those are the design's own numbers,
-/// and the weaving is what makes a long strand read as a journey rather than
-/// a list.
+/// Nodes weave across four columns — 50%, 28%, 50%, 72%, repeating — inside a
+/// 380px column (280px on a phone). Those are the design's own numbers; the
+/// weaving is what makes a strand read as a journey rather than a list.
 ///
-/// Connectors are drawn behind the orbs: solid up to the furthest node the
-/// kid has reached, dashed beyond it, so "how far have I got" is legible
-/// without reading a single label.
+/// Connectors are the design's bezier curves, drawn behind the orbs: solid
+/// blue into any node that is open, dotted grey into one that is locked, so
+/// "how far can I go" is legible without reading a label.
+///
+/// The **active** node carries the "Continuer" card and the fox beside it.
 class SkillPath extends StatelessWidget {
-  const SkillPath({required this.nodes, this.onTapNode, super.key});
+  const SkillPath({
+    required this.nodes,
+    required this.statusLabel,
+    required this.continueLabel,
+    this.onTapNode,
+    this.compact = false,
+    super.key,
+  });
 
   final List<PathNode> nodes;
+
+  /// The active card's eyebrow, e.g. "En cours · 60 % maîtrisé".
+  final String Function(PathNode node) statusLabel;
+  final String continueLabel;
   final ValueChanged<PathNode>? onTapNode;
+
+  /// Phone sizing, below `Breakpoints.compact`.
+  final bool compact;
 
   /// `left: 50% / 28% / 50% / 72%`, repeating.
   static const _columns = <double>[0.5, 0.28, 0.5, 0.72];
-  static const _rowHeight = 104.0;
-  static const _orb = 60.0;
 
   @override
   Widget build(BuildContext context) {
     final p = VillagePalette.of(context);
+    final m = compact ? _Metrics.compact : _Metrics.wide;
+
+    final tops = <double>[];
+    var y = m.topPad;
+    for (final node in nodes) {
+      tops.add(y);
+      y += node.state == PathNodeState.active ? m.activeRow : m.row;
+    }
+    final height = y;
 
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 380),
+        constraints: BoxConstraints(maxWidth: m.maxWidth),
         child: SizedBox(
-          height: nodes.length * _rowHeight + _orb,
+          height: height,
           child: LayoutBuilder(
             builder: (context, constraints) {
               final w = constraints.maxWidth;
-              final reached = _furthestReached();
+              double xOf(int i) => w * _columns[i % _columns.length];
+              final centres = [
+                for (var i = 0; i < nodes.length; i++)
+                  Offset(xOf(i), tops[i] + m.orb / 2),
+              ];
 
               return Stack(
+                clipBehavior: Clip.none,
                 children: [
                   Positioned.fill(
                     child: CustomPaint(
                       painter: _ConnectorPainter(
-                        nodes: nodes,
-                        columns: _columns,
-                        rowHeight: _rowHeight,
-                        orb: _orb,
-                        reachedIndex: reached,
+                        centres: centres,
+                        lockedAhead: [
+                          for (var i = 1; i < nodes.length; i++)
+                            nodes[i].state == PathNodeState.locked,
+                        ],
                         solid: p.quebecBlueBright,
-                        dashed: p.track,
+                        // The design's `--track` itself is invisible on the
+                        // pale path card (#E1E9F7 on ~#E6F3FF); a third of
+                        // the way to muted ink reads as the faint grey dots
+                        // the prototype actually shows.
+                        dotted: Color.lerp(p.track, p.inkMuted, 0.35)!,
                       ),
                     ),
                   ),
-                  for (var i = 0; i < nodes.length; i++)
+                  for (var i = 0; i < nodes.length; i++) ...[
                     Positioned(
-                      left: w * _columns[i % _columns.length] - _orb / 2,
-                      top: i * _rowHeight,
-                      child: _Orb(
+                      left: xOf(i) - m.capWidth / 2,
+                      top: tops[i],
+                      width: m.capWidth,
+                      child: _Node(
                         node: nodes[i],
+                        metrics: m,
                         palette: p,
                         onTap: nodes[i].state == PathNodeState.locked
                             ? null
                             : () => onTapNode?.call(nodes[i]),
                       ),
                     ),
+                    if (nodes[i].state == PathNodeState.active) ...[
+                      _mascotFor(xOf(i), tops[i], w, m),
+                      Positioned(
+                        left: (xOf(i) - m.cardWidth / 2)
+                            .clamp(0.0, math.max(0.0, w - m.cardWidth)),
+                        top: tops[i] + m.cardTop,
+                        width: m.cardWidth,
+                        child: _ActiveCard(
+                          status: statusLabel(nodes[i]),
+                          title: nodes[i].label,
+                          cta: continueLabel,
+                          metrics: m,
+                          palette: p,
+                          onTap: () => onTapNode?.call(nodes[i]),
+                        ),
+                      ),
+                    ],
+                  ],
                 ],
               );
             },
@@ -92,68 +214,70 @@ class SkillPath extends StatelessWidget {
     );
   }
 
-  /// The last node that is not locked — where the solid line stops.
-  int _furthestReached() {
-    var last = -1;
-    for (var i = 0; i < nodes.length; i++) {
-      if (nodes[i].state != PathNodeState.locked) last = i;
-    }
-    return last;
+  /// `.mascot-hint` sits just left of the active orb. Where a left-hand
+  /// column leaves no room for it, it moves to the right rather than off
+  /// the card's edge.
+  Widget _mascotFor(double x, double top, double w, _Metrics m) {
+    // The welcome art is 420x409.
+    final foxWidth = m.mascot * 420 / 409;
+    const gap = 8.0;
+    final leftSide = x - m.orb / 2 - gap - foxWidth;
+    final left = leftSide >= 0 ? leftSide : x + m.orb / 2 + gap;
+    return Positioned(
+      left: left.clamp(0.0, math.max(0.0, w - foxWidth)),
+      top: top + 4,
+      child: IgnorePointer(
+        child: BreathingMascot(height: m.mascot, hoverLift: false),
+      ),
+    );
   }
 }
 
-class _Orb extends StatelessWidget {
-  const _Orb({required this.node, required this.palette, this.onTap});
+/// An orb and its caption.
+class _Node extends StatelessWidget {
+  const _Node({
+    required this.node,
+    required this.metrics,
+    required this.palette,
+    this.onTap,
+  });
 
   final PathNode node;
+  final _Metrics metrics;
   final VillagePalette palette;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final (ring, icon) = switch (node.state) {
-      PathNodeState.mastered => (palette.gold, Icons.star_rounded),
-      PathNodeState.active => (palette.quebecBlueBright, Icons.play_arrow_rounded),
-      PathNodeState.available => (palette.quebecBlueBright, Icons.play_arrow_rounded),
-      PathNodeState.locked => (palette.track, Icons.lock_rounded),
-    };
+    final m = metrics;
+    final p = palette;
     final locked = node.state == PathNodeState.locked;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Opacity(
-          // `.path-node.locked .orb { opacity: .5 }`
-          opacity: locked ? 0.5 : 1,
-          child: Material(
-            color: palette.surface,
-            shape: CircleBorder(side: BorderSide(color: ring, width: 3)),
-            elevation: VillageColors.elevationSmall,
-            shadowColor: palette.shadowSmall,
-            child: InkWell(
-              onTap: onTap,
-              customBorder: const CircleBorder(),
-              child: SizedBox(
-                width: SkillPath._orb,
-                height: SkillPath._orb,
-                child: Icon(icon, size: 24, color: ring),
-              ),
-            ),
+        Semantics(
+          button: !locked,
+          label: node.label,
+          child: _Orb(
+            key: ValueKey('path-orb-${node.id}'),
+            node: node,
+            metrics: m,
+            palette: p,
+            onTap: onTap,
           ),
         ),
         const SizedBox(height: 7),
-        SizedBox(
-          width: 96,
-          child: Text(
-            node.label,
-            maxLines: 2,
-            textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: palette.inkMuted,
-            ),
+        Text(
+          node.label,
+          maxLines: 2,
+          textAlign: TextAlign.center,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: m.capSize,
+            fontWeight: FontWeight.w700,
+            // `.path-node.mastered/.active/.available .cap { color: ink }`
+            color: locked ? p.inkMuted : p.ink,
           ),
         ),
       ],
@@ -161,65 +285,404 @@ class _Orb extends StatelessWidget {
   }
 }
 
-/// Lines between consecutive orbs: solid up to the furthest reached node,
-/// dashed past it.
-class _ConnectorPainter extends CustomPainter {
-  _ConnectorPainter({
-    required this.nodes,
-    required this.columns,
-    required this.rowHeight,
-    required this.orb,
-    required this.reachedIndex,
-    required this.solid,
-    required this.dashed,
+/// The orb: a card-coloured disc whose state is carried by its ring, glow
+/// and icon — never by a solid fill.
+class _Orb extends StatefulWidget {
+  const _Orb({
+    required this.node,
+    super.key,
+    required this.metrics,
+    required this.palette,
+    this.onTap,
   });
 
-  final List<PathNode> nodes;
-  final List<double> columns;
-  final double rowHeight;
-  final double orb;
-  final int reachedIndex;
-  final Color solid;
-  final Color dashed;
+  final PathNode node;
+  final _Metrics metrics;
+  final VillagePalette palette;
+  final VoidCallback? onTap;
 
   @override
-  void paint(Canvas canvas, Size size) {
-    for (var i = 0; i < nodes.length - 1; i++) {
-      final from = _centre(i, size);
-      final to = _centre(i + 1, size);
-      final paint = Paint()
-        ..color = i < reachedIndex ? solid : dashed
-        ..strokeWidth = 4
-        ..strokeCap = StrokeCap.round
-        ..style = PaintingStyle.stroke;
+  State<_Orb> createState() => _OrbState();
+}
 
-      if (i < reachedIndex) {
-        canvas.drawLine(from, to, paint);
-      } else {
-        _dashedLine(canvas, from, to, paint);
-      }
+class _OrbState extends State<_Orb> with SingleTickerProviderStateMixin {
+  /// `pulse-glow 2.2s ease-in-out infinite` on available orbs.
+  late final AnimationController _pulse = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2200),
+  );
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  /// Same two guards as `BreathingMascot`: reduced motion stops it outright,
+  /// and so does a hidden tab — `IndexedStack` does not mute tickers.
+  void _syncTicker({required bool shouldRun}) {
+    if (shouldRun && !_pulse.isAnimating) {
+      _pulse.repeat();
+    } else if (!shouldRun && _pulse.isAnimating) {
+      _pulse.stop();
+      _pulse.value = 0;
     }
   }
 
-  Offset _centre(int index, Size size) => Offset(
-        size.width * columns[index % columns.length],
-        index * rowHeight + orb / 2,
-      );
+  @override
+  Widget build(BuildContext context) {
+    final node = widget.node;
+    final m = widget.metrics;
+    final p = widget.palette;
 
-  void _dashedLine(Canvas canvas, Offset from, Offset to, Paint paint) {
-    const dash = 7.0;
-    const gap = 6.0;
-    final total = (to - from).distance;
-    final step = (to - from) / total;
-    var travelled = 0.0;
-    while (travelled < total) {
-      final end = (travelled + dash).clamp(0.0, total);
-      canvas.drawLine(from + step * travelled, from + step * end, paint);
-      travelled = end + gap;
+    final pulses = node.state == PathNodeState.available;
+    _syncTicker(
+      shouldRun: pulses &&
+          !MediaQuery.disableAnimationsOf(context) &&
+          Visibility.of(context),
+    );
+
+    final ring = switch (node.state) {
+      PathNodeState.mastered => p.gold,
+      PathNodeState.active || PathNodeState.available => p.quebecBlueBright,
+      PathNodeState.locked => p.track,
+    };
+    final icon = switch (node.state) {
+      PathNodeState.mastered => _Check(size: m.icon, color: p.gold),
+      PathNodeState.active => _Target(size: m.activeIcon),
+      PathNodeState.available => _Target(size: m.activeIcon - 4),
+      PathNodeState.locked =>
+        Icon(Icons.lock_outline_rounded, size: m.icon, color: p.inkMuted),
+    };
+
+    final orb = AnimatedBuilder(
+      animation: _pulse,
+      builder: (context, child) {
+        final shadows = <BoxShadow>[
+          // `0 0 0 6px rgba(gold, .14)` / `rgba(blue, .16)` — a flat halo.
+          if (node.state == PathNodeState.mastered)
+            BoxShadow(color: p.gold.withValues(alpha: 0.14), spreadRadius: 6),
+          if (node.state == PathNodeState.active)
+            BoxShadow(
+              color: p.quebecBlueBright.withValues(alpha: 0.16),
+              spreadRadius: 6,
+            ),
+          // `0 0 0 0 → 0 0 0 9px`, fading .28 → 0, out and back.
+          if (pulses && _pulse.isAnimating)
+            () {
+              final t = Curves.easeInOut.transform(
+                1 - (2 * _pulse.value - 1).abs(),
+              );
+              return BoxShadow(
+                color: p.quebecBlueBright.withValues(alpha: 0.28 * (1 - t)),
+                spreadRadius: 9 * t,
+              );
+            }(),
+          BoxShadow(
+            color: p.shadowSmall,
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ];
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: p.surface,
+            border: Border.all(color: ring, width: 3),
+            boxShadow: shadows,
+          ),
+          child: child,
+        );
+      },
+      child: SizedBox(
+        width: m.orb,
+        height: m.orb,
+        child: Center(child: icon),
+      ),
+    );
+
+    final progress = node.state == PathNodeState.active
+        ? (node.masteryPct ?? 0)
+        : 0.0;
+
+    return Opacity(
+      // `.path-node.locked .orb { opacity: .5 }`
+      opacity: node.state == PathNodeState.locked ? 0.5 : 1,
+      child: MouseRegion(
+        cursor: widget.onTap == null
+            ? SystemMouseCursors.basic
+            : SystemMouseCursors.click,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTap,
+          child: CustomPaint(
+            // The active orb's conic arc: how much of this skill is
+            // mastered, drawn over the ring from twelve o'clock.
+            foregroundPainter: progress > 0
+                ? _ArcPainter(fraction: progress, color: p.quebecBlueBright)
+                : null,
+            child: orb,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "En cours · 60 % maîtrisé", the skill's name, and the gold CTA.
+class _ActiveCard extends StatelessWidget {
+  const _ActiveCard({
+    required this.status,
+    required this.title,
+    required this.cta,
+    required this.metrics,
+    required this.palette,
+    required this.onTap,
+  });
+
+  final String status;
+  final String title;
+  final String cta;
+  final _Metrics metrics;
+  final VillagePalette palette;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = palette;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: p.surface,
+        border: Border.all(color: p.line),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: p.shadow,
+            blurRadius: 40,
+            offset: const Offset(0, 20),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(metrics.cardPad),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              status.toUpperCase(),
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+                color: p.quebecBlueBright,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: VillageType.display,
+                fontWeight: FontWeight.w700,
+                fontSize: 13.5,
+                color: p.ink,
+              ),
+            ),
+            const SizedBox(height: 9),
+            SizedBox(
+              width: double.infinity,
+              child: Material(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(999),
+                child: InkWell(
+                  onTap: onTap,
+                  borderRadius: BorderRadius.circular(999),
+                  child: Ink(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [p.goldLight, p.gold],
+                      ),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Text(
+                        cta,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontFamily: VillageType.display,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13.5,
+                          color: Color(0xFF241A04),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The design's `#i-target`: a red-and-white bullseye.
+class _Target extends StatelessWidget {
+  const _Target({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) =>
+      CustomPaint(size: Size.square(size), painter: _TargetPainter());
+}
+
+class _TargetPainter extends CustomPainter {
+  static const _red = Color(0xFFEF4444);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Radii from the symbol's 24-unit viewBox: 9, 6.2, 3.6, 1.3.
+    final c = size.center(Offset.zero);
+    final u = size.width / 24;
+    final fill = Paint();
+    canvas
+      ..drawCircle(c, 9 * u, fill..color = _red)
+      ..drawCircle(c, 6.2 * u, fill..color = Colors.white)
+      ..drawCircle(c, 3.6 * u, fill..color = _red)
+      ..drawCircle(c, 1.3 * u, fill..color = Colors.white);
+  }
+
+  @override
+  bool shouldRepaint(_TargetPainter old) => false;
+}
+
+/// The design's `#i-check-bold`: `M5 12l4 4 10-10`, stroke 3.
+class _Check extends StatelessWidget {
+  const _Check({required this.size, required this.color});
+
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+        size: Size.square(size),
+        painter: _CheckPainter(color),
+      );
+}
+
+class _CheckPainter extends CustomPainter {
+  _CheckPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final u = size.width / 24;
+    canvas.drawPath(
+      Path()
+        ..moveTo(5 * u, 12 * u)
+        ..lineTo(9 * u, 16 * u)
+        ..lineTo(19 * u, 6 * u),
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3 * u
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_CheckPainter old) => old.color != color;
+}
+
+/// `conic-gradient(blue 0 216deg, transparent 216deg)` masked to a 4px band
+/// over the ring: the share of the skill already mastered.
+class _ArcPainter extends CustomPainter {
+  _ArcPainter({required this.fraction, required this.color});
+
+  final double fraction;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // `inset: -3px`, band 4px wide: centred 1px outside the orb's edge.
+    final rect = (Offset.zero & size).inflate(1);
+    canvas.drawArc(
+      rect,
+      -math.pi / 2,
+      2 * math.pi * fraction.clamp(0.0, 1.0),
+      false,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_ArcPainter old) =>
+      old.fraction != fraction || old.color != color;
+}
+
+/// The design's connectors: `M x1 y1 C x1 midY x2 midY x2 y2`, stroke 3,
+/// solid blue into an open node, `stroke-dasharray: 2 8` in track grey into a
+/// locked one — round caps turn those dashes into dots.
+class _ConnectorPainter extends CustomPainter {
+  _ConnectorPainter({
+    required this.centres,
+    required this.lockedAhead,
+    required this.solid,
+    required this.dotted,
+  });
+
+  final List<Offset> centres;
+  final List<bool> lockedAhead;
+  final Color solid;
+  final Color dotted;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (var i = 0; i < centres.length - 1; i++) {
+      final a = centres[i];
+      final b = centres[i + 1];
+      final midY = (a.dy + b.dy) / 2;
+      final path = Path()
+        ..moveTo(a.dx, a.dy)
+        ..cubicTo(a.dx, midY, b.dx, midY, b.dx, b.dy);
+      final locked = lockedAhead[i];
+      final paint = Paint()
+        ..color = locked ? dotted : solid
+        ..strokeWidth = 3
+        ..strokeCap = StrokeCap.round
+        ..style = PaintingStyle.stroke;
+
+      if (!locked) {
+        canvas.drawPath(path, paint);
+        continue;
+      }
+      for (final metric in path.computeMetrics()) {
+        for (var d = 0.0; d < metric.length; d += 10) {
+          canvas.drawPath(
+            metric.extractPath(d, math.min(d + 2, metric.length)),
+            paint,
+          );
+        }
+      }
     }
   }
 
   @override
   bool shouldRepaint(_ConnectorPainter old) =>
-      old.nodes != nodes || old.reachedIndex != reachedIndex;
+      old.centres != centres ||
+      old.lockedAhead != lockedAhead ||
+      old.solid != solid ||
+      old.dotted != dotted;
 }

@@ -13,7 +13,9 @@ import 'package:tutolys_app/data/sync/content_hash.dart';
 import 'package:tutolys_app/features/pairing/pairing_controller.dart';
 import 'package:tutolys_app/features/path/path_controller.dart';
 import 'package:tutolys_app/features/path/path_screen.dart';
+import 'package:tutolys_app/data/api/progress_api.dart';
 import 'package:tutolys_app/features/play/play_screen.dart';
+import 'package:tutolys_app/features/progress/progress_controller.dart';
 
 class _FixedSessionController extends SessionController {
   _FixedSessionController(this._state);
@@ -23,15 +25,30 @@ class _FixedSessionController extends SessionController {
   SessionState build() => _state;
 }
 
-class _FakeCurriculumApi extends CurriculumApi {
-  _FakeCurriculumApi(this.leaves) : super(dio: Dio());
-  final List<CurriculumLeaf> leaves;
+class FakeCurriculumApi extends CurriculumApi {
+  FakeCurriculumApi(this.bySubject) : super(dio: Dio());
+  final Map<String, List<CurriculumLeaf>> bySubject;
+  final requested = <String>[];
 
   @override
   Future<CurriculumTreeResult> fetchTree({
     required String accessToken,
     required String subject,
-  }) async => CurriculumTreeFetched(leaves);
+  }) async {
+    requested.add(subject);
+    return CurriculumTreeFetched(bySubject[subject] ?? const []);
+  }
+}
+
+class _FixedProgress extends ProgressController {
+  _FixedProgress(this._state);
+  final ProgressState _state;
+
+  @override
+  ProgressState build() => _state;
+
+  @override
+  Future<void> refresh() async {}
 }
 
 class _FakeContentApi extends ContentApi {
@@ -107,6 +124,9 @@ Map<String, Object?> exercise({
 Widget appUnder({
   required List<CurriculumLeaf> leaves,
   required Map<String, Map<String, Object?>> content,
+  Map<String, List<CurriculumLeaf>> otherSubjects = const {},
+  List<SkillMasteryDto> masteries = const [],
+  FakeCurriculumApi? curriculum,
 }) {
   final router = buildPairedRouter();
   addTearDown(router.dispose);
@@ -114,7 +134,14 @@ Widget appUnder({
   return ProviderScope(
     overrides: [
       localDatabaseProvider.overrideWithValue(LocalDatabase.memory()),
-      curriculumApiProvider.overrideWithValue(_FakeCurriculumApi(leaves)),
+      curriculumApiProvider.overrideWithValue(
+        curriculum ?? FakeCurriculumApi({'MATH': leaves, ...otherSubjects}),
+      ),
+      progressControllerProvider.overrideWith(
+        () => _FixedProgress(
+          ProgressState(loading: false, masteries: masteries),
+        ),
+      ),
       contentApiProvider.overrideWithValue(_FakeContentApi(content)),
       sessionControllerProvider.overrideWith(
         () => _FixedSessionController(
@@ -143,71 +170,128 @@ Widget appUnder({
   );
 }
 
+const _compter = CurriculumLeaf(
+  id: 'leaf-1',
+  labelFr: 'Compter',
+  labelEn: '',
+  stableKey: 'mathematique/sens-et-ecriture-des-nombres/b:A/o:1',
+);
+
+Future<void> openCarte(WidgetTester tester, Widget app) async {
+  await tester.pumpWidget(app);
+  await tester.pumpAndSettle();
+  // The shell starts on Village; the design names this destination Carte.
+  await tester.tap(find.text('Carte'));
+  await tester.pumpAndSettle();
+}
+
 void main() {
-  testWidgets('an available node navigates to play when tapped', (
+  testWidgets('the first playable node is active and plays when tapped', (
     tester,
   ) async {
-    await tester.pumpWidget(
+    await openCarte(
+      tester,
       appUnder(
-        leaves: const [
-          CurriculumLeaf(
-            id: 'leaf-1',
-            labelFr: 'Compter',
-            labelEn: '',
-            stableKey: 'math/1',
-          ),
-        ],
+        leaves: const [_compter],
         content: {'ex-1': exercise(id: 'ex-1', skillNodeId: 'leaf-1')},
       ),
     );
-    await tester.pumpAndSettle();
-    // The home shell starts on its Home tab; the path lives on its own tab.
-    // The design renames this destination: Parcours -> Carte.
-    await tester.tap(find.text('Carte'));
-    await tester.pumpAndSettle();
 
-    expect(find.text('Compter'), findsOneWidget);
-    expect(find.byIcon(Icons.play_arrow_rounded), findsOneWidget);
+    // Titled by its learning area, not a generic heading.
+    expect(find.text('Arithmétique'), findsOneWidget);
+    // Never played: the card says so rather than showing "0 %".
+    expect(find.text('À DÉCOUVRIR'), findsOneWidget);
 
-    // Tapping the node opens its quest card rather than navigating
-    // straight away — a second, explicit tap on "Jouer" commits to it.
-    // The design plays on the orb itself — there is no intermediate card
-    // between tapping a node and the exercise opening.
-    await tester.tap(find.byIcon(Icons.play_arrow_rounded));
-    await tester.pumpAndSettle();
-
+    // The design plays on the orb itself.
+    await tester.tap(find.byKey(const ValueKey('path-orb-leaf-1')));
     await tester.pumpAndSettle();
 
     expect(find.byType(PlayScreen), findsOneWidget);
   });
 
-  testWidgets('a locked node (no synced exercise) opens its card but never plays', (
+  testWidgets('the active card\'s Continuer plays the same node', (
     tester,
   ) async {
-    await tester.pumpWidget(
+    await openCarte(
+      tester,
       appUnder(
-        leaves: const [
-          CurriculumLeaf(
-            id: 'leaf-1',
-            labelFr: 'Compter',
-            labelEn: '',
-            stableKey: 'math/1',
-          ),
-        ],
-        content: const {},
+        leaves: const [_compter],
+        content: {'ex-1': exercise(id: 'ex-1', skillNodeId: 'leaf-1')},
       ),
     );
-    await tester.pumpAndSettle();
-    // The design renames this destination: Parcours -> Carte.
-    await tester.tap(find.text('Carte'));
+
+    await tester.tap(find.text('Continuer →'));
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.lock_rounded), findsOneWidget);
+    expect(find.byType(PlayScreen), findsOneWidget);
+  });
 
-    // The tap opens the quest card (same as an available node) — it just
-    // never offers a real "Jouer" button, only a disabled locked one.
+  testWidgets('the active card shows the real mastery from /me/progress', (
+    tester,
+  ) async {
+    await openCarte(
+      tester,
+      appUnder(
+        leaves: const [_compter],
+        content: {'ex-1': exercise(id: 'ex-1', skillNodeId: 'leaf-1')},
+        masteries: const [
+          SkillMasteryDto(
+            skillNodeId: 'leaf-1',
+            masteryPct: 60,
+            isMastered: false,
+          ),
+        ],
+      ),
+    );
+
+    expect(find.text('EN COURS · 60 % MAÎTRISÉ'), findsOneWidget);
+  });
+
+  testWidgets('a subject pill switches the map to that subject', (
+    tester,
+  ) async {
+    final curriculum = FakeCurriculumApi({
+      'MATH': const [_compter],
+      'FR': const [
+        CurriculumLeaf(
+          id: 'fr-1',
+          labelFr: 'Lire des syllabes',
+          labelEn: '',
+          stableKey: 'francais-langue/lire/b:A/o:1',
+        ),
+      ],
+    });
+    await openCarte(
+      tester,
+      appUnder(leaves: const [], content: const {}, curriculum: curriculum),
+    );
+    expect(find.text('Compter'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('subject-pill-FR')));
+    await tester.pumpAndSettle();
+
+    expect(curriculum.requested.last, 'FR');
+    expect(find.text('Lire des syllabes'), findsOneWidget);
+    expect(find.text('Compter'), findsNothing);
+  });
+
+
+  testWidgets('a locked node (no synced exercise) has no way to play', (
+    tester,
+  ) async {
+    await openCarte(
+      tester,
+      appUnder(leaves: const [_compter], content: const {}),
+    );
+
+    // Nothing playable means no active node, so no Continuer card either.
+    expect(find.text('Continuer →'), findsNothing);
+
     // A locked orb has no handler at all, so tapping it cannot play.
-    await tester.tap(find.byIcon(Icons.lock_rounded), warnIfMissed: false);
+    await tester.tap(
+      find.byKey(const ValueKey('path-orb-leaf-1')),
+      warnIfMissed: false,
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(PlayScreen), findsNothing);
@@ -217,13 +301,12 @@ void main() {
   testWidgets('shows the empty state when there is nothing synced', (
     tester,
   ) async {
-    await tester.pumpWidget(appUnder(leaves: const [], content: const {}));
-    await tester.pumpAndSettle();
-    // The design renames this destination: Parcours -> Carte.
-    await tester.tap(find.text('Carte'));
-    await tester.pumpAndSettle();
+    await openCarte(tester, appUnder(leaves: const [], content: const {}));
 
     expect(find.byType(PlayScreen), findsNothing);
-    expect(find.byIcon(Icons.play_arrow_rounded), findsNothing);
+    expect(find.text("Il n'y a pas encore d'activités. Reviens bientôt !"),
+        findsOneWidget);
+    // The pills stay, so a kid can still go to a subject that has content.
+    expect(find.byKey(const ValueKey('subject-pill-FR')), findsOneWidget);
   });
 }

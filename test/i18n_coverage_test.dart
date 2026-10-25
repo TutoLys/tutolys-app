@@ -25,6 +25,8 @@ void main() {
       if (file is! File || !file.path.endsWith('.dart')) continue;
       if (file.path.endsWith('core/i18n/strings.dart')) continue;
       if (file.path.endsWith('.g.dart')) continue;
+      // Curriculum data carrying both languages itself, not UI copy.
+      if (file.path.endsWith('features/path/learning_areas.dart')) continue;
 
       final lines = file.readAsLinesSync();
       for (var i = 0; i < lines.length; i++) {
@@ -75,6 +77,8 @@ void main() {
       if (file is! File || !file.path.endsWith('.dart')) continue;
       if (file.path.endsWith('core/i18n/strings.dart')) continue;
       if (file.path.endsWith('.g.dart')) continue;
+      // Curriculum data carrying both languages itself, not UI copy.
+      if (file.path.endsWith('features/path/learning_areas.dart')) continue;
 
       final lines = file.readAsLinesSync();
       for (var i = 0; i < lines.length; i++) {

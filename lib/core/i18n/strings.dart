@@ -51,6 +51,13 @@ abstract class Strings {
   String get pathEmpty;
   String get pathLocked;
 
+  /// The active node's card. French puts a space before "%", English does not.
+  String pathInProgress(int pct);
+
+  /// The active node's card when the kid has not played it yet — "0 %
+  /// maîtrisé" would read as a score rather than a beginning.
+  String get pathNotStarted;
+
   // --- profile -------------------------------------------------------------
   String profileGrade(int grade);
   String get profileBadgesComingSoon;
@@ -266,6 +273,12 @@ class _FrenchStrings extends Strings {
 
   @override
   String get pathLocked => 'Pas encore débloqué';
+
+  @override
+  String pathInProgress(int pct) => 'En cours · $pct % maîtrisé';
+
+  @override
+  String get pathNotStarted => 'À découvrir';
 
   @override
   String get profileTitle => 'Mon profil';
@@ -654,6 +667,12 @@ class _EnglishStrings extends Strings {
 
   @override
   String get pathLocked => 'Not unlocked yet';
+
+  @override
+  String pathInProgress(int pct) => 'In progress · $pct% mastered';
+
+  @override
+  String get pathNotStarted => 'Up next';
 
   @override
   String get profileTitle => 'My profile';

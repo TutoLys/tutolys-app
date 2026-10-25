@@ -7,21 +7,28 @@ import '../../data/sync/content_sync.dart';
 import '../../data/sync/curriculum_sync.dart';
 import '../pairing/pairing_controller.dart';
 
-/// Hardcoded for A7's thin slice (Hafid's scope decision) — math is the
-/// one Phase-4 dataset not mid-repair (see `a7-skill-path-plan.md`'s own
-/// "B7 status" section). Subject switching is explicitly out of scope,
-/// not an oversight.
-const pathSubject = 'MATH';
+/// Where the Carte opens. Math was A7's whole thin slice and is still the
+/// subject with the most real content; the subject pills switch from here.
+const defaultPathSubject = 'MATH';
+
+/// The subjects the Carte can show — the five with real curriculum data.
+/// Culture québécoise is drawn by the design but has no backend subject yet
+/// (open item #13), and a pill opening an empty map is worse than no pill.
+const pathSubjects = ['MATH', 'FR', 'EN', 'SCI', 'SOC'];
 
 /// What the path screen renders.
 class PathState {
   const PathState({
+    this.subject = defaultPathSubject,
     this.leaves = const [],
     this.exerciseByNodeId = const {},
     this.loading = true,
     this.offline = false,
     this.error,
   });
+
+  /// Backend subject code (`MATH`, `FR`, …) this state describes.
+  final String subject;
 
   final List<CachedSkillNode> leaves;
 
@@ -52,9 +59,10 @@ class PathController extends Notifier<PathState> {
   }
 
   Future<void> _load() async {
+    final subject = state.subject;
     final kid = ref.read(sessionControllerProvider).kid;
     if (kid == null) {
-      state = const PathState(loading: false);
+      state = PathState(subject: subject, loading: false);
       return;
     }
 
@@ -62,23 +70,23 @@ class PathController extends Notifier<PathState> {
     final contentSync = ref.read(contentSyncProvider);
 
     final curriculumReport = await curriculumSync.sync(
-      subject: pathSubject,
+      subject: subject,
       grade: kid.gradeLevel,
     );
     // Exercise content for the same slice, so a tapped node actually has
     // something to play — ContentSync already existed (B8) but nothing in
     // the app ever called it before this.
-    await contentSync.sync(subject: pathSubject);
+    await contentSync.sync(subject: subject);
 
     final leaves = await curriculumSync.cachedLeaves(
-      subject: pathSubject,
+      subject: subject,
       grade: kid.gradeLevel,
     );
     // Already rank-ordered (ContentSync.cachedExercises's own contract) —
     // the first write per node id wins, which is exactly "first by rank".
     final exerciseByNodeId = <String, Map<String, Object?>>{};
     for (final envelope in await contentSync.cachedExercises(
-      subject: pathSubject,
+      subject: subject,
       grade: kid.gradeLevel,
     )) {
       exerciseByNodeId.putIfAbsent(
@@ -87,7 +95,12 @@ class PathController extends Notifier<PathState> {
       );
     }
 
+    // A slow sync for one subject must not land on top of another the kid
+    // has switched to in the meantime.
+    if (state.subject != subject) return;
+
     state = PathState(
+      subject: subject,
       leaves: leaves,
       exerciseByNodeId: exerciseByNodeId,
       loading: false,
@@ -97,6 +110,13 @@ class PathController extends Notifier<PathState> {
   }
 
   Future<void> refresh() => _load();
+
+  /// Switches the Carte to another subject and loads it.
+  Future<void> selectSubject(String subject) {
+    if (subject == state.subject && !state.loading) return Future.value();
+    state = PathState(subject: subject);
+    return _load();
+  }
 }
 
 final pathControllerProvider = NotifierProvider<PathController, PathState>(
