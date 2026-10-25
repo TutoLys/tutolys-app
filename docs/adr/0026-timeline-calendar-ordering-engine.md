@@ -85,3 +85,33 @@ attempt is one checked order.
   Analyze is clean.
 - **Not done:** live play on web, and activation on the dev-stack. Docker
   isn't usable from this session.
+
+## Amendment, same day: distractors and given positions
+
+The Questions Maker had 5 lessons waiting on ordering, and two needs
+showed up in nearly all of them:
+
+- **`distractors`** (0–3 `{id, label}`): items that belong nowhere in the
+  sequence, "the one that doesn't fit". It's the best diagnostic on a
+  board. They go in the tray with the rest. When the order is right they
+  are simply left there, and one placed in the sequence marks that
+  position wrong (partial credit as usual), then goes back to the tray.
+  This replaces "No distractors" above.
+- **`given: true`** on an item: shown already in its position, fixed, and
+  never graded. It's the season a cycle starts from ("à partir du
+  printemps"), or the week's "lundi". It's drawn neutral, not green,
+  because it is part of the question, not a verdict. It's left out of
+  `itemResults` and out of the score, since the child didn't place it. At
+  least two items must remain to place.
+
+Both are optional, so content without them plays exactly as before. The
+tray-never-starts-solved check now compares only the items to place.
+
+The Questions Maker's second need, placing items at ticks on an axis (a
+timeline or a number line), stays a planned **axis mode of this engine**,
+not a new key, as it recommended. It comes after `find_it`.
+
+Tests: engines_core 117 → 123, covering a given slot (locked, neutral, not
+removable), a distractor left in the tray when right, a distractor placed
+counting as wrong, the given position left out of the score, restore with
+a given position, and the parse refusals.

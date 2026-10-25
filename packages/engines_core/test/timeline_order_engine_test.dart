@@ -245,6 +245,127 @@ void main() {
     });
   });
 
+  group('distractors and given positions', () {
+    const seasons = <String, Object?>{
+      'items': [
+        {'id': 'printemps', 'label': 'printemps', 'order': 0, 'given': true},
+        {'id': 'ete', 'label': 'été', 'order': 1},
+        {'id': 'automne', 'label': 'automne', 'order': 2},
+        {'id': 'hiver', 'label': 'hiver', 'order': 3},
+      ],
+      'distractors': [
+        {'id': 'lundi', 'label': 'lundi'},
+      ],
+    };
+    final c = engine.parse(seasons).valueOrNull!;
+
+    test(
+      'a given position starts filled and locked; distractors join the tray',
+      () {
+        expect(c.given, {0});
+        final s = engine.initialize(c, const EngineSeed(2));
+        expect(s.slots, ['printemps', null, null, null]);
+        expect(s.locked, {0});
+        expect(s.tray, unorderedEquals(['ete', 'automne', 'hiver', 'lundi']));
+        expect(
+          engine.reduce(s, const ClearPosition(0)).events,
+          isEmpty,
+          reason: 'a given item cannot be taken out',
+        );
+      },
+    );
+
+    test(
+      'right order leaves the distractor in the tray; given is not graded',
+      () {
+        var s = placeAll(engine, engine.initialize(c, const EngineSeed(2)), [
+          'ete',
+          'automne',
+          'hiver',
+        ]);
+        expect(s.isPlaced('lundi'), isFalse);
+        final r = const TimelineOrderEvaluator().evaluate(
+          c,
+          engine.extractAnswer(s)!,
+          ctx,
+        );
+        expect(r.outcome, Outcome.correct);
+        expect(r.itemResults.keys, ['1', '2', '3']);
+      },
+    );
+
+    test('a distractor placed in the sequence marks that position wrong', () {
+      final s = placeAll(engine, engine.initialize(c, const EngineSeed(2)), [
+        'ete',
+        'lundi',
+        'hiver',
+      ]);
+      final r = const TimelineOrderEvaluator().evaluate(
+        c,
+        engine.extractAnswer(s)!,
+        ctx,
+      );
+      expect(r.itemResults, {'1': true, '2': false, '3': true});
+      expect(r.score, closeTo(2 / 3, 1e-9), reason: 'given left out of score');
+      final after = engine.applyFeedback(s, r);
+      expect(after.slots, ['printemps', 'ete', null, 'hiver']);
+      expect(after.isPlaced('lundi'), isFalse, reason: 'back to the tray');
+    });
+
+    test(
+      'restore keeps the given position and refuses a snapshot without it',
+      () {
+        final s = engine.initialize(c, const EngineSeed(2));
+        final snap =
+            jsonDecode(jsonEncode(engine.snapshot(s))) as Map<String, Object?>;
+        expect(engine.restore(c, snap)!.slots.first, 'printemps');
+        expect(engine.restore(c, {...snap, 'locked': <int>[]}), isNull);
+      },
+    );
+
+    test('refuses a board with fewer than two items left to place', () {
+      expect(
+        engine.parse({
+          'items': [
+            {'id': 'a', 'label': 'a', 'order': 0, 'given': true},
+            {'id': 'b', 'label': 'b', 'order': 1, 'given': true},
+            {'id': 'c', 'label': 'c', 'order': 2},
+          ],
+        }),
+        isA<ParseInvalid<TimelineContent>>(),
+      );
+      expect(
+        engine.parse({
+          ...seasons,
+          'distractors': [
+            {'id': 'ete', 'label': 'x'},
+          ],
+        }),
+        isA<ParseInvalid<TimelineContent>>(),
+        reason: 'a distractor id clashing with an item',
+      );
+    });
+
+    testWidgets('in the shell, the given tile is neutral, not green', (
+      tester,
+    ) async {
+      tallView(tester);
+      final (ctl, _) = controllerFor(seasons);
+      await tester.runAsync(ctl.start);
+      await tester.pumpWidget(app(ctl));
+      final tile = tester.widget<AnswerTile>(
+        find.descendant(
+          of: find.byKey(const ValueKey('timeline-slot-0')),
+          matching: find.byType(AnswerTile),
+        ),
+      );
+      expect(tile.state, AnswerTileState.idle);
+      expect(tile.onTap, isNull);
+      expect(find.byKey(const ValueKey('timeline-item-lundi')), findsOneWidget);
+      ctl.dispose();
+    });
+  });
+
   group('snapshot', () {
     test('round-trips through JSON', () {
       var s = placeAll(

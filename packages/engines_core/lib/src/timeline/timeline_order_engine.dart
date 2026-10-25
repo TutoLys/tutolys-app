@@ -15,11 +15,22 @@ class TimelineContent {
   const TimelineContent({
     required this.items,
     required this.answer,
+    this.distractors = const [],
+    this.given = const {},
     this.startLabel,
     this.endLabel,
   });
 
+  /// The items that make the sequence.
   final List<TimelineItem> items;
+
+  /// Items that belong nowhere in it — "the one that doesn't fit", the best
+  /// diagnostic on a board. They stay in the tray when the order is right.
+  final List<TimelineItem> distractors;
+
+  /// Positions shown already filled and fixed — the season a cycle starts
+  /// from, the week's "lundi". Never graded: the child didn't place them.
+  final Set<int> given;
 
   /// Item ids in the right order, first to last.
   final List<String> answer;
@@ -29,7 +40,15 @@ class TimelineContent {
   final String? startLabel;
   final String? endLabel;
 
-  TimelineItem item(String id) => items.firstWhere((i) => i.id == id);
+  TimelineItem item(String id) =>
+      items.followedBy(distractors).firstWhere((i) => i.id == id);
+
+  /// What the child places: every item not given, plus the distractors.
+  Set<String> get trayIds => {
+    for (var i = 0; i < answer.length; i++)
+      if (!given.contains(i)) answer[i],
+    for (final d in distractors) d.id,
+  };
 }
 
 class TimelineState {
@@ -81,8 +100,9 @@ class ClearPosition extends TimelineAction {
 ///
 /// Days of the week, a morning routine, a life cycle, a story's events,
 /// smallest to largest. Tap an item to put it in the next empty position;
-/// tap a placed one to send it back. Every item belongs somewhere: there
-/// are no distractors, because "which comes next?" is the whole question.
+/// tap a placed one to send it back. Content may add distractors (items
+/// that belong nowhere, left in the tray when the order is right) and give
+/// positions already filled, e.g. the season a cycle starts from.
 ///
 /// Checked position by position, with **partial credit**: right positions
 /// lock, wrong ones empty for the retry. The old engine revealed one slot
@@ -122,6 +142,7 @@ class TimelineOrderEngine
     }
     final items = <TimelineItem>[];
     final byOrder = <int, String>{};
+    final givenIds = <String>{};
     for (final i in raw) {
       final id = i is Map ? i['id'] : null;
       final label = i is Map ? i['label'] : null;
@@ -143,8 +164,38 @@ class TimelineOrderEngine
           'Two items share an order: each position has one right item.',
         );
       }
+      final given = i['given'];
+      if (given != null && given is! bool) {
+        return const ParseResult.invalid('given must be true or false.');
+      }
+      if (given == true) givenIds.add(id);
       items.add(TimelineItem(id: id, label: label));
       byOrder[order] = id;
+    }
+    if (items.length - givenIds.length < 2) {
+      return const ParseResult.invalid(
+        'At least two items must be left for the child to place.',
+      );
+    }
+    final distractors = <TimelineItem>[];
+    final rawDistractors = config['distractors'];
+    if (rawDistractors != null) {
+      if (rawDistractors is! List || rawDistractors.length > 3) {
+        return const ParseResult.invalid('distractors allows at most 3 items.');
+      }
+      for (final d in rawDistractors) {
+        final id = d is Map ? d['id'] : null;
+        final label = d is Map ? d['label'] : null;
+        if (id is! String || id.isEmpty || label is! String || label.isEmpty) {
+          return const ParseResult.invalid(
+            'Every distractor needs an id and a label.',
+          );
+        }
+        if (items.followedBy(distractors).any((x) => x.id == id)) {
+          return const ParseResult.invalid('Item ids must be unique.');
+        }
+        distractors.add(TimelineItem(id: id, label: label));
+      }
     }
     final orders = byOrder.keys.toList()..sort();
     if (orders.first != 0 || orders.last != items.length - 1) {
@@ -152,10 +203,16 @@ class TimelineOrderEngine
         'order must count 0, 1, 2… with no gaps.',
       );
     }
+    final answer = [for (final o in orders) byOrder[o]!];
     return ParseResult.ok(
       TimelineContent(
         items: List.unmodifiable(items),
-        answer: List.unmodifiable([for (final o in orders) byOrder[o]!]),
+        answer: List.unmodifiable(answer),
+        distractors: List.unmodifiable(distractors),
+        given: {
+          for (var i = 0; i < answer.length; i++)
+            if (givenIds.contains(answer[i])) i,
+        },
         startLabel: _optionalLabel(config['start_label']),
         endLabel: _optionalLabel(config['end_label']),
       ),
@@ -164,16 +221,32 @@ class TimelineOrderEngine
 
   @override
   TimelineState initialize(TimelineContent content, EngineSeed seed) {
-    final tray = [for (final i in content.items) i.id];
+    final tray = [
+      for (final id in content.answer)
+        if (content.trayIds.contains(id)) id,
+      for (final d in content.distractors) d.id,
+    ];
+    final toPlace = [
+      for (var i = 0; i < content.answer.length; i++)
+        if (!content.given.contains(i)) content.answer[i],
+    ];
     final random = seed.random();
     // A tray already in the right order would give the answer away.
     for (var tries = 0; tries < 8; tries++) {
       tray.shuffle(random);
-      if (!_sameOrder(tray, content.answer)) break;
+      final order = [
+        for (final id in tray)
+          if (toPlace.contains(id)) id,
+      ];
+      if (!_sameOrder(order, toPlace)) break;
     }
     return TimelineState(
       tray: List.unmodifiable(tray),
-      slots: List.filled(content.answer.length, null),
+      slots: [
+        for (var i = 0; i < content.answer.length; i++)
+          content.given.contains(i) ? content.answer[i] : null,
+      ],
+      locked: {...content.given},
     );
   }
 
@@ -249,13 +322,17 @@ class TimelineOrderEngine
   TimelineState? restore(TimelineContent content, Map<String, Object?> snap) {
     try {
       final tray = (snap['tray'] as List).cast<String>();
-      final known = {for (final i in content.items) i.id};
+      final known = content.trayIds;
       if (tray.length != known.length || !tray.every(known.contains)) {
         return null;
       }
       final slots = (snap['slots'] as List).cast<String?>();
       if (slots.length != content.answer.length ||
-          !slots.every((x) => x == null || known.contains(x))) {
+          !slots.indexed.every(
+            (e) => content.given.contains(e.$1)
+                ? e.$2 == content.answer[e.$1]
+                : e.$2 == null || known.contains(e.$2),
+          )) {
         return null;
       }
       final locked = ((snap['locked'] as List?) ?? const [])
@@ -266,6 +343,7 @@ class TimelineOrderEngine
       )) {
         return null;
       }
+      if (!locked.containsAll(content.given)) return null;
       return TimelineState(
         tray: List.unmodifiable(tray),
         slots: List.of(slots),
@@ -293,11 +371,17 @@ class TimelineOrderEngine
       key: ValueKey('timeline-slot-$i'),
       index: i + 1,
       label: s.slots[i] == null ? null : content.item(s.slots[i]!).label,
-      state: s.locked.contains(i)
+      // A given item is part of the question, not a verdict: neutral, not
+      // green.
+      state: content.given.contains(i)
+          ? AnswerTileState.idle
+          : s.locked.contains(i)
           ? AnswerTileState.correct
           : AnswerTileState.picked,
       emptyLabel: fr ? 'position ${i + 1}, vide' : 'position ${i + 1}, empty',
-      semanticsState: s.locked.contains(i)
+      semanticsState: content.given.contains(i)
+          ? (fr ? 'déjà placé pour toi' : 'already placed for you')
+          : s.locked.contains(i)
           ? (fr ? 'bien placé' : 'in the right place')
           : (fr ? 'touche pour retirer' : 'tap to take it out'),
       onTap: view.enabled && !s.locked.contains(i)
@@ -424,7 +508,8 @@ class TimelineOrderEngine
 ///
 /// A position is right when it holds the item that belongs there. Score is
 /// the share of positions right; [EvaluationResult.itemResults] is keyed by
-/// position index.
+/// position index. Given positions are left out of both: the child didn't
+/// place them, so they are no evidence either way.
 class TimelineOrderEvaluator
     implements Evaluator<TimelineContent, OrderingAnswer> {
   const TimelineOrderEvaluator();
@@ -450,7 +535,7 @@ class TimelineOrderEvaluator
     }
     final items = <String, bool>{
       for (var i = 0; i < placed.length; i++)
-        '$i': placed[i] == content.answer[i],
+        if (!content.given.contains(i)) '$i': placed[i] == content.answer[i],
     };
     final right = items.values.where((v) => v).length;
     return EvaluationResult(
