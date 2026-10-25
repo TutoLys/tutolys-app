@@ -64,7 +64,6 @@ abstract class Strings {
   String get profileSignOut;
   String profileSkillsMastered(int count);
   String profileStreakDays(int days);
-  String profileFreezesAvailable(int count);
   String get profileTotalXp;
 
   // --- pin gate ------------------------------------------------------------
@@ -180,6 +179,42 @@ abstract class Strings {
   List<HelpEntry> get helpEntries;
 
   String get villageYourSubjects;
+
+  // --- quêtes --------------------------------------------------------------
+  String get questsEyebrow;
+  String get questsTitle;
+  String questsStreakDays(int days);
+
+  /// Under the streak number. The design's "come back tomorrow" only reads
+  /// right once today is played, so there is a today variant for before.
+  String questsStreakNextTomorrow(int goal);
+  String questsStreakNextToday(int goal);
+  String get questsStreakStart;
+  String get questsStreakUnknown;
+  String get questsStreakOpenHint;
+
+  /// One letter per day, Monday first.
+  List<String> get weekdayInitials;
+  String monthYear(int year, int month);
+
+  String get streakDetailTitle;
+  String get streakDetailEyebrow;
+  String streakDetailHeadline(int days);
+  String get streakDetailNudge;
+  String get streakDetailNudgeCta;
+  String get streakDetailCalendar;
+  String get streakDetailPrevMonth;
+  String get streakDetailNextMonth;
+  String get streakDetailGoal;
+  String get streakDetailRewards;
+
+  /// The design's "Bouclier de série" is the real streak freeze (backend
+  /// ADR 0019) under the design's own name.
+  String get streakShieldTitle;
+  String get streakShieldBody;
+  String streakShieldBalance(int count);
+  String get streakShieldNone;
+  String get closeLabel;
 
   static const Strings fr = _FrenchStrings();
   static const Strings en = _EnglishStrings();
@@ -299,11 +334,6 @@ class _FrenchStrings extends Strings {
   @override
   String profileStreakDays(int days) =>
       days == 1 ? 'jour de suite' : 'jours de suite';
-
-  @override
-  String profileFreezesAvailable(int count) => count == 1
-      ? '1 gel de série disponible'
-      : '$count gels de série disponibles';
 
   @override
   String get profileTotalXp => 'points XP';
@@ -581,6 +611,94 @@ class _FrenchStrings extends Strings {
   @override
   String get villageYourSubjects => 'Tes matières';
 
+  @override
+  String get questsEyebrow => 'Aujourd\'hui et cette semaine';
+
+  @override
+  String get questsTitle => 'Tes quêtes';
+
+  @override
+  String questsStreakDays(int days) =>
+      days == 1 ? '1 jour de suite' : '$days jours de suite';
+
+  @override
+  String questsStreakNextTomorrow(int goal) =>
+      'Continue demain pour atteindre $goal !';
+
+  @override
+  String questsStreakNextToday(int goal) =>
+      'Joue aujourd\'hui pour atteindre $goal !';
+
+  @override
+  String get questsStreakStart => 'Termine une leçon pour lancer ta série !';
+
+  @override
+  String get questsStreakUnknown =>
+      'On ne peut pas lire ta série pour l\'instant.';
+
+  @override
+  String get questsStreakOpenHint => 'Voir le détail de ta série';
+
+  @override
+  List<String> get weekdayInitials => const ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+
+  static const _months = [
+    'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet',
+    'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
+  ];
+
+  @override
+  String monthYear(int year, int month) => '${_months[month - 1]} $year';
+
+  @override
+  String get streakDetailTitle => 'Série';
+
+  @override
+  String get streakDetailEyebrow => 'La flamme de la série';
+
+  @override
+  String streakDetailHeadline(int days) =>
+      days == 1 ? 'Série de 1 jour' : 'Série de $days jours';
+
+  @override
+  String get streakDetailNudge =>
+      'Termine une leçon aujourd\'hui pour prolonger ta série !';
+
+  @override
+  String get streakDetailNudgeCta => 'Prolonger ma série →';
+
+  @override
+  String get streakDetailCalendar => 'Calendrier';
+
+  @override
+  String get streakDetailPrevMonth => 'Mois précédent';
+
+  @override
+  String get streakDetailNextMonth => 'Mois suivant';
+
+  @override
+  String get streakDetailGoal => 'Objectif de série';
+
+  @override
+  String get streakDetailRewards => 'Récompenses de série';
+
+  @override
+  String get streakShieldTitle => 'Bouclier de série';
+
+  @override
+  String get streakShieldBody =>
+      'Protège ta série si tu manques une journée d\'entraînement.';
+
+  @override
+  String streakShieldBalance(int count) =>
+      count == 1 ? '1 bouclier prêt' : '$count boucliers prêts';
+
+  @override
+  String get streakShieldNone => 'Tu en gagnes un chaque semaine.';
+
+  @override
+  String get closeLabel => 'Fermer';
+
 }
 
 class _EnglishStrings extends Strings {
@@ -692,11 +810,6 @@ class _EnglishStrings extends Strings {
 
   @override
   String profileStreakDays(int days) => 'day streak';
-
-  @override
-  String profileFreezesAvailable(int count) => count == 1
-      ? '1 streak freeze available'
-      : '$count streak freezes available';
 
   @override
   String get profileTotalXp => 'XP';
@@ -973,6 +1086,92 @@ class _EnglishStrings extends Strings {
 
   @override
   String get villageYourSubjects => 'Your subjects';
+
+  @override
+  String get questsEyebrow => 'Today and this week';
+
+  @override
+  String get questsTitle => 'Your quests';
+
+  @override
+  String questsStreakDays(int days) =>
+      days == 1 ? '1 day in a row' : '$days days in a row';
+
+  @override
+  String questsStreakNextTomorrow(int goal) =>
+      'Come back tomorrow to reach $goal!';
+
+  @override
+  String questsStreakNextToday(int goal) => 'Play today to reach $goal!';
+
+  @override
+  String get questsStreakStart => 'Finish a lesson to start your streak!';
+
+  @override
+  String get questsStreakUnknown => 'We can\'t read your streak right now.';
+
+  @override
+  String get questsStreakOpenHint => 'See your streak details';
+
+  @override
+  List<String> get weekdayInitials => const ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+  static const _months = [
+    'January', 'February', 'March', 'April', 'May', 'June', 'July',
+    'August', 'September', 'October', 'November', 'December',
+  ];
+
+  @override
+  String monthYear(int year, int month) => '${_months[month - 1]} $year';
+
+  @override
+  String get streakDetailTitle => 'Streak';
+
+  @override
+  String get streakDetailEyebrow => 'Your streak flame';
+
+  @override
+  String streakDetailHeadline(int days) =>
+      days == 1 ? '1-day streak' : '$days-day streak';
+
+  @override
+  String get streakDetailNudge =>
+      'Finish a lesson today to keep your streak going!';
+
+  @override
+  String get streakDetailNudgeCta => 'Keep my streak →';
+
+  @override
+  String get streakDetailCalendar => 'Calendar';
+
+  @override
+  String get streakDetailPrevMonth => 'Previous month';
+
+  @override
+  String get streakDetailNextMonth => 'Next month';
+
+  @override
+  String get streakDetailGoal => 'Streak goal';
+
+  @override
+  String get streakDetailRewards => 'Streak rewards';
+
+  @override
+  String get streakShieldTitle => 'Streak shield';
+
+  @override
+  String get streakShieldBody =>
+      'Protects your streak if you miss a day of practice.';
+
+  @override
+  String streakShieldBalance(int count) =>
+      count == 1 ? '1 shield ready' : '$count shields ready';
+
+  @override
+  String get streakShieldNone => 'You earn one every week.';
+
+  @override
+  String get closeLabel => 'Close';
 
 }
 

@@ -7,6 +7,7 @@ import '../../features/path/path_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/about/about_screen.dart';
 import '../../features/progress/progress_controller.dart';
+import '../../features/quests/quests_screen.dart';
 import '../../features/help/help_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../i18n/strings.dart';
@@ -21,9 +22,9 @@ import 'village_nav.dart';
 /// locally rather than through go_router — none of them need their own URL,
 /// only `/play` does, and that is pushed on top of this whole shell.
 ///
-/// Four of the six destinations have real screens. Quêtes and Progrès do
-/// not yet, and render an honest placeholder naming themselves rather than
-/// a blank or a fake.
+/// Five of the six destinations have real screens. Progrès does not yet,
+/// and renders an honest placeholder naming itself rather than a blank or a
+/// fake.
 class VillageShell extends ConsumerStatefulWidget {
   const VillageShell({super.key});
 
@@ -45,7 +46,7 @@ class _VillageShellState extends ConsumerState<VillageShell> {
           onOpenPath: () => setState(() => _index = 1),
         ),
         const PathScreen(),
-        _NotBuiltYet(title: s.navQuetes),
+        QuestsScreen(onOpenPath: () => setState(() => _index = 1)),
         _NotBuiltYet(title: s.navProgres),
         const ProfileScreen(),
         SettingsScreen(
@@ -62,10 +63,18 @@ class _VillageShellState extends ConsumerState<VillageShell> {
   ///
   /// Réglages is deliberately not among the primary five — it is the
   /// secondary section on desktop and tablet, and a header icon on mobile.
-  static List<VillageDestination> _primary(Strings s) => [
+  ///
+  /// Quêtes carries a badge counting today's quests still open — 1 while
+  /// the daily challenge is unfinished, none once it is or when it is
+  /// unknown. Not the design's "3": there is one quest to count.
+  static List<VillageDestination> _primary(Strings s, {int openQuests = 0}) => [
         VillageDestination(label: s.navVillage, asset: 'asset-village.png'),
         VillageDestination(label: s.navCarte, asset: 'asset-carte.png'),
-        VillageDestination(label: s.navQuetes, asset: 'asset-quetes.png'),
+        VillageDestination(
+          label: s.navQuetes,
+          asset: 'asset-quetes.png',
+          badge: openQuests > 0 ? openQuests : null,
+        ),
         VillageDestination(label: s.navProgres, asset: 'asset-progres.png'),
         VillageDestination(label: s.navProfil, asset: 'asset-profil.png'),
       ];
@@ -91,7 +100,10 @@ class _VillageShellState extends ConsumerState<VillageShell> {
       // colour underneath it would only show through at the edges.
       backgroundColor: Colors.transparent,
       body: VillageNavShell(
-        destinations: _primary(t),
+        destinations: _primary(
+          t,
+          openQuests: progress.dailyQuest?.completed == false ? 1 : 0,
+        ),
         secondary: _secondary(t),
         currentIndex: _index,
         onSelect: (i) => setState(() => _index = i),

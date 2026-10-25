@@ -195,7 +195,8 @@ void main() {
     // there, and the PIN-gate group below exercises it where it is.
   });
 
-  testWidgets('shows the real freeze balance from the backend', (tester) async {
+  testWidgets('the freeze balance is no longer on Profil', (tester) async {
+    // It moved to Quêtes' streak detail as "Bouclier de série" (ADR 0015).
     final progressApi = _FakeProgressApi()
       ..result = const ProgressFetched(
         ProgressSnapshot(
@@ -208,19 +209,8 @@ void main() {
     await tester.pumpWidget(appUnder(progressApi: progressApi));
     await tester.pumpAndSettle();
 
-    expect(find.text(Strings.fr.profileFreezesAvailable(2)), findsOneWidget);
-  });
-
-  testWidgets('no freeze line when the balance is unknown', (tester) async {
-    final progressApi = _FakeProgressApi()
-      ..result = const ProgressFetched(
-        ProgressSnapshot(masteries: [], currentStreakDays: 5),
-      );
-
-    await tester.pumpWidget(appUnder(progressApi: progressApi));
-    await tester.pumpAndSettle();
-
-    expect(find.text(Strings.fr.profileFreezesAvailable(0)), findsNothing);
+    expect(find.text(Strings.fr.streakShieldBalance(2)), findsNothing);
+    expect(find.text(Strings.fr.streakShieldBalance(2).toUpperCase()), findsNothing);
   });
 
   testWidgets('shows the real XP total from the backend ledger', (

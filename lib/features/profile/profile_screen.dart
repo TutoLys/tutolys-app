@@ -13,12 +13,9 @@ import '../progress/progress_controller.dart';
 /// Profil, as the design draws it: an avatar hero, three stat tiles, and
 /// per-subject progress.
 ///
-/// The streak-freeze count is shown even though the design does not draw it.
-/// Freezes are real, shipped and earnable (backend ADR 0019, telemetry ADR
-/// 0007, app ADR 0011) — the design simply predates them. Dropping a working
-/// feature because a mockup omits it is a regression, not fidelity; it moves
-/// to Quêtes when that page exists, which is where the design puts streak
-/// detail.
+/// The streak-freeze balance used to live here, ahead of the design. It now
+/// sits in Quêtes' streak detail as the design's "Bouclier de série", which
+/// is where the design puts streak detail (app ADR 0015).
 ///
 /// Two of the design's sections are **not** rendered as mockups of
 /// themselves. Badges and the recent-activity feed have no mechanism behind
@@ -112,30 +109,6 @@ class ProfileScreen extends ConsumerWidget {
                         ],
                       ),
               ),
-              if (progress.freezesAvailable != null) ...[
-                const SizedBox(height: Space.md),
-                _Card(
-                  title: t.profileStreakLabel,
-                  icon: Icons.ac_unit,
-                  palette: p,
-                  child: Row(
-                    children: [
-                      Image.asset(
-                        'assets/images/asset-flame.webp',
-                        width: 22,
-                        height: 22,
-                      ),
-                      const SizedBox(width: Space.xs),
-                      Expanded(
-                        child: Text(
-                          t.profileFreezesAvailable(progress.freezesAvailable!),
-                          style: TextStyle(fontSize: 13.5, color: p.ink),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
               const SizedBox(height: Space.md),
               _Card(
                 title: t.profileBadges,
