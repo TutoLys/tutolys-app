@@ -687,6 +687,104 @@ void main() {
     );
   });
 
+  group('outbox flusher follows the active kid', () {
+    // The wiring test above overrides both the outbox and the flusher with
+    // fixed values, so the active kid never changes underneath AppShell —
+    // which is exactly how a real flusher bound to the wrong kid went
+    // unnoticed (ADR 0019, "Found, not fixed here"). These leave both real
+    // and fake only the network.
+    ProviderContainer realFlusherContainer(
+      LocalDatabase db,
+      _RecordingTelemetryServer server, {
+      String? storedToken = 'stored',
+    }) => ProviderContainer(
+      overrides: [
+        sessionStoreProvider.overrideWithValue(
+          FakeSessionStore(storedToken: storedToken),
+        ),
+        pairingApiProvider.overrideWithValue(
+          FakePairingApi(
+            exchangeResult: _success,
+            refreshResult: const RefreshSucceeded(
+              accessToken: 'fresh',
+              expiresIn: 900,
+            ),
+          ),
+        ),
+        sessionAutoRefreshProvider.overrideWithValue(false),
+        localDatabaseProvider.overrideWithValue(db),
+        curriculumApiProvider.overrideWithValue(_OfflineCurriculumApi()),
+        contentApiProvider.overrideWithValue(_OfflineContentApi()),
+        progressApiProvider.overrideWithValue(_OfflineProgressApi()),
+        telemetryApiProvider.overrideWithValue(server),
+      ],
+    );
+
+    Map<String, Object?> event(String id) => {
+      'schema_version': 1,
+      'event_id': id,
+      'event_ts': DateTime.utc(2026, 10, 25).toIso8601String(),
+      'session_id': 'session-1',
+      'event_type': 'exercise_complete',
+      'app_version': '0.1.0',
+    };
+
+    testWidgets(
+      'a kid restored at launch has their queued events uploaded',
+      (tester) async {
+        final db = LocalDatabase.memory();
+        final server = _RecordingTelemetryServer();
+        final container = realFlusherContainer(db, server);
+        addTearDown(container.dispose);
+
+        // Played before this launch; queued under the kid's own scope.
+        await DriftEventOutbox(db, kidId: 'k1').add(event('evt-restored'));
+
+        await tester.pumpWidget(appUnder(container, const AppShell()));
+        // The session restores after the first frame — after AppShell's
+        // initState, which is where the old code captured the flusher.
+        await tester.pump();
+        await tester.pump();
+        expect(container.read(activeKidIdProvider), 'k1');
+
+        await tester.pump(OutboxFlusher.defaultInterval + const Duration(seconds: 1));
+
+        expect(server.delivered, contains('evt-restored'));
+        expect(await DriftEventOutbox(db, kidId: 'k1').pending(limit: 10), isEmpty);
+
+        // Tear down the tree so the flusher's periodic timer is cancelled.
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+
+    testWidgets(
+      'a kid paired during this run has their events uploaded',
+      (tester) async {
+        final db = LocalDatabase.memory();
+        final server = _RecordingTelemetryServer();
+        final container = realFlusherContainer(db, server, storedToken: null);
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(appUnder(container, const AppShell()));
+        await tester.pump();
+        await tester.pump();
+        expect(container.read(activeKidIdProvider), isNull);
+
+        await container
+            .read(sessionControllerProvider.notifier)
+            .pair('ABC123');
+        await tester.pump();
+        expect(container.read(activeKidIdProvider), 'k1');
+
+        await DriftEventOutbox(db, kidId: 'k1').add(event('evt-after-pairing'));
+        await tester.pump(OutboxFlusher.defaultInterval + const Duration(seconds: 1));
+
+        expect(server.delivered, contains('evt-after-pairing'));
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  });
+
   group('token refresh (review findings)', () {
     test('concurrent refreshes coalesce into one request', () async {
       /// The single-flight mutex. Two concurrent 401 retries both refreshing

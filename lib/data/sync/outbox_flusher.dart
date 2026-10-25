@@ -23,7 +23,7 @@ class OutboxFlusher {
     required this.api,
     required this.accessToken,
     this.batchSize = 50,
-    this.interval = const Duration(seconds: 30),
+    this.interval = defaultInterval,
     this.maxAttempts = 10,
     this.maxOutboxRows = 10000,
     Random? random,
@@ -42,6 +42,9 @@ class OutboxFlusher {
   /// Upload trigger: this many events, or [interval] elapsed. Matches plan
   /// §5.8 — 50 events or 30 seconds.
   final int batchSize;
+  /// How often a running flusher wakes to upload.
+  static const defaultInterval = Duration(seconds: 30);
+
   final Duration interval;
 
   /// After this many failures an event is reported as stuck rather than

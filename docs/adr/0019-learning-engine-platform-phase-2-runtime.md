@@ -166,7 +166,7 @@ until Phase 3 only test engines exercise it.
   known, the provider builds a new flusher for that kid, but nothing ever
   starts it. This predates Phase 2 (ADR 0014's kid scoping plus ADR 0007's
   one-time wiring). It means every play since kid scoping has stayed on
-  the device. It needs its own fix and its own test.
+  the device. **Fixed in ADR 0020.**
 
 ## Not done
 

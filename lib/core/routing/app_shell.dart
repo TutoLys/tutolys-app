@@ -27,10 +27,17 @@ class AppShell extends ConsumerStatefulWidget {
 }
 
 class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver {
-  // Captured once, in initState: `ref.read` inside `dispose()` is unsafe
-  // (the widget is being unmounted), so the instance itself — not another
-  // provider read — is what dispose/lifecycle callbacks act on.
-  late final OutboxFlusher _flusher;
+  /// The flusher for the active kid. *Followed*, not captured once: the
+  /// provider builds a new flusher whenever the active kid changes — which
+  /// happens after this widget's initState on every launch, because the
+  /// session restores on the first frame. Capturing it in initState bound
+  /// the running flusher to the "nobody paired yet" outbox scope for the
+  /// whole run, so no event was ever uploaded (ADR 0020).
+  ///
+  /// Held in a field (not re-read) because `ref.read` inside `dispose()` is
+  /// unsafe — the widget is being unmounted.
+  late OutboxFlusher _flusher;
+  late final ProviderSubscription<OutboxFlusher> _flusherSubscription;
 
   /// Whether this cold start's loader and welcome screen are behind us.
   /// Never reset: signing out or re-pairing later in the same run goes
@@ -50,19 +57,26 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
       FlutterNativeSplash.remove();
       ref.read(sessionControllerProvider.notifier).restore();
     });
-    _flusher = ref.read(outboxFlusherProvider);
     // Started unconditionally (outside tests), before pairing status is even
     // known: flush() itself no-ops without an access token (see
-    // OutboxFlusher), so starting early just means it is already ticking the
-    // moment pairing succeeds rather than missing the first interval.
-    if (ref.read(outboxFlusherAutoStartProvider)) {
-      _flusher.start();
-    }
+    // OutboxFlusher). Each replacement is started as it arrives; the
+    // provider stops the one it replaces.
+    final autoStart = ref.read(outboxFlusherAutoStartProvider);
+    _flusherSubscription = ref.listenManual<OutboxFlusher>(
+      outboxFlusherProvider,
+      (previous, next) {
+        previous?.stop();
+        _flusher = next;
+        if (autoStart) next.start();
+      },
+      fireImmediately: true,
+    );
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _flusherSubscription.close();
     _flusher.stop();
     super.dispose();
   }

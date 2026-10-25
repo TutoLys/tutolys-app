@@ -41,18 +41,30 @@ final eventOutboxProvider = Provider<DriftEventOutbox>((ref) {
   );
 });
 
+/// The upload client. Its own provider so a test can swap in a fake server
+/// while leaving the real outbox and flusher providers — and so the real
+/// kid-scoping behaviour — in place.
+final telemetryApiProvider = Provider<TelemetryApi>(
+  (ref) => TelemetryApi(dio: ref.watch(telemetryDioProvider)),
+);
+
 /// Plain `Provider`, not `autoDispose`: the flusher's own retry timer and
 /// `_paused` flag must survive for the app's whole lifetime, not get torn
 /// down and rebuilt whenever something elsewhere in the tree stops watching
 /// it.
 final outboxFlusherProvider = Provider<OutboxFlusher>((ref) {
-  return OutboxFlusher(
+  final flusher = OutboxFlusher(
     outbox: ref.watch(eventOutboxProvider),
-    api: TelemetryApi(dio: ref.watch(telemetryDioProvider)),
+    api: ref.watch(telemetryApiProvider),
     // Read per attempt, never captured: a flush may happen long after the
     // token it started with expired.
     accessToken: () => ref.read(sessionControllerProvider).accessToken,
   );
+  // This provider rebuilds whenever the active kid changes, and each build
+  // is a new flusher for the new kid's outbox. The one it replaces must stop
+  // ticking: left running, it would keep flushing a scope nobody writes to.
+  ref.onDispose(flusher.stop);
+  return flusher;
 });
 
 /// Same idiom as `sessionAutoRefreshProvider`: production always starts the
