@@ -66,4 +66,41 @@ void main() {
     final rows = build([leaf('a', 'mesure', 1)], [m('elsewhere', 100)]);
     expect(rows.single.status, AreaStatus.notStarted);
   });
+
+  group('a finished lesson counts at once (ADR 0032)', () {
+    test('local lessons move the bar and the status before the server', () {
+      final rows = buildAreaProgress(
+        subject: 'MATH',
+        leaves: [leaf('a', 'mesure', 1), leaf('b', 'mesure', 2)],
+        masteries: const [],
+        english: false,
+        local: const {'a': 0.5},
+      );
+      expect(rows.single.fraction, closeTo(0.25, 1e-9));
+      expect(rows.single.status, AreaStatus.learning);
+    });
+
+    test('per leaf, the further of server and local wins', () {
+      final rows = buildAreaProgress(
+        subject: 'MATH',
+        leaves: [leaf('a', 'mesure', 1), leaf('b', 'mesure', 2)],
+        masteries: [m('a', 80), m('b', 10)],
+        english: false,
+        local: const {'a': 0.5, 'b': 1.0},
+      );
+      expect(rows.single.fraction, closeTo((0.8 + 1.0) / 2, 1e-9));
+    });
+
+    test('gold stays the server\'s: all lessons done is not mastered', () {
+      final rows = buildAreaProgress(
+        subject: 'MATH',
+        leaves: [leaf('a', 'mesure', 1)],
+        masteries: const [],
+        english: false,
+        local: const {'a': 1.0},
+      );
+      expect(rows.single.fraction, 1.0);
+      expect(rows.single.status, AreaStatus.learning);
+    });
+  });
 }

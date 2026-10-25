@@ -31,9 +31,9 @@ class ProgressState {
   final bool loading;
   final bool offline;
 
-  /// True when `currentStreakDays` came from this device's own local play
-  /// history (plan §5.8), not a live read — the backend is still the
-  /// source of truth and this is only ever shown while it's unreachable.
+  /// True when the server couldn't be reached and `currentStreakDays` is
+  /// this device's own count alone. No longer drawn as a `~` prefix: the
+  /// streak shown is always the larger of the two (ADR 0032).
   final bool isStreakEstimated;
 
   /// Null while offline/loading/unreachable — same "unknown, not a
@@ -95,10 +95,23 @@ class ProgressController extends Notifier<ProgressState> {
     final result = await ref
         .read(progressApiProvider)
         .fetchMyProgress(accessToken: token);
+    // This device's own count of consecutive days played. Today's play
+    // reaches the server only once telemetry uploads, so the server can
+    // trail it; the streak shown is whichever is larger, so a child never
+    // watches it go backwards while the server catches up (ADR 0032).
+    final local = await StreakLocal(
+      ref.read(localDatabaseProvider),
+      kidId: ref.read(activeKidIdProvider) ?? unpairedKidId,
+    ).currentStreak();
 
     state = switch (result) {
       ProgressFetched(:final snapshot) => ProgressState(
-        currentStreakDays: snapshot.currentStreakDays,
+        currentStreakDays: switch (snapshot.currentStreakDays) {
+          final server? => server > local ? server : local,
+          // The server couldn't read telemetry: this device's count is
+          // still real, but a local 0 says nothing, so that stays a dash.
+          null => local > 0 ? local : null,
+        },
         masteredCount: snapshot.masteredCount,
         totalSkills: snapshot.masteries.length,
         loading: false,
@@ -113,11 +126,7 @@ class ProgressController extends Notifier<ProgressState> {
       ProgressOffline() => ProgressState(
         loading: false,
         offline: true,
-        currentStreakDays: await StreakLocal(
-          ref.read(localDatabaseProvider),
-          kidId: ref.read(activeKidIdProvider) ?? unpairedKidId,
-        )
-            .currentStreak(),
+        currentStreakDays: local,
         isStreakEstimated: true,
       ),
       // Unauthorized/failed: show nothing rather than a stale/fabricated

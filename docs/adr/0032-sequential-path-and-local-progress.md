@@ -38,3 +38,52 @@ nothing, and `play_screen_test` now pins that.
   node 3) stays completed and replayable. Nothing is taken back.
 - `PathNodeState.available` is no longer produced by the Carte. The widget
   still draws it.
+
+## Decision: progress that shows the moment a lesson ends
+
+**Why it stayed at 0.** Progrès, the Village buildings and the header read
+only server mastery (`/me/progress`). The server recomputes mastery on a
+schedule from telemetry's continuous aggregates, which never include today
+(`materialized_only`, GO_LIVE open question #7). So nothing played today
+could show. The design interview's rule, "progression is local-instant,
+server-authoritative, monotonic", had never been implemented.
+
+- **The local measure** is defined per skill node: *finished lessons ÷
+  lessons*, from this kid's completion record (`nodeProgressProvider`,
+  exercise ids per node) against the lessons the Carte would serve. Those
+  are every cached exercise at the kid's grade, one per `lesson_group`,
+  in the language the subject asks for (`localNodeProgressProvider`). A
+  node with nothing cached has no local measure, which is not zero.
+- **Shown progress per node = max(server mastery, local measure)**
+  (`shownNodeProgress`). A finished lesson shows at once, and the server
+  catching up never pulls a bar back.
+- **Strands (Progrès) and subjects (Village)** are the mean of shown
+  progress over their leaves at the kid's grade, the same rule both
+  already used for mastery. A strand is "learning" once any leaf has
+  mastery or a finished lesson.
+- **Mastery stays the server's.** Gold and "Maîtrisé" still need
+  `is_mastered`. Finishing every lesson fills a bar but never turns it
+  gold, because mastery is a judgement on answers over time, not a count
+  of lessons played.
+- **The streak** is max(server, this device's count of consecutive days
+  played). The two count days the same way; the server adds
+  freeze-bridged gaps and other devices, while the device knows about
+  today's play before telemetry uploads. Offline, the device's count
+  shows alone. A server that can't read telemetry plus a local 0 stays a
+  dash, never a made-up zero.
+- **The `~` prefix is gone** (header, Profil, Progrès, Quêtes). It marked a
+  local value as provisional. With max() a shown value is never below
+  what the kid earned, so there's nothing to hedge, and that supersedes
+  ADR 0006's convention.
+
+## Not done
+
+- The local measure isn't recomputed when a sync adds lessons; it refreshes
+  on the next completion or app start. Content growth can also lower a
+  node's local fraction (1/1 becomes 1/2 when a lesson is added). That's
+  honest: there is more to do. It's the one way a bar can move back.
+- XP and level stay server-only and still lag until `award_xp` runs.
+  Making them local-instant needs a local XP ledger reconciled with the
+  server's, a larger change than this bug.
+- The old, unused `HomeScreen` still draws `~`; it is not in any
+  navigation.

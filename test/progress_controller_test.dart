@@ -144,6 +144,58 @@ void main() {
     },
   );
 
+  group('the streak shown never trails this device (ADR 0032)', () {
+    Future<void> playedTodayAndYesterday() async {
+      final now = DateTime.now();
+      await StreakLocal(db, kidId: 'k1', clock: () => now).recordPlayedToday();
+      await StreakLocal(
+        db,
+        kidId: 'k1',
+        clock: () => now.subtract(const Duration(days: 1)),
+      ).recordPlayedToday();
+    }
+
+    test('a server still missing today\'s play shows the local 2', () async {
+      container = build();
+      await playedTodayAndYesterday();
+      api.result = const ProgressFetched(
+        ProgressSnapshot(masteries: [], currentStreakDays: 1),
+      );
+
+      await container.read(progressControllerProvider.notifier).refresh();
+
+      final state = container.read(progressControllerProvider);
+      expect(state.currentStreakDays, 2);
+      expect(state.isStreakEstimated, isFalse, reason: 'online: no ~');
+    });
+
+    test('a larger server streak (freezes, another device) wins', () async {
+      container = build();
+      await playedTodayAndYesterday();
+      api.result = const ProgressFetched(
+        ProgressSnapshot(masteries: [], currentStreakDays: 9),
+      );
+
+      await container.read(progressControllerProvider.notifier).refresh();
+
+      expect(container.read(progressControllerProvider).currentStreakDays, 9);
+    });
+
+    test('server unknown and nothing local stays a dash', () async {
+      container = build();
+      api.result = const ProgressFetched(
+        ProgressSnapshot(masteries: [], currentStreakDays: null),
+      );
+
+      await container.read(progressControllerProvider.notifier).refresh();
+
+      expect(
+        container.read(progressControllerProvider).currentStreakDays,
+        isNull,
+      );
+    });
+  });
+
   test('unauthorized shows nothing rather than an error state', () async {
     container = build();
     api.result = const ProgressUnauthorized();

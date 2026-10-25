@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tutolys_app/data/local_db/database.dart';
 import 'package:tutolys_app/core/i18n/strings.dart';
 import 'package:tutolys_app/data/api/progress_api.dart';
 import 'package:tutolys_app/data/local_db/session_store.dart';
@@ -73,6 +74,8 @@ Widget _app({
       };
   return ProviderScope(
     overrides: [
+      // The streak reads this device's own play days (ADR 0032).
+      localDatabaseProvider.overrideWithValue(LocalDatabase.memory()),
       progressApiProvider.overrideWithValue(_FakeProgressApi(progress)),
       sessionControllerProvider.overrideWith(_FixedSessionController.new),
       playedDaysProvider.overrideWith(

@@ -1,9 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../pairing/pairing_controller.dart';
+import '../progress/local_progress.dart';
 import '../progress/progress_controller.dart';
 
-/// Per-subject mastery, joined locally rather than fetched.
+/// Per-subject progress, joined locally rather than fetched.
 ///
 /// `/api/v1/me/progress` already returns mastery for every skill the kid has
 /// played, and `skill_node_cache` already records which subject each skill
@@ -35,14 +36,21 @@ final subjectProgressProvider =
     total[leaf.subject] = (total[leaf.subject] ?? 0) + 1;
   }
 
-  // Sum real mastery percentages rather than counting mastered leaves: a kid
+  // Sum each leaf's progress rather than counting mastered leaves: a kid
   // halfway through every skill in a subject has made real progress, and a
-  // mastered-only count would show them zero.
+  // mastered-only count would show them zero. Per leaf, server mastery or
+  // the local lesson measure, whichever is further (ADR 0032), so a lesson
+  // finished today counts before the server's scheduled refresh has run.
+  final local = await ref.watch(localNodeProgressProvider.future);
+  final mastery = {
+    for (final m in progress.masteries) m.skillNodeId: m.masteryPct,
+  };
   final earned = <String, double>{};
-  for (final mastery in progress.masteries) {
-    final subject = subjectOf[mastery.skillNodeId];
+  for (final id in {...mastery.keys, ...local.keys}) {
+    final subject = subjectOf[id];
     if (subject == null) continue;
-    earned[subject] = (earned[subject] ?? 0) + (mastery.masteryPct / 100);
+    final shown = shownNodeProgress(masteryPct: mastery[id], local: local[id]);
+    earned[subject] = (earned[subject] ?? 0) + (shown ?? 0);
   }
 
   return {

@@ -212,8 +212,7 @@ class _VillageShellState extends ConsumerState<VillageShell> {
                   asset: 'asset-flame.webp',
                   label: progress.currentStreakDays == null
                       ? '–'
-                      : '${progress.isStreakEstimated ? '~' : ''}'
-                          '${progress.currentStreakDays}',
+                      : '${progress.currentStreakDays}',
                 ),
                 // The design's "2/3 quêtes" pill: today's quests done.
                 if (board != null && board.quests.isNotEmpty)

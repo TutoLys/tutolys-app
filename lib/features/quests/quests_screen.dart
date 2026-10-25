@@ -143,7 +143,6 @@ class _QuestsScreenState extends ConsumerState<QuestsScreen> {
               header,
               StreakCard(
                 streakDays: progress.currentStreakDays,
-                estimated: progress.isStreakEstimated,
                 played: played,
                 compact: compact,
                 onTap: played == null ? null : () => _showSerie(true),
@@ -352,7 +351,6 @@ class StreakCard extends StatelessWidget {
   const StreakCard({
     super.key,
     required this.streakDays,
-    required this.estimated,
     required this.played,
     required this.compact,
     this.onTap,
@@ -360,7 +358,6 @@ class StreakCard extends StatelessWidget {
 
   /// Null means unknown — shown as a dash, never as zero.
   final int? streakDays;
-  final bool estimated;
   final PlayedDays? played;
   final bool compact;
   final VoidCallback? onTap;
@@ -373,7 +370,7 @@ class StreakCard extends StatelessWidget {
 
     final number = streak == null
         ? '–'
-        : '${estimated ? '~' : ''}${t.questsStreakDays(streak)}';
+        : t.questsStreakDays(streak);
     final String line;
     if (streak == null) {
       line = t.questsStreakUnknown;

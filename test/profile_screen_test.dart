@@ -74,6 +74,8 @@ Widget appUnder({
 }) {
   return ProviderScope(
     overrides: [
+      // The streak reads this device's own play days (ADR 0032).
+      localDatabaseProvider.overrideWithValue(LocalDatabase.memory()),
       if (board != null)
         questBoardProvider.overrideWith((ref) async => board),
       progressApiProvider.overrideWithValue(progressApi ?? _FakeProgressApi()),

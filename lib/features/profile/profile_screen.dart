@@ -79,8 +79,7 @@ class ProfileScreen extends ConsumerWidget {
                     asset: 'asset-flame.webp',
                     value: progress.currentStreakDays == null
                         ? '–'
-                        : '${progress.isStreakEstimated ? '~' : ''}'
-                            '${progress.currentStreakDays}',
+                        : '${progress.currentStreakDays}',
                     label: t.profileStreakLabel,
                   ),
                   _HeroStat(

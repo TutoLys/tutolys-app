@@ -7,6 +7,7 @@ import '../../data/local_db/database.dart';
 import '../pairing/pairing_controller.dart';
 import '../path/path_controller.dart';
 import '../path/subject_pills.dart';
+import 'local_progress.dart';
 import 'progress_controller.dart';
 import 'progress_model.dart';
 
@@ -83,10 +84,9 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                     _StatCard(
                       asset: 'asset-flame.webp',
                       // Same rule as the header: unknown is a dash, never a
-                      // made-up zero; a local estimate keeps its `~`.
-                      value: streak == null
-                          ? '–'
-                          : '${progress.isStreakEstimated ? '~' : ''}$streak',
+                      // made-up zero (ADR 0032: no `~`, the value is
+                      // already local-instant and monotonic).
+                      value: streak == null ? '–' : '$streak',
                       label: t.profileStreakDays(streak ?? 0),
                       palette: p,
                     ),
@@ -197,6 +197,8 @@ class _ByArea extends ConsumerWidget {
     final t = context.s;
     final leaves = ref.watch(progressLeavesProvider(subject));
     final masteries = ref.watch(progressControllerProvider).masteries;
+    // Lessons finished on this device count at once (ADR 0032).
+    final local = ref.watch(localNodeProgressProvider).value ?? const {};
     final english = Localizations.localeOf(context).languageCode == 'en';
 
     final Widget body = switch (leaves) {
@@ -207,6 +209,7 @@ class _ByArea extends ConsumerWidget {
             leaves: value,
             masteries: masteries,
             english: english,
+            local: local,
           ).indexed) ...[
             if (i > 0) Divider(height: 1, thickness: 1, color: p.line),
             _AreaRow(
