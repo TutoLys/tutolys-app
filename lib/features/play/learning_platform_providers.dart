@@ -25,6 +25,7 @@ final learningEngineRegistryProvider = Provider<LearningEngineRegistry>(
     eraseEngine(const FindItEngine()),
     eraseEngine(const DataGraphEngine()),
     eraseEngine(const PassageReaderEngine()),
+    eraseEngine(const BalanceScaleEngine()),
   ]),
 );
 
@@ -40,6 +41,7 @@ final evaluatorRegistryProvider = Provider<EvaluatorRegistry>(
     FindItEvaluator(),
     DataGraphEvaluator(),
     PassageReaderEvaluator(),
+    BalanceScaleEvaluator(),
   ]),
 );
 

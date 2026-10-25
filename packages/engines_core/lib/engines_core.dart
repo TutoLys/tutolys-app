@@ -27,3 +27,4 @@ export 'src/timeline/timeline_axis_engine.dart';
 export 'src/timeline/timeline_calendar_engine.dart';
 export 'src/data_graph/data_graph_engine.dart';
 export 'src/passage_reader/passage_reader_engine.dart';
+export 'src/balance_scale/balance_scale_engine.dart';
