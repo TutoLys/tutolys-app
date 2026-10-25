@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../../features/home/village_screen.dart';
 import '../../features/path/path_screen.dart';
 import '../../features/profile/profile_screen.dart';
+import '../../features/about/about_screen.dart';
+import '../../features/help/help_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../i18n/strings.dart';
 import 'village_nav.dart';
@@ -31,13 +33,18 @@ class _VillageShellState extends State<VillageShell> {
   /// `IndexedStack`, not a rebuilt child per tab: switching must not
   /// re-trigger each screen's one-shot `build()` load — Home's and Path's
   /// controllers fetch once and expect to stay mounted.
-  static List<Widget> _pages(Strings s) => [
+  List<Widget> _pages(Strings s) => [
         const VillageScreen(),
         const PathScreen(),
         _NotBuiltYet(title: s.navQuetes),
         _NotBuiltYet(title: s.navProgres),
         const ProfileScreen(),
-        const SettingsScreen(),
+        SettingsScreen(
+          onOpenHelp: () => setState(() => _index = _helpIndex),
+          onOpenAbout: () => setState(() => _index = _aboutIndex),
+        ),
+        const HelpScreen(),
+        const AboutScreen(),
       ];
 
   /// Built from [Strings] rather than held as a const list: these labels are
@@ -58,6 +65,13 @@ class _VillageShellState extends State<VillageShell> {
         VillageDestination(label: s.navReglages, asset: 'asset-reglages.png'),
       ];
 
+  /// Help and About sit after Réglages in the same `IndexedStack`. They are
+  /// not navigation destinations — nothing in the nav selects them — but
+  /// they are pages, and routing them through the same stack keeps one
+  /// mechanism rather than bolting a second one on for two screens.
+  static const _helpIndex = 6;
+  static const _aboutIndex = 7;
+
   @override
   Widget build(BuildContext context) {
     final t = context.s;
@@ -74,17 +88,12 @@ class _VillageShellState extends State<VillageShell> {
           () => _index = _primary(t).length + i,
         ),
         helpLabel: t.navHelp,
-        onHelp: () => _showNotBuiltYet(context, t.navHelp),
+        onHelp: () => setState(() => _index = _helpIndex),
         child: IndexedStack(index: _index, children: _pages(t)),
       ),
     );
   }
 
-  void _showNotBuiltYet(BuildContext context, String title) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$title — ${context.s.notBuiltYetSuffix}')),
-    );
-  }
 }
 
 /// A page that does not exist yet, saying so.

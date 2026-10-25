@@ -1,5 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -69,9 +70,21 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
   Widget build(BuildContext context) {
     final session = ref.watch(sessionControllerProvider);
 
+    // Also here, not only in the listener below: `ref.listen` fires on
+    // *change*, so a restore that finishes before the first build would
+    // leave the native splash up forever with the app running behind it.
+    // `remove()` is safe to call more than once.
+    if (session.status != SessionStatus.checking) {
+      FlutterNativeSplash.remove();
+    }
+
     // A revoked device token pauses the flusher (see OutboxFlusher) until the
     // app re-pairs — the only path that ever replaces that token.
     ref.listen<SessionState>(sessionControllerProvider, (previous, next) {
+      // The session has resolved either way — let the native splash go.
+      if (next.status != SessionStatus.checking) {
+        FlutterNativeSplash.remove();
+      }
       if (next.status == SessionStatus.paired) {
         _flusher.resume();
       }
@@ -93,7 +106,10 @@ class _Splash extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: TutolysMascot(size: 120)));
+    // Still restoring: the native splash is still up (see `main`), so this
+    // is behind it and deliberately plain. It is only ever seen if the
+    // restore outlives the splash removal.
+    return const SizedBox.shrink();
   }
 }
 

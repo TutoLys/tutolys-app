@@ -35,6 +35,10 @@ dependencies:
   sqlite3_flutter_libs: ^0.6.0+eol
   crypto: ^3.0.6  # content checksums, matching the backend
   intl: ^0.20.3
+
+  # Runtime, not just the generator: the splash is held until the session
+  # has resolved, so the app imports `FlutterNativeSplash.preserve/remove`.
+  flutter_native_splash: ^2.4.6
   drift_flutter: ^0.3.1
 
 dev_dependencies:
@@ -44,7 +48,6 @@ dev_dependencies:
   drift_dev: ^2.35.1
   build_runner: ^2.7.1
   flutter_launcher_icons: ^0.14.4
-  flutter_native_splash: ^2.4.6
 
 flutter:
   uses-material-design: true

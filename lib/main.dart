@@ -2,6 +2,7 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/routing/app_shell.dart';
@@ -13,7 +14,18 @@ import 'features/pairing/pairing_controller.dart';
 import 'features/settings/settings_controller.dart';
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
+  final binding = WidgetsFlutterBinding.ensureInitialized();
+
+  // Hold the native splash until the app is genuinely usable.
+  //
+  // Without this there are two splashes back to back: the native one
+  // disappears on the first frame, and `AppShell` then shows its own
+  // loading screen while the device token is read from the secure store and
+  // refreshed. Two screens, two different foxes, two different
+  // backgrounds — which is exactly how it read. `AppShell` removes this one
+  // once the session has resolved, so there is one splash and it ends when
+  // the app can actually be used.
+  FlutterNativeSplash.preserve(widgetsBinding: binding);
 
   // Before anything else: a release build still pointed at localhost must
   // fail visibly, not silently ship broken to a real user.

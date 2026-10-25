@@ -3,176 +3,293 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/i18n/strings.dart';
+import '../home/subject_progress.dart';
+import '../home/village_scene.dart';
+import '../home/village_screen.dart' show subjectCodeFor;
 import '../pairing/pairing_controller.dart';
 import '../progress/progress_controller.dart';
-import 'pin_gate.dart';
 
-/// The profile tab (A7.2, visual-layer-only scope + B9's follow-up): the
-/// kid's name and grade, their real mastered-skills count and day-streak
-/// (both now readable from the backend, see ADR 0009), and where "sign out
-/// this device" lives. Deliberately no avatar-unlock-by-mastery or real
-/// badge grid yet — that needs a product decision on what unlocks what,
-/// not just the data (#3 on the open-items list), so that stays a
-/// placeholder rather than a fabricated one.
+/// Profil, as the design draws it: an avatar hero, three stat tiles, and
+/// per-subject progress.
+///
+/// The streak-freeze count is shown even though the design does not draw it.
+/// Freezes are real, shipped and earnable (backend ADR 0019, telemetry ADR
+/// 0007, app ADR 0011) — the design simply predates them. Dropping a working
+/// feature because a mockup omits it is a regression, not fidelity; it moves
+/// to Quêtes when that page exists, which is where the design puts streak
+/// detail.
+///
+/// Two of the design's sections are **not** rendered as mockups of
+/// themselves. Badges and the recent-activity feed have no mechanism behind
+/// them — badges are open item #3 ("do not build"), and nothing records an
+/// activity history. Rather than draw eight permanently-locked badges,
+/// which would imply a system a kid could unlock by playing, each section
+/// says what it is waiting for.
+///
+/// Everything else here is real: the name, grade, XP ledger total, streak,
+/// mastered count, and the per-subject bars — the same local join the
+/// Village uses.
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final s = context.s;
+    final p = VillagePalette.of(context);
+    final t = context.s;
     final kid = ref.watch(sessionControllerProvider).kid;
     final progress = ref.watch(progressControllerProvider);
+    final bySubject =
+        ref.watch(subjectProgressProvider).value ?? const <String, double>{};
 
-    return Scaffold(
-      appBar: AppBar(title: Text(s.profileTitle)),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(Space.lg),
-          children: [
-            Center(
-              child: Column(
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(Space.lg),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 680),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _Hero(
+                name: kid?.displayName ?? '',
+                grade: kid?.gradeLevel,
+                palette: p,
+              ),
+              const SizedBox(height: Space.md),
+              Row(
                 children: [
-                  const TutolysMascot(mood: MascotMood.idle, size: 120),
-                  const SizedBox(height: Space.md),
-                  if (kid != null) ...[
-                    Text(kid.displayName, style: context.text.headlineSmall),
-                    const SizedBox(height: Space.xxs),
-                    Text(
-                      s.profileGrade(kid.gradeLevel),
-                      style: context.text.bodyMedium?.copyWith(
-                        color: context.extras.mutedText,
-                      ),
+                  Expanded(
+                    child: _Tile(
+                      asset: 'asset-xpstar.webp',
+                      value: '${progress.totalXp}',
+                      label: t.profileTotalXp,
+                      palette: p,
                     ),
-                  ],
+                  ),
+                  const SizedBox(width: Space.sm),
+                  Expanded(
+                    child: _Tile(
+                      asset: 'asset-flame.webp',
+                      value: progress.currentStreakDays == null
+                          ? '–'
+                          : '${progress.isStreakEstimated ? '~' : ''}'
+                              '${progress.currentStreakDays}',
+                      label: t.profileStreakDays(progress.currentStreakDays ?? 0),
+                      palette: p,
+                    ),
+                  ),
+                  const SizedBox(width: Space.sm),
+                  Expanded(
+                    child: _Tile(
+                      asset: 'asset-badge.webp',
+                      value: '${progress.masteredCount}',
+                      label: t.profileSkillsMastered(progress.masteredCount),
+                      palette: p,
+                    ),
+                  ),
                 ],
               ),
-            ),
-            const SizedBox(height: Space.xl),
-            if (!progress.loading) _ProgressSummary(progress: progress),
-            const SizedBox(height: Space.xl),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(Space.lg),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.emoji_events_outlined,
-                      color: context.extras.mutedText,
-                    ),
-                    const SizedBox(width: Space.md),
-                    Expanded(
-                      child: Text(
-                        s.profileBadgesComingSoon,
-                        style: context.text.bodyMedium?.copyWith(
-                          color: context.extras.mutedText,
+              const SizedBox(height: Space.md),
+              _Card(
+                title: t.profileBySubject,
+                icon: Icons.insights_outlined,
+                palette: p,
+                child: bySubject.isEmpty
+                    ? Text(
+                        t.profileNoSubjects,
+                        style: TextStyle(fontSize: 13, color: p.inkMuted),
+                      )
+                    : Column(
+                        children: [
+                          for (final b in villageBuildings(t))
+                            if (bySubject[subjectCodeFor(b.asset)] != null)
+                              _SubjectRow(
+                                label: b.label,
+                                value: bySubject[subjectCodeFor(b.asset)]!,
+                                accent: b.accent,
+                                palette: p,
+                              ),
+                        ],
+                      ),
+              ),
+              if (progress.freezesAvailable != null) ...[
+                const SizedBox(height: Space.md),
+                _Card(
+                  title: t.profileStreakLabel,
+                  icon: Icons.ac_unit,
+                  palette: p,
+                  child: Row(
+                    children: [
+                      Image.asset(
+                        'assets/images/asset-flame.webp',
+                        width: 22,
+                        height: 22,
+                      ),
+                      const SizedBox(width: Space.xs),
+                      Expanded(
+                        child: Text(
+                          t.profileFreezesAvailable(progress.freezesAvailable!),
+                          style: TextStyle(fontSize: 13.5, color: p.ink),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: Space.md),
+              _Card(
+                title: t.profileBadges,
+                icon: Icons.workspace_premium_outlined,
+                palette: p,
+                child: Text(
+                  t.profileBadgesSoon,
+                  style: TextStyle(fontSize: 13, height: 1.4, color: p.inkMuted),
                 ),
               ),
+              const SizedBox(height: Space.md),
+              _Card(
+                title: t.profileRecent,
+                icon: Icons.history,
+                palette: p,
+                child: Text(
+                  t.profileRecentSoon,
+                  style: TextStyle(fontSize: 13, height: 1.4, color: p.inkMuted),
+                ),
+              ),
+              const SizedBox(height: Space.xl),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Hero extends StatelessWidget {
+  const _Hero({required this.name, required this.grade, required this.palette});
+
+  final String name;
+  final int? grade;
+  final VillagePalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Image.asset(
+          'assets/images/asset-mascot-welcome.webp',
+          height: 116,
+          fit: BoxFit.contain,
+        ),
+        const SizedBox(height: Space.xs),
+        Text(
+          name,
+          style: TextStyle(
+            fontFamily: VillageType.display,
+            fontWeight: FontWeight.w800,
+            fontSize: 22,
+            color: palette.ink,
+          ),
+        ),
+        if (grade != null)
+          Text(
+            context.s.gradeLabel(grade!),
+            style: TextStyle(fontSize: 13, color: palette.inkMuted),
+          ),
+      ],
+    );
+  }
+}
+
+class _Tile extends StatelessWidget {
+  const _Tile({
+    required this.asset,
+    required this.value,
+    required this.label,
+    required this.palette,
+  });
+
+  final String asset;
+  final String value;
+  final String label;
+  final VillagePalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: palette.surface,
+      borderRadius: VillageMetrics.mdAll,
+      elevation: VillageColors.elevationSmall,
+      shadowColor: palette.shadowSmall,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: Space.md, horizontal: Space.xs),
+        child: Column(
+          children: [
+            Image.asset('assets/images/$asset', width: 26, height: 26),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: TextStyle(
+                fontFamily: VillageType.display,
+                fontWeight: FontWeight.w800,
+                fontSize: 19,
+                color: palette.ink,
+              ),
             ),
-            const SizedBox(height: Space.xl),
-            OutlinedButton.icon(
-              onPressed: () => _signOut(context, ref),
-              icon: const Icon(Icons.logout),
-              label: Text(s.profileSignOut),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 11, color: palette.inkMuted),
             ),
           ],
         ),
       ),
     );
   }
-
-  /// A PIN gate stands between this tap and a real sign-out — see
-  /// `pin_gate.dart`. Without it, a kid signing out by accident (or on a
-  /// whim) costs a guardian a full re-pair.
-  Future<void> _signOut(BuildContext context, WidgetRef ref) async {
-    final allowed = await requireGuardianPin(context, ref);
-    if (!allowed || !context.mounted) return;
-    ref.read(sessionControllerProvider.notifier).forget();
-  }
 }
 
-class _ProgressSummary extends StatelessWidget {
-  const _ProgressSummary({required this.progress});
+class _Card extends StatelessWidget {
+  const _Card({
+    required this.title,
+    required this.icon,
+    required this.child,
+    required this.palette,
+  });
 
-  final ProgressState progress;
+  final String title;
+  final IconData icon;
+  final Widget child;
+  final VillagePalette palette;
 
   @override
   Widget build(BuildContext context) {
-    final s = context.s;
-    // A freshly-paired kid (or a read that couldn't reach telemetry) has
-    // nothing real to show yet — no card at all, rather than a fabricated
-    // "0 skills mastered" that reads as a judgement. XP included: it's a
-    // real ledger total, not "unknown", so a kid who's earned some stays
-    // worth showing even if streak/mastery happen to be unavailable.
-    if (progress.totalSkills == 0 &&
-        progress.currentStreakDays == null &&
-        progress.totalXp == 0) {
-      return const SizedBox.shrink();
-    }
-
-    return Card(
+    return Material(
+      color: palette.surface,
+      borderRadius: VillageMetrics.mdAll,
+      elevation: VillageColors.elevationSmall,
+      shadowColor: palette.shadowSmall,
       child: Padding(
-        padding: const EdgeInsets.all(Space.lg),
+        padding: const EdgeInsets.all(Space.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Expanded(
-                  child: _ProgressTile(
-                    icon: Icons.local_fire_department_rounded,
-                    value: progress.currentStreakDays == null
-                        ? '–'
-                        : '${progress.currentStreakDays}',
-                    label: progress.currentStreakDays == null
-                        ? s.homeStatStreak
-                        : s.profileStreakDays(progress.currentStreakDays!),
-                  ),
-                ),
-                const SizedBox(width: Space.md),
-                Expanded(
-                  child: _ProgressTile(
-                    icon: Icons.star_rounded,
-                    value: '${progress.masteredCount}',
-                    label: s.profileSkillsMastered(progress.masteredCount),
-                  ),
-                ),
-                const SizedBox(width: Space.md),
-                Expanded(
-                  child: _ProgressTile(
-                    icon: Icons.bolt_rounded,
-                    value: '${progress.totalXp}',
-                    label: s.profileTotalXp,
+                Icon(icon, size: 18, color: palette.quebecBlue),
+                const SizedBox(width: Space.xs),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontFamily: VillageType.display,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 15,
+                    color: palette.ink,
                   ),
                 ),
               ],
             ),
-            // Only shown when the balance is actually known — a read that
-            // couldn't reach telemetry has nothing real to claim here
-            // either, same "unknown, not a fabricated number" rule as the
-            // streak tile above.
-            if (progress.freezesAvailable != null) ...[
-              const SizedBox(height: Space.md),
-              Row(
-                children: [
-                  Icon(
-                    Icons.ac_unit_rounded,
-                    size: 18,
-                    color: context.colors.primary,
-                  ),
-                  const SizedBox(width: Space.xs),
-                  Text(
-                    s.profileFreezesAvailable(progress.freezesAvailable!),
-                    style: context.text.labelMedium?.copyWith(
-                      color: context.extras.mutedText,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            const SizedBox(height: Space.sm),
+            child,
           ],
         ),
       ),
@@ -180,37 +297,66 @@ class _ProgressSummary extends StatelessWidget {
   }
 }
 
-class _ProgressTile extends StatelessWidget {
-  const _ProgressTile({
-    required this.icon,
-    required this.value,
+class _SubjectRow extends StatelessWidget {
+  const _SubjectRow({
     required this.label,
+    required this.value,
+    required this.accent,
+    required this.palette,
   });
 
-  final IconData icon;
-  final String value;
   final String label;
+  final double value;
+  final Color accent;
+  final VillagePalette palette;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, color: context.colors.primary, size: 20),
-            const SizedBox(width: Space.xs),
-            Text(value, style: context.text.titleLarge),
-          ],
-        ),
-        Text(
-          label,
-          style: context.text.labelSmall?.copyWith(
-            color: context.extras.mutedText,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: Space.xs),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 140,
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: VillageType.display,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                color: palette.ink,
+              ),
+            ),
           ),
-          overflow: TextOverflow.ellipsis,
-        ),
-      ],
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(
+                value: value,
+                minHeight: 8,
+                backgroundColor: palette.track,
+                valueColor: AlwaysStoppedAnimation(accent),
+              ),
+            ),
+          ),
+          const SizedBox(width: Space.xs),
+          SizedBox(
+            width: 44,
+            child: Text(
+              '${(value * 100).round()} %',
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontFamily: VillageType.display,
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+                color: palette.inkMuted,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

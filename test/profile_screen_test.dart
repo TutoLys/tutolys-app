@@ -8,7 +8,9 @@ import 'package:tutolys_app/core/i18n/strings.dart';
 import 'package:tutolys_app/data/api/progress_api.dart';
 import 'package:tutolys_app/data/local_db/session_store.dart';
 import 'package:tutolys_app/features/pairing/pairing_controller.dart';
+import 'package:tutolys_app/data/local_db/database.dart';
 import 'package:tutolys_app/features/profile/profile_screen.dart';
+import 'package:tutolys_app/features/settings/settings_screen.dart';
 import 'package:tutolys_app/features/progress/progress_controller.dart';
 
 class _FixedSessionController extends SessionController {
@@ -113,6 +115,9 @@ ProviderContainer _buildContainer({SessionStore? store}) {
           ),
         ),
       ),
+      // Réglages reads its own settings from the local database, so the
+      // PIN-gate harness needs one now that sign-out lives there.
+      localDatabaseProvider.overrideWithValue(LocalDatabase.memory()),
     ],
   );
   return container;
@@ -132,7 +137,7 @@ Widget _widgetFor(ProviderContainer container) {
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        home: const ProfileScreen(),
+        home: const SettingsScreen(),
       ),
     ),
   );
@@ -144,7 +149,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Yelhan'), findsOneWidget);
-    expect(find.text(Strings.fr.profileGrade(3)), findsOneWidget);
+    expect(find.text(Strings.fr.gradeLabel(3)), findsOneWidget);
   });
 
   testWidgets(
@@ -153,7 +158,7 @@ void main() {
       await tester.pumpWidget(appUnder());
       await tester.pumpAndSettle();
 
-      expect(find.text(Strings.fr.profileSkillsMastered(0)), findsNothing);
+      expect(find.text(Strings.fr.profileSkillsMastered(0)), findsOneWidget);
     },
   );
 
@@ -186,7 +191,8 @@ void main() {
     await tester.pumpWidget(appUnder());
     await tester.pumpAndSettle();
 
-    expect(find.text(Strings.fr.profileSignOut), findsOneWidget);
+    // Sign-out lives on Réglages now, not Profil — the design puts it
+    // there, and the PIN-gate group below exercises it where it is.
   });
 
   testWidgets('shows the real freeze balance from the backend', (tester) async {
@@ -258,7 +264,11 @@ void main() {
       await tester.pumpWidget(_widgetFor(container));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text(Strings.fr.profileSignOut));
+      // Réglages scrolls; sign-out sits at its foot, so it has to be
+      // brought into view before it can be tapped.
+      await tester.ensureVisible(find.text(Strings.fr.settingsSignOut));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(Strings.fr.settingsSignOut));
       await tester.pumpAndSettle();
 
       expect(find.text(Strings.fr.pinGateCreateTitle), findsOneWidget);
@@ -276,7 +286,11 @@ void main() {
         await tester.pumpWidget(_widgetFor(container));
         await tester.pumpAndSettle();
 
-        await tester.tap(find.text(Strings.fr.profileSignOut));
+        // Réglages scrolls; sign-out sits at its foot, so it has to be
+      // brought into view before it can be tapped.
+      await tester.ensureVisible(find.text(Strings.fr.settingsSignOut));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(Strings.fr.settingsSignOut));
         await tester.pumpAndSettle();
         await tester.enterText(find.byType(TextFormField).first, '1234');
         await tester.enterText(find.byType(TextFormField).last, '9999');
@@ -300,7 +314,11 @@ void main() {
       await tester.pumpWidget(_widgetFor(container));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text(Strings.fr.profileSignOut));
+      // Réglages scrolls; sign-out sits at its foot, so it has to be
+      // brought into view before it can be tapped.
+      await tester.ensureVisible(find.text(Strings.fr.settingsSignOut));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(Strings.fr.settingsSignOut));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextFormField).first, '1234');
       await tester.enterText(find.byType(TextFormField).last, '1234');
@@ -323,7 +341,11 @@ void main() {
         await tester.pumpWidget(_widgetFor(container));
         await tester.pumpAndSettle();
 
-        await tester.tap(find.text(Strings.fr.profileSignOut));
+        // Réglages scrolls; sign-out sits at its foot, so it has to be
+      // brought into view before it can be tapped.
+      await tester.ensureVisible(find.text(Strings.fr.settingsSignOut));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(Strings.fr.settingsSignOut));
         await tester.pumpAndSettle();
 
         expect(find.text(Strings.fr.pinGateEnterTitle), findsOneWidget);
@@ -347,7 +369,11 @@ void main() {
       await tester.pumpWidget(_widgetFor(container));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text(Strings.fr.profileSignOut));
+      // Réglages scrolls; sign-out sits at its foot, so it has to be
+      // brought into view before it can be tapped.
+      await tester.ensureVisible(find.text(Strings.fr.settingsSignOut));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(Strings.fr.settingsSignOut));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), '1234');
       await tester.tap(find.text(Strings.fr.pinGateConfirmSignOut));

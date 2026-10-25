@@ -25,7 +25,12 @@ import 'settings_controller.dart';
 ///   Flutter spec flagged it as a defect, so it is called out rather than
 ///   repeated silently.
 class SettingsScreen extends ConsumerWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({this.onOpenHelp, this.onOpenAbout, super.key});
+
+  /// Supplied by the shell, which owns which page is showing. The screen
+  /// does not navigate itself — same reason `VillageNavShell` does not.
+  final VoidCallback? onOpenHelp;
+  final VoidCallback? onOpenAbout;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -136,7 +141,7 @@ class SettingsScreen extends ConsumerWidget {
               _LinkRow(
                 icon: Icons.info_outline,
                 label: t.settingsAbout,
-                onTap: () => _notBuilt(context, t.settingsAbout),
+                onTap: onOpenAbout ?? () => _notBuilt(context, t.settingsAbout),
               ),
 
               const SizedBox(height: Space.lg),

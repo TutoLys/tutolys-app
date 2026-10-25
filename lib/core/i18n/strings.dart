@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
 
+import '../../features/help/help_screen.dart';
+
 /// Strings, French first.
 ///
 /// The product launches in Quebec, so `fr-CA` is the default and English is the
@@ -50,7 +52,6 @@ abstract class Strings {
   String get pathLocked;
 
   // --- profile -------------------------------------------------------------
-  String get profileTitle;
   String profileGrade(int grade);
   String get profileBadgesComingSoon;
   String get profileSignOut;
@@ -146,6 +147,30 @@ abstract class Strings {
 
   /// "3 bonnes réponses de suite".
   String streakQuestTitle(int target);
+
+  String get profileEyebrow;
+  String get profileTitle;
+  String get profileStreakLabel;
+  String get profileBySubject;
+  String get profileBadges;
+  String get profileBadgesSoon;
+  String get profileRecent;
+  String get profileRecentSoon;
+  String get profileNoSubjects;
+  String get daysShort;
+
+  String get helpTitle;
+  String get helpSubtitle;
+  String get helpFaqTitle;
+  String get helpParentsTitle;
+  String get helpParentsBody;
+  String get aboutTagline;
+  String get aboutVersion;
+  String get aboutCurriculum;
+  String get aboutMadeIn;
+
+  /// The FAQ, question and answer, in the reader's own language.
+  List<HelpEntry> get helpEntries;
 
   static const Strings fr = _FrenchStrings();
   static const Strings en = _EnglishStrings();
@@ -476,6 +501,68 @@ class _FrenchStrings extends Strings {
   @override
   String streakQuestTitle(int target) => '$target bonnes réponses de suite';
 
+  @override
+  String get profileEyebrow => 'Ton profil';
+
+  @override
+  String get profileStreakLabel => 'Série en cours';
+
+  @override
+  String get profileBySubject => 'Progression par matière';
+
+  @override
+  String get profileBadges => 'Badges';
+
+  @override
+  String get profileBadgesSoon => 'Les badges arrivent bientôt. Rien n\'est encore à gagner, alors rien n\'est affiché comme verrouillé.';
+
+  @override
+  String get profileRecent => 'Activité récente';
+
+  @override
+  String get profileRecentSoon => 'L\'historique détaillé arrivera avec les badges.';
+
+  @override
+  String get profileNoSubjects => 'Joue un peu et tes matières apparaîtront ici.';
+
+  @override
+  String get daysShort => 'j';
+
+  @override
+  String get helpTitle => 'Besoin d\'aide ?';
+
+  @override
+  String get helpSubtitle => 'Voici les questions qu\'on nous pose le plus souvent.';
+
+  @override
+  String get helpFaqTitle => 'Questions fréquentes';
+
+  @override
+  String get helpParentsTitle => 'Pour les parents';
+
+  @override
+  String get helpParentsBody => 'Une question technique, un problème de compte ? Passez par le site web.';
+
+  @override
+  String get aboutTagline => 'Apprendre en jouant, selon le programme du Québec.';
+
+  @override
+  String get aboutVersion => 'Version';
+
+  @override
+  String get aboutCurriculum => 'Programme';
+
+  @override
+  String get aboutMadeIn => 'Fait au Québec 🍁';
+  @override
+  List<HelpEntry> get helpEntries => const [
+        HelpEntry(question: 'Comment je gagne des pièces ?', answer: 'En terminant des exercices et en complétant des quêtes ! Plus tu joues, plus tu en gagnes.'),
+        HelpEntry(question: 'C\'est quoi ma série ?', answer: 'C\'est le nombre de jours de suite où tu as joué. Termine au moins un exercice chaque jour pour ne pas la perdre.'),
+        HelpEntry(question: 'Comment débloquer un nouveau bâtiment ?', answer: 'Chaque bâtiment du Village représente une matière. Plus tu avances dans son parcours (onglet Carte), plus sa barre de progression se remplit.'),
+        HelpEntry(question: 'J\'ai perdu ma série, que faire ?', answer: 'Pas de panique ! Recommence aujourd\'hui — une nouvelle série démarre tout de suite.'),
+        HelpEntry(question: 'J\'ai trouvé une erreur ou un problème', answer: 'Dis-le à un parent ou à ton enseignant — ils pourront nous contacter pour toi.'),
+      ];
+
 }
 
 class _EnglishStrings extends Strings {
@@ -797,6 +884,68 @@ class _EnglishStrings extends Strings {
 
   @override
   String streakQuestTitle(int target) => '$target correct answers in a row';
+
+  @override
+  String get profileEyebrow => 'Your profile';
+
+  @override
+  String get profileStreakLabel => 'Current streak';
+
+  @override
+  String get profileBySubject => 'Progress by subject';
+
+  @override
+  String get profileBadges => 'Badges';
+
+  @override
+  String get profileBadgesSoon => 'Badges are coming soon. There is nothing to earn yet, so nothing is shown as locked.';
+
+  @override
+  String get profileRecent => 'Recent activity';
+
+  @override
+  String get profileRecentSoon => 'A detailed history will arrive with the badges.';
+
+  @override
+  String get profileNoSubjects => 'Play a little and your subjects will show up here.';
+
+  @override
+  String get daysShort => 'd';
+
+  @override
+  String get helpTitle => 'Need help?';
+
+  @override
+  String get helpSubtitle => 'Here are the questions we get asked most.';
+
+  @override
+  String get helpFaqTitle => 'Frequently asked';
+
+  @override
+  String get helpParentsTitle => 'For parents';
+
+  @override
+  String get helpParentsBody => 'A technical question, an account problem? Go through the website.';
+
+  @override
+  String get aboutTagline => 'Learning through play, following the Quebec curriculum.';
+
+  @override
+  String get aboutVersion => 'Version';
+
+  @override
+  String get aboutCurriculum => 'Curriculum';
+
+  @override
+  String get aboutMadeIn => 'Made in Quebec 🍁';
+  @override
+  List<HelpEntry> get helpEntries => const [
+        HelpEntry(question: 'How do I earn coins?', answer: 'By finishing exercises and completing quests! The more you play, the more you earn.'),
+        HelpEntry(question: 'What is my streak?', answer: 'It\'s the number of days in a row you\'ve played. Finish at least one exercise each day to keep it.'),
+        HelpEntry(question: 'How do I unlock a new building?', answer: 'Each building in the Village is a subject. The further you get along its path (the Map tab), the more its progress bar fills up.'),
+        HelpEntry(question: 'I lost my streak, what now?', answer: 'Don\'t worry! Start again today — a new streak begins right away.'),
+        HelpEntry(question: 'I found a mistake or a problem', answer: 'Tell a parent or your teacher — they can contact us for you.'),
+      ];
 
 }
 
