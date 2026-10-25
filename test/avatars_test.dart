@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:design_system/design_system.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -122,6 +124,17 @@ void main() {
       expect(keys.toSet(), hasLength(keys.length));
       for (final k in keys) {
         expect(RegExp(r'^[a-z0-9][a-z0-9_]{0,63}$').hasMatch(k), isTrue, reason: k);
+      }
+    });
+
+    test('every bundled avatar file exists, as a small webp', () {
+      for (final a in avatarCatalog) {
+        if (a.asset == null) continue;
+        final f = File('assets/images/${a.asset}');
+        expect(f.existsSync(), isTrue, reason: a.asset);
+        expect(a.asset, endsWith('.webp'), reason: a.asset);
+        // Every avatar ships in every build, web included.
+        expect(f.lengthSync(), lessThan(120 * 1024), reason: a.asset);
       }
     });
 

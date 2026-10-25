@@ -49,11 +49,13 @@ class AvatarDef {
 const defaultAvatarKey = 'kid_wavy';
 
 /// The catalog, in the picker's order: starters, then unlockables from
-/// easiest to rarest. Keys match `docs/design/AVATARS.md`.
+/// easiest to rarest. Keys match `docs/design/AVATARS.md`, which also says
+/// how to add one: a 512px webp in `assets/images/`, plus one line here.
+/// A key is stored by the backend, so it is never renamed once shipped.
 const avatarCatalog = <AvatarDef>[
-  AvatarDef(defaultAvatarKey, AvatarFree(), asset: 'asset-profil.png'),
-  AvatarDef('kid_curly', AvatarFree()),
-  AvatarDef('kid_glasses', AvatarFree()),
+  AvatarDef(defaultAvatarKey, AvatarFree(), asset: 'avatar-kid-wavy.webp'),
+  AvatarDef('kid_curly', AvatarFree(), asset: 'avatar-kid-curly.webp'),
+  AvatarDef('kid_glasses', AvatarFree(), asset: 'avatar-kid-glasses.webp'),
   AvatarDef('kid_hijab', AvatarFree()),
   AvatarDef('kid_freckles', AvatarFree()),
   AvatarDef('kid_braids', AvatarFree()),

@@ -58,6 +58,28 @@ level 2 comes in the first session and level 20 is about 1,900 XP. The
 achievement unlocks reuse the eight achievements in Quêtes
 (`quest_board.dart`), so an avatar and its badge always unlock together.
 
-Until the art arrives, the app shows the existing Léa for slot 1 and a
-neutral silhouette for the others, so the picker can ship and be tested
-first.
+## Status
+
+Delivered 2026-10-25 (source art in `Lab/Tutolys/Assets/imgs/avatars/`,
+never edited in place): **#1 `kid_wavy`, #2 `kid_curly`, #3
+`kid_glasses`.** The other 14 show a neutral face until drawn.
+
+The same delivery had four more images, which are **not in the catalog**
+because they repeat a face that's already there: "ChatGPT Image … AM-1"
+is the curly-haired boy again, and "… AM-2", "Cheerful Girl in Blue
+Hoodie" and "Léa's Cheerful Blue Hoodie Avatar" are all Léa. Still
+missing from the starters: #4 hijab, #5 freckles, #6 braids.
+
+## Adding an avatar
+
+1. Keep the original in `Assets/imgs/avatars/`.
+2. Export a square 512×512 webp with alpha (quality about 86, which is
+   about 40–50 KB) to `tutolys-app/assets/images/avatar-<key>.webp`.
+   Don't ship the 1.2–1.5 MB PNGs: they go in every build, web included.
+3. Add or fill one line in `avatarCatalog`
+   (`lib/features/profile/avatars.dart`): the key, the unlock rule, and
+   the asset. For an unlockable, also add its name to `avatarName` in
+   `strings.dart` (FR and EN).
+4. The key (`^[a-z0-9][a-z0-9_]{0,63}$`) is what the backend stores in
+   `Kid.avatar_key`, so it's **permanent once shipped**. The backend has
+   no allowlist, so adding an avatar needs no backend deploy.
