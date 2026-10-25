@@ -129,6 +129,26 @@ void main() {
       expect(b.keepAlive.last, isFalse);
     });
 
+    testWidgets('armed at startup, it holds from the first tap anywhere', (
+      tester,
+    ) async {
+      final b = FakeBackend();
+      final k = AudioOutputKeepAlive(b)..armOnFirstGesture();
+      await tester.pumpWidget(
+        const Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox.expand(),
+        ),
+      );
+      expect(k.active, isFalse, reason: 'no gesture yet');
+      await tester.tapAt(const Offset(10, 10));
+      expect(k.active, isTrue);
+      expect(b.log, contains('running'), reason: 'woken inside the gesture');
+      await tester.tapAt(const Offset(10, 10));
+      k.release();
+      expect(k.active, isFalse, reason: 'one hold, taken once');
+    });
+
     test('native: no backend, nothing happens', () {
       final k = AudioOutputKeepAlive(null)..acquire();
       expect(k.active, isTrue);

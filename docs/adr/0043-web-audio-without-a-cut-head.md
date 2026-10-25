@@ -152,3 +152,17 @@ stays as a third layer.
 - engine_sdk 152, engines_core 176. App: 498 pass on HEAD plus these
   changes. In the shared tree one `profile_screen_test` fails, and it
   belongs to the app session's uncommitted profile/progress work, not this.
+
+### Armed on the first gesture
+
+Hafid may tap the speaker within seconds of opening a game, and on his
+machine the sink takes longer than the Backend's 250 ms of leading
+silence to wake. So `AudioOutputKeepAlive.armOnFirstGesture()`, called
+once at startup, takes a hold from the **first pointer-down anywhere in
+the app**. That pointer-down is a user gesture, so the browser lets the
+context start. From then on the output stays awake while the app is
+visible; it still turns off when the app is hidden. The activity-scoped
+holds remain. On native it does nothing. One test: no hold before a tap,
+a hold after the first tap with the context woken inside the gesture, and
+only one hold however many taps follow. The startup call itself is one
+line in `lib/main.dart`, which belongs to the app session.

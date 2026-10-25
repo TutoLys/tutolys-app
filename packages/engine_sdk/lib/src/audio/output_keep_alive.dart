@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 
 import 'web_audio_backend.dart';
@@ -30,10 +31,31 @@ class AudioOutputKeepAlive {
 
   final WebAudioBackend? _backend;
   int _holders = 0;
+  bool _armed = false;
   bool _hidden = false;
   AppLifecycleListener? _lifecycle;
 
   bool get active => _holders > 0 && !_hidden;
+
+  /// Hold the output awake from the app's **first tap anywhere** on, not
+  /// only while an activity is open — the sink then has every second the
+  /// child spends in menus to wake, long before the first read-aloud. Call
+  /// once at startup. It still turns off while the app is hidden. On a
+  /// platform with no backend (native) it does nothing.
+  ///
+  /// The first pointer-down is a user gesture, which is what a browser
+  /// requires before the audio context may start.
+  void armOnFirstGesture() {
+    if (_armed || _backend == null) return;
+    _armed = true;
+    GestureBinding.instance.pointerRouter.addGlobalRoute(_onFirstPointer);
+  }
+
+  void _onFirstPointer(PointerEvent event) {
+    if (event is! PointerDownEvent) return;
+    GestureBinding.instance.pointerRouter.removeGlobalRoute(_onFirstPointer);
+    acquire();
+  }
 
   void acquire() {
     _holders++;
