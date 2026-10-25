@@ -459,6 +459,12 @@ void main() {
         );
         await tester.pump();
 
+        // The speaker sits to the left of the question (Hafid, 2026-10-25).
+        expect(
+          tester.getCenter(find.byIcon(Icons.volume_up)).dx,
+          lessThan(tester.getCenter(find.text('Quel nombre ?')).dx),
+        );
+
         final buttonBefore = tester.widget<IconButton>(
           find.widgetWithIcon(IconButton, Icons.volume_up),
         );

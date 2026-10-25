@@ -63,10 +63,11 @@ void main() {
   });
 
   group('SpeechPlan', () {
-    test('v1 content auto-reads the prompt from its asset', () {
+    test('the prompt is read from its asset, only when asked', () {
       final env = _env(const {});
       final plan = SpeechPlan(envelope: env, question: env.questions.single);
-      expect(plan.autoPlays(SpeechPart.prompt), isTrue);
+      expect(plan.autoPlays(SpeechPart.prompt), isFalse);
+      expect(plan.canSpeak(SpeechPart.prompt), isTrue);
       expect(
         plan.canSpeak(SpeechPart.option),
         isFalse,
@@ -99,8 +100,17 @@ void main() {
       );
     });
 
-    test('read-aloud off stops auto-play but keeps the speaker button', () {
-      final env = _env(const {});
+    test('content may ask for auto-read; read-aloud off still stops it', () {
+      final env = _env({
+        'speech_policy': {'prompt': 'auto'},
+      });
+      expect(
+        SpeechPlan(
+          envelope: env,
+          question: env.questions.single,
+        ).autoPlays(SpeechPart.prompt),
+        isTrue,
+      );
       final plan = SpeechPlan(
         envelope: env,
         question: env.questions.single,

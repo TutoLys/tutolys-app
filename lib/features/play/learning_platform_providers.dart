@@ -1,4 +1,5 @@
 import 'package:engine_sdk/engine_sdk.dart';
+import 'package:engines_core/engines_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tutolys_motion/tutolys_motion.dart';
 
@@ -6,17 +7,18 @@ import '../pairing/pairing_controller.dart';
 import '../../data/sync/drift_audio_resolver.dart';
 import '../settings/settings_controller.dart';
 
-/// Engines on the new `LearningEngine` contract. **Empty in Phase 2**: every
-/// exercise still plays through the legacy registry inside the shell.
-/// Phase 3 adds the ported `mcq` here, and an exercise moves to the new
-/// runtime as soon as all of its questions' engines are listed.
+/// Engines on the new `LearningEngine` contract. An exercise plays on the
+/// new runtime as soon as every one of its questions' engines is listed
+/// here; anything else still plays through the legacy registry inside the
+/// same shell. `mcq` moved in Phase 3 (ADR 0021); the legacy `McqEngine`
+/// stays registered there until nothing could need it.
 final learningEngineRegistryProvider = Provider<LearningEngineRegistry>(
-  (ref) => LearningEngineRegistry(const []),
+  (ref) => LearningEngineRegistry([eraseEngine(const SingleChoiceEngine())]),
 );
 
-/// Evaluators, by engine and policy. Empty until Phase 3, like the engines.
+/// Evaluators, by engine and policy.
 final evaluatorRegistryProvider = Provider<EvaluatorRegistry>(
-  (ref) => EvaluatorRegistry(const []),
+  (ref) => EvaluatorRegistry(const [McqExactEvaluator()]),
 );
 
 /// Who can appear in an activity and who draws them. Only the fox, drawn by

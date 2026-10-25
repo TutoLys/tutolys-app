@@ -107,11 +107,21 @@ class ActivityShell extends StatelessWidget {
     final compact = MediaQuery.sizeOf(context).width < Breakpoints.compact;
     final gutter = compact ? Space.md : 28.0;
 
+    // The design floats the mascot beside the content (`.mascot-hint` is
+    // absolutely positioned), never as a row of its own: a row cost a
+    // fixed-height legacy engine 72px it didn't have on a short window. So
+    // it sits beside the prompt — or, when the engine draws its own prompt
+    // (the legacy path), small in the top bar.
+    final hasPrompt = promptText != null || onSpeak != null;
     final header = <Widget>[
-      if (character != null)
-        Align(alignment: Alignment.centerLeft, child: character),
-      if (promptText != null || onSpeak != null)
-        _PromptRow(palette: p, strings: s, text: promptText, onSpeak: onSpeak),
+      if (hasPrompt)
+        _PromptRow(
+          palette: p,
+          strings: s,
+          text: promptText,
+          onSpeak: onSpeak,
+          character: character,
+        ),
       if (revealedHint != null) _HintPanel(palette: p, text: revealedHint!),
       if (notice != null)
         Padding(
@@ -153,6 +163,7 @@ class ActivityShell extends StatelessWidget {
                   progressLabel: progressLabel,
                   xp: xp,
                   inARow: inARow,
+                  character: hasPrompt ? null : character,
                 ),
                 Expanded(
                   child: Stack(
@@ -218,12 +229,14 @@ class _TopBar extends StatelessWidget {
     required this.progressLabel,
     required this.xp,
     required this.inARow,
+    required this.character,
   });
 
   final VillagePalette palette;
   final ShellStrings strings;
   final double gutter;
   final VoidCallback onClose;
+  final Widget? character;
   final double? progress;
   final String? progressLabel;
   final int? xp;
@@ -245,6 +258,8 @@ class _TopBar extends StatelessWidget {
             tooltip: strings.close,
             icon: Icon(Icons.close_rounded, color: p.inkMuted, size: 20),
           ),
+          if (character != null)
+            SizedBox.square(dimension: 52, child: FittedBox(child: character)),
           const SizedBox(width: Space.sm),
           Expanded(
             child: Column(
@@ -316,12 +331,14 @@ class _PromptRow extends StatelessWidget {
     required this.strings,
     required this.text,
     required this.onSpeak,
+    required this.character,
   });
 
   final VillagePalette palette;
   final ShellStrings strings;
   final String? text;
   final VoidCallback? onSpeak;
+  final Widget? character;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -329,6 +346,7 @@ class _PromptRow extends StatelessWidget {
     child: Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        if (character != null) ...[character!, const SizedBox(width: 14)],
         if (onSpeak != null)
           IconButton.filledTonal(
             onPressed: onSpeak,
@@ -342,6 +360,7 @@ class _PromptRow extends StatelessWidget {
               text!,
               textAlign: TextAlign.center,
               style: TextStyle(
+                fontFamily: VillageType.display,
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
                 color: palette.ink,
@@ -417,6 +436,9 @@ class _BottomBar extends StatelessWidget {
         border: Border(top: BorderSide(color: p.line)),
       ),
       child: Row(
+        // INDICE left, VALIDER right (the design's `.exo-bottombar`),
+        // each allowed to shrink on a narrow screen.
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           if (onHint != null)
             Flexible(
@@ -437,8 +459,10 @@ class _BottomBar extends StatelessWidget {
                   ),
                 ),
               ),
-            ),
-          const Spacer(),
+            )
+          else
+            // Holds the left slot so a lone VALIDER still sits on the right.
+            const SizedBox.shrink(),
           if (showValidate)
             Flexible(
               child: Semantics(
@@ -473,6 +497,7 @@ class _BottomBar extends StatelessWidget {
                       strings.validate.toUpperCase(),
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
+                        fontFamily: VillageType.display,
                         fontWeight: FontWeight.w800,
                         letterSpacing: .4,
                       ),
@@ -543,6 +568,7 @@ class _FeedbackBanner extends StatelessWidget {
                   Text(
                     feedback.title,
                     style: TextStyle(
+                      fontFamily: VillageType.display,
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
                       color: p.ink,
@@ -570,7 +596,10 @@ class _FeedbackBanner extends StatelessWidget {
               ),
               child: Text(
                 feedback.actionLabel.toUpperCase(),
-                style: const TextStyle(fontWeight: FontWeight.w800),
+                style: const TextStyle(
+                  fontFamily: VillageType.display,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
           ],

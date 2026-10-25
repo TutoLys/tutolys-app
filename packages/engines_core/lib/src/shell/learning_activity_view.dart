@@ -75,8 +75,11 @@ class _LearningActivityViewState extends State<LearningActivityView> {
           _hintRevealed = false;
         case ActivityCompleted():
           // The child just pressed Continuer on the last banner; a second
-          // "well done" screen would only be one more tap.
-          WidgetsBinding.instance.addPostFrameCallback((_) {
+          // "well done" screen would only be one more tap. A microtask, not
+          // a post-frame callback: nothing schedules a frame here, so a
+          // post-frame callback waited for the next repaint — a visible
+          // second on an empty shell, until the mouse moved.
+          scheduleMicrotask(() {
             if (mounted) widget.onDone();
           });
         case _:

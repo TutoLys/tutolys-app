@@ -98,15 +98,15 @@ class _ExerciseRunnerState extends State<ExerciseRunner> {
   bool _finished = false;
   Future<void>? _startFuture;
 
-  /// Which `exerciseId/audioRef` has already been resolved-and-autoplayed,
-  /// so a rebuild (e.g. a settings change) never replays the same prompt.
+  /// Which `exerciseId/audioRef` has already been resolved, so a rebuild
+  /// (e.g. a settings change) never resolves the same prompt twice.
   /// Only set once resolution actually *succeeds* — a `null` result (not
   /// synced yet) must stay eligible to retry on a later rebuild, rather
   /// than being treated as "handled" forever.
-  String? _autoPlayedFor;
+  String? _resolvedFor;
 
   /// Guards against a second concurrent resolve for the same key while
-  /// the first is still in flight — separate from [_autoPlayedFor] so a
+  /// the first is still in flight — separate from [_resolvedFor] so a
   /// `null` result doesn't block a legitimate retry.
   String? _resolvingFor;
   Uint8List? _audioBytes;
@@ -123,7 +123,7 @@ class _ExerciseRunnerState extends State<ExerciseRunner> {
       _started = false;
       _finished = false;
       _startFuture = null;
-      _autoPlayedFor = null;
+      _resolvedFor = null;
       _resolvingFor = null;
       _audioBytes = null;
     }
@@ -249,7 +249,7 @@ class _ExerciseRunnerState extends State<ExerciseRunner> {
     }
 
     if (audioRef != null && exerciseId != null) {
-      _maybeAutoPlay(exerciseId, audioRef);
+      _maybeResolveAudio(exerciseId, audioRef);
     }
 
     return Padding(
@@ -258,17 +258,9 @@ class _ExerciseRunnerState extends State<ExerciseRunner> {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          if (text != null && text.isNotEmpty)
-            Flexible(
-              child: Text(
-                text,
-                textAlign: TextAlign.center,
-                style: DefaultTextStyle.of(context).style
-                    .copyWith(fontSize: 22, fontWeight: FontWeight.w700),
-              ),
-            ),
+          // Speaker first, on the left of the question (Hafid, 2026-10-25),
+          // and it plays only when tapped — never on its own.
           if (audioRef != null) ...[
-            const SizedBox(width: 8),
             _ReadAloudButton(
               enabled: _audioBytes != null,
               onPressed: () {
@@ -279,20 +271,32 @@ class _ExerciseRunnerState extends State<ExerciseRunner> {
                 );
               },
             ),
+            const SizedBox(width: 8),
           ],
+          if (text != null && text.isNotEmpty)
+            Flexible(
+              child: Text(
+                text,
+                textAlign: TextAlign.center,
+                style: DefaultTextStyle.of(context).style
+                    .copyWith(fontSize: 22, fontWeight: FontWeight.w700),
+              ),
+            ),
         ],
       ),
     );
   }
 
-  /// Resolve + play once per `exerciseId/audioRef`, not once per rebuild.
+  /// Resolve the prompt's audio once per `exerciseId/audioRef`, so the
+  /// speaker is ready the moment it's tapped. Never plays it: the question
+  /// is read only when the child asks (Hafid, 2026-10-25).
   ///
   /// Called from `build()`, so the guard has to be synchronous and
-  /// immediate — marking `_autoPlayedFor` before the `await` is what stops
-  /// a second concurrent rebuild from kicking off a second resolve.
-  void _maybeAutoPlay(String exerciseId, String audioRef) {
+  /// immediate — marking `_resolvingFor` before the `await` is what stops a
+  /// second concurrent rebuild from kicking off a second resolve.
+  void _maybeResolveAudio(String exerciseId, String audioRef) {
     final key = '$exerciseId/$audioRef';
-    if (_autoPlayedFor == key || _resolvingFor == key) return;
+    if (_resolvedFor == key || _resolvingFor == key) return;
     _resolvingFor = key;
 
     scheduleMicrotask(() async {
@@ -302,9 +306,8 @@ class _ExerciseRunnerState extends State<ExerciseRunner> {
       );
       _resolvingFor = null;
       if (!mounted || bytes == null) return;
-      _autoPlayedFor = key;
+      _resolvedFor = key;
       setState(() => _audioBytes = bytes);
-      await _player.play(bytes, cacheKey: key);
     });
   }
 

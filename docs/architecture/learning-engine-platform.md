@@ -2,7 +2,11 @@
 
 Status: **accepted 2026-10-25.** Hafid approved the design and took every §10
 recommendation (D1–D8). **Phase 1 (contracts) is done** (ADR 0017); **Phase 2
-(shared runtime) is done** (ADR 0019). Phase 3 (the `mcq` port) is next.
+(shared runtime) is done** (ADR 0019); **Phase 3 (`mcq` on the new contract)
+is done** (ADR 0021). Phase 4 (shared mechanics, porting the other three
+engines) is next. Since 2026-10-25 the question is read **only on request**
+and the speaker sits left of it (Hafid), wherever this document still says
+auto-read.
 
 This answers the "Learning Engine Platform, Animation Framework & Educational
 Telemetry" brief. The brief asks for an audit before any design, so §1 is a
@@ -316,8 +320,8 @@ field is optional with a default (G10).
                 "mode": "prerecorded" }    // NEW: authoring-time pronunciation source
   },
   "speech_policy": {                       // NEW: what may be read aloud, and when
-    "prompt": "auto",                      // auto | on_request | never
-    "options": "on_request",               // never for reading/listening assessments
+    "prompt": "on_request",                // auto | on_request | never (default on_request)
+    "options": "never",                    // default: answer choices are never read (Decision Log)
     "feedback": "on_request"
   },
   "config": { /* engine content, per engine schema */ },

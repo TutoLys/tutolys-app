@@ -65,7 +65,7 @@ const _mcqEnvelope = <String, Object?>{
   'subject': 'MATH',
   'grade': 1,
   'rank': 0,
-  'prompt': {'text': 'Combien font 7 + 5 ?'},
+  'prompt': {'text': 'Combien font 7 + 5 ?', 'audio_ref': 'audio'},
   'config': {
     'options': [
       {'id': 'a', 'label': '10'},
@@ -73,6 +73,28 @@ const _mcqEnvelope = <String, Object?>{
     ],
     'correct': 'b',
     'shuffle': false,
+  },
+};
+
+/// A legacy-path exercise: `compose_build` isn't on the new contract yet.
+const _composeEnvelope = <String, Object?>{
+  'exercise_id': '882398fb-9064-4678-b5f2-d1fa1f7cb1fb',
+  'version': 1,
+  'engine_key': 'compose_build',
+  'engine_min_version': 1,
+  'skill_node_id': 'bd88c27b-3508-517c-bf0d-a06f5f743f0b',
+  'subject': 'MATH',
+  'grade': 1,
+  'rank': 0,
+  'prompt': {'text': 'Construis le nombre 7 avec deux blocs'},
+  'config': {
+    'tiles': [
+      {'id': 'b1', 'label': '1'},
+      {'id': 'b2', 'label': '2'},
+      {'id': 'b5', 'label': '5'},
+    ],
+    'target': ['b2', 'b5'],
+    'ordered': false,
   },
 };
 
@@ -148,19 +170,29 @@ void main() {
   }
 
   testWidgets(
-    'today\'s content plays in the shell, the fox on stage, telemetry as before',
+    'a legacy engine plays in the shell, the fox on stage, telemetry as before',
     (tester) async {
-      await tester.pumpWidget(app(_mcqEnvelope));
+      await tester.pumpWidget(app(_composeEnvelope));
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
 
       expect(find.byTooltip("Quitter l'exercice"), findsOneWidget);
       expect(find.byType(TutolysMascot), findsOneWidget);
-      expect(find.text('Combien font 7 + 5 ?'), findsOneWidget);
+      expect(
+        find.text('Construis le nombre 7 avec deux blocs'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('VALIDER'),
+        findsNothing,
+        reason: 'legacy engines resolve on tap',
+      );
 
-      await tester.tap(find.text('12'));
-      // The legacy engine awaits its attempt write, then its reaction beats
-      // (2 × 900 ms), before finishing; the screen then pops.
+      await tester.tap(find.text('5'));
+      await settle(tester);
+      await tester.tap(find.text('2'));
+      // The legacy engine awaits its attempt write, then its reaction beats,
+      // before finishing; the screen then pops.
       await settle(tester, rounds: 6);
       await tester.pumpAndSettle();
 
@@ -184,6 +216,64 @@ void main() {
   );
 
   testWidgets(
+    'a real mcq exercise plays on the new runtime: listen, wrong, retry, right, done',
+    (tester) async {
+      // No engine overrides: the app's own registry serves mcq now.
+      await tester.pumpWidget(app(_mcqEnvelope));
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await settle(tester);
+
+      expect(audio.requests, isEmpty, reason: 'never read on its own');
+      // The speaker is left of the question, and reads it when tapped.
+      expect(
+        tester.getCenter(find.byTooltip('Écouter la question')).dx,
+        lessThan(tester.getCenter(find.text('Combien font 7 + 5 ?')).dx),
+      );
+      await tester.tap(find.byTooltip('Écouter la question'));
+      await settle(tester);
+      expect(audio.requests, hasLength(1));
+      expect((audio.requests.single.source as PrerecordedAudio).ref, 'audio');
+
+      await tester.tap(find.text('10'));
+      await settle(tester);
+      await tester.tap(find.text('VALIDER'));
+      await settle(tester);
+      expect(find.text('Presque !'), findsOneWidget);
+      await tester.tap(find.text('RÉESSAYER'));
+      await settle(tester);
+      await tester.tap(find.text('12'));
+      await settle(tester);
+      await tester.tap(find.text('VALIDER'));
+      await settle(tester);
+      expect(find.text('Bravo !'), findsOneWidget);
+      await tester.tap(find.text('CONTINUER'));
+      await settle(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text('open'), findsOneWidget, reason: 'finished and popped');
+      final events = await outbox();
+      expect(events.map((e) => e['event_type']).toList(), [
+        'session_start',
+        'exercise_start',
+        'attempt',
+        'attempt',
+        'exercise_complete',
+        'session_end',
+      ]);
+      final attempts = events
+          .where((e) => e['event_type'] == 'attempt')
+          .toList();
+      expect(attempts.map((e) => e['is_correct']), [false, true]);
+      expect(attempts.map((e) => (e['answer_payload']! as Map)['selected']), [
+        'a',
+        'b',
+      ]);
+      expect(await db.select(db.activitySessionTable).get(), isEmpty);
+    },
+  );
+
+  testWidgets(
     'a runtime exercise survives leaving mid-question and resumes where it was',
     (tester) async {
       final envelope = fakeEnvelope(questions: 2);
@@ -198,7 +288,7 @@ void main() {
       await settle(tester);
 
       expect(find.text('Q0'), findsOneWidget);
-      expect(audio.requests, hasLength(1), reason: 'the prompt auto-reads');
+      expect(audio.requests, isEmpty, reason: 'read only when asked');
       expect(find.byTooltip('Écouter la question'), findsOneWidget);
 
       await tester.tap(find.byKey(const ValueKey('option-a')));

@@ -303,4 +303,125 @@ void main() {
     );
     bridge.dispose();
   });
+
+  testWidgets(
+    'LegacyEngineHost: a timed speed_tap answer registers inside the shell',
+    (tester) async {
+      final outbox = InMemoryEventOutbox();
+      final bridge = LegacyFeedbackBridge(beat: Duration.zero);
+      ExerciseResult? result;
+      await tester.pumpWidget(
+        _app(
+          LegacyEngineHost(
+            envelope: {
+              'exercise_id': 'c89696ba-26f1-460c-8e2a-b02ca6a294f3',
+              'version': 1,
+              'engine_key': 'speed_tap',
+              'engine_min_version': 1,
+              'skill_node_id': '6caa74dd-747a-5372-9f1a-4df9fc889e9e',
+              'subject': 'MATH',
+              'grade': 1,
+              'rank': 0,
+              'prompt': {'text': 'Combien font 4 + 3 ?'},
+              'config': {
+                'correct': 'b',
+                'options': [
+                  {'id': 'a', 'label': '6'},
+                  {'id': 'b', 'label': '7'},
+                  {'id': 'c', 'label': '8'},
+                ],
+                'shuffle': false,
+                'time_limit_ms': 8000,
+              },
+            },
+            registry: EngineRegistry([const SpeedTapEngine()]),
+            telemetry: TelemetryClient(
+              outbox: outbox,
+              sessionId: 's',
+              appVersion: '0.2.0',
+            ),
+            feedback: bridge,
+            locale: fr,
+            character: const Text('fox'),
+            onFinished: (r) => result = r,
+            onClose: () {},
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text('7'));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(outbox.all.map((e) => e['event_type']), contains('attempt'));
+      expect(result?.outcome, ExerciseOutcome.completed);
+      bridge.dispose();
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets('VALIDER sits on the right, INDICE on the left', (tester) async {
+    for (final withHint in [true, false]) {
+      await tester.pumpWidget(
+        _app(
+          ActivityShell(
+            locale: fr,
+            onClose: () {},
+            body: const SizedBox(),
+            showValidate: true,
+            onValidate: () {},
+            onHint: withHint ? () {} : null,
+          ),
+        ),
+      );
+      final width = tester.getSize(find.byType(ActivityShell)).width;
+      expect(
+        tester.getCenter(find.text('VALIDER')).dx,
+        greaterThan(width * 0.75),
+        reason: 'hint: $withHint',
+      );
+      if (withHint) {
+        expect(
+          tester.getCenter(find.text('INDICE')).dx,
+          lessThan(width * 0.25),
+        );
+      }
+    }
+  });
+
+  testWidgets(
+    'completing the last question leaves on its own, without waiting for a repaint',
+    (tester) async {
+      final c = ActivitySessionController(
+        envelope: QuestionEnvelope.parse(fakeEnvelope(questions: 1))
+            .valueOrNull!,
+        kidId: 'kid',
+        engines: LearningEngineRegistry([eraseEngine(FakeChoiceEngine())]),
+        evaluators: EvaluatorRegistry([FakeExactEvaluator()]),
+        store: InMemoryActivitySessionStore(),
+        appVersion: '0.2.0',
+      );
+      var done = false;
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(
+        _app(
+          LearningActivityView(
+            controller: c,
+            locale: fr,
+            onDone: () => done = true,
+          ),
+        ),
+      );
+      await tester.tap(find.byKey(const ValueKey('option-b')));
+      await tester.runAsync(() => pumpEventQueue());
+      await tester.pump();
+      await tester.tap(find.text('VALIDER'));
+      await tester.runAsync(() => pumpEventQueue());
+      await tester.pump();
+      await tester.tap(find.text('CONTINUER'));
+      // No pump: the old post-frame callback only ran on the next frame.
+      await tester.runAsync(() => pumpEventQueue());
+      expect(done, isTrue);
+      c.dispose();
+    },
+  );
 }

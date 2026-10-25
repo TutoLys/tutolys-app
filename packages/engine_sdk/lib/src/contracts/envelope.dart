@@ -65,15 +65,16 @@ class SpeechSpec {
 
 class SpeechPolicy {
   const SpeechPolicy({
-    this.prompt = SpeechTrigger.auto,
+    this.prompt = SpeechTrigger.onRequest,
     this.options = SpeechTrigger.never,
     this.feedback = SpeechTrigger.onRequest,
   });
 
-  /// v1 behaviour: the runner auto-plays the prompt's audio (ADR 0013), and
-  /// answer choices are **never** read unless the content opts in — Hafid's
-  /// explicit correction, recorded in the design's Decision Log ("only the
-  /// question").
+  /// The default for content that says nothing: the question is read
+  /// **only when the child taps the speaker** (Hafid, 2026-10-25, replacing
+  /// ADR 0013's auto-play), and answer choices are **never** read unless the
+  /// content opts in (the design's Decision Log: "only the question").
+  /// Content may still ask for `"prompt": "auto"` explicitly.
   static const v1Default = SpeechPolicy();
 
   final SpeechTrigger prompt;
@@ -241,7 +242,7 @@ class QuestionEnvelope {
       }
 
       speechPolicy = SpeechPolicy(
-        prompt: trigger('prompt', SpeechTrigger.auto),
+        prompt: trigger('prompt', SpeechTrigger.onRequest),
         options: trigger('options', SpeechTrigger.never),
         feedback: trigger('feedback', SpeechTrigger.onRequest),
       );

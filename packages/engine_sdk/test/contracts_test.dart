@@ -32,7 +32,11 @@ void main() {
       expect(env.questions, hasLength(1));
       expect(env.questions.single.engineKey, 'mcq');
       expect(env.questions.single.prompt.audioRef, 'audio');
-      expect(env.speechPolicy.prompt, SpeechTrigger.auto);
+      expect(
+        env.speechPolicy.prompt,
+        SpeechTrigger.onRequest,
+        reason: 'read only when the child taps the speaker',
+      );
       expect(env.evaluation.maxAttempts, isNull, reason: 'retry until correct');
       expect(env.skillNodeIds, ['skill-1']);
     });
@@ -78,7 +82,7 @@ void main() {
       expect(env.speechPolicy.feedback, SpeechTrigger.never);
       expect(
         env.speechPolicy.prompt,
-        SpeechTrigger.auto,
+        SpeechTrigger.onRequest,
         reason: 'unset keeps its default',
       );
       expect(

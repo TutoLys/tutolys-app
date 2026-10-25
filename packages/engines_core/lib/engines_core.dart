@@ -12,3 +12,5 @@ export 'src/shell/activity_shell.dart';
 export 'src/shell/learning_activity_view.dart';
 export 'src/shell/legacy_engine_host.dart';
 export 'src/shell/shell_strings.dart';
+export 'src/single_choice/single_choice_engine.dart';
+export 'src/widgets/answer_tile.dart';

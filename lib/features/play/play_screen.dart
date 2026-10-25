@@ -219,30 +219,36 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   // ── shared ─────────────────────────────────────────────────────────────
 
   void _handleFinished(ExerciseResult result) {
+    // Resolved before popping: once popped, this context is gone.
+    final messenger = ScaffoldMessenger.of(context);
+    final xpMessage = context.s.playXpEarned;
+    Navigator.of(context).pop();
+
     // Home's stat tiles are real counts, never a mastery judgment — an
     // abandoned run taught nothing worth counting as "played today".
-    if (result.outcome == ExerciseOutcome.completed) {
-      final db = ref.read(localDatabaseProvider);
-      HomeStats(
-        db,
-        kidId: _kidId,
-      ).recordExerciseCompleted(elapsedMs: result.elapsedMs);
-      StreakLocal(db, kidId: _kidId).recordPlayedToday();
+    if (result.outcome != ExerciseOutcome.completed) return;
+    final db = ref.read(localDatabaseProvider);
+    HomeStats(
+      db,
+      kidId: _kidId,
+    ).recordExerciseCompleted(elapsedMs: result.elapsedMs);
+    StreakLocal(db, kidId: _kidId).recordPlayedToday();
 
-      // A client-side estimate, shown immediately — `manage.py award_xp`
-      // hasn't run yet at this instant. The authoritative total still comes
-      // from `ProgressState.totalXp`.
-      final xp = estimateXp(result);
-      if (xp > 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.s.playXpEarned(xp)),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
+    // A client-side estimate, shown immediately — `manage.py award_xp`
+    // hasn't run yet at this instant. The authoritative total still comes
+    // from `ProgressState.totalXp`. Shown after the pop, over the page the
+    // child returns to: shown before it, the snackbar shrank the play
+    // screen for its last frame, which a fixed-height legacy engine can't
+    // absorb.
+    final xp = estimateXp(result);
+    if (xp > 0) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(xpMessage(xp)),
+          duration: const Duration(seconds: 2),
+        ),
+      );
     }
-    Navigator.of(context).pop();
   }
 
   @override
