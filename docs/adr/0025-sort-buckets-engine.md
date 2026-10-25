@@ -33,8 +33,12 @@ contract, built the way `pair_match` was in ADR 0022.
   engine_sdk change.
 - **Evaluator:** `sort_buckets.exact@1`. `itemResults` is keyed by item id.
   A wrong board carries `ErrorClassification.unclassified()`, because the
-  item's diagnostic meaning lives in reviewer-only `authoring_meta` and never
-  reaches the device.
+  item's diagnostic meaning lives in the lesson's reviewer-only
+  `.authoring.yaml` sidecar and never reaches the device.
+- **Images:** content may carry `image_ref`, but nothing renders it yet,
+  because the app has no image asset cache (only audio). Emoji in `label`
+  are the picture for now. Rendering images is a shared-widget change in
+  `AnswerTile` once that pipeline exists, not a change to this engine.
 - **Layout:** the tray is a `Wrap` of `AnswerTile`s, and a sorted item
   leaves a gap so the tray never reflows under a finger. Buckets sit side
   by side when each still fits a 140px tile; otherwise two to a row (four
