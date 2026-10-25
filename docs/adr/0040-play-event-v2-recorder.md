@@ -1,4 +1,4 @@
-# ADR 0031 — The runtime records `play_event.v2`
+# ADR 0040 — The runtime records `play_event.v2`
 
 Date: 2026-10-25
 Status: accepted
