@@ -394,7 +394,7 @@ const apiBaseUrl = String.fromEnvironment(
   defaultValue: 'http://127.0.0.1:8000',
 );
 
-const appVersion = '0.1.0';
+const appVersion = '0.2.0';
 
 String currentPlatform() {
   if (kIsWeb) return 'web';

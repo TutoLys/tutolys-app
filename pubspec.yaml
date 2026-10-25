@@ -3,7 +3,7 @@ description: >
   TutoLys kid-facing app. One Flutter codebase for desktop, mobile and web.
   Knows nothing about organizations, billing or tutors — a kid is a kid.
 publish_to: none
-version: 0.1.0
+version: 0.2.0
 
 environment:
   sdk: ^3.13.3
