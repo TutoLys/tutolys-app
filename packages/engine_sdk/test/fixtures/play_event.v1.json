@@ -61,7 +61,12 @@
       "description": "The leaf the exercise is tagged to. This is what makes a play report map onto the ministry curriculum."
     },
     "subject": { "type": ["string", "null"], "maxLength": 16 },
-    "grade": { "type": ["integer", "null"], "minimum": 1, "maximum": 6 },
+    "grade": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "maximum": 11,
+      "description": "1–6 primaire, 7–11 Secondaire 1–5 (backend ADR 0029)."
+    },
     "rank": { "type": ["integer", "null"], "minimum": 0 },
     "attempt_index": {
       "type": ["integer", "null"],
