@@ -14,6 +14,16 @@ class RemoteProfile {
   final KidSex sex;
 }
 
+/// The kid's earned avatars as the backend keeps them (backend ADR 0064).
+class RemoteAvatarUnlocks {
+  const RemoteAvatarUnlocks({required this.unlocked, required this.drops});
+
+  final Set<String> unlocked;
+
+  /// Lesson (exercise id) → the rare character it revealed.
+  final Map<String, String> drops;
+}
+
 /// `GET` / `PATCH /api/v1/me/profile`: the paired kid's own avatar and sex
 /// (`Platforms/BACKEND_WORKORDER_PROFILE.md`, P1).
 ///
@@ -61,6 +71,54 @@ class ProfileApi {
       return false;
     }
   }
+
+  static const _unlocksPath = '/api/v1/me/avatar-unlocks';
+
+  /// Merges this device's unlocks into the backend's copy and returns the
+  /// merged state, or null when that fails (offline, an error, or a
+  /// backend without the endpoint yet). The backend only ever adds, so
+  /// posting can never remove an unlock another device recorded.
+  ///
+  /// Only UUID-shaped lesson ids are sent: the backend refuses the whole
+  /// body over one that isn't, and such a drop stays on this device.
+  Future<RemoteAvatarUnlocks?> mergeAvatarUnlocks({
+    required String accessToken,
+    required Set<String> unlocked,
+    required Map<String, String> drops,
+  }) async {
+    try {
+      final response = await dio.post<Map<String, Object?>>(
+        _unlocksPath,
+        data: {
+          'unlocked': unlocked.toList()..sort(),
+          'drops': {
+            for (final MapEntry(:key, :value) in drops.entries)
+              if (_uuid.hasMatch(key)) key: value,
+          },
+        },
+        options: _auth(accessToken),
+      );
+      final data = response.data;
+      if (data == null) return null;
+      return RemoteAvatarUnlocks(
+        unlocked: {
+          for (final k in data['unlocked'] as List<Object?>? ?? const [])
+            if (k is String) k,
+        },
+        drops: {
+          for (final MapEntry(:key, :value)
+              in (data['drops'] as Map<String, Object?>? ?? const {}).entries)
+            if (value is String) key.toLowerCase(): value,
+        },
+      );
+    } on DioException {
+      return null;
+    }
+  }
+
+  static final _uuid = RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+  );
 
   static Options _auth(String token) =>
       Options(headers: {'Authorization': 'Bearer $token'});

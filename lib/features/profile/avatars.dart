@@ -548,6 +548,17 @@ class AvatarStore {
     return (jsonDecode(raw) as Map<String, dynamic>).cast<String, String>();
   }
 
+  /// Adds [other] (the backend's copy) to the recorded drops. A lesson
+  /// already recorded here keeps its value, as on the backend.
+  Future<Map<String, String>> mergeDrops(Map<String, String> other) async {
+    final current = await drops();
+    final merged = {...other, ...current};
+    if (merged.length != current.length) {
+      await _write(_dropsKey, jsonEncode(merged));
+    }
+    return merged;
+  }
+
   /// Records that [lessonId] revealed [character] and unlocks its keys.
   Future<void> recordDrop(String lessonId, String character) async {
     final current = await drops();
@@ -666,6 +677,11 @@ class AvatarController extends AsyncNotifier<AvatarState> {
       ),
     );
 
+    // Kept server-side too (backend ADR 0064), so a reinstall or a second
+    // device never loses one. Both sides only add, so syncing is a union
+    // and nothing is ever taken away.
+    final unlockedNow = await _syncUnlocks(store, unlocked);
+
     // Read on every build, not only the first: an adult can set the sex
     // in the portal long after pairing. Offline keeps the cached value.
     final remote = await _remote();
@@ -686,9 +702,27 @@ class AvatarController extends AsyncNotifier<AvatarState> {
     }
     return AvatarState(
       selected: selected ?? defaultAvatarFor(sex),
-      unlocked: unlocked,
+      unlocked: unlockedNow,
       sex: sex,
     );
+  }
+
+  /// Posts this device's unlocks and drops, and records whatever the
+  /// backend adds. Offline or without the endpoint, the local set stands.
+  Future<Set<String>> _syncUnlocks(
+    AvatarStore store,
+    Set<String> local,
+  ) async {
+    final token = ref.read(sessionControllerProvider).accessToken;
+    if (token == null) return local;
+    final remote = await ref.read(profileApiProvider).mergeAvatarUnlocks(
+          accessToken: token,
+          unlocked: local,
+          drops: await store.drops(),
+        );
+    if (remote == null) return local;
+    await store.mergeDrops(remote.drops);
+    return store.recordUnlocked(remote.unlocked);
   }
 
   Future<RemoteProfile?> _remote() async {
@@ -721,7 +755,10 @@ class AvatarController extends AsyncNotifier<AvatarState> {
   /// Rolls for a rare avatar after [lessonId] was completed perfectly
   /// ([rareDropFor]). Returns the key this kid was given, offered to their
   /// sex, or null. Never twice for the same lesson.
-  Future<String?> rollRareDrop(String lessonId, {String? subject}) async {
+  Future<String?> rollRareDrop(String rawLessonId, {String? subject}) async {
+    // The backend stores lesson ids lowercase; matching it keeps one entry
+    // per lesson after a sync.
+    final lessonId = rawLessonId.toLowerCase();
     final store = ref.read(avatarStoreProvider);
     final kidId = ref.read(activeKidIdProvider);
     if (kidId == null) return null;

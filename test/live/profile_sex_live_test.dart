@@ -19,7 +19,9 @@ void main() {
       : jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
 
   test('real /me/profile sex drives the picker and the default', () async {
-    final api = ProfileApi(dio: Dio(BaseOptions(baseUrl: tokens!['base'] as String)));
+    final api = ProfileApi(
+      dio: Dio(BaseOptions(baseUrl: tokens!['base'] as String)),
+    );
 
     final girl = await api.fetchProfile(accessToken: tokens['girl'] as String);
     final boy = await api.fetchProfile(accessToken: tokens['boy'] as String);
@@ -27,17 +29,53 @@ void main() {
     expect(boy?.sex, KidSex.boy);
 
     List<String> offered(KidSex s) => [
-          for (final a in AvatarState(selected: '', unlocked: const {}, sex: s).offered)
-            if (a.unlock is AvatarFree) a.key,
-        ];
+      for (final a in AvatarState(
+        selected: '',
+        unlocked: const {},
+        sex: s,
+      ).offered)
+        if (a.unlock is AvatarFree) a.key,
+    ];
     expect(offered(girl!.sex), [
       'kid_wavy', 'kid_glasses', 'kid_hijab', 'kid_braids', //
       'camper_girl', 'explorer_girl',
     ]);
     expect(offered(boy!.sex), [
-      'kid_curly', 'kid_freckles', 'camper_boy', 'explorer_boy',
+      'kid_curly',
+      'kid_freckles',
+      'camper_boy',
+      'explorer_boy',
     ]);
     expect(defaultAvatarFor(boy.sex), 'kid_curly');
     expect(defaultAvatarFor(girl.sex), 'kid_wavy');
+  }, skip: tokens == null ? 'needs E2E_TOKENS (a running dev-stack)' : false);
+
+  test('real avatar-unlocks: the app\'s merge is a union', () async {
+    final api = ProfileApi(
+      dio: Dio(BaseOptions(baseUrl: tokens!['base'] as String)),
+    );
+    final token = tokens['girl'] as String;
+    final lesson =
+        '22222222-3333-4444-8555-${DateTime.now().microsecondsSinceEpoch.toString().padLeft(12, '0').substring(0, 12)}';
+
+    final first = await api.mergeAvatarUnlocks(
+      accessToken: token,
+      unlocked: {'mermaid'},
+      // A non-UUID id stays local instead of sinking the whole post.
+      drops: {lesson: 'mermaid', 'lesson-not-a-uuid': 'wizard'},
+    );
+    expect(first, isNotNull);
+    expect(first!.unlocked, contains('mermaid'));
+    expect(first.drops[lesson], 'mermaid');
+    expect(first.drops, isNot(contains('lesson-not-a-uuid')));
+
+    // Posting less never removes anything.
+    final second = await api.mergeAvatarUnlocks(
+      accessToken: token,
+      unlocked: const {},
+      drops: const {},
+    );
+    expect(second!.unlocked, containsAll(first.unlocked));
+    expect(second.drops, containsPair(lesson, 'mermaid'));
   }, skip: tokens == null ? 'needs E2E_TOKENS (a running dev-stack)' : false);
 }

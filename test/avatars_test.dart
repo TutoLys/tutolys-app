@@ -55,6 +55,28 @@ class _FakeProfileApi extends ProfileApi {
   Future<RemoteProfile?> fetchProfile({required String accessToken}) async =>
       RemoteProfile(avatarKey: remote ?? '', sex: sex);
 
+  /// The backend's copy, merged like ADR 0064: a union, first drop wins.
+  final serverUnlocked = <String>{};
+  final serverDrops = <String, String>{};
+  final posted = <Set<String>>[];
+
+  @override
+  Future<RemoteAvatarUnlocks?> mergeAvatarUnlocks({
+    required String accessToken,
+    required Set<String> unlocked,
+    required Map<String, String> drops,
+  }) async {
+    posted.add({...unlocked});
+    serverUnlocked.addAll(unlocked);
+    for (final e in drops.entries) {
+      serverDrops.putIfAbsent(e.key, () => e.value);
+    }
+    return RemoteAvatarUnlocks(
+      unlocked: {...serverUnlocked},
+      drops: {...serverDrops},
+    );
+  }
+
   @override
   Future<bool> saveAvatarKey({
     required String accessToken,
@@ -69,6 +91,13 @@ class _OfflineProfileApi extends _FakeProfileApi {
   @override
   Future<RemoteProfile?> fetchProfile({required String accessToken}) async =>
       null;
+
+  @override
+  Future<RemoteAvatarUnlocks?> mergeAvatarUnlocks({
+    required String accessToken,
+    required Set<String> unlocked,
+    required Map<String, String> drops,
+  }) async => null;
 }
 
 QuestBoard _board(Set<Achievement> earned) => QuestBoard(
@@ -467,6 +496,65 @@ void main() {
         expect(api.saved, isEmpty);
       },
     );
+
+    test('unlocks sync with the backend as a union', () async {
+      final db = LocalDatabase.memory();
+      addTearDown(db.close);
+      // Earned on another device: the backend has it, this one doesn't.
+      final api = _FakeProfileApi()..serverUnlocked.add('wizard_girl');
+      // Earned here: this device has it, the backend doesn't.
+      await AvatarStore(db, kidId: 'k1').recordUnlocked(['chemist_boy']);
+      final c = _container(db: db, profileApi: api);
+      addTearDown(c.dispose);
+
+      final state = await _settle(c);
+      expect(state.isUnlocked('wizard_girl'), isTrue);
+      expect(api.serverUnlocked, contains('chemist_boy'));
+      // Kept locally too, so it holds offline from now on.
+      expect(
+        await AvatarStore(db, kidId: 'k1').unlocked(),
+        containsAll(['wizard_girl', 'chemist_boy']),
+      );
+    });
+
+    test('a server copy missing a local unlock never removes it', () async {
+      final db = LocalDatabase.memory();
+      addTearDown(db.close);
+      await AvatarStore(db, kidId: 'k1').recordUnlocked(['coder_girl']);
+      final c = _container(db: db, profileApi: _OfflineProfileApi());
+      addTearDown(c.dispose);
+
+      expect((await _settle(c)).isUnlocked('coder_girl'), isTrue);
+    });
+
+    test('a drop recorded on another device stops a re-roll here', () async {
+      final db = LocalDatabase.memory();
+      addTearDown(db.close);
+      final lucky =
+          [
+            for (var i = 0; i < 1000; i++)
+              '00000000-0000-4000-8000-${i.toString().padLeft(12, '0')}',
+          ].firstWhere(
+            (l) =>
+                rareDropFor(
+                  kidId: 'k1',
+                  lessonId: l,
+                  sex: KidSex.unspecified,
+                  unlocked: const {},
+                ) !=
+                null,
+          );
+      final api = _FakeProfileApi()..serverDrops[lucky] = 'wizard';
+      final c = _container(db: db, profileApi: api);
+      addTearDown(c.dispose);
+      await _settle(c);
+
+      expect(await AvatarStore(db, kidId: 'k1').drops(), {lucky: 'wizard'});
+      expect(
+        await c.read(avatarControllerProvider.notifier).rollRareDrop(lucky),
+        isNull,
+      );
+    });
 
     test('the cached sex holds offline', () async {
       final db = LocalDatabase.memory();

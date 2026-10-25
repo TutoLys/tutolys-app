@@ -99,10 +99,7 @@ kids see everything.
 
 ## Not done
 
-- **Unlocks are still per device**, including rare drops, which can't be
-  re-earned. The server-side copy is
-  `Platforms/BACKEND_WORKORDER_AVATAR_UNLOCKS.md` (U1–U4). The app's sync
-  call waits for it.
+- ~~Unlocks are still per device~~: synced since the revision below.
 - **Missing art**: `kid_hijab`, `fox_hood`, and a boy tuque.
 - **Subject counts are this device's own.** The server reports total
   `skills_completed`, not per subject, so a second device starts its
@@ -139,3 +136,24 @@ screenshot).
   under them.
 - Widget tests pin this at 1920×1040 (centred, bounded, header fixed while
   scrolling) and at 400×800 (a sheet).
+
+## Revision 2026-10-25: unlocks kept server-side
+
+The backend built the work order (backend ADR 0064, `POST`/`GET
+/api/v1/me/avatar-unlocks`).
+- On every avatar refresh the app posts its local unlocks and drops
+  (`ProfileApi.mergeAvatarUnlocks`) and records the merged state the
+  backend returns.
+- Both sides only add, so the sync is a union and **never removes an
+  unlock**. A recorded drop keeps its first value on both sides.
+- A drop recorded on another device stops the same lesson from re-rolling
+  here.
+- Offline, or with an older backend that returns 404, the local set stands.
+- Only UUID-shaped lesson ids are posted, because the backend refuses the
+  whole body over one that isn't. Lesson ids are lowercased, as the backend
+  stores them, so a lesson keeps a single entry.
+- Checked live: `e2e_profile.py` (36/36) and `test/live/`, which runs the
+  app's own client against the real endpoint.
+- **Subject unlocks still count this device's own play.** What they unlock
+  is now kept and shared across devices, but the counts toward the next one
+  are not.
