@@ -13,6 +13,7 @@ import 'package:tutolys_app/data/local_db/node_progress_local.dart';
 import 'package:tutolys_app/features/pairing/pairing_controller.dart';
 import 'package:tutolys_app/features/play/learning_platform_providers.dart';
 import 'package:tutolys_app/features/play/play_screen.dart';
+import 'package:tutolys_motion/tutolys_motion.dart';
 
 /// Records what would have been played; plays nothing.
 class _SilentAudio implements AudioCoordinator {
@@ -204,7 +205,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byTooltip("Quitter l'exercice"), findsOneWidget);
-      expect(find.byType(TutolysMascot), findsOneWidget);
+      expect(find.byType(BitmapCharacterView), findsOneWidget);
       expect(
         find.text('Construis le nombre 7 avec deux blocs'),
         findsOneWidget,

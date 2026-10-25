@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tutolys_motion/tutolys_motion.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../core/widgets/breathing_mascot.dart';
 import '../../data/local_db/database.dart';
 import '../../data/local_db/drift_activity_session_store.dart';
 import '../../data/local_db/home_stats.dart';
@@ -313,9 +312,14 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
           title: summary.perfect
               ? null
               : (name == null ? null : strings.wellDone(name)),
-          // The real fox art for the big moment, not the in-game placeholder:
-          // the celebration is the one screen with room for it.
-          character: const BreathingMascot(height: 150, hoverLift: false),
+          // The same fox as in the game, cued to `victory` just before this
+          // mounts: two hops and confetti, or a still pose under reduced
+          // motion.
+          character: CharacterStage(
+            director: _director,
+            registry: ref.read(characterRegistryProvider),
+            size: 150,
+          ),
           extraRows: [
             for (final row
                 in ref.watch(celebrationRowsProvider).value ?? const [])

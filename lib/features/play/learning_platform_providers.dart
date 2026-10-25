@@ -41,12 +41,17 @@ final evaluatorRegistryProvider = Provider<EvaluatorRegistry>(
   ]),
 );
 
-/// Who can appear in an activity and who draws them. Only the fox, drawn by
-/// the placeholder renderer, until real character art exists (Phase 7).
+/// Who can appear in an activity and who draws them. The fox is the real
+/// art, moved natively (`BitmapCharacterRenderer`); the painted placeholder
+/// stays installed as the fallback. New art or a new renderer (Rive, one
+/// day) is a change here and nowhere else — ADR 0060.
 final characterRegistryProvider = Provider<CharacterRegistry>(
   (ref) => CharacterRegistry(
-    manifests: [PlaceholderCharacterRenderer.fox],
-    renderers: const [PlaceholderCharacterRenderer()],
+    manifests: [BitmapCharacterRenderer.fox],
+    renderers: const [
+      BitmapCharacterRenderer(),
+      PlaceholderCharacterRenderer(),
+    ],
   ),
 );
 
