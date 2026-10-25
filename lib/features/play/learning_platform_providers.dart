@@ -1,5 +1,6 @@
 import 'package:engine_sdk/engine_sdk.dart';
 import 'package:engines_core/engines_core.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tutolys_motion/tutolys_motion.dart';
 
@@ -9,16 +10,27 @@ import '../settings/settings_controller.dart';
 
 /// Engines on the new `LearningEngine` contract. An exercise plays on the
 /// new runtime as soon as every one of its questions' engines is listed
-/// here; anything else still plays through the legacy registry inside the
-/// same shell. `mcq` moved in Phase 3 (ADR 0021); the legacy `McqEngine`
-/// stays registered there until nothing could need it.
+/// here; anything else falls back to the legacy registry inside the same
+/// shell. Since Phase 4 (ADR 0022) all four launch engines are here, so the
+/// legacy path serves nothing that is published today — it stays only as a
+/// fallback until it is deleted.
 final learningEngineRegistryProvider = Provider<LearningEngineRegistry>(
-  (ref) => LearningEngineRegistry([eraseEngine(const SingleChoiceEngine())]),
+  (ref) => LearningEngineRegistry([
+    eraseEngine(const SingleChoiceEngine()),
+    eraseEngine(const TimedChoiceEngine()),
+    eraseEngine(const PairMatchBoardEngine()),
+    eraseEngine(const ComposeSlotsEngine()),
+  ]),
 );
 
 /// Evaluators, by engine and policy.
 final evaluatorRegistryProvider = Provider<EvaluatorRegistry>(
-  (ref) => EvaluatorRegistry(const [McqExactEvaluator()]),
+  (ref) => EvaluatorRegistry(const [
+    McqExactEvaluator(),
+    SpeedTapExactEvaluator(),
+    PairMatchEvaluator(),
+    ComposeBuildEvaluator(),
+  ]),
 );
 
 /// Who can appear in an activity and who draws them. Only the fox, drawn by
@@ -45,3 +57,29 @@ final audioCoordinatorProvider = Provider<AudioCoordinator>((ref) {
   ref.onDispose(coordinator.dispose);
   return coordinator;
 });
+
+/// One progress line for the end-of-exercise celebration — the design's
+/// `.quest-update-row` ("Termine 5 exercices · 3/5").
+class CelebrationRowData {
+  const CelebrationRowData({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.max,
+  });
+
+  final IconData icon;
+  final String label;
+  final int value;
+  final int max;
+}
+
+/// Rows the celebration shows under the XP — daily-quest progress, a streak
+/// extended. **Empty here on purpose**: quests are another feature's data.
+/// Their owner overrides this provider (or replaces its body) to return the
+/// progress *including* the exercise just finished; the play screen
+/// invalidates `nodeProgressProvider` and the stats it records before the
+/// celebration builds, so a provider watching those is already current.
+final celebrationRowsProvider = FutureProvider<List<CelebrationRowData>>(
+  (ref) async => const [],
+);

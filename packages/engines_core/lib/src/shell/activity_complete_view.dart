@@ -1,0 +1,456 @@
+import 'dart:math' as math;
+
+import 'package:design_system/design_system.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import 'shell_strings.dart';
+
+/// What the child did, for the end-of-exercise screen.
+class ActivitySummary {
+  const ActivitySummary({
+    required this.questions,
+    required this.solved,
+    required this.firstTry,
+    required this.xp,
+  });
+
+  final int questions;
+  final int solved;
+
+  /// Questions right on the first attempt.
+  final int firstTry;
+
+  /// The client-side estimate (`estimateXp`); the backend's ledger is the
+  /// real total.
+  final int xp;
+
+  bool get perfect => questions > 0 && firstTry == questions;
+}
+
+/// The moment after the last question — the design's end-of-series panel
+/// ("Mise à jour des quêtes !"), made into a celebration.
+///
+/// A burst of stars behind the character, the XP counting up into a gold
+/// pill, what the child got right, then a gold Continuer. [extraRows] is
+/// where the host adds what this package can't know — daily-quest progress,
+/// a streak extended — in the design's row style ([CelebrationRow]).
+///
+/// Reduced motion: no burst and no count-up; the numbers simply appear.
+/// Nothing here waits on an animation: Continuer works from the first frame.
+class ActivityCompleteView extends StatelessWidget {
+  const ActivityCompleteView({
+    required this.summary,
+    required this.locale,
+    required this.onContinue,
+    this.character,
+    this.title,
+    this.extraRows = const [],
+    super.key,
+  });
+
+  final ActivitySummary summary;
+  final Locale locale;
+  final VoidCallback onContinue;
+  final Widget? character;
+
+  /// Overrides the default title (e.g. with the child's name).
+  final String? title;
+  final List<Widget> extraRows;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
+    final s = ShellStrings.of(locale);
+    final still = MediaQuery.disableAnimationsOf(context);
+
+    return CallbackShortcuts(
+      bindings: {const SingleActivator(LogicalKeyboardKey.enter): onContinue},
+      child: Focus(
+        autofocus: true,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [p.skyTop, p.skyBottom],
+            ),
+          ),
+          // CONTINUER is pinned below the scrolling content: on a short
+          // screen, or with quest rows, a child must never have to scroll
+          // to find the way out.
+          child: SafeArea(
+            child: Column(
+              children: [
+                Expanded(
+                  child: Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(Space.lg),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 440),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              height: 190,
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  if (!still)
+                                    const Positioned.fill(child: _StarBurst()),
+                                  if (character != null)
+                                    SizedBox.square(
+                                      dimension: 150,
+                                      child: character,
+                                    ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: Space.sm),
+                            Semantics(
+                              header: true,
+                              child: Text(
+                                title ??
+                                    (summary.perfect
+                                        ? s.perfectTitle
+                                        : s.doneTitle),
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontFamily: VillageType.display,
+                                  fontSize: 30,
+                                  fontWeight: FontWeight.w800,
+                                  color: p.ink,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: Space.md),
+                            _XpPill(
+                              xp: summary.xp,
+                              animate: !still,
+                              label: s.xpEarnedLabel,
+                            ),
+                            const SizedBox(height: Space.lg),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _StatCard(
+                                    icon: Icons.check_rounded,
+                                    color: p.success,
+                                    value:
+                                        '${summary.solved}/${summary.questions}',
+                                    label: s.rightAnswersLabel,
+                                  ),
+                                ),
+                                const SizedBox(width: Space.sm),
+                                Expanded(
+                                  child: _StatCard(
+                                    icon: Icons.bolt_rounded,
+                                    color: p.gold,
+                                    value: '${summary.firstTry}',
+                                    label: s.firstTryLabel,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (extraRows.isNotEmpty) ...[
+                              const SizedBox(height: Space.md),
+                              for (final row in extraRows) ...[
+                                row,
+                                const SizedBox(height: Space.xs),
+                              ],
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    Space.lg,
+                    0,
+                    Space.lg,
+                    Space.lg,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 440),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: Radii.cardMd,
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [p.goldLight, p.gold],
+                          ),
+                        ),
+                        child: TextButton(
+                          onPressed: onContinue,
+                          style: TextButton.styleFrom(
+                            foregroundColor: const Color(0xFF241A04),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: Radii.cardMd,
+                            ),
+                          ),
+                          child: Text(
+                            s.continueLabel.toUpperCase(),
+                            style: const TextStyle(
+                              fontFamily: VillageType.display,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: .4,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One line of progress on the celebration screen — the design's
+/// `.quest-update-row`: an icon, a label, a bar and "3/5".
+class CelebrationRow extends StatelessWidget {
+  const CelebrationRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.max,
+    super.key,
+  });
+
+  final IconData icon;
+  final String label;
+  final int value;
+  final int max;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
+    final fraction = max <= 0 ? 0.0 : (value / max).clamp(0.0, 1.0);
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: Space.md,
+        vertical: Space.sm,
+      ),
+      decoration: BoxDecoration(color: p.surface, borderRadius: Radii.cardMd),
+      child: Row(
+        children: [
+          Icon(icon, color: p.quebecBlueBright, size: 20),
+          const SizedBox(width: Space.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(fontWeight: FontWeight.w700, color: p.ink),
+                ),
+                const SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: Radii.pillAll,
+                  child: LinearProgressIndicator(
+                    value: fraction,
+                    minHeight: 6,
+                    backgroundColor: p.track,
+                    color: p.gold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: Space.sm),
+          Text(
+            '$value/$max',
+            style: TextStyle(fontWeight: FontWeight.w700, color: p.inkMuted),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _XpPill extends StatelessWidget {
+  const _XpPill({required this.xp, required this.animate, required this.label});
+  final int xp;
+  final bool animate;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
+    Widget pill(int shown) => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 12),
+      decoration: BoxDecoration(
+        borderRadius: Radii.pillAll,
+        gradient: LinearGradient(colors: [p.goldLight, p.gold]),
+        boxShadow: [
+          BoxShadow(
+            color: p.gold.withValues(alpha: .35),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.star_rounded, color: Colors.white, size: 30),
+          const SizedBox(width: 8),
+          Text(
+            '+$shown XP',
+            style: const TextStyle(
+              fontFamily: VillageType.display,
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF241A04),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return Semantics(
+      label: '$label : $xp',
+      excludeSemantics: true,
+      child: animate
+          ? TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: 1),
+              duration: const Duration(milliseconds: 1100),
+              curve: Curves.easeOutBack,
+              builder: (context, t, _) => Transform.scale(
+                scale: 0.6 + 0.4 * t.clamp(0.0, 1.2),
+                child: pill((xp * t.clamp(0.0, 1.0)).round()),
+              ),
+            )
+          : pill(xp),
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  const _StatCard({
+    required this.icon,
+    required this.color,
+    required this.value,
+    required this.label,
+  });
+  final IconData icon;
+  final Color color;
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
+    return Container(
+      padding: const EdgeInsets.all(Space.md),
+      decoration: BoxDecoration(
+        color: p.surface,
+        borderRadius: Radii.cardMd,
+        boxShadow: [
+          BoxShadow(
+            color: p.shadowSmall,
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 16,
+            backgroundColor: color,
+            child: Icon(icon, color: Colors.white, size: 18),
+          ),
+          const SizedBox(height: Space.xs),
+          Text(
+            value,
+            style: TextStyle(
+              fontFamily: VillageType.display,
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: p.ink,
+            ),
+          ),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: p.inkMuted),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Stars flying out from behind the character, once.
+class _StarBurst extends StatelessWidget {
+  const _StarBurst();
+
+  @override
+  Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
+    return IgnorePointer(
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0, end: 1),
+        duration: const Duration(milliseconds: 1400),
+        curve: Curves.easeOutCubic,
+        builder: (context, t, _) => CustomPaint(
+          painter: _BurstPainter(t, [
+            p.gold,
+            p.goldLight,
+            p.quebecBlueBright,
+            p.success,
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+class _BurstPainter extends CustomPainter {
+  _BurstPainter(this.t, this.colors);
+  final double t;
+  final List<Color> colors;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(Offset.zero);
+    final reach = size.shortestSide * 0.62;
+    const count = 14;
+    for (var i = 0; i < count; i++) {
+      final angle = (i / count) * 2 * math.pi + (i.isEven ? 0.12 : -0.08);
+      final dist = reach * t * (0.75 + 0.25 * ((i * 37) % 10) / 10);
+      final pos = c + Offset(math.cos(angle), math.sin(angle)) * dist;
+      final r = (i.isEven ? 7.0 : 5.0) * (1 - 0.35 * t);
+      final paint = Paint()
+        ..color = colors[i % colors.length].withValues(
+          alpha: (1 - t * 0.6).clamp(0.0, 1.0),
+        );
+      canvas.drawPath(_star(pos, r), paint);
+    }
+  }
+
+  Path _star(Offset o, double r) {
+    final path = Path();
+    for (var k = 0; k < 10; k++) {
+      final rr = k.isEven ? r : r * 0.45;
+      final a = -math.pi / 2 + k * math.pi / 5;
+      final pt = o + Offset(math.cos(a), math.sin(a)) * rr;
+      k == 0 ? path.moveTo(pt.dx, pt.dy) : path.lineTo(pt.dx, pt.dy);
+    }
+    return path..close();
+  }
+
+  @override
+  bool shouldRepaint(_BurstPainter old) => old.t != t;
+}

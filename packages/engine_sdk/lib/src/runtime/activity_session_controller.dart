@@ -133,6 +133,11 @@ class ActivitySessionController extends ChangeNotifier {
 
   int get hintsShown => _hintsShown;
 
+  /// The verdict the feedback banner is about. In memory only: after a
+  /// resume the banner falls back to its generic wording.
+  EvaluationResult? get lastResult => _lastResult;
+  EvaluationResult? _lastResult;
+
   ActivityQuestionView? get current {
     final i = _state.questionIndex;
     if (i >= _questions.length || _state.phase.isTerminal) return null;
@@ -613,6 +618,10 @@ class ActivitySessionController extends ChangeNotifier {
       _failureReason = null;
     }
     _state = next;
+    for (final e in events) {
+      if (e is AnswerEvaluated) _lastResult = e.result;
+      if (e is QuestionPresented) _lastResult = null;
+    }
     _engineState = engineState;
     _publish(events);
   }

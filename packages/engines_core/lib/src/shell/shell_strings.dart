@@ -30,6 +30,15 @@ class ShellStrings {
   String get retryMessage =>
       _t('Pas tout à fait — essaie encore.', 'Not quite — try again.');
   String get retryLabel => _t('Réessayer', 'Try again');
+  String get partialMessage => _t(
+    'Certaines sont justes — elles restent en place. Corrige les autres.',
+    "Some are right — they stay put. Fix the others.",
+  );
+  String get timeUpTitle => _t('Temps écoulé !', "Time's up!");
+  String get timeUpMessage => _t(
+    'Essaie encore : un nouveau compte à rebours commence.',
+    'Try again — a fresh countdown starts.',
+  );
   String get movingOnTitle => _t('On continue', "Let's keep going");
   String get movingOnMessage => _t(
     'On regardera celle-ci une autre fois.',
@@ -50,4 +59,11 @@ class ShellStrings {
     "Impossible d'enregistrer ta réponse. Réessaie.",
     "Your answer couldn't be saved. Try again.",
   );
+
+  String get doneTitle => _t('Exercice terminé !', 'Exercise complete!');
+  String get perfectTitle => _t('Parfait !', 'Perfect!');
+  String get xpEarnedLabel => _t('XP gagnés', 'XP earned');
+  String get rightAnswersLabel => _t('bonnes réponses', 'right answers');
+  String get firstTryLabel => _t('du premier coup', 'first try');
+  String wellDone(String name) => _t('Bravo, $name !', 'Well done, $name!');
 }

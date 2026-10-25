@@ -36,6 +36,7 @@ sealed class AnswerValue {
           (json['blanks'] as Map).cast<String, String>(),
         ),
         'hotspot' => HotspotAnswer(_strings(json['regions'])),
+        'no_response' => NoResponseAnswer(json['reason'] as String),
         _ => null,
       };
     } on Object {
@@ -160,4 +161,24 @@ class HotspotAnswer extends AnswerValue {
 
   @override
   Map<String, Object?> toJson() => {'kind': kind, 'regions': selectedRegionIds};
+}
+
+/// The child gave no answer — a countdown ran out (`speed_tap`).
+///
+/// An answer of its own rather than a missing one, so the attempt is still
+/// recorded: running out of time is evidence (about speed, not about a
+/// misconception), and the retry-until-right contract still applies.
+class NoResponseAnswer extends AnswerValue {
+  const NoResponseAnswer(this.reason);
+
+  static const timeout = NoResponseAnswer('timeout');
+
+  /// Why nothing was answered: `timeout` is the only one today.
+  final String reason;
+
+  @override
+  String get kind => 'no_response';
+
+  @override
+  Map<String, Object?> toJson() => {'kind': kind, 'reason': reason};
 }

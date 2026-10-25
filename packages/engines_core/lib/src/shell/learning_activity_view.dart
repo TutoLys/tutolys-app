@@ -149,10 +149,15 @@ class _LearningActivityViewState extends State<LearningActivityView> {
           onAction: c.proceed,
         );
       } else if (state.canRetry) {
+        final timedOut = c.lastResult?.feedbackCode == 'timeout';
         feedback = ShellFeedback(
           kind: ShellFeedbackKind.retry,
-          title: s.retryTitle,
-          message: s.retryMessage,
+          title: timedOut ? s.timeUpTitle : s.retryTitle,
+          message: timedOut
+              ? s.timeUpMessage
+              : outcome == Outcome.partial
+              ? s.partialMessage
+              : s.retryMessage,
           actionLabel: s.retryLabel,
           onAction: c.proceed,
         );

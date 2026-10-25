@@ -88,6 +88,7 @@ class EvaluationResult {
     this.errors = const [],
     this.skillNodeIds = const [],
     this.needsReview = false,
+    this.itemResults = const {},
   }) : assert(score >= 0 && score <= 1, 'score is 0..1');
 
   /// The result recorded when an evaluator throws. The kid did nothing wrong,
@@ -102,7 +103,8 @@ class EvaluationResult {
        authority = EvaluationAuthority.local,
        feedbackCode = null,
        errors = const [],
-       needsReview = true;
+       needsReview = true,
+       itemResults = const {};
 
   final Outcome outcome;
 
@@ -122,6 +124,12 @@ class EvaluationResult {
   final List<String> skillNodeIds;
   final bool needsReview;
 
+  /// Per-part verdicts for an answer with parts — a pair, a slot — keyed by
+  /// the part's id. It's how partial credit becomes visible: the engine
+  /// locks the parts that were right and clears the rest for the retry,
+  /// without ever grading anything itself.
+  final Map<String, bool> itemResults;
+
   bool get isCorrect => outcome == Outcome.correct;
 
   Map<String, Object?> toJson() => {
@@ -134,6 +142,7 @@ class EvaluationResult {
     'errors': [for (final e in errors) e.toJson()],
     'skill_node_ids': skillNodeIds,
     if (needsReview) 'needs_review': true,
+    if (itemResults.isNotEmpty) 'items': itemResults,
   };
 }
 

@@ -424,4 +424,141 @@ void main() {
       c.dispose();
     },
   );
+
+  testWidgets('the progress fill is actually drawn (it had zero height)', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(
+        ActivityShell(
+          locale: fr,
+          onClose: () {},
+          body: const SizedBox(),
+          progress: 0.5,
+        ),
+      ),
+    );
+    final fill = find.descendant(
+      of: find.byType(FractionallySizedBox),
+      matching: find.byType(DecoratedBox),
+    );
+    final size = tester.getSize(fill.first);
+    expect(size.height, greaterThan(0));
+    final trackWidth = (tester.renderObject(
+      find.byType(FractionallySizedBox).first,
+    ) as RenderBox).constraints.maxWidth;
+    expect(
+      size.width,
+      closeTo(trackWidth / 2, 1),
+      reason: 'half done, half drawn',
+    );
+  });
+
+  testWidgets('the countdown fill is drawn too', (tester) async {
+    await tester.pumpWidget(
+      _app(
+        CountdownBar(
+          duration: const Duration(seconds: 4),
+          round: 0,
+          running: true,
+          onExpired: () {},
+          semanticsLabel: 'Temps restant',
+        ),
+      ),
+    );
+    await tester.pump(const Duration(seconds: 1));
+    final fill = find.descendant(
+      of: find.byType(FractionallySizedBox),
+      matching: find.byType(ColoredBox),
+    );
+    expect(tester.getSize(fill.first).height, greaterThan(0));
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  group('ActivityCompleteView', () {
+    Widget view({
+      required ActivitySummary summary,
+      required VoidCallback onContinue,
+      Locale locale = fr,
+      bool still = true,
+    }) => MaterialApp(
+      theme: TutolysTheme.village(),
+      home: MediaQuery(
+        data: MediaQueryData(disableAnimations: still),
+        child: Scaffold(
+          body: ActivityCompleteView(
+            summary: summary,
+            locale: locale,
+            onContinue: onContinue,
+          ),
+        ),
+      ),
+    );
+
+    testWidgets('a perfect run says so, with XP and what was right', (
+      tester,
+    ) async {
+      var continued = false;
+      await tester.pumpWidget(
+        view(
+          summary: const ActivitySummary(
+            questions: 3,
+            solved: 3,
+            firstTry: 3,
+            xp: 45,
+          ),
+          onContinue: () => continued = true,
+        ),
+      );
+      expect(find.text('Parfait !'), findsOneWidget);
+      expect(find.text('+45 XP'), findsOneWidget);
+      expect(find.text('3/3'), findsOneWidget);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      expect(continued, isTrue, reason: 'Enter continues');
+    });
+
+    testWidgets('otherwise a plain well-done; English follows the locale', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        view(
+          summary: const ActivitySummary(
+            questions: 2,
+            solved: 2,
+            firstTry: 1,
+            xp: 25,
+          ),
+          onContinue: () {},
+          locale: const Locale('en'),
+        ),
+      );
+      expect(find.text('Exercise complete!'), findsOneWidget);
+      expect(find.text('first try'), findsOneWidget);
+      expect(find.text('CONTINUE'), findsOneWidget);
+    });
+
+    testWidgets('with motion, the XP counts up and Continuer works at once', (
+      tester,
+    ) async {
+      var continued = false;
+      await tester.pumpWidget(
+        view(
+          summary: const ActivitySummary(
+            questions: 1,
+            solved: 1,
+            firstTry: 1,
+            xp: 15,
+          ),
+          onContinue: () => continued = true,
+          still: false,
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.text('+15 XP'), findsNothing, reason: 'still counting');
+      await tester.tap(find.text('CONTINUER'));
+      expect(continued, isTrue, reason: 'never waits on the animation');
+      await tester.pumpAndSettle();
+      expect(find.text('+15 XP'), findsOneWidget);
+    });
+  });
 }

@@ -31,6 +31,7 @@ class AnswerTile extends StatelessWidget {
     required this.state,
     required this.onTap,
     this.semanticsState,
+    this.badge,
     super.key,
   });
 
@@ -43,6 +44,10 @@ class AnswerTile extends StatelessWidget {
   /// Spoken after the label for [AnswerTileState.retry] and
   /// [AnswerTileState.correct] — e.g. "déjà essayé".
   final String? semanticsState;
+
+  /// A small number drawn on the tile — which pair a matched tile belongs
+  /// to (`pair_match`), so two linked tiles read as a pair without lines.
+  final int? badge;
 
   @override
   Widget build(BuildContext context) {
@@ -103,7 +108,30 @@ class AnswerTile extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (icon != null) Icon(icon, size: 18, color: border),
+                  if (badge != null)
+                    Container(
+                      margin: const EdgeInsets.only(left: 8),
+                      width: 22,
+                      height: 22,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: border,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '$badge',
+                        style: const TextStyle(
+                          fontFamily: VillageType.display,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 12,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  if (icon != null) ...[
+                    const SizedBox(width: 8),
+                    Icon(icon, size: 18, color: border),
+                  ],
                 ],
               ),
             ),

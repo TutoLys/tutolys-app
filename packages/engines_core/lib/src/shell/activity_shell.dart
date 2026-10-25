@@ -292,6 +292,9 @@ class _TopBar extends StatelessWidget {
                           children: [
                             Positioned.fill(child: ColoredBox(color: p.track)),
                             FractionallySizedBox(
+                              // Full height: a childless box in a Stack is otherwise
+                              // sized to zero, and the fill never shows.
+                              heightFactor: 1,
                               widthFactor: progress!.clamp(0, 1).toDouble(),
                               child: DecoratedBox(
                                 decoration: BoxDecoration(
@@ -314,9 +317,34 @@ class _TopBar extends StatelessWidget {
             const SizedBox(width: Space.md),
             Icon(Icons.star_rounded, color: p.gold, size: 18),
             const SizedBox(width: 4),
-            Text(
-              strings.xp(xp!),
-              style: TextStyle(fontWeight: FontWeight.w700, color: p.ink),
+            // A little pop when XP arrives; a plain swap when motion is
+            // reduced.
+            AnimatedSwitcher(
+              duration: MediaQuery.disableAnimationsOf(context)
+                  ? Duration.zero
+                  : const Duration(milliseconds: 380),
+              transitionBuilder: (child, animation) => ScaleTransition(
+                scale: TweenSequence<double>([
+                  TweenSequenceItem(
+                    tween: Tween(begin: 0.6, end: 1.35),
+                    weight: 60,
+                  ),
+                  TweenSequenceItem(
+                    tween: Tween(begin: 1.35, end: 1),
+                    weight: 40,
+                  ),
+                ]).animate(animation),
+                child: child,
+              ),
+              child: Text(
+                strings.xp(xp!),
+                key: ValueKey(xp),
+                style: TextStyle(
+                  fontFamily: VillageType.display,
+                  fontWeight: FontWeight.w800,
+                  color: p.ink,
+                ),
+              ),
             ),
           ],
         ],

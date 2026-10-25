@@ -9,6 +9,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
+import 'package:tutolys_app/data/local_db/node_progress_local.dart';
 import 'package:tutolys_app/features/pairing/pairing_controller.dart';
 import 'package:tutolys_app/features/play/learning_platform_providers.dart';
 import 'package:tutolys_app/features/play/play_screen.dart';
@@ -108,50 +109,61 @@ void main() {
   });
   tearDown(() => db.close());
 
-  Widget app(Map<String, Object?> envelope, {bool runtime = false}) =>
-      ProviderScope(
-        overrides: [
-          localDatabaseProvider.overrideWithValue(db),
-          activeKidIdProvider.overrideWithValue('kid-lea'),
-          audioCoordinatorProvider.overrideWithValue(audio),
-          if (runtime) ...[
-            learningEngineRegistryProvider.overrideWithValue(
-              LearningEngineRegistry([eraseEngine(FakeChoiceEngine())]),
-            ),
-            evaluatorRegistryProvider.overrideWithValue(
-              EvaluatorRegistry([FakeExactEvaluator()]),
-            ),
-          ],
+  /// [runtime] swaps in the fake engine; [legacyOnly] empties the new
+  /// registry so even a ported engine takes the legacy fallback path.
+  Widget app(
+    Map<String, Object?> envelope, {
+    bool runtime = false,
+    bool legacyOnly = false,
+    bool english = false,
+    List<CelebrationRowData> celebrationRows = const [],
+  }) => ProviderScope(
+    overrides: [
+      celebrationRowsProvider.overrideWith((ref) async => celebrationRows),
+      localDatabaseProvider.overrideWithValue(db),
+      activeKidIdProvider.overrideWithValue('kid-lea'),
+      audioCoordinatorProvider.overrideWithValue(audio),
+      if (legacyOnly)
+        learningEngineRegistryProvider.overrideWithValue(
+          LearningEngineRegistry(const []),
+        ),
+      if (runtime) ...[
+        learningEngineRegistryProvider.overrideWithValue(
+          LearningEngineRegistry([eraseEngine(FakeChoiceEngine())]),
+        ),
+        evaluatorRegistryProvider.overrideWithValue(
+          EvaluatorRegistry([FakeExactEvaluator()]),
+        ),
+      ],
+    ],
+    child: MediaQuery(
+      data: const MediaQueryData(disableAnimations: true),
+      child: MaterialApp(
+        theme: TutolysTheme.village(),
+        locale: english ? const Locale('en', 'CA') : const Locale('fr', 'CA'),
+        supportedLocales: const [Locale('fr', 'CA'), Locale('en', 'CA')],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
         ],
-        child: MediaQuery(
-          data: const MediaQueryData(disableAnimations: true),
-          child: MaterialApp(
-            theme: TutolysTheme.village(),
-            locale: const Locale('fr', 'CA'),
-            supportedLocales: const [Locale('fr', 'CA'), Locale('en', 'CA')],
-            localizationsDelegates: const [
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            home: Builder(
-              builder: (context) => Scaffold(
-                body: Center(
-                  child: TextButton(
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) =>
-                            PlayScreen(node: _node, envelope: envelope),
-                      ),
-                    ),
-                    child: const Text('open'),
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => PlayScreen(node: _node, envelope: envelope),
                   ),
                 ),
+                child: const Text('open'),
               ),
             ),
           ),
         ),
-      );
+      ),
+    ),
+  );
 
   Future<List<Map<String, Object?>>> outbox() async => [
     for (final row in await db.select(db.eventOutboxTable).get())
@@ -170,9 +182,24 @@ void main() {
   }
 
   testWidgets(
-    'a legacy engine plays in the shell, the fox on stage, telemetry as before',
+    'the legacy fallback still plays in the shell, fox on stage, telemetry as before',
     (tester) async {
-      await tester.pumpWidget(app(_composeEnvelope));
+      // Every published engine is on the new runtime since Phase 4; the
+      // legacy path is only a fallback now, so force it.
+      await tester.pumpWidget(
+        app(
+          _composeEnvelope,
+          legacyOnly: true,
+          celebrationRows: const [
+            CelebrationRowData(
+              icon: Icons.flag_rounded,
+              label: 'Résous 5 exercices',
+              value: 2,
+              max: 5,
+            ),
+          ],
+        ),
+      );
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
 
@@ -192,8 +219,22 @@ void main() {
       await settle(tester);
       await tester.tap(find.text('2'));
       // The legacy engine awaits its attempt write, then its reaction beats,
-      // before finishing; the screen then pops.
+      // before finishing; then the celebration.
       await settle(tester, rounds: 6);
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Parfait !'),
+        findsOneWidget,
+        reason: 'right first time',
+      );
+      expect(find.text('+15 XP'), findsOneWidget);
+      expect(
+        find.text('Résous 5 exercices'),
+        findsOneWidget,
+        reason: 'quest rows come from their owner',
+      );
+      expect(find.text('2/5'), findsOneWidget);
+      await tester.tap(find.text('CONTINUER'));
       await tester.pumpAndSettle();
 
       expect(find.text('open'), findsOneWidget, reason: 'finished and popped');
@@ -247,10 +288,32 @@ void main() {
       await tester.tap(find.text('VALIDER'));
       await settle(tester);
       expect(find.text('Bravo !'), findsOneWidget);
+      expect(
+        find.text('+10'),
+        findsOneWidget,
+        reason: 'XP shows on the right answer',
+      );
       await tester.tap(find.text('CONTINUER'));
       await settle(tester);
       await tester.pumpAndSettle();
 
+      // The celebration, not a snackbar.
+      expect(find.text('Exercice terminé !'), findsOneWidget);
+      expect(
+        find.text('+10 XP'),
+        findsOneWidget,
+        reason: 'second try: 10, no bonus',
+      );
+      expect(find.text('1/1'), findsOneWidget);
+      expect(find.byType(SnackBar), findsNothing);
+      final done = await tester.runAsync(
+        () => NodeProgressLocal(db, kidId: 'kid-lea').all(),
+      );
+      expect(done!.keys, [_node.id], reason: 'the map can mark it done now');
+      expect(done[_node.id]!.everPerfect, isFalse);
+
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
       expect(find.text('open'), findsOneWidget, reason: 'finished and popped');
       final events = await outbox();
       expect(events.map((e) => e['event_type']).toList(), [
@@ -349,6 +412,36 @@ void main() {
         'session_end',
       ]);
       unawaited(Future<void>.value());
+    },
+  );
+
+  testWidgets(
+    'in English, the game chrome is English (content stays as authored)',
+    (tester) async {
+      await tester.pumpWidget(app(_mcqEnvelope, english: true));
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await settle(tester);
+
+      expect(find.text('CHECK'), findsOneWidget);
+      expect(
+        find.text('HINT'),
+        findsNothing,
+        reason: 'this question has no hint',
+      );
+      expect(find.byTooltip('Listen to the question'), findsOneWidget);
+      expect(
+        find.text('Combien font 7 + 5 ?'),
+        findsOneWidget,
+        reason: 'French content until English content exists',
+      );
+
+      await tester.tap(find.text('10'));
+      await settle(tester);
+      await tester.tap(find.text('CHECK'));
+      await settle(tester);
+      expect(find.text('Almost!'), findsOneWidget);
+      expect(find.text('TRY AGAIN'), findsOneWidget);
     },
   );
 }

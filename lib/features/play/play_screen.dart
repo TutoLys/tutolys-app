@@ -7,10 +7,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tutolys_motion/tutolys_motion.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../core/i18n/strings.dart';
+import '../../core/widgets/breathing_mascot.dart';
 import '../../data/local_db/database.dart';
 import '../../data/local_db/drift_activity_session_store.dart';
 import '../../data/local_db/home_stats.dart';
+import '../../data/local_db/node_progress_local.dart';
 import '../../data/local_db/streak_local.dart';
 import '../../data/sync/drift_audio_resolver.dart';
 import '../../data/sync/outbox_flusher_provider.dart';
@@ -56,6 +57,10 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   ActivitySessionController? _controller;
   StreamSubscription<RuntimeEvent>? _autoRead;
   final List<ExerciseResult> _questionResults = [];
+
+  /// Set when the exercise is completed: the celebration replaces the
+  /// exercise until the child presses Continuer.
+  ActivitySummary? _summary;
 
   // Legacy path.
   TelemetryClient? _telemetry;
@@ -192,7 +197,25 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     );
   }
 
-  int _runtimeXp() => _questionResults.fold(0, (sum, q) => sum + estimateXp(q));
+  /// XP so far: every finished question, plus the one just answered right
+  /// — shown the moment the banner says "Bravo", not a tap later.
+  int _runtimeXp() {
+    final c = _controller!;
+    final done = _questionResults.fold(0, (sum, q) => sum + estimateXp(q));
+    final s = c.state;
+    if (s.phase != SessionPhase.feedback || s.lastOutcome != Outcome.correct) {
+      return done;
+    }
+    return done +
+        estimateXp(
+          ExerciseResult(
+            outcome: ExerciseOutcome.completed,
+            attempts: s.attempts,
+            correct: 1,
+            elapsedMs: 0,
+          ),
+        );
+  }
 
   void _onRuntimeDone() {
     final c = _controller!;
@@ -219,42 +242,82 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   // ── shared ─────────────────────────────────────────────────────────────
 
   void _handleFinished(ExerciseResult result) {
-    // Resolved before popping: once popped, this context is gone.
-    final messenger = ScaffoldMessenger.of(context);
-    final xpMessage = context.s.playXpEarned;
-    Navigator.of(context).pop();
+    // An abandoned run taught nothing worth counting or celebrating.
+    if (result.outcome != ExerciseOutcome.completed) {
+      Navigator.of(context).pop();
+      return;
+    }
+    final perQuestion = result.questionResults.isEmpty
+        ? [result]
+        : result.questionResults;
+    final summary = ActivitySummary(
+      questions: perQuestion.length,
+      solved: perQuestion.where((q) => q.correct > 0).length,
+      firstTry: perQuestion.where((q) => q.isFirstTryPerfect).length,
+      // A client-side estimate — `manage.py award_xp` hasn't run yet. The
+      // authoritative total still comes from `ProgressState.totalXp`.
+      xp: estimateXp(result),
+    );
 
-    // Home's stat tiles are real counts, never a mastery judgment — an
-    // abandoned run taught nothing worth counting as "played today".
-    if (result.outcome != ExerciseOutcome.completed) return;
+    // Home's stat tiles, the offline streak, and the map's "done" mark all
+    // learn about this now, not when the backend next catches up.
     final db = ref.read(localDatabaseProvider);
     HomeStats(
       db,
       kidId: _kidId,
     ).recordExerciseCompleted(elapsedMs: result.elapsedMs);
     StreakLocal(db, kidId: _kidId).recordPlayedToday();
+    unawaited(
+      NodeProgressLocal(db, kidId: _kidId)
+          .recordCompleted(widget.node.id, perfect: summary.perfect)
+          .then((_) => ref.invalidate(nodeProgressProvider)),
+    );
 
-    // A client-side estimate, shown immediately — `manage.py award_xp`
-    // hasn't run yet at this instant. The authoritative total still comes
-    // from `ProgressState.totalXp`. Shown after the pop, over the page the
-    // child returns to: shown before it, the snackbar shrank the play
-    // screen for its last frame, which a fixed-height legacy engine can't
-    // absorb.
-    final xp = estimateXp(result);
-    if (xp > 0) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(xpMessage(xp)),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
+    _director.cue(
+      const ReactionCue(
+        role: ActorRole.guide,
+        reaction: Reaction.victory,
+        priority: CuePriority.critical,
+        hold: null,
+      ),
+    );
+    setState(() => _summary = summary);
   }
 
   @override
   Widget build(BuildContext context) {
     final locale = Localizations.localeOf(context);
     final compact = MediaQuery.sizeOf(context).width < 600;
+
+    final summary = _summary;
+    if (summary != null) {
+      final name = ref.read(sessionControllerProvider).kid?.displayName;
+      final strings = ShellStrings.of(locale);
+      return Scaffold(
+        body: ActivityCompleteView(
+          summary: summary,
+          locale: locale,
+          title: summary.perfect
+              ? null
+              : (name == null ? null : strings.wellDone(name)),
+          // The real fox art for the big moment, not the in-game placeholder:
+          // the celebration is the one screen with room for it.
+          character: const BreathingMascot(height: 150, hoverLift: false),
+          extraRows: [
+            for (final row
+                in ref.watch(celebrationRowsProvider).value ?? const [])
+              CelebrationRow(
+                icon: row.icon,
+                label: row.label,
+                value: row.value,
+                max: row.max,
+              ),
+          ],
+          onContinue: () => Navigator.of(context).pop(),
+        ),
+      );
+    }
+
     final stage = CharacterStage(
       director: _director,
       registry: ref.read(characterRegistryProvider),
