@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../data/sync/outbox_flusher.dart';
 import '../../data/sync/outbox_flusher_provider.dart';
+import '../../features/launch/launch_flow.dart';
 import '../../features/pairing/pairing_controller.dart';
 import '../../features/pairing/pairing_screen.dart';
 import '../../features/settings/settings_controller.dart';
@@ -31,6 +32,11 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
   // provider read — is what dispose/lifecycle callbacks act on.
   late final OutboxFlusher _flusher;
 
+  /// Whether this cold start's loader and welcome screen are behind us.
+  /// Never reset: signing out or re-pairing later in the same run goes
+  /// straight to the screen it needs, not back through the title screen.
+  bool _launched = false;
+
   @override
   void initState() {
     super.initState();
@@ -38,6 +44,10 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
     // Read the secure store and refresh once the first frame is up, so launch
     // shows a splash rather than a blank window.
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // The Flutter loader is on screen from the first frame and looks the
+      // same as the native one, so the native splash can go now — the
+      // loader, not the splash, is what waits for the session (ADR 0018).
+      FlutterNativeSplash.remove();
       ref.read(sessionControllerProvider.notifier).restore();
     });
     _flusher = ref.read(outboxFlusherProvider);
@@ -82,12 +92,6 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
       SessionStatus.paired => settingsReady,
     };
 
-    // In build rather than a listener: build re-runs whenever either input
-    // changes, and a listener only fires on a change, so a restore that
-    // finished before the first build would leave the splash up forever.
-    // `remove()` is safe to call more than once.
-    if (ready) FlutterNativeSplash.remove();
-
     // A revoked device token pauses the flusher (see OutboxFlusher) until the
     // app re-pairs — the only path that ever replaces that token.
     ref.listen<SessionState>(sessionControllerProvider, (previous, next) {
@@ -96,16 +100,36 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
       }
     });
 
-    return AnimatedSwitcher(
-      duration: Motion.normal,
-      child: switch (session.status) {
+    if (!_launched) {
+      return _switch(LaunchFlow(
+        key: const ValueKey('launch'),
+        stage: switch (session.status) {
+          SessionStatus.checking => LaunchStage.restoring,
+          _ when !ready => LaunchStage.sessionResolved,
+          _ => LaunchStage.ready,
+        },
+        kidName: session.status == SessionStatus.paired ? session.kid?.displayName : null,
+        onFinished: () => setState(() => _launched = true),
+      ));
+    }
+
+    return _switch(switch (session.status) {
         // Session resolved but the kid's settings not read yet: stay blank
         // behind the splash rather than drawing in the default theme.
         _ when !ready => const _Splash(),
         SessionStatus.checking => const _Splash(),
         SessionStatus.unpaired => const PairingScreen(),
         SessionStatus.paired => const _PairedShell(),
-      },
+      });
+  }
+
+  /// One switcher for every top-level screen, launch included, so the
+  /// welcome screen cross-fades into pairing or the Village rather than
+  /// cutting to it.
+  Widget _switch(Widget child) {
+    return AnimatedSwitcher(
+      duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : Motion.normal,
+      child: child,
     );
   }
 }
@@ -115,9 +139,8 @@ class _Splash extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Still restoring: the native splash is still up (see `main`), so this
-    // is behind it and deliberately plain. It is only ever seen if the
-    // restore outlives the splash removal.
+    // Only reachable after launch, if the session is re-checked later in the
+    // run; the launch loader covers every wait before that.
     return const SizedBox.shrink();
   }
 }

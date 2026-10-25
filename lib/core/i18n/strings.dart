@@ -35,6 +35,31 @@ abstract class Strings {
   String get continueLabel;
   String get loading;
 
+  // --- launch: loader and welcome -----------------------------------------
+  /// The loader's lines while the app is still getting ready, in story
+  /// order. Shown on a timer, so none of them may claim a specific step is
+  /// happening — they set a mood, the bar carries the facts.
+  List<String> get launchMessages;
+
+  /// Shown only once real progress is past 80 %, never on a timer.
+  String get launchAlmost;
+
+  /// Shown only once real progress is past 92 %.
+  String get launchNearlyReady;
+
+  /// Shown only when startup has genuinely finished.
+  String get launchDone;
+
+  /// Screen-reader label for the launch progress bar.
+  String get launchProgressLabel;
+
+  String get welcomeTagline;
+  String welcomeGreeting(String name);
+  String get welcomeFoxLine;
+  String get welcomeFoxLineNew;
+  String get welcomePlay;
+  String get welcomeStart;
+
   // --- home --------------------------------------------------------------
   String homeGreeting(String name);
   String get homeContinueLearning;
@@ -328,6 +353,45 @@ class _FrenchStrings extends Strings {
 
   @override
   String get loading => 'Un instant…';
+
+  @override
+  List<String> get launchMessages => const [
+        'Préparation de ton aventure…',
+        'On prépare le village pour toi…',
+        'On rassemble tes activités…',
+        'Foxy arrive avec tes défis…',
+        'On installe ton parcours d’apprentissage…',
+      ];
+
+  @override
+  String get launchAlmost => 'Tiens bon, on y est presque…';
+
+  @override
+  String get launchNearlyReady => 'Presque prêt…';
+
+  @override
+  String get launchDone => 'Bienvenue dans TutoLys !';
+
+  @override
+  String get launchProgressLabel => 'Chargement de TutoLys';
+
+  @override
+  String get welcomeTagline => 'Ton aventure d’apprentissage au Québec';
+
+  @override
+  String welcomeGreeting(String name) => 'Salut $name !';
+
+  @override
+  String get welcomeFoxLine => 'On repart à l’aventure ?';
+
+  @override
+  String get welcomeFoxLineNew => 'Viens découvrir le village avec moi !';
+
+  @override
+  String get welcomePlay => 'Jouer';
+
+  @override
+  String get welcomeStart => 'Commencer l’aventure';
 
   @override
   String homeGreeting(String name) => 'Salut, $name !';
@@ -923,6 +987,45 @@ class _EnglishStrings extends Strings {
 
   @override
   String get loading => 'One moment…';
+
+  @override
+  List<String> get launchMessages => const [
+        'Getting your adventure ready…',
+        'Setting up the village for you…',
+        'Gathering your activities…',
+        'Foxy is on the way with your challenges…',
+        'Laying out your learning path…',
+      ];
+
+  @override
+  String get launchAlmost => 'Hang on, we’re nearly there…';
+
+  @override
+  String get launchNearlyReady => 'Almost ready…';
+
+  @override
+  String get launchDone => 'Welcome to TutoLys!';
+
+  @override
+  String get launchProgressLabel => 'Loading TutoLys';
+
+  @override
+  String get welcomeTagline => 'Your learning adventure in Québec';
+
+  @override
+  String welcomeGreeting(String name) => 'Hi $name!';
+
+  @override
+  String get welcomeFoxLine => 'Off on another adventure?';
+
+  @override
+  String get welcomeFoxLineNew => 'Come explore the village with me!';
+
+  @override
+  String get welcomePlay => 'Play';
+
+  @override
+  String get welcomeStart => 'Start the adventure';
 
   @override
   String homeGreeting(String name) => 'Hi, $name!';

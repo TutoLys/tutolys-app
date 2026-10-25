@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:design_system/design_system.dart';
 
+import 'package:tutolys_app/features/launch/launch_flow.dart';
+import 'package:tutolys_app/features/launch/tutolys_welcome_screen.dart';
 import 'package:tutolys_app/core/routing/app_shell.dart';
 import 'package:tutolys_app/core/routing/village_shell.dart';
 import 'package:tutolys_app/data/api/content_api.dart';
@@ -540,6 +542,19 @@ void main() {
   });
 
   group('app shell', () {
+    // Every cold start passes the launch loader and the welcome screen
+    // (ADR 0018): wait out the loader's closing beat, then press the
+    // welcome screen's button, exactly as a child would.
+    Future<void> passLaunch(WidgetTester tester, String button) async {
+      await tester.pumpAndSettle();
+      await tester.pump(LaunchFlow.doneBeatReduced);
+      await tester.pumpAndSettle();
+      expect(find.byType(TutolysWelcomeScreen), findsOneWidget);
+      expect(find.byType(PairingScreen), findsNothing);
+      await tester.tap(find.text(button));
+      await tester.pumpAndSettle();
+    }
+
     testWidgets('an unpaired device lands on the pairing screen', (
       tester,
     ) async {
@@ -553,7 +568,7 @@ void main() {
       addTearDown(container.dispose);
 
       await tester.pumpWidget(appUnder(container, const AppShell()));
-      await tester.pumpAndSettle();
+      await passLaunch(tester, 'Commencer l’aventure');
 
       expect(find.byType(PairingScreen), findsOneWidget);
       expect(find.byType(PathScreen), findsNothing);
@@ -573,7 +588,7 @@ void main() {
       addTearDown(container.dispose);
 
       await tester.pumpWidget(appUnder(container, const AppShell()));
-      await tester.pumpAndSettle();
+      await passLaunch(tester, 'Jouer');
 
       expect(find.byType(VillageShell), findsOneWidget);
       expect(find.byType(PairingScreen), findsNothing);
@@ -592,7 +607,7 @@ void main() {
       addTearDown(container.dispose);
 
       await tester.pumpWidget(appUnder(container, const AppShell()));
-      await tester.pumpAndSettle();
+      await passLaunch(tester, 'Commencer l’aventure');
 
       expect(find.byType(PairingScreen), findsOneWidget);
     });
