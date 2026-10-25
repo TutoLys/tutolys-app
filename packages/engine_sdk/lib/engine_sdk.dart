@@ -12,6 +12,7 @@ export 'src/audio/web_audio_player.dart';
 export 'src/audio/output_keep_alive.dart';
 export 'src/audio/audio_debug.dart';
 export 'src/audio/keep_alive_config.dart';
+export 'src/content_speaker.dart';
 export 'src/contracts/answer.dart';
 export 'src/contracts/envelope.dart';
 export 'src/contracts/evaluation.dart';
