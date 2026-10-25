@@ -13,6 +13,9 @@ import 'data/local_db/database.dart';
 import 'data/local_db/session_store.dart';
 import 'data/sync/outbox_flusher_provider.dart' show telemetryBaseUrl;
 import 'features/pairing/pairing_controller.dart';
+import 'features/play/learning_platform_providers.dart'
+    show celebrationRowsProvider;
+import 'features/quests/quest_celebration.dart';
 import 'features/settings/settings_controller.dart';
 
 void main() {
@@ -63,7 +66,11 @@ void main() {
 
   runApp(
     ProviderScope(
-      overrides: [localDatabaseProvider.overrideWithValue(db)],
+      overrides: [
+        localDatabaseProvider.overrideWithValue(db),
+        // The celebration's quest rows (app ADR 0022's hook).
+        celebrationRowsProvider.overrideWith(questCelebrationRows),
+      ],
       child: const TutolysApp(),
     ),
   );

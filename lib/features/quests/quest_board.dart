@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart' show IconData, Icons;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/api/progress_api.dart';
@@ -22,6 +23,14 @@ import 'quests_model.dart';
 /// A quest's completion is written to [QuestLog] the first time it is seen
 /// complete, which is what the weekly badge and "50 quêtes" count.
 enum QuestKind { challenge, exercises, minutes }
+
+/// Each kind of quest's icon, the same everywhere it appears (Village's
+/// quest tiles, the end-of-exercise celebration).
+IconData questIconFor(QuestKind kind) => switch (kind) {
+  QuestKind.challenge => Icons.bolt_rounded,
+  QuestKind.exercises => Icons.task_alt_rounded,
+  QuestKind.minutes => Icons.timer_outlined,
+};
 
 class DailyQuestItem {
   const DailyQuestItem({

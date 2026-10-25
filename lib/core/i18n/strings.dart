@@ -128,7 +128,6 @@ abstract class Strings {
 
   // --- play --------------------------------------------------------------
   String get playBack;
-  String playXpEarned(int xp);
 
 
   // --- navigation & settings ---------------------------------------------
@@ -549,8 +548,6 @@ class _FrenchStrings extends Strings {
   @override
   String get playBack => 'Retour';
 
-  @override
-  String playXpEarned(int xp) => '+$xp XP !';
 
   @override
   String get navVillage => 'Village';
@@ -1237,8 +1234,6 @@ class _EnglishStrings extends Strings {
   @override
   String get playBack => 'Back';
 
-  @override
-  String playXpEarned(int xp) => '+$xp XP!';
 
   @override
   String get navVillage => 'Village';
