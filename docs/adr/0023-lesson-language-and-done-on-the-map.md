@@ -147,11 +147,16 @@ engine*). That also made the "2/4" count wrong. Now one rule,
 `lib/data/sync/lesson_key.dart`, serves both the Carte (`pickLessons`) and
 the sync's keep-other-language removal:
 
-- With the backend's **`translation_group`** (agreed with the backend
-  session; on the envelope and on each manifest entry), all language
-  versions sharing it are one lesson.
-- Without it, the fallback is **(node, engine, rank)**, the backend's own
-  uniqueness key. Two distinct exercises never share it, so none is
-  hidden, and a translation, which keeps all three, still pairs with its
-  original.
+- The backend sends **`lesson_group`** on the envelope and on every
+  manifest entry (agreed with the backend session). It's the same for
+  every language version of one lesson, and never null: an untranslated
+  lesson is a group of one, its own exercise id. All versions sharing it
+  are one lesson.
+- The fallback, **(node, engine, rank)**, only covers exercises cached
+  before the field shipped; adding it changed every content hash, so the
+  next sync replaces them. It is the backend's own uniqueness key, so
+  even then no two distinct exercises merge.
+- Rank alone does not order a node: the backend keeps rank unique for new
+  lessons but doesn't promise it, since two engines on one leaf at the
+  same difficulty is a natural shape. Hence the tiebreak.
 - A node's lessons are ordered by (rank, engine, exercise id).

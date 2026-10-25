@@ -21,7 +21,7 @@ Map<String, Object?> lesson(
   'engine_key': engine,
   'rank': rank,
   'locale': locale,
-  'translation_group': ?group,
+  'lesson_group': ?group,
 };
 
 void main() {
@@ -93,7 +93,7 @@ void main() {
       expect(picked['n']!.map((e) => e['exercise_id']), ['x', 'y', 'z']);
     });
 
-    test('translation_group makes one lesson of its language versions', () {
+    test('lesson_group makes one lesson of its language versions', () {
       final picked = pickLessons([
         lesson('fr', 'n', 'fr-CA', group: 'g1'),
         lesson('en', 'n', 'en-CA', rank: 4, engine: 'pair_match', group: 'g1'),

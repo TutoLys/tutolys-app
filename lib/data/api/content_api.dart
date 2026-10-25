@@ -16,7 +16,7 @@ class ManifestEntry {
     required this.grade,
     required this.rank,
     this.locale = 'fr-CA',
-    this.translationGroup,
+    this.lessonGroup,
   });
 
   factory ManifestEntry.fromJson(Map<String, Object?> json) {
@@ -31,7 +31,7 @@ class ManifestEntry {
       grade: json['grade'] as int,
       rank: json['rank'] as int,
       locale: (json['locale'] as String?) ?? 'fr-CA',
-      translationGroup: json['translation_group'] as String?,
+      lessonGroup: json['lesson_group'] as String?,
     );
   }
 
@@ -53,9 +53,10 @@ class ManifestEntry {
   /// served, in the language it was authored in (backend ADR 0026).
   final String locale;
 
-  /// Shared by every language version of one lesson; null on content
-  /// published before the backend sent it (see `lesson_key.dart`).
-  final String? translationGroup;
+  /// Shared by every language version of one lesson; the exercise's own
+  /// id when it has none. Null only from a backend older than the field
+  /// (see `lesson_key.dart`).
+  final String? lessonGroup;
 }
 
 class ContentManifest {

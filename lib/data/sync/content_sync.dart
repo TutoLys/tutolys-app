@@ -173,7 +173,7 @@ class ContentSync {
               skillNodeId: e.skillNodeId,
               engineKey: e.engineKey,
               rank: e.rank,
-              translationGroup: e.translationGroup,
+              lessonGroup: e.lessonGroup,
             ),
             () => {},
           )
@@ -507,7 +507,7 @@ class ContentSync {
     String? group;
     try {
       group =
-          (jsonDecode(row.payload) as Map<String, Object?>)['translation_group']
+          (jsonDecode(row.payload) as Map<String, Object?>)['lesson_group']
               as String?;
     } on Object {
       group = null;
@@ -516,7 +516,7 @@ class ContentSync {
       skillNodeId: row.skillNodeId,
       engineKey: row.engineKey,
       rank: row.rank,
-      translationGroup: group,
+      lessonGroup: group,
     );
   }
 

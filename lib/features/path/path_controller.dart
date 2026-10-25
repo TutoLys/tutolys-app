@@ -177,7 +177,7 @@ class PathController extends Notifier<PathState> {
 ///
 /// [envelopes] may hold one lesson in several languages: siblings share the
 /// cache, and a translation is another exercise of the same lesson
-/// (`lessonKey`: its `translation_group`, else node + engine + rank). Per
+/// (`lessonKey`: its `lesson_group`, else node + engine + rank). Per
 /// lesson this takes the version in [locale], else French, else whatever
 /// was authored. Distinct exercises are never merged, so none is hidden;
 /// lessons are ordered by (rank, engine, exercise id).

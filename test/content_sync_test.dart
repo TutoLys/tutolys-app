@@ -61,14 +61,14 @@ class FakeContentServer extends ContentApi {
 
     // Like the backend (ADR 0026): one version per lesson, in the
     // asked-for language where it exists, else the authored one. A lesson
-    // is its translation_group, else (node, engine, rank).
+    // is its lesson_group, else (node, engine, rank).
     final asked = locale ?? 'fr-CA';
     final byLesson = <Object, List<Map<String, Object?>>>{};
     for (final e in content.values) {
       if (subject != null && e['subject'] != subject) continue;
       byLesson
           .putIfAbsent(
-            e['translation_group'] ??
+            e['lesson_group'] ??
                 (e['subject'], e['skill_node_id'], e['engine_key'], e['rank']),
             () => [],
           )
@@ -93,7 +93,7 @@ class FakeContentServer extends ContentApi {
             grade: e['grade'] as int,
             rank: e['rank'] as int,
             locale: e['locale'] as String,
-            translationGroup: e['translation_group'] as String?,
+            lessonGroup: e['lesson_group'] as String?,
           ),
         )
         .toList();
@@ -159,7 +159,7 @@ void main() {
     'exercise_id': id,
     'version': version,
     'engine_key': engine,
-    'translation_group': ?group,
+    'lesson_group': ?group,
     'engine_min_version': 1,
     'skill_node_id': node,
     'subject': subject,
@@ -845,7 +845,7 @@ void main() {
     );
 
     test(
-      'translation_group pairs versions even when their ranks differ',
+      'lesson_group pairs versions even when their ranks differ',
       () async {
         server.content['fr'] = exercise('fr', group: 'g1');
         server.content['en'] = exercise(
