@@ -14,6 +14,7 @@ import '../../data/local_db/home_stats.dart';
 import '../../data/local_db/node_progress_local.dart';
 import '../../data/local_db/streak_local.dart';
 import '../../data/sync/drift_audio_resolver.dart';
+import '../../data/sync/drift_image_resolver.dart';
 import '../../data/sync/outbox_flusher_provider.dart';
 import '../pairing/pairing_controller.dart';
 import '../settings/settings_controller.dart';
@@ -52,6 +53,11 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
   /// Captured once: `ref` is unusable in [dispose], which still needs it.
   late final AudioCoordinator _audio = ref.read(audioCoordinatorProvider);
+
+  /// Pictures for `image_ref`s, put above the engine (ADR 0027).
+  late final ImageResolver _images = DriftImageResolver(
+    ref.read(localDatabaseProvider),
+  );
 
   // Runtime path.
   ActivitySessionController? _controller;
@@ -331,32 +337,38 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     final c = _controller;
     if (c != null) {
       return Scaffold(
-        body: LearningActivityView(
-          controller: c,
-          locale: locale,
-          character: stage,
-          onDone: _onRuntimeDone,
-          xpEarned: _runtimeXp,
-          speakPrompt: (q) {
-            final plan = _planFor(c, q.index);
-            if (plan == null || plan.promptSource() == null) return null;
-            return () => _speak(c, plan);
-          },
+        body: ImageResolverScope(
+          resolver: _images,
+          child: LearningActivityView(
+            controller: c,
+            locale: locale,
+            character: stage,
+            onDone: _onRuntimeDone,
+            xpEarned: _runtimeXp,
+            speakPrompt: (q) {
+              final plan = _planFor(c, q.index);
+              if (plan == null || plan.promptSource() == null) return null;
+              return () => _speak(c, plan);
+            },
+          ),
         ),
       );
     }
 
     return Scaffold(
-      body: LegacyEngineHost(
-        envelope: widget.envelope,
-        registry: ref.watch(engineRegistryProvider),
-        telemetry: _telemetry!,
-        feedback: _bridge!,
-        audio: _legacyAudio,
-        locale: locale,
-        character: stage,
-        onFinished: _handleFinished,
-        onClose: () => Navigator.of(context).pop(),
+      body: ImageResolverScope(
+        resolver: _images,
+        child: LegacyEngineHost(
+          envelope: widget.envelope,
+          registry: ref.watch(engineRegistryProvider),
+          telemetry: _telemetry!,
+          feedback: _bridge!,
+          audio: _legacyAudio,
+          locale: locale,
+          character: stage,
+          onFinished: _handleFinished,
+          onClose: () => Navigator.of(context).pop(),
+        ),
       ),
     );
   }

@@ -212,6 +212,11 @@ class ContentApi {
     }
   }
 
+  /// Any `assets[].url`, picture or audio: the download is the same plain
+  /// unauthenticated GET either way, so pictures reuse [fetchAudio] (and a
+  /// test fake that overrides it covers both).
+  Future<AudioResult> fetchAsset(String url) => fetchAudio(url);
+
   /// `url` is one exercise's `assets[].url` — server-relative (e.g.
   /// `/media/exercise_audio/<id>/<ref>.wav`), resolved against [dio]'s own
   /// `baseUrl` exactly like every other call here. No auth header: the

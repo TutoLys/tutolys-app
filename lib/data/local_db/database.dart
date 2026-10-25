@@ -119,6 +119,34 @@ class AudioCacheTable extends Table {
   Set<Column> get primaryKey => {exerciseId, ref};
 }
 
+/// Downloaded picture assets, **content-addressed**: one row per sha256,
+/// so lessons that use the same picture keep a single copy (ADR 0027).
+///
+/// Which picture an `image_ref` means is the exercise's own business: its
+/// cached envelope's `assets[]` maps the ref to a sha256, and this table
+/// holds the bytes for that hash. Shared across kids, like the exercise
+/// cache it serves. A row no cached exercise points at any more is removed
+/// after the next sync, and every removal is counted (`app_state`).
+class AssetCacheTable extends Table {
+  @override
+  String get tableName => 'asset_cache';
+
+  TextColumn get sha256 => text()();
+
+  /// `image/webp`, `image/png`, … — from the asset's `media_type`, or
+  /// inferred from its URL for content published before that field.
+  TextColumn get mediaType => text().named('media_type')();
+
+  BlobColumn get bytes => blob()();
+
+  IntColumn get sizeBytes => integer().named('size_bytes')();
+
+  DateTimeColumn get cachedAt => dateTime().named('cached_at')();
+
+  @override
+  Set<Column> get primaryKey => {sha256};
+}
+
 /// Cached curriculum leaves for the path screen (A7).
 ///
 /// Flat, not a tree — no parent/child columns, matching the backend
@@ -257,6 +285,7 @@ const String deviceScope = '';
     PlayedDateTable,
     AudioCacheTable,
     ActivitySessionTable,
+    AssetCacheTable,
   ],
 )
 // Timestamp storage is configured in build.yaml
@@ -297,7 +326,7 @@ class LocalDatabase extends _$LocalDatabase {
   Future<String?> Function()? migrationKidIdLoader;
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -341,6 +370,9 @@ class LocalDatabase extends _$LocalDatabase {
       if (from < 5) {
         await m.createTable(activitySessionTable);
         await _createActivitySessionIndex();
+      }
+      if (from < 6) {
+        await m.createTable(assetCacheTable);
       }
     },
   );

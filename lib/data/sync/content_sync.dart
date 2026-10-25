@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 
 import '../api/content_api.dart';
 import '../local_db/database.dart';
+import 'asset_kind.dart';
 import 'content_hash.dart';
 
 /// What a sync did, so the UI and the logs can say something specific.
@@ -230,7 +231,7 @@ class ContentSync {
           // commit it rather than throwing the work away — the next sync picks
           // up the rest.
           await _commit(verified, const []);
-          await _syncAudio(verified);
+          await _syncAssets(verified);
           return SyncReport(
             upToDate: upToDate,
             downloaded: verified.length,
@@ -241,7 +242,7 @@ class ContentSync {
           );
         case ExercisesFailed(:final detail):
           await _commit(verified, const []);
-          await _syncAudio(verified);
+          await _syncAssets(verified);
           return SyncReport(
             upToDate: upToDate,
             downloaded: verified.length,
@@ -254,7 +255,7 @@ class ContentSync {
     }
 
     await _commit(verified, toRemove);
-    await _syncAudio(verified);
+    await _syncAssets(verified);
 
     return SyncReport(
       upToDate: upToDate,
@@ -263,6 +264,14 @@ class ContentSync {
       rejected: rejected,
       unavailable: unavailable,
     );
+  }
+
+  /// Audio, then pictures, for newly verified envelopes; then drop
+  /// pictures no cached exercise points at any more.
+  Future<void> _syncAssets(List<Map<String, Object?>> envelopes) async {
+    await _syncAudio(envelopes);
+    await _syncImages(envelopes);
+    await pruneImages();
   }
 
   /// Download and cache every audio asset referenced by newly-verified
@@ -290,6 +299,7 @@ class ContentSync {
         final url = asset['url'] as String?;
         final sha256 = asset['sha256'] as String?;
         if (ref == null || url == null || sha256 == null) continue;
+        if (assetKindOf(asset) != AssetKind.audio) continue;
         if (cached[(exerciseId, ref)] == sha256) continue; // already have it
 
         final result = await api.fetchAudio(url);
@@ -315,6 +325,106 @@ class ContentSync {
             );
       }
     }
+  }
+
+  /// Download every picture newly verified envelopes reference, into the
+  /// content-addressed `asset_cache` (ADR 0027).
+  ///
+  /// Same posture as audio: best-effort, verified against the manifest's
+  /// sha256, and a picture that fails to arrive is simply tried again next
+  /// sync — the engine shows the item's label meanwhile. Keyed by hash, so
+  /// a picture two lessons share is downloaded once.
+  Future<void> _syncImages(List<Map<String, Object?>> envelopes) async {
+    final have = {
+      for (final row in await (db.selectOnly(
+        db.assetCacheTable,
+      )..addColumns([db.assetCacheTable.sha256])).get())
+        row.read(db.assetCacheTable.sha256)!,
+    };
+
+    for (final envelope in envelopes) {
+      final assets = envelope['assets'] as List?;
+      if (assets == null) continue;
+      for (final asset in assets.cast<Map<String, Object?>>()) {
+        final url = asset['url'] as String?;
+        final sha256 = asset['sha256'] as String?;
+        final mediaType = imageMediaTypeOf(asset);
+        if (url == null || sha256 == null || mediaType == null) continue;
+        if (have.contains(sha256)) continue;
+
+        final result = await api.fetchAsset(url);
+        if (result is! AudioFetched) continue; // offline or a server error
+        if (bytesSha256(result.bytes) != sha256) continue; // refuse it
+
+        await db
+            .into(db.assetCacheTable)
+            .insertOnConflictUpdate(
+              AssetCacheTableCompanion.insert(
+                sha256: sha256,
+                mediaType: mediaType,
+                bytes: result.bytes,
+                sizeBytes: result.bytes.length,
+                cachedAt: _now(),
+              ),
+            );
+        have.add(sha256);
+      }
+    }
+  }
+
+  static const removedImagesKey = 'asset_cache.removed_total';
+  static const lastRemovedImagesKey = 'asset_cache.last_removed_at';
+
+  /// Removes every cached picture that no cached exercise references, and
+  /// returns how many. Never silent: the running total and the time of the
+  /// last removal are kept in device-scoped `app_state`.
+  Future<int> pruneImages() async {
+    final wanted = <String>{};
+    for (final row in await db.select(db.exerciseCacheTable).get()) {
+      final assets =
+          (jsonDecode(row.payload) as Map<String, Object?>)['assets'] as List?;
+      for (final asset in (assets ?? const []).cast<Map<String, Object?>>()) {
+        if (imageMediaTypeOf(asset) == null) continue;
+        if (asset['sha256'] case final String sha) wanted.add(sha);
+      }
+    }
+
+    return db.transaction(() async {
+      final removed = await (db.delete(
+        db.assetCacheTable,
+      )..where((t) => t.sha256.isNotIn(wanted))).go();
+      if (removed == 0) return 0;
+
+      final now = _now();
+      final total = (await imagesRemovedTotal()) + removed;
+      for (final (key, value) in [
+        (removedImagesKey, '$total'),
+        (lastRemovedImagesKey, now.toUtc().toIso8601String()),
+      ]) {
+        await db
+            .into(db.appStateTable)
+            .insertOnConflictUpdate(
+              AppStateTableCompanion.insert(
+                kidId: deviceScope,
+                key: key,
+                value: value,
+                updatedAt: now,
+              ),
+            );
+      }
+      return removed;
+    });
+  }
+
+  /// Pictures ever removed from this device's cache by [pruneImages].
+  Future<int> imagesRemovedTotal() async {
+    final row =
+        await (db.select(db.appStateTable)..where(
+              (t) =>
+                  t.kidId.equals(deviceScope) & t.key.equals(removedImagesKey),
+            ))
+            .getSingleOrNull();
+    return int.tryParse(row?.value ?? '') ?? 0;
   }
 
   /// Write verified content and drop withdrawn content in one transaction.

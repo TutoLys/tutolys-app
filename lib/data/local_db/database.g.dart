@@ -3198,6 +3198,379 @@ class ActivitySessionTableCompanion
   }
 }
 
+class $AssetCacheTableTable extends AssetCacheTable
+    with TableInfo<$AssetCacheTableTable, AssetCacheTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AssetCacheTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _sha256Meta = const VerificationMeta('sha256');
+  @override
+  late final GeneratedColumn<String> sha256 = GeneratedColumn<String>(
+    'sha256',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _mediaTypeMeta = const VerificationMeta(
+    'mediaType',
+  );
+  @override
+  late final GeneratedColumn<String> mediaType = GeneratedColumn<String>(
+    'media_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _bytesMeta = const VerificationMeta('bytes');
+  @override
+  late final GeneratedColumn<Uint8List> bytes = GeneratedColumn<Uint8List>(
+    'bytes',
+    aliasedName,
+    false,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sizeBytesMeta = const VerificationMeta(
+    'sizeBytes',
+  );
+  @override
+  late final GeneratedColumn<int> sizeBytes = GeneratedColumn<int>(
+    'size_bytes',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _cachedAtMeta = const VerificationMeta(
+    'cachedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> cachedAt = GeneratedColumn<DateTime>(
+    'cached_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    sha256,
+    mediaType,
+    bytes,
+    sizeBytes,
+    cachedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'asset_cache';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AssetCacheTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('sha256')) {
+      context.handle(
+        _sha256Meta,
+        sha256.isAcceptableOrUnknown(data['sha256']!, _sha256Meta),
+      );
+    } else if (isInserting) {
+      context.missing(_sha256Meta);
+    }
+    if (data.containsKey('media_type')) {
+      context.handle(
+        _mediaTypeMeta,
+        mediaType.isAcceptableOrUnknown(data['media_type']!, _mediaTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_mediaTypeMeta);
+    }
+    if (data.containsKey('bytes')) {
+      context.handle(
+        _bytesMeta,
+        bytes.isAcceptableOrUnknown(data['bytes']!, _bytesMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bytesMeta);
+    }
+    if (data.containsKey('size_bytes')) {
+      context.handle(
+        _sizeBytesMeta,
+        sizeBytes.isAcceptableOrUnknown(data['size_bytes']!, _sizeBytesMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sizeBytesMeta);
+    }
+    if (data.containsKey('cached_at')) {
+      context.handle(
+        _cachedAtMeta,
+        cachedAt.isAcceptableOrUnknown(data['cached_at']!, _cachedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cachedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {sha256};
+  @override
+  AssetCacheTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AssetCacheTableData(
+      sha256: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sha256'],
+      )!,
+      mediaType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}media_type'],
+      )!,
+      bytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}bytes'],
+      )!,
+      sizeBytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}size_bytes'],
+      )!,
+      cachedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cached_at'],
+      )!,
+    );
+  }
+
+  @override
+  $AssetCacheTableTable createAlias(String alias) {
+    return $AssetCacheTableTable(attachedDatabase, alias);
+  }
+}
+
+class AssetCacheTableData extends DataClass
+    implements Insertable<AssetCacheTableData> {
+  final String sha256;
+
+  /// `image/webp`, `image/png`, … — from the asset's `media_type`, or
+  /// inferred from its URL for content published before that field.
+  final String mediaType;
+  final Uint8List bytes;
+  final int sizeBytes;
+  final DateTime cachedAt;
+  const AssetCacheTableData({
+    required this.sha256,
+    required this.mediaType,
+    required this.bytes,
+    required this.sizeBytes,
+    required this.cachedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['sha256'] = Variable<String>(sha256);
+    map['media_type'] = Variable<String>(mediaType);
+    map['bytes'] = Variable<Uint8List>(bytes);
+    map['size_bytes'] = Variable<int>(sizeBytes);
+    map['cached_at'] = Variable<DateTime>(cachedAt);
+    return map;
+  }
+
+  AssetCacheTableCompanion toCompanion(bool nullToAbsent) {
+    return AssetCacheTableCompanion(
+      sha256: Value(sha256),
+      mediaType: Value(mediaType),
+      bytes: Value(bytes),
+      sizeBytes: Value(sizeBytes),
+      cachedAt: Value(cachedAt),
+    );
+  }
+
+  factory AssetCacheTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AssetCacheTableData(
+      sha256: serializer.fromJson<String>(json['sha256']),
+      mediaType: serializer.fromJson<String>(json['mediaType']),
+      bytes: serializer.fromJson<Uint8List>(json['bytes']),
+      sizeBytes: serializer.fromJson<int>(json['sizeBytes']),
+      cachedAt: serializer.fromJson<DateTime>(json['cachedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'sha256': serializer.toJson<String>(sha256),
+      'mediaType': serializer.toJson<String>(mediaType),
+      'bytes': serializer.toJson<Uint8List>(bytes),
+      'sizeBytes': serializer.toJson<int>(sizeBytes),
+      'cachedAt': serializer.toJson<DateTime>(cachedAt),
+    };
+  }
+
+  AssetCacheTableData copyWith({
+    String? sha256,
+    String? mediaType,
+    Uint8List? bytes,
+    int? sizeBytes,
+    DateTime? cachedAt,
+  }) => AssetCacheTableData(
+    sha256: sha256 ?? this.sha256,
+    mediaType: mediaType ?? this.mediaType,
+    bytes: bytes ?? this.bytes,
+    sizeBytes: sizeBytes ?? this.sizeBytes,
+    cachedAt: cachedAt ?? this.cachedAt,
+  );
+  AssetCacheTableData copyWithCompanion(AssetCacheTableCompanion data) {
+    return AssetCacheTableData(
+      sha256: data.sha256.present ? data.sha256.value : this.sha256,
+      mediaType: data.mediaType.present ? data.mediaType.value : this.mediaType,
+      bytes: data.bytes.present ? data.bytes.value : this.bytes,
+      sizeBytes: data.sizeBytes.present ? data.sizeBytes.value : this.sizeBytes,
+      cachedAt: data.cachedAt.present ? data.cachedAt.value : this.cachedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AssetCacheTableData(')
+          ..write('sha256: $sha256, ')
+          ..write('mediaType: $mediaType, ')
+          ..write('bytes: $bytes, ')
+          ..write('sizeBytes: $sizeBytes, ')
+          ..write('cachedAt: $cachedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    sha256,
+    mediaType,
+    $driftBlobEquality.hash(bytes),
+    sizeBytes,
+    cachedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AssetCacheTableData &&
+          other.sha256 == this.sha256 &&
+          other.mediaType == this.mediaType &&
+          $driftBlobEquality.equals(other.bytes, this.bytes) &&
+          other.sizeBytes == this.sizeBytes &&
+          other.cachedAt == this.cachedAt);
+}
+
+class AssetCacheTableCompanion extends UpdateCompanion<AssetCacheTableData> {
+  final Value<String> sha256;
+  final Value<String> mediaType;
+  final Value<Uint8List> bytes;
+  final Value<int> sizeBytes;
+  final Value<DateTime> cachedAt;
+  final Value<int> rowid;
+  const AssetCacheTableCompanion({
+    this.sha256 = const Value.absent(),
+    this.mediaType = const Value.absent(),
+    this.bytes = const Value.absent(),
+    this.sizeBytes = const Value.absent(),
+    this.cachedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  AssetCacheTableCompanion.insert({
+    required String sha256,
+    required String mediaType,
+    required Uint8List bytes,
+    required int sizeBytes,
+    required DateTime cachedAt,
+    this.rowid = const Value.absent(),
+  }) : sha256 = Value(sha256),
+       mediaType = Value(mediaType),
+       bytes = Value(bytes),
+       sizeBytes = Value(sizeBytes),
+       cachedAt = Value(cachedAt);
+  static Insertable<AssetCacheTableData> custom({
+    Expression<String>? sha256,
+    Expression<String>? mediaType,
+    Expression<Uint8List>? bytes,
+    Expression<int>? sizeBytes,
+    Expression<DateTime>? cachedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (sha256 != null) 'sha256': sha256,
+      if (mediaType != null) 'media_type': mediaType,
+      if (bytes != null) 'bytes': bytes,
+      if (sizeBytes != null) 'size_bytes': sizeBytes,
+      if (cachedAt != null) 'cached_at': cachedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  AssetCacheTableCompanion copyWith({
+    Value<String>? sha256,
+    Value<String>? mediaType,
+    Value<Uint8List>? bytes,
+    Value<int>? sizeBytes,
+    Value<DateTime>? cachedAt,
+    Value<int>? rowid,
+  }) {
+    return AssetCacheTableCompanion(
+      sha256: sha256 ?? this.sha256,
+      mediaType: mediaType ?? this.mediaType,
+      bytes: bytes ?? this.bytes,
+      sizeBytes: sizeBytes ?? this.sizeBytes,
+      cachedAt: cachedAt ?? this.cachedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (sha256.present) {
+      map['sha256'] = Variable<String>(sha256.value);
+    }
+    if (mediaType.present) {
+      map['media_type'] = Variable<String>(mediaType.value);
+    }
+    if (bytes.present) {
+      map['bytes'] = Variable<Uint8List>(bytes.value);
+    }
+    if (sizeBytes.present) {
+      map['size_bytes'] = Variable<int>(sizeBytes.value);
+    }
+    if (cachedAt.present) {
+      map['cached_at'] = Variable<DateTime>(cachedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AssetCacheTableCompanion(')
+          ..write('sha256: $sha256, ')
+          ..write('mediaType: $mediaType, ')
+          ..write('bytes: $bytes, ')
+          ..write('sizeBytes: $sizeBytes, ')
+          ..write('cachedAt: $cachedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$LocalDatabase extends GeneratedDatabase {
   _$LocalDatabase(QueryExecutor e) : super(e);
   $LocalDatabaseManager get managers => $LocalDatabaseManager(this);
@@ -3218,6 +3591,9 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
   );
   late final $ActivitySessionTableTable activitySessionTable =
       $ActivitySessionTableTable(this);
+  late final $AssetCacheTableTable assetCacheTable = $AssetCacheTableTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3231,6 +3607,7 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
     playedDateTable,
     audioCacheTable,
     activitySessionTable,
+    assetCacheTable,
   ];
   @override
   DriftDatabaseOptions get options =>
@@ -5074,6 +5451,227 @@ typedef $$ActivitySessionTableTableProcessedTableManager =
       ActivitySessionRow,
       PrefetchHooks Function()
     >;
+typedef $$AssetCacheTableTableCreateCompanionBuilder =
+    AssetCacheTableCompanion Function({
+      required String sha256,
+      required String mediaType,
+      required Uint8List bytes,
+      required int sizeBytes,
+      required DateTime cachedAt,
+      Value<int> rowid,
+    });
+typedef $$AssetCacheTableTableUpdateCompanionBuilder =
+    AssetCacheTableCompanion Function({
+      Value<String> sha256,
+      Value<String> mediaType,
+      Value<Uint8List> bytes,
+      Value<int> sizeBytes,
+      Value<DateTime> cachedAt,
+      Value<int> rowid,
+    });
+
+class $$AssetCacheTableTableFilterComposer
+    extends Composer<_$LocalDatabase, $AssetCacheTableTable> {
+  $$AssetCacheTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get sha256 => $composableBuilder(
+    column: $table.sha256,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mediaType => $composableBuilder(
+    column: $table.mediaType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get bytes => $composableBuilder(
+    column: $table.bytes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sizeBytes => $composableBuilder(
+    column: $table.sizeBytes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$AssetCacheTableTableOrderingComposer
+    extends Composer<_$LocalDatabase, $AssetCacheTableTable> {
+  $$AssetCacheTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get sha256 => $composableBuilder(
+    column: $table.sha256,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get mediaType => $composableBuilder(
+    column: $table.mediaType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get bytes => $composableBuilder(
+    column: $table.bytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sizeBytes => $composableBuilder(
+    column: $table.sizeBytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$AssetCacheTableTableAnnotationComposer
+    extends Composer<_$LocalDatabase, $AssetCacheTableTable> {
+  $$AssetCacheTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get sha256 =>
+      $composableBuilder(column: $table.sha256, builder: (column) => column);
+
+  GeneratedColumn<String> get mediaType =>
+      $composableBuilder(column: $table.mediaType, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get bytes =>
+      $composableBuilder(column: $table.bytes, builder: (column) => column);
+
+  GeneratedColumn<int> get sizeBytes =>
+      $composableBuilder(column: $table.sizeBytes, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get cachedAt =>
+      $composableBuilder(column: $table.cachedAt, builder: (column) => column);
+}
+
+class $$AssetCacheTableTableTableManager
+    extends
+        RootTableManager<
+          _$LocalDatabase,
+          $AssetCacheTableTable,
+          AssetCacheTableData,
+          $$AssetCacheTableTableFilterComposer,
+          $$AssetCacheTableTableOrderingComposer,
+          $$AssetCacheTableTableAnnotationComposer,
+          $$AssetCacheTableTableCreateCompanionBuilder,
+          $$AssetCacheTableTableUpdateCompanionBuilder,
+          (
+            AssetCacheTableData,
+            BaseReferences<
+              _$LocalDatabase,
+              $AssetCacheTableTable,
+              AssetCacheTableData
+            >,
+          ),
+          AssetCacheTableData,
+          PrefetchHooks Function()
+        > {
+  $$AssetCacheTableTableTableManager(
+    _$LocalDatabase db,
+    $AssetCacheTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AssetCacheTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AssetCacheTableTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AssetCacheTableTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> sha256 = const Value.absent(),
+                Value<String> mediaType = const Value.absent(),
+                Value<Uint8List> bytes = const Value.absent(),
+                Value<int> sizeBytes = const Value.absent(),
+                Value<DateTime> cachedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AssetCacheTableCompanion(
+                sha256: sha256,
+                mediaType: mediaType,
+                bytes: bytes,
+                sizeBytes: sizeBytes,
+                cachedAt: cachedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String sha256,
+                required String mediaType,
+                required Uint8List bytes,
+                required int sizeBytes,
+                required DateTime cachedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => AssetCacheTableCompanion.insert(
+                sha256: sha256,
+                mediaType: mediaType,
+                bytes: bytes,
+                sizeBytes: sizeBytes,
+                cachedAt: cachedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$AssetCacheTableTable, AssetCacheTableData>(
+                    table,
+                  ),
+                  BaseReferences<
+                    _$LocalDatabase,
+                    $AssetCacheTableTable,
+                    AssetCacheTableData
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$AssetCacheTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$LocalDatabase,
+      $AssetCacheTableTable,
+      AssetCacheTableData,
+      $$AssetCacheTableTableFilterComposer,
+      $$AssetCacheTableTableOrderingComposer,
+      $$AssetCacheTableTableAnnotationComposer,
+      $$AssetCacheTableTableCreateCompanionBuilder,
+      $$AssetCacheTableTableUpdateCompanionBuilder,
+      (
+        AssetCacheTableData,
+        BaseReferences<
+          _$LocalDatabase,
+          $AssetCacheTableTable,
+          AssetCacheTableData
+        >,
+      ),
+      AssetCacheTableData,
+      PrefetchHooks Function()
+    >;
 
 class $LocalDatabaseManager {
   final _$LocalDatabase _db;
@@ -5094,4 +5692,6 @@ class $LocalDatabaseManager {
       $$AudioCacheTableTableTableManager(_db, _db.audioCacheTable);
   $$ActivitySessionTableTableTableManager get activitySessionTable =>
       $$ActivitySessionTableTableTableManager(_db, _db.activitySessionTable);
+  $$AssetCacheTableTableTableManager get assetCacheTable =>
+      $$AssetCacheTableTableTableManager(_db, _db.assetCacheTable);
 }
