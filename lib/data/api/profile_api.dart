@@ -1,6 +1,20 @@
 import 'package:dio/dio.dart';
 
-/// `GET` / `PATCH /api/v1/me/profile`: the paired kid's own avatar
+import '../../features/profile/avatars.dart' show KidSex;
+
+/// What `GET /me/profile` says about the paired kid.
+class RemoteProfile {
+  const RemoteProfile({required this.avatarKey, required this.sex});
+
+  /// `''` when unset.
+  final String avatarKey;
+
+  /// Set by an adult in the portal, read-only here. A backend that
+  /// doesn't send it yet reads as [KidSex.unspecified].
+  final KidSex sex;
+}
+
+/// `GET` / `PATCH /api/v1/me/profile`: the paired kid's own avatar and sex
 /// (`Platforms/BACKEND_WORKORDER_PROFILE.md`, P1).
 ///
 /// Both calls are best effort and never throw. The avatar is cosmetic and
@@ -13,14 +27,19 @@ class ProfileApi {
 
   static const _path = '/api/v1/me/profile';
 
-  /// The backend's `avatar_key`: `''` when unset, null when unknown.
-  Future<String?> fetchAvatarKey({required String accessToken}) async {
+  /// The kid's profile, or null when it can't be read.
+  Future<RemoteProfile?> fetchProfile({required String accessToken}) async {
     try {
       final response = await dio.get<Map<String, Object?>>(
         _path,
         options: _auth(accessToken),
       );
-      return response.data?['avatar_key'] as String?;
+      final data = response.data;
+      if (data == null) return null;
+      return RemoteProfile(
+        avatarKey: data['avatar_key'] as String? ?? '',
+        sex: KidSex.parse(data['sex'] as String?),
+      );
     } on DioException {
       return null;
     }

@@ -44,12 +44,15 @@ class _FakeProgressApi extends ProgressApi {
 }
 
 class _FakeProfileApi extends ProfileApi {
-  _FakeProfileApi({this.remote}) : super(dio: Dio());
+  _FakeProfileApi({this.remote, this.sex = KidSex.unspecified})
+      : super(dio: Dio());
   final String? remote;
+  KidSex sex;
   final saved = <String>[];
 
   @override
-  Future<String?> fetchAvatarKey({required String accessToken}) async => remote;
+  Future<RemoteProfile?> fetchProfile({required String accessToken}) async =>
+      RemoteProfile(avatarKey: remote ?? '', sex: sex);
 
   @override
   Future<bool> saveAvatarKey({
@@ -59,6 +62,12 @@ class _FakeProfileApi extends ProfileApi {
     saved.add(avatarKey);
     return true;
   }
+}
+
+class _OfflineProfileApi extends _FakeProfileApi {
+  @override
+  Future<RemoteProfile?> fetchProfile({required String accessToken}) async =>
+      null;
 }
 
 QuestBoard _board(Set<Achievement> earned) => QuestBoard(
@@ -138,6 +147,35 @@ void main() {
       }
     });
 
+    test('every starter has a sex; the defaults follow it', () {
+      for (final a in avatarCatalog.where((a) => a.unlock is AvatarFree)) {
+        expect(a.sex, isNotNull, reason: a.key);
+      }
+      expect(avatarFor(defaultAvatarFor(KidSex.girl)).sex, KidSex.girl);
+      expect(avatarFor(defaultAvatarFor(KidSex.boy)).sex, KidSex.boy);
+      expect(defaultAvatarFor(KidSex.unspecified), defaultAvatarKey);
+    });
+
+    test('a kid is offered their own sex, and everyone is offered all', () {
+      final girl = avatarCatalog.where((a) => offeredTo(a, KidSex.girl));
+      final boy = avatarCatalog.where((a) => offeredTo(a, KidSex.boy));
+      expect(girl.map((a) => a.key), containsAll(['kid_wavy', 'kid_glasses']));
+      expect(girl.map((a) => a.key), isNot(contains('kid_curly')));
+      expect(boy.map((a) => a.key), contains('kid_curly'));
+      expect(boy.map((a) => a.key), isNot(contains('kid_wavy')));
+      expect(
+        avatarCatalog.where((a) => offeredTo(a, KidSex.unspecified)),
+        hasLength(avatarCatalog.length),
+      );
+    });
+
+    test('the backend\'s sex value parses, unknown is unspecified', () {
+      expect(KidSex.parse('girl'), KidSex.girl);
+      expect(KidSex.parse('boy'), KidSex.boy);
+      expect(KidSex.parse(''), KidSex.unspecified);
+      expect(KidSex.parse(null), KidSex.unspecified);
+    });
+
     test('an unknown key draws the default', () {
       expect(avatarFor('from_a_newer_app').key, defaultAvatarKey);
       expect(avatarFor('').key, defaultAvatarKey);
@@ -184,6 +222,50 @@ void main() {
       expect(await AvatarStore(db, kidId: 'k1').selected(), 'tuque');
     });
 
+    test('a boy with no choice yet wears a boy avatar, not Léa', () async {
+      final db = LocalDatabase.memory();
+      addTearDown(db.close);
+      final c = _container(
+        db: db,
+        profileApi: _FakeProfileApi(sex: KidSex.boy),
+      );
+      addTearDown(c.dispose);
+
+      final state = await _settle(c);
+      expect(state.selected, 'kid_curly');
+      expect(state.offered.map((a) => a.key), isNot(contains('kid_wavy')));
+      expect(await AvatarStore(db, kidId: 'k1').sex(), KidSex.boy);
+    });
+
+    test('an avatar from before the sex was set stays on, but is not offered',
+        () async {
+      final db = LocalDatabase.memory();
+      addTearDown(db.close);
+      await AvatarStore(db, kidId: 'k1').select('kid_wavy');
+      final api = _FakeProfileApi(sex: KidSex.boy);
+      final c = _container(db: db, profileApi: api);
+      addTearDown(c.dispose);
+
+      final state = await _settle(c);
+      expect(state.selected, 'kid_wavy');
+      expect(state.offered.map((a) => a.key), isNot(contains('kid_wavy')));
+
+      // Nor can it be picked again by key.
+      await c.read(avatarControllerProvider.notifier).select('kid_glasses');
+      expect(c.read(selectedAvatarKeyProvider), 'kid_wavy');
+      expect(api.saved, isEmpty);
+    });
+
+    test('the cached sex holds offline', () async {
+      final db = LocalDatabase.memory();
+      addTearDown(db.close);
+      await AvatarStore(db, kidId: 'k1').setSex(KidSex.boy);
+      final c = _container(db: db, profileApi: _OfflineProfileApi());
+      addTearDown(c.dispose);
+
+      expect((await _settle(c)).selected, 'kid_curly');
+    });
+
     test('a locked avatar is refused', () async {
       final db = LocalDatabase.memory();
       addTearDown(db.close);
@@ -204,10 +286,16 @@ void main() {
       WidgetTester tester, {
       int? level,
       Set<Achievement> earned = const {},
+      KidSex sex = KidSex.unspecified,
     }) async {
       final db = LocalDatabase.memory();
       addTearDown(db.close);
-      final c = _container(db: db, level: level, earned: earned);
+      final c = _container(
+        db: db,
+        level: level,
+        earned: earned,
+        profileApi: _FakeProfileApi(sex: sex),
+      );
       addTearDown(c.dispose);
       await tester.pumpWidget(
         UncontrolledProviderScope(
@@ -254,6 +342,15 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(c.read(selectedAvatarKeyProvider), 'kid_braids');
+    });
+
+    testWidgets('a boy is shown only boy starters', (tester) async {
+      await pumpPicker(tester, level: 1, sex: KidSex.boy);
+
+      expect(find.byKey(const ValueKey('avatar-kid_curly')), findsOneWidget);
+      expect(find.byKey(const ValueKey('avatar-kid_freckles')), findsOneWidget);
+      expect(find.byKey(const ValueKey('avatar-kid_wavy')), findsNothing);
+      expect(find.byKey(const ValueKey('avatar-kid_braids')), findsNothing);
     });
   });
 }

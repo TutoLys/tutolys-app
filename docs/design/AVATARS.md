@@ -25,19 +25,33 @@ app's mascot and is never a kid's avatar.
 Six, so every child can pick one that looks like them. A choice of who you
 are is never locked behind play.
 
-| # | File | Art idea |
-|---|---|---|
-| 1 | `avatar-kid-wavy.webp` | **The existing Léa** (`asset-profil.png`), re-exported at 512 with alpha. The default. |
-| 2 | `avatar-kid-curly.webp` | Boy, dark skin, short black curly hair, big smile, blue hoodie |
-| 3 | `avatar-kid-glasses.webp` | Kid with round glasses, straight black bob, light-tan skin, blue hoodie |
-| 4 | `avatar-kid-hijab.webp` | Girl in a blue hijab, warm brown skin, blue hoodie |
-| 5 | `avatar-kid-freckles.webp` | Boy, red hair, freckles, gap-toothed grin, blue hoodie |
-| 6 | `avatar-kid-braids.webp` | Girl, medium-dark skin, two long braids with blue beads, blue hoodie |
+**Avatars follow the kid's sex** (Hafid, 2026-10-25). An adult sets it in
+the portal (`Kid.sex`: girl, boy, or unspecified); a girl is offered girl
+avatars, a boy boy avatars, and an unspecified kid all of them. The
+default follows it too: Léa for girls, `kid_curly` for boys.
+
+| # | File | Sex | Art idea |
+|---|---|---|---|
+| 1 | `avatar-kid-wavy.webp` | girl | **The existing Léa** (`asset-profil.png`), re-exported at 512 with alpha. The girls' default. |
+| 2 | `avatar-kid-curly.webp` | boy | Boy, dark skin, short black curly hair, big smile, blue hoodie. The boys' default. |
+| 3 | `avatar-kid-glasses.webp` | girl | Girl with round glasses, straight black bob, light-tan skin, blue hoodie |
+| 4 | `avatar-kid-hijab.webp` | girl | Girl in a blue hijab, warm brown skin, blue hoodie |
+| 5 | `avatar-kid-freckles.webp` | boy | Boy, red hair, freckles, gap-toothed grin, blue hoodie |
+| 6 | `avatar-kid-braids.webp` | girl | Girl, medium-dark skin, two long braids with blue beads, blue hoodie |
+
+**Boys are short of starters**: one drawn (`kid_curly`), one planned
+(`kid_freckles`), against four for girls. More boy starters are needed;
+each is a new key with `sex: KidSex.boy`.
 
 ## Unlockables: earned by playing
 
 Each one is the kid in a costume, so it stays a "me" and not a different
 character. Unlocks are recorded once and never taken back.
+
+They have **no sex in the catalog yet**, so every kid is offered them. When
+the art comes, either draw one neutral version, or draw a girl and a boy
+version as two keys (`astronaut_girl`, `astronaut_boy`) with the same
+unlock rule and tag each.
 
 | # | File | Name (FR) | Unlocked by | Art idea |
 |---|---|---|---|---|
@@ -77,8 +91,9 @@ missing from the starters: #4 hijab, #5 freckles, #6 braids.
    about 40–50 KB) to `tutolys-app/assets/images/avatar-<key>.webp`.
    Don't ship the 1.2–1.5 MB PNGs: they go in every build, web included.
 3. Add or fill one line in `avatarCatalog`
-   (`lib/features/profile/avatars.dart`): the key, the unlock rule, and
-   the asset. For an unlockable, also add its name to `avatarName` in
+   (`lib/features/profile/avatars.dart`): the key, the unlock rule, the
+   sex (`sex: KidSex.girl` / `KidSex.boy`, or none for everyone), and the
+   asset. For an unlockable, also add its name to `avatarName` in
    `strings.dart` (FR and EN).
 4. The key (`^[a-z0-9][a-z0-9_]{0,63}$`) is what the backend stores in
    `Kid.avatar_key`, so it's **permanent once shipped**. The backend has

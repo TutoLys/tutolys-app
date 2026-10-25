@@ -33,8 +33,11 @@ class AvatarPicker extends ConsumerWidget {
     final p = VillagePalette.of(context);
     final state = ref.watch(avatarControllerProvider).value;
     final selected = state?.selected ?? defaultAvatarKey;
-    final starters = avatarCatalog.where((a) => a.unlock is AvatarFree);
-    final unlockables = avatarCatalog.where((a) => a.unlock is! AvatarFree);
+    // Only what this kid's sex is offered. A worn avatar outside that list
+    // (picked before the sex was set) stays on, but isn't offered again.
+    final offered = state?.offered ?? avatarCatalog;
+    final starters = offered.where((a) => a.unlock is AvatarFree);
+    final unlockables = offered.where((a) => a.unlock is! AvatarFree);
 
     Widget grid(Iterable<AvatarDef> avatars) => Wrap(
           spacing: Space.sm,

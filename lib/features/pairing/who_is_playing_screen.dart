@@ -15,11 +15,8 @@ import 'pairing_controller.dart';
 final kidAvatarKeyProvider =
     FutureProvider.family<String, String>((ref, kidId) async {
   ref.watch(selectedAvatarKeyProvider);
-  final selected = await AvatarStore(
-    ref.watch(localDatabaseProvider),
-    kidId: kidId,
-  ).selected();
-  return selected ?? defaultAvatarKey;
+  final store = AvatarStore(ref.watch(localDatabaseProvider), kidId: kidId);
+  return await store.selected() ?? defaultAvatarFor(await store.sex());
 });
 
 /// "Qui joue ?": one tile per kid paired on this device, plus "Ajouter un

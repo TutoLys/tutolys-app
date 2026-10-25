@@ -32,13 +32,34 @@ class AvatarForAchievement extends AvatarUnlock {
   final Achievement achievement;
 }
 
+/// The kid's sex, as an adult set it in the portal (`Kid.sex`). The device
+/// only ever reads it. [unspecified] covers kids created before the field
+/// existed, and a backend that doesn't send it yet.
+enum KidSex {
+  girl,
+  boy,
+  unspecified;
+
+  static KidSex parse(String? raw) => switch (raw) {
+        'girl' => girl,
+        'boy' => boy,
+        _ => unspecified,
+      };
+
+  String get wire => this == unspecified ? '' : name;
+}
+
 /// One avatar in the catalog (`docs/design/AVATARS.md`).
 class AvatarDef {
-  const AvatarDef(this.key, this.unlock, {this.asset});
+  const AvatarDef(this.key, this.unlock, {this.sex, this.asset});
 
   /// Stored as `Kid.avatar_key` on the backend. Never renamed once shipped.
   final String key;
   final AvatarUnlock unlock;
+
+  /// Who it's offered to. Null means everyone: the unlockables, until
+  /// their art says otherwise.
+  final KidSex? sex;
 
   /// The bundled art under `assets/images/`, or null while it isn't drawn
   /// yet. `KidAvatar` draws a placeholder face for a null asset, so the
@@ -47,18 +68,31 @@ class AvatarDef {
 }
 
 const defaultAvatarKey = 'kid_wavy';
+const _defaultBoyAvatarKey = 'kid_curly';
+
+/// What a kid wears before choosing. A boy never defaults to Léa.
+String defaultAvatarFor(KidSex sex) =>
+    sex == KidSex.boy ? _defaultBoyAvatarKey : defaultAvatarKey;
+
+/// Whether the picker offers [a] to a kid of [sex]. An unspecified kid is
+/// offered everything.
+bool offeredTo(AvatarDef a, KidSex sex) =>
+    sex == KidSex.unspecified || a.sex == null || a.sex == sex;
 
 /// The catalog, in the picker's order: starters, then unlockables from
 /// easiest to rarest. Keys match `docs/design/AVATARS.md`, which also says
 /// how to add one: a 512px webp in `assets/images/`, plus one line here.
 /// A key is stored by the backend, so it is never renamed once shipped.
 const avatarCatalog = <AvatarDef>[
-  AvatarDef(defaultAvatarKey, AvatarFree(), asset: 'avatar-kid-wavy.webp'),
-  AvatarDef('kid_curly', AvatarFree(), asset: 'avatar-kid-curly.webp'),
-  AvatarDef('kid_glasses', AvatarFree(), asset: 'avatar-kid-glasses.webp'),
-  AvatarDef('kid_hijab', AvatarFree()),
-  AvatarDef('kid_freckles', AvatarFree()),
-  AvatarDef('kid_braids', AvatarFree()),
+  AvatarDef(defaultAvatarKey, AvatarFree(),
+      sex: KidSex.girl, asset: 'avatar-kid-wavy.webp'),
+  AvatarDef(_defaultBoyAvatarKey, AvatarFree(),
+      sex: KidSex.boy, asset: 'avatar-kid-curly.webp'),
+  AvatarDef('kid_glasses', AvatarFree(),
+      sex: KidSex.girl, asset: 'avatar-kid-glasses.webp'),
+  AvatarDef('kid_hijab', AvatarFree(), sex: KidSex.girl),
+  AvatarDef('kid_freckles', AvatarFree(), sex: KidSex.boy),
+  AvatarDef('kid_braids', AvatarFree(), sex: KidSex.girl),
   AvatarDef('tuque', AvatarAtLevel(2)),
   AvatarDef('camper', AvatarForAchievement(Achievement.streak3)),
   AvatarDef('astronaut', AvatarAtLevel(3)),
@@ -114,8 +148,15 @@ class AvatarStore {
 
   static const _selectedKey = 'avatar.selected';
   static const _unlockedKey = 'avatar.unlocked';
+  static const _sexKey = 'kid.sex';
 
   Future<String?> selected() => _read(_selectedKey);
+
+  /// The last sex the backend reported, so the default and the picker
+  /// follow it offline and on "Qui joue ?".
+  Future<KidSex> sex() async => KidSex.parse(await _read(_sexKey));
+
+  Future<void> setSex(KidSex sex) => _write(_sexKey, sex.wire);
 
   Future<void> select(String key) => _write(_selectedKey, key);
 
@@ -159,12 +200,24 @@ class AvatarStore {
 
 /// What Profil's picker and every [KidAvatar] needs.
 class AvatarState {
-  const AvatarState({required this.selected, required this.unlocked});
+  const AvatarState({
+    required this.selected,
+    required this.unlocked,
+    this.sex = KidSex.unspecified,
+  });
 
+  /// What the kid wears. It can be one the picker no longer offers: an
+  /// avatar chosen before the kid's sex was set stays on until they pick
+  /// another (ADR 0024).
   final String selected;
   final Set<String> unlocked;
+  final KidSex sex;
 
   bool isUnlocked(String key) => unlocked.contains(key);
+
+  /// The catalog as the picker shows it to this kid.
+  List<AvatarDef> get offered =>
+      [for (final a in avatarCatalog) if (offeredTo(a, sex)) a];
 }
 
 final profileApiProvider = Provider<ProfileApi>(
@@ -198,31 +251,41 @@ class AvatarController extends AsyncNotifier<AvatarState> {
       earnedAvatars(level: level, has: (a) => board?.has(a) ?? false),
     );
 
+    // Read on every build, not only the first: an adult can set the sex
+    // in the portal long after pairing. Offline keeps the cached value.
+    final remote = await _remote();
+    var sex = await store.sex();
+    if (remote?.sex case final reported? when reported != sex) {
+      sex = reported;
+      await store.setSex(sex);
+    }
+
     var selected = await store.selected();
-    if (selected == null) {
-      final remote = await _remoteKey();
-      if (remote != null && remote.isNotEmpty) {
-        selected = remote;
-        await store.select(remote);
-      }
+    final remoteKey = remote?.avatarKey;
+    if (selected == null && remoteKey != null && remoteKey.isNotEmpty) {
+      selected = remoteKey;
+      await store.select(remoteKey);
     }
     return AvatarState(
-      selected: selected ?? defaultAvatarKey,
+      selected: selected ?? defaultAvatarFor(sex),
       unlocked: unlocked,
+      sex: sex,
     );
   }
 
-  Future<String?> _remoteKey() async {
+  Future<RemoteProfile?> _remote() async {
     final token = ref.read(sessionControllerProvider).accessToken;
     if (token == null) return null;
-    return ref.read(profileApiProvider).fetchAvatarKey(accessToken: token);
+    return ref.read(profileApiProvider).fetchProfile(accessToken: token);
   }
 
-  /// Wear [key]. Locked avatars are refused: the picker never offers one,
-  /// and this is the one place that would let it through.
+  /// Wear [key]. Locked avatars, and avatars not offered to this kid's
+  /// sex, are refused: the picker never offers either, and this is the one
+  /// place that would let one through.
   Future<void> select(String key) async {
     final current = state.value;
     if (current == null || !current.isUnlocked(key)) return;
+    if (!offeredTo(avatarFor(key), current.sex)) return;
     await ref.read(avatarStoreProvider).select(key);
     state = AsyncData(AvatarState(selected: key, unlocked: current.unlocked));
     // Best effort: offline, or a backend without the endpoint yet, leaves

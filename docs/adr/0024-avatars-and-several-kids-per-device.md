@@ -51,6 +51,22 @@ a 404 keeps it local.
   A server allowlist would also make an older backend reject a newer
   app's avatar.
 
+**Avatars follow the kid's sex** (Hafid's decision, 2026-10-25).
+- `Kid.sex` (girl, boy, or empty) is set by an adult in the portal and is
+  read-only on the device. The app reads it from `GET /me/profile` on every
+  avatar refresh, not only the first, because an adult may set it long
+  after pairing, and caches it per kid (`app_state` `kid.sex`) so the
+  default and "Qui joue ?" follow it offline.
+- Each starter carries a sex in the catalog. The picker offers only the
+  kid's own; an unspecified kid is offered everything. Unlockables carry
+  no sex until their art exists, so everyone is offered them.
+- The default follows the sex: Léa for girls and unspecified kids,
+  `kid_curly` for boys.
+- **An avatar worn before the sex was set stays on.** It isn't taken away,
+  because swapping a kid's face without them doing anything is jarring and
+  the choice was legitimate when made. It just isn't offered again in the
+  picker, and `select` refuses it, so once the kid picks another it's gone.
+
 **Several kids per device.** `SessionStore` holds a list of
 `(kid, device_token)` plus the active kid id, in the secure store. The
 old single-pairing keys migrate on first read, the new list is written
