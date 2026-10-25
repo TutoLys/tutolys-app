@@ -256,6 +256,9 @@ abstract class Strings {
   String get streakShieldNone;
   String get streakTabPersonal;
   String get backToQuests;
+  String get questsViewQuests;
+  String get questsViewSerie;
+  String get questsSeeStreak;
 
   /// A label only: the design's greyed-out tab. No social feature (#12).
   String get streakTabFriends;
@@ -846,6 +849,15 @@ class _FrenchStrings extends Strings {
 
   @override
   String get backToQuests => 'Retour aux quêtes';
+
+  @override
+  String get questsViewQuests => 'Mes quêtes';
+
+  @override
+  String get questsViewSerie => 'Ma série';
+
+  @override
+  String get questsSeeStreak => 'Voir ma série';
 
   @override
   String get streakTabFriends => 'Entre amis';
@@ -1476,6 +1488,15 @@ class _EnglishStrings extends Strings {
 
   @override
   String get backToQuests => 'Back to quests';
+
+  @override
+  String get questsViewQuests => 'My quests';
+
+  @override
+  String get questsViewSerie => 'My streak';
+
+  @override
+  String get questsSeeStreak => 'See my streak';
 
   @override
   String get streakTabFriends => 'With friends';

@@ -50,7 +50,54 @@ class _QuestsScreenState extends ConsumerState<QuestsScreen> {
     final gap = compact ? Space.sm : 18.0;
     final padding = EdgeInsets.all(compact ? Space.md : Space.lg);
 
-    if (_serie && played != null) {
+    final serie = _serie && played != null;
+
+    // Shared by both views: where you are, and the way to the other one.
+    final header = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          t.questsEyebrow.toUpperCase(),
+          style: TextStyle(
+            fontFamily: VillageType.display,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.66,
+            color: p.inkMuted,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: Space.md,
+          runSpacing: Space.sm,
+          children: [
+            Text(
+              t.questsTitle,
+              style: TextStyle(
+                fontFamily: VillageType.display,
+                fontSize: compact ? 17 : 21,
+                fontWeight: FontWeight.w700,
+                color: p.ink,
+              ),
+            ),
+            // Scales down rather than overflowing on a narrow phone.
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: QuestsViewSwitch(
+                serie: serie,
+                streakDays: progress.currentStreakDays,
+                onSelect: played == null ? null : _showSerie,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: compact ? Space.sm : 18),
+      ],
+    );
+
+    if (serie) {
       return SingleChildScrollView(
         // Its own key, so opening it starts at the top, not wherever the
         // quest list was scrolled to.
@@ -59,18 +106,25 @@ class _QuestsScreenState extends ConsumerState<QuestsScreen> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 1040),
-            child: StreakDetail(
-              streakDays: progress.currentStreakDays,
-              freezesAvailable: progress.freezesAvailable,
-              played: played,
-              board: board,
-              onClose: () => _showSerie(false),
-              onOpenPath: onOpenPath == null
-                  ? null
-                  : () {
-                      _showSerie(false);
-                      onOpenPath();
-                    },
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                header,
+                StreakDetail(
+                  streakDays: progress.currentStreakDays,
+                  freezesAvailable: progress.freezesAvailable,
+                  played: played,
+                  board: board,
+                  onClose: () => _showSerie(false),
+                  onOpenPath: onOpenPath == null
+                      ? null
+                      : () {
+                          _showSerie(false);
+                          onOpenPath();
+                        },
+                ),
+                const SizedBox(height: Space.xl),
+              ],
             ),
           ),
         ),
@@ -86,27 +140,7 @@ class _QuestsScreenState extends ConsumerState<QuestsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                t.questsEyebrow.toUpperCase(),
-                style: TextStyle(
-                  fontFamily: VillageType.display,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.66,
-                  color: p.inkMuted,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                t.questsTitle,
-                style: TextStyle(
-                  fontFamily: VillageType.display,
-                  fontSize: compact ? 17 : 21,
-                  fontWeight: FontWeight.w700,
-                  color: p.ink,
-                ),
-              ),
-              SizedBox(height: compact ? Space.sm : 18),
+              header,
               StreakCard(
                 streakDays: progress.currentStreakDays,
                 estimated: progress.isStreakEstimated,
@@ -154,6 +188,124 @@ class _QuestsScreenState extends ConsumerState<QuestsScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// "Mes quêtes | Ma série": two pills under the page title, on both views,
+/// so the Série page is visible before anyone thinks to tap the streak card
+/// and it is always clear which view is showing. The design reached Série
+/// only through the card; on its own that had no visible affordance.
+class QuestsViewSwitch extends StatelessWidget {
+  const QuestsViewSwitch({
+    super.key,
+    required this.serie,
+    required this.streakDays,
+    this.onSelect,
+  });
+
+  final bool serie;
+  final int? streakDays;
+
+  /// Null while the play history is still loading; the pills are inert.
+  final ValueChanged<bool>? onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.s;
+    final p = VillagePalette.of(context);
+    Widget pill({
+      required Key key,
+      required bool selected,
+      required String asset,
+      required String label,
+      String? count,
+      required bool value,
+    }) {
+      return Semantics(
+        button: true,
+        selected: selected,
+        child: Material(
+          key: key,
+          color: selected ? p.surface : Colors.transparent,
+          elevation: selected ? 2 : 0,
+          shadowColor: p.shadowSmall,
+          borderRadius: BorderRadius.circular(999),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(999),
+            onTap: onSelect == null || selected ? null : () => onSelect!(value),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.asset('assets/images/$asset', width: 16, height: 16),
+                  const SizedBox(width: 6),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontFamily: VillageType.display,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      color: selected ? p.quebecBlueBright : p.inkMuted,
+                    ),
+                  ),
+                  if (count != null) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: p.goldPale,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        count,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: p.ink,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: p.track,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          pill(
+            key: const ValueKey('view-quests'),
+            selected: !serie,
+            asset: 'asset-target.webp',
+            label: t.questsViewQuests,
+            value: false,
+          ),
+          const SizedBox(width: 4),
+          pill(
+            key: const ValueKey('view-serie'),
+            selected: serie,
+            asset: 'asset-flame.webp',
+            label: t.questsViewSerie,
+            count: streakDays == null ? null : '$streakDays',
+            value: true,
+          ),
+        ],
       ),
     );
   }
@@ -263,6 +415,27 @@ class StreakCard extends StatelessWidget {
             spread: compact,
           );
 
+    // The visible "this opens something" cue — the card alone looked like
+    // every other panel.
+    final see = onTap == null
+        ? null
+        : Row(
+            key: const ValueKey('streak-see'),
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                t.questsSeeStreak,
+                style: TextStyle(
+                  fontFamily: VillageType.display,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: p.quebecBlueBright,
+                ),
+              ),
+              Icon(Icons.chevron_right, size: 18, color: p.quebecBlueBright),
+            ],
+          );
+
     return Semantics(
       button: onTap != null,
       hint: onTap == null ? null : t.questsStreakOpenHint,
@@ -280,6 +453,10 @@ class StreakCard extends StatelessWidget {
                     ],
                   ),
                   if (week != null) ...[const SizedBox(height: Space.xs), week],
+                  if (see != null) ...[
+                    const SizedBox(height: Space.xs),
+                    Align(alignment: Alignment.centerRight, child: see),
+                  ],
                 ],
               )
             : Row(
@@ -288,6 +465,7 @@ class StreakCard extends StatelessWidget {
                   const SizedBox(width: 18),
                   Expanded(child: text),
                   ?week,
+                  if (see != null) ...[const SizedBox(width: 18), see],
                 ],
               ),
       ),

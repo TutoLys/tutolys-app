@@ -176,6 +176,62 @@ void main() {
     });
   });
 
+  group('getting to Série', () {
+    testWidgets('the switch shows both views and the streak count', (
+      tester,
+    ) async {
+      _wide(tester);
+      await tester.pumpWidget(_app(progress: _snapshot()));
+      await tester.pumpAndSettle();
+
+      expect(find.text(fr.questsViewQuests), findsOneWidget);
+      expect(find.text(fr.questsViewSerie), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('view-serie')),
+          matching: find.text('4'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('streak-see')), findsOneWidget);
+    });
+
+    testWidgets('Ma série opens it; Mes quêtes comes back', (tester) async {
+      _wide(tester);
+      await tester.pumpWidget(_app(progress: _snapshot()));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('view-serie')));
+      await tester.pumpAndSettle();
+      expect(find.text(fr.streakDetailHeadline(4)), findsOneWidget);
+      // The switch stays, now marking where you are.
+      expect(find.byKey(const ValueKey('view-quests')), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('view-quests')));
+      await tester.pumpAndSettle();
+      expect(find.text(fr.villageQuestsTitle), findsOneWidget);
+    });
+
+    testWidgets('"Voir ma série" opens it too', (tester) async {
+      _wide(tester);
+      await tester.pumpWidget(_app(progress: _snapshot()));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(fr.questsSeeStreak));
+      await tester.pumpAndSettle();
+      expect(find.text(fr.streakDetailHeadline(4)), findsOneWidget);
+    });
+
+    testWidgets('the header and card fit a phone', (tester) async {
+      _phone(tester);
+      await tester.pumpWidget(_app(progress: _snapshot()));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const ValueKey('view-serie')), findsOneWidget);
+      expect(find.byKey(const ValueKey('streak-see')), findsOneWidget);
+    });
+  });
+
   group('quêtes du jour', () {
     testWidgets('three quests, each with its progress and XP reward', (
       tester,
@@ -239,7 +295,9 @@ void main() {
 
     testWidgets('the weekly badge counts this week\'s quests', (tester) async {
       _wide(tester);
-      await tester.pumpWidget(_app(progress: _snapshot(), board: _board(week: 7)));
+      await tester.pumpWidget(
+        _app(progress: _snapshot(), board: _board(week: 7)),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text(fr.weeklyBadgeTitle), findsOneWidget);
@@ -263,28 +321,33 @@ void main() {
       expect(find.text(fr.weeklyBadgeEarned), findsOneWidget);
     });
 
-    testWidgets('recent achievements: earned first, newest first, then locked', (
-      tester,
-    ) async {
-      _wide(tester);
-      await tester.pumpWidget(
-        _app(
-          progress: _snapshot(),
-          board: _board(
-            unlocked: {'streak3': '2026-10-20', 'questMaster': '2026-10-21'},
+    testWidgets(
+      'recent achievements: earned first, newest first, then locked',
+      (tester) async {
+        _wide(tester);
+        await tester.pumpWidget(
+          _app(
+            progress: _snapshot(),
+            board: _board(
+              unlocked: {'streak3': '2026-10-20', 'questMaster': '2026-10-21'},
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text(fr.recentTitle), findsOneWidget);
-      final master = tester.getTopLeft(find.byKey(const ValueKey('recent-questMaster')));
-      final streak = tester.getTopLeft(find.byKey(const ValueKey('recent-streak3')));
-      expect(master.dx, lessThan(streak.dx));
-      for (final i in [2, 3, 4]) {
-        expect(find.byKey(ValueKey('recent-locked-$i')), findsOneWidget);
-      }
-    });
+        expect(find.text(fr.recentTitle), findsOneWidget);
+        final master = tester.getTopLeft(
+          find.byKey(const ValueKey('recent-questMaster')),
+        );
+        final streak = tester.getTopLeft(
+          find.byKey(const ValueKey('recent-streak3')),
+        );
+        expect(master.dx, lessThan(streak.dx));
+        for (final i in [2, 3, 4]) {
+          expect(find.byKey(ValueKey('recent-locked-$i')), findsOneWidget);
+        }
+      },
+    );
 
     testWidgets('lays out on a phone without overflow', (tester) async {
       _phone(tester);
@@ -293,7 +356,11 @@ void main() {
           progress: _snapshot(),
           board: _board(
             quests: buildDailyQuests(
-              challenge: const DailyQuestDto(target: 3, progress: 1, completed: false),
+              challenge: const DailyQuestDto(
+                target: 3,
+                progress: 1,
+                completed: false,
+              ),
               exercisesToday: 1,
               msToday: 0,
             ),
@@ -492,7 +559,9 @@ void main() {
       expect(find.text(fr.streakDetailCalendar), findsOneWidget);
     });
 
-    testWidgets('the tab row fits the full-screen phone layout', (tester) async {
+    testWidgets('the tab row fits the full-screen phone layout', (
+      tester,
+    ) async {
       _phone(tester);
       await tester.pumpWidget(_app(progress: _snapshot()));
       await tester.pumpAndSettle();

@@ -156,3 +156,14 @@ It is not a dialog or a pushed route.
 The design's own content is unchanged: hero, tabs, nudge, calendar, goal
 and rewards. Following the nudge to the Carte returns the tab to its quest
 list.
+
+**Getting there (same day).** Hafid: "Nothing indicates that I can access
+another screen." The design reaches Série only through the streak card,
+and that card looked like every other panel. Two affordances were added:
+
+- **A "Mes quêtes | Ma série 🔥N" pill switch under the page title, on both
+  views.** The second screen is visible before anyone taps anything, and
+  the selected pill shows which view you're on.
+- **A "Voir ma série ›" link on the streak card itself.**
+
+The back arrow in the Série hero stays as a third way back.
