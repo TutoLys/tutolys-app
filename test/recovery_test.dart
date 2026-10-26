@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -58,13 +60,40 @@ class _Path extends PathController {
 }
 
 void main() {
-  group('RecoveryScheduler', () {
-    test('backs off 5, 10, 20, 40, then 60 s, and stays at 60', () {
-      final s = RecoveryScheduler(retryAll: () async {});
-      expect(
-        [for (var i = 1; i <= 7; i++) s.backoffAfter(i).inSeconds],
-        [5, 10, 20, 40, 60, 60, 60],
-      );
+  group('RecoveryScheduler: jitter (scaling plan fix #1)', () {
+    test('every wait is between 5 and 60 s, and grows from 5', () {
+      final s = RecoveryScheduler(retryAll: () async {}, random: Random(7));
+      final waits = [
+        for (var i = 0; i < 50; i++) s.nextBackoff().inMilliseconds,
+      ];
+      expect(waits.every((w) => w >= 5000 && w <= 60000), isTrue);
+      expect(waits.first, lessThanOrEqualTo(15000), reason: '≤ 3 × 5 s');
+      expect(waits.reduce(max), greaterThan(40000), reason: 'reaches the cap');
+    });
+
+    test('a seeded generator gives the same waits; another seed differs', () {
+      List<int> run(int seed) {
+        final s = RecoveryScheduler(
+          retryAll: () async {},
+          random: Random(seed),
+        );
+        return [for (var i = 0; i < 8; i++) s.nextBackoff().inMilliseconds];
+      }
+
+      expect(run(1), run(1));
+      expect(run(1), isNot(run(2)));
+    });
+
+    test('a thousand devices failing together spread their first retry', () {
+      final firsts = {
+        for (var seed = 0; seed < 1000; seed++)
+          RecoveryScheduler(
+            retryAll: () async {},
+            random: Random(seed),
+          ).nextBackoff().inSeconds,
+      };
+      // 5–15 s, not all at 5 s.
+      expect(firsts.length, greaterThan(8));
     });
   });
 
@@ -99,8 +128,14 @@ void main() {
     expect(c.read(progressControllerProvider).currentStreakDays, isNull);
 
     // No tap, no reload: the scheduler keeps asking, further apart.
-    for (final wait in [5, 10, 20, 40]) {
-      await tester.pump(Duration(seconds: wait));
+    // Jittered waits: step a second at a time until the header catches up.
+    // Five 60 s waits is the slowest it can take.
+    for (
+      var t = 0;
+      t < 300 && c.read(progressControllerProvider).currentStreakDays == null;
+      t++
+    ) {
+      await tester.pump(const Duration(seconds: 1));
       await settleIo();
     }
     expect(progress.calls, 5, reason: '1 + 4 retries, the last one succeeds');
@@ -117,12 +152,18 @@ void main() {
     c.dispose();
   });
 
-  testWidgets('coming back to the app retries at once', (tester) async {
+  testWidgets('coming back to the app retries within the 3 s spread, once', (
+    tester,
+  ) async {
     var runs = 0;
-    final s = RecoveryScheduler(retryAll: () async => runs++);
+    final s = RecoveryScheduler(
+      retryAll: () async => runs++,
+      random: Random(3),
+    );
     addTearDown(s.dispose);
     s.nudge();
-    await tester.pump();
+    s.nudge(); // focus and visibility together: one retry
+    await tester.pump(const Duration(seconds: 3));
     expect(runs, 1);
   });
 

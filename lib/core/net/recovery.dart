@@ -16,18 +16,25 @@ import 'network_online.dart';
 /// Each reader (progress, the inbox, the Carte's sync, the token refresh)
 /// reports how its last call went:
 /// - After a failure, everything is retried on a capped backoff
-///   (5 s, 10 s, 20 s, 40 s, then every 60 s), forever.
+///   with decorrelated jitter: each wait is random between 5 s and three
+///   times the last, capped at 60 s, forever. Random so that 50,000
+///   devices failing together don't all come back in the same second
+///   (the scaling plan's fix #1).
 /// - The first success after a failure retries everything at once, so
 ///   the header catches up the moment the server answers.
 /// - Coming back to the app (focus, visibility) or the network coming back
-///   online retries everything at once too.
+///   online retries everything too, after a random 0–3 s, for the same
+///   reason: a school's Wi-Fi returning brings every tablet back at once.
 class RecoveryScheduler {
   RecoveryScheduler({
     required this.retryAll,
     this.enabled = true,
     this.first = const Duration(seconds: 5),
     this.cap = const Duration(seconds: 60),
-  });
+    this.nudgeSpread = const Duration(seconds: 3),
+    Random? random,
+  }) : _random = random ?? Random(),
+       _last = first;
 
   /// Re-runs every reader.
   final Future<void> Function() retryAll;
@@ -38,17 +45,26 @@ class RecoveryScheduler {
   final Duration first;
   final Duration cap;
 
+  /// The longest random wait before a nudge's retry.
+  final Duration nudgeSpread;
+  final Random _random;
+  Duration _last;
+
   int _failures = 0;
   Timer? _timer;
+  Timer? _nudgeTimer;
   bool _running = false;
   bool _disposed = false;
 
   bool get failing => _failures > 0;
 
-  /// The wait before the next retry, after [failures] failures in a row.
-  Duration backoffAfter(int failures) {
-    final ms = first.inMilliseconds * pow(2, max(0, failures - 1));
-    return Duration(milliseconds: min(ms.toInt(), cap.inMilliseconds));
+  /// The wait before the next retry: decorrelated jitter, random between
+  /// [first] and three times the last wait, never above [cap].
+  Duration nextBackoff() {
+    final lo = first.inMilliseconds;
+    final hi = max(lo, min(cap.inMilliseconds, _last.inMilliseconds * 3));
+    _last = Duration(milliseconds: lo + _random.nextInt(hi - lo + 1));
+    return _last;
   }
 
   /// Counts rounds, not readers: several reads failing together wait one
@@ -56,7 +72,7 @@ class RecoveryScheduler {
   void reportFailure() {
     if (_disposed || !enabled || _timer != null) return;
     _failures++;
-    _timer = Timer(backoffAfter(_failures), () {
+    _timer = Timer(nextBackoff(), () {
       _timer = null;
       unawaited(_retry());
     });
@@ -65,14 +81,23 @@ class RecoveryScheduler {
   void reportSuccess() {
     if (_disposed || !enabled || _failures == 0) return;
     _failures = 0;
+    _last = first;
     _timer?.cancel();
     _timer = null;
     unawaited(_retry());
   }
 
-  /// Focus, visibility or the network back: try now, whatever the state.
+  /// Focus, visibility or the network back: try soon, whatever the state,
+  /// after a random spread. Nudges close together share one retry.
   void nudge() {
-    if (enabled) unawaited(_retry());
+    if (!enabled || _disposed || _nudgeTimer != null) return;
+    final wait = Duration(
+      milliseconds: _random.nextInt(nudgeSpread.inMilliseconds + 1),
+    );
+    _nudgeTimer = Timer(wait, () {
+      _nudgeTimer = null;
+      unawaited(_retry());
+    });
   }
 
   Future<void> _retry() async {
@@ -91,6 +116,7 @@ class RecoveryScheduler {
   void dispose() {
     _disposed = true;
     _timer?.cancel();
+    _nudgeTimer?.cancel();
   }
 }
 
