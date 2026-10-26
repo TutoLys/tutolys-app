@@ -66,6 +66,7 @@ flutter:
     # Fetched when first played, so not part of the web's first download.
     - assets/sounds/music/
     - assets/sounds/sfx/
+    - assets/sounds/songs/
 
 # `dart run flutter_launcher_icons` regenerates web/icons/*.png from these.
 # Scoped to web only: Linux desktop has no Flutter-tooling icon pipeline (its

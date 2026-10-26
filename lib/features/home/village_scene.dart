@@ -208,6 +208,7 @@ class VillageScene extends StatelessWidget {
     required this.signSubtitle,
     this.greeting,
     this.onTapBuilding,
+    this.onTapMascot,
     super.key,
   });
 
@@ -218,6 +219,9 @@ class VillageScene extends StatelessWidget {
   /// What the fox says. Null hides the mascot entirely.
   final String? greeting;
   final ValueChanged<VillageBuilding>? onTapBuilding;
+
+  /// The fox was tapped (it sings, ADR 0035). Null: just decoration.
+  final VoidCallback? onTapMascot;
 
   @override
   Widget build(BuildContext context) {
@@ -265,7 +269,10 @@ class VillageScene extends StatelessWidget {
                     child: Transform.scale(
                       scale: scale,
                       alignment: Alignment.topLeft,
-                      child: _MascotGreeting(text: greeting!),
+                      child: _MascotGreeting(
+                        text: greeting!,
+                        onTapMascot: onTapMascot,
+                      ),
                     ),
                   ),
                 for (final b in buildings)
@@ -487,9 +494,10 @@ class _Pill extends StatelessWidget {
 
 /// The fox and its speech bubble, standing in the middle of the village.
 class _MascotGreeting extends StatelessWidget {
-  const _MascotGreeting({required this.text});
+  const _MascotGreeting({required this.text, this.onTapMascot});
 
   final String text;
+  final VoidCallback? onTapMascot;
 
   @override
   Widget build(BuildContext context) {
@@ -523,9 +531,36 @@ class _MascotGreeting extends StatelessWidget {
         ),
         Padding(
           padding: EdgeInsets.only(left: 24, top: 4),
-          child: BreathingMascot(height: 120),
+          child: TappableMascot(height: 120, onTap: onTapMascot),
         ),
       ],
+    );
+  }
+}
+
+/// The breathing fox, tappable when [onTap] is set: a button for screen
+/// readers, a pointer cursor, and the whole fox as the target.
+class TappableMascot extends StatelessWidget {
+  const TappableMascot({required this.height, this.onTap, super.key});
+
+  final double height;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final fox = BreathingMascot(height: height);
+    if (onTap == null) return fox;
+    return Semantics(
+      button: true,
+      label: context.s.mascotSingLabel,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: fox,
+        ),
+      ),
     );
   }
 }

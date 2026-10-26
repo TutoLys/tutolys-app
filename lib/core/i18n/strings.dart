@@ -58,6 +58,7 @@ abstract class Strings {
   String get bootPreviousRun;
   String get diagJournalTitle;
   String get diagEmpty;
+  String get mascotSingLabel;
 
   /// Screen-reader label for the launch progress bar.
   String get launchProgressLabel;
@@ -503,6 +504,9 @@ class _FrenchStrings extends Strings {
 
   @override
   String get diagEmpty => 'Aucune erreur enregistrée.';
+
+  @override
+  String get mascotSingLabel => 'Faire chanter TutoLys';
 
   @override
   String get launchProgressLabel => 'Chargement de TutoLys';
@@ -1427,6 +1431,9 @@ class _EnglishStrings extends Strings {
 
   @override
   String get diagEmpty => 'No errors recorded.';
+
+  @override
+  String get mascotSingLabel => 'Make TutoLys sing';
 
   @override
   String get launchProgressLabel => 'Loading TutoLys';

@@ -7,8 +7,9 @@ import '../../core/i18n/strings.dart';
 import '../pairing/pairing_controller.dart';
 import 'subject_progress.dart';
 import 'subject_strip.dart';
-import '../../core/widgets/breathing_mascot.dart';
 import 'village_scene.dart';
+import '../audio/app_sounds.dart' show mascotSongFor;
+import '../audio/music_director.dart';
 import '../quests/quest_board.dart';
 import '../quests/quests_screen.dart' show questTitle;
 
@@ -54,6 +55,12 @@ class VillageScreen extends ConsumerWidget {
     final t = context.s;
     final bySubject =
         ref.watch(subjectProgressProvider).value ?? <String, double>{};
+    // The fox sings in the app's language, not a subject's (ADR 0035).
+    void sing() => ref
+        .read(musicDirectorProvider)
+        .toggleSong(
+          mascotSongFor(Localizations.localeOf(context).languageCode),
+        );
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -83,6 +90,7 @@ class VillageScreen extends ConsumerWidget {
                     children: [
                       _MobileGreeting(
                         text: _greetingFor(t, kid?.displayName, board),
+                        onTapMascot: sing,
                       ),
                       const SizedBox(height: Space.md),
                       SubjectStrip(
@@ -111,6 +119,7 @@ class VillageScreen extends ConsumerWidget {
                           : t.gradeLabel(kid!.gradeLevel),
                       greeting: _greetingFor(t, kid?.displayName, board),
                       onTapBuilding: (b) => onOpenSubject?.call(b.subject),
+                      onTapMascot: sing,
                     ),
                   ),
                 );
@@ -539,9 +548,10 @@ class _QuestRow extends StatelessWidget {
 /// The fox and its line, on a phone — the scene's own greeting lives inside
 /// the village canvas, which mobile does not render.
 class _MobileGreeting extends StatelessWidget {
-  const _MobileGreeting({required this.text});
+  const _MobileGreeting({required this.text, this.onTapMascot});
 
   final String text;
+  final VoidCallback? onTapMascot;
 
   @override
   Widget build(BuildContext context) {
@@ -550,7 +560,7 @@ class _MobileGreeting extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        const BreathingMascot(height: 64),
+        TappableMascot(height: 64, onTap: onTapMascot),
         const SizedBox(width: Space.xs),
         Expanded(
           child: Container(

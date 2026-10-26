@@ -126,6 +126,72 @@ void main() {
     expect(audio.running, 1);
   });
 
+  group('the mascot song', () {
+    test('follows the app language', () {
+      expect(mascotSongFor('fr'), 'songs/mascot-fr.m4a');
+      expect(mascotSongFor('en'), 'songs/mascot-en.m4a');
+      expect(mascotSongFor('de'), 'songs/mascot-fr.m4a', reason: 'French first');
+    });
+
+    test('plays on the character channel and pauses the loop', () async {
+      music.shellShown();
+      music.toggleSong('songs/mascot-fr.m4a');
+      await pumpEventQueue();
+      final song = audio.requests.last;
+      expect(song.channel, AudioChannel.character);
+      expect((song.source as PrerecordedAudio).ref, 'songs/mascot-fr.m4a');
+      expect(music.singing, isTrue);
+      expect(music.playing, isFalse, reason: 'two pieces of music clash');
+      expect(audio.running, 1, reason: 'only the song');
+    });
+
+    test('a second tap stops it, never a second copy', () async {
+      music.shellShown();
+      music.toggleSong('songs/mascot-fr.m4a');
+      music.toggleSong('songs/mascot-fr.m4a');
+      await pumpEventQueue();
+      expect(music.singing, isFalse);
+      expect(
+        audio.requests.where((r) => r.channel == AudioChannel.character),
+        hasLength(1),
+      );
+      expect(music.playing, isTrue, reason: 'the loop comes back');
+      expect(audio.running, 1);
+    });
+
+    test('when the song ends by itself the loop comes back', () async {
+      music.shellShown();
+      music.toggleSong('songs/mascot-en.m4a');
+      await audio.stopChannel(AudioChannel.character);
+      await pumpEventQueue();
+      expect(music.singing, isFalse);
+      expect(music.playing, isTrue);
+    });
+
+    test('opening an activity or hiding the app stops it', () async {
+      music.shellShown();
+      music.toggleSong('songs/mascot-fr.m4a');
+      music.activityEntered();
+      await pumpEventQueue();
+      expect(music.singing, isFalse);
+      expect(audio.running, 0);
+      music.activityLeft();
+      music.toggleSong('songs/mascot-fr.m4a');
+      music.appHidden();
+      await pumpEventQueue();
+      expect(music.singing, isFalse);
+      expect(audio.running, 0);
+    });
+
+    test('sings even with the music toggle off: it was asked for', () async {
+      musicOn = false;
+      music.shellShown();
+      music.toggleSong('songs/mascot-fr.m4a');
+      await pumpEventQueue();
+      expect(music.singing, isTrue);
+    });
+  });
+
   group('bundled sounds', () {
     TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -143,12 +209,20 @@ void main() {
       }
     });
 
-    test('the celebration has the win jingle; right and retry are silent '
-        'until Hafid picks', () async {
+    test("every moment has Hafid's pick; there's no \"nooo\"", () async {
       expect(await appEffectBytes('activity_complete'), isNotNull);
-      expect(await appEffectBytes('answer_right'), isNull);
-      expect(await appEffectBytes('answer_retry'), isNull);
+      expect(await appEffectBytes('answer_right'), isNotNull);
+      expect(await appEffectBytes('answer_retry'), isNotNull);
       expect(await appEffectBytes('nooo'), isNull);
+    });
+
+    test('both mascot songs are in the bundle', () async {
+      for (final lang in ['fr', 'en']) {
+        final data = await rootBundle.load(
+          'assets/sounds/${mascotSongFor(lang)}',
+        );
+        expect(data.lengthInBytes, greaterThan(100000), reason: lang);
+      }
     });
 
     test(

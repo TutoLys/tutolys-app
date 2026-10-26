@@ -104,3 +104,63 @@ Windows' Media Foundation can't decode it.
   1,428,000 samples, the same as its source, with no leading silence.
 - Music is 64 kbps mono (about 245 KB per loop, slightly bigger than the
   Ogg). The jingle is 80 kbps (54 KB). The Ogg files are removed.
+
+## Revision 2026-10-26: Hafid's picks, and the mascot's song
+
+Hafid listened to every candidate (`Assets/Sounds/listen_all.html`) and
+picked:
+
+| moment | sound | file |
+|---|---|---|
+| right answer | `generated/right_b`, warm marimba | `sfx/answer-right.m4a` |
+| wrong answer | `generated/wrong_a`, soft low "boop-boop" | `sfx/answer-retry.m4a` |
+| end of lesson | `generated/hafid_win_matched`, his own jingle, levelled | `sfx/activity-complete.m4a` |
+| background | loops #4 (`…T23_16_40`) and #6 (`…T23_35_26`) | `music/village-1/2.m4a` |
+| Village mascot | `Joue avec TutoLys ! 2n style` / `Play with TutoLys!` | `songs/mascot-fr/en.m4a` |
+
+The right and retry slots are no longer silent. The background loops
+replace the two picked by measurement above. Loop #4 starts with 0.5 s
+of silence; it's trimmed before the seam is made.
+
+**`tools/sounds/build_app_sounds.py`** rebuilds every file from the
+masters, so the next swap is one line there:
+- AAC-LC .m4a, mono. Music 64 kbps, effects 80 kbps, songs 96 kbps.
+- Effects and songs at **-19 LUFS** (the generated set's level, 4 dB
+  under narration). Music at **-20 LUFS**, then 0.35 of master volume in
+  the app. The old jingle was -16; it now matches the other effects.
+- Loops: leading silence trimmed, then the last 250 ms folded into the
+  first at equal power. The jump at the wrap is 0.014 and 0.008, under
+  each track's own 99th-percentile sample step (0.035, 0.015). The
+  container's length is exact (1,403,184 samples for loop #4); the
+  ffmpeg command-line decoder appends 720 samples of encoder padding,
+  but browsers honour the container.
+- Songs are about 28 and 34 s, 340 and 415 KB. Fetched on first tap.
+
+### The mascot's song
+
+Tapping the fox in the Village scene (and on a phone, in the greeting
+row) plays the song **in the app's language**, not a subject's.
+- `MusicDirector.toggleSong`: a second tap while it plays **stops** it.
+  Never two copies.
+- The loop **pauses** while it sings, rather than ducking: two pieces of
+  music in different keys clash. The loop comes back from its start when
+  the song ends or is stopped.
+- It plays on the `character` channel, so a voice read aloud takes over
+  from it, and master volume applies. The music toggle doesn't silence
+  it: the child asked for it.
+- Opening an activity or hiding the app stops it.
+- The fox is a button for screen readers ("Faire chanter TutoLys").
+- This settles the "theme songs" proposal above for the Village only.
+  First launch, level-up and À propos stay unbuilt.
+
+### Clipping over Bluetooth
+
+Hafid hears the first part of sounds cut off, on a plain HTML page too.
+His output is a Bluetooth sink, which sleeps when idle. The keep-alive
+(ADR 0043) already covers every app sound on the web: all channels
+(narration, effects, music, the song) play through one shared
+`AudioContext`. `AudioOutputKeepAlive.armOnFirstGesture` holds the output
+awake from the first pointer-down for the whole session, and stops it
+while the app is hidden. Native targets play through audioplayers and
+have no keep-alive. A plain HTML page has none at all, which is why the
+listening page clips.

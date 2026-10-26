@@ -29,19 +29,64 @@ class MusicDirector {
   int _activities = 0;
   bool _hidden = false;
   PlaybackHandle? _playing;
+  PlaybackHandle? _song;
 
-  bool get shouldPlay => _shell && _activities == 0 && !_hidden && enabled();
+  bool get shouldPlay =>
+      _shell && _activities == 0 && !_hidden && _song == null && enabled();
 
   /// Whether a loop is running now, for tests.
   bool get playing => _playing != null;
 
+  /// Whether the mascot's song is playing.
+  bool get singing => _song != null;
+
   void shellShown() => _set(() => _shell = true);
   void shellGone() => _set(() => _shell = false);
-  void activityEntered() => _set(() => _activities++);
+  void activityEntered() {
+    _stopSong();
+    _set(() => _activities++);
+  }
+
   void activityLeft() =>
       _set(() => _activities = _activities > 0 ? _activities - 1 : 0);
-  void appHidden() => _set(() => _hidden = true);
+  void appHidden() {
+    _stopSong();
+    _set(() => _hidden = true);
+  }
+
   void appShown() => _set(() => _hidden = false);
+
+  /// The Village mascot was tapped: sing [songRef], or stop if it's
+  /// already singing. Never two copies at once. The loop pauses while it
+  /// sings (two pieces of music in different keys clash) and comes back
+  /// from its start afterwards. On the character channel, so a question
+  /// read aloud takes over from it, and master volume applies.
+  void toggleSong(String songRef) {
+    if (_song != null) {
+      _stopSong();
+      return;
+    }
+    final handle = _audio.play(
+      AudioRequest(
+        source: PrerecordedAudio(exerciseId: appAudioScope, ref: songRef),
+        channel: AudioChannel.character,
+      ),
+    );
+    _set(() => _song = handle);
+    unawaited(
+      handle.done.then((_) {
+        if (identical(_song, handle)) _set(() => _song = null);
+      }),
+    );
+  }
+
+  void _stopSong() {
+    final song = _song;
+    if (song == null) return;
+    _song = null;
+    unawaited(song.stop());
+    _apply();
+  }
 
   /// Re-checks after the music toggle changes.
   void settingsChanged() => _apply();

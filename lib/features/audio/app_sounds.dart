@@ -13,9 +13,15 @@ import '../../core/diagnostics/diag_log.dart';
 /// a lesson's synced clip.
 const appAudioScope = 'app';
 
-/// The background loops, picked from Hafid's six (ADR 0035). Each was
-/// crossfaded end into start, so it repeats without a seam.
+/// The background loops, Hafid's picks from his six (ADR 0035, #4 and #6).
+/// Each was crossfaded end into start, so it repeats without a seam.
+/// Rebuilt from the masters by `tools/sounds/build_app_sounds.py`.
 const musicTracks = ['music/village-1.m4a', 'music/village-2.m4a'];
+
+/// The song the Village mascot sings when tapped, in the app's language
+/// (not the subject's: it isn't a lesson).
+String mascotSongFor(String languageCode) =>
+    languageCode == 'en' ? 'songs/mascot-en.m4a' : 'songs/mascot-fr.m4a';
 
 /// One loop per launch, so the village doesn't sound the same every time.
 String pickMusicTrack([Random? random]) =>
@@ -38,11 +44,12 @@ enum SfxMoment {
   final String effectName;
 }
 
-/// Each moment's sound, or null for a silent placeholder until Hafid picks
-/// one from the candidates in `Assets/Sounds/generated/`.
+/// Each moment's sound, or null for a silent slot. Hafid's picks from
+/// `Assets/Sounds/generated/` (2026-10-26): `right_b` (marimba), `wrong_a`
+/// (soft low boop-boop), and his own winning jingle, levelled.
 const sfxAssets = <SfxMoment, String?>{
-  SfxMoment.answerRight: null,
-  SfxMoment.answerRetry: null,
+  SfxMoment.answerRight: 'sfx/answer-right.m4a',
+  SfxMoment.answerRetry: 'sfx/answer-retry.m4a',
   SfxMoment.activityComplete: 'sfx/activity-complete.m4a',
 };
 

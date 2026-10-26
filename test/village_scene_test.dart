@@ -232,4 +232,59 @@ void main() {
       });
     }
   });
+
+  group('the fox', () {
+    Widget withFox({VoidCallback? onTap}) => MaterialApp(
+      home: Scaffold(
+        body: SizedBox(
+          width: 1000,
+          height: 580,
+          child: VillageScene(
+            buildings: _buildings,
+            signTitle: 'Village',
+            signSubtitle: '',
+            greeting: 'Salut !',
+            onTapMascot: onTap,
+          ),
+        ),
+      ),
+    );
+
+    testWidgets('tapping it asks for the song', (tester) async {
+      final semantics = tester.ensureSemantics();
+      var taps = 0;
+      await tester.pumpWidget(withFox(onTap: () => taps++));
+      // A button for screen readers, in the app language (English here).
+      expect(find.bySemanticsLabel('Make TutoLys sing'), findsOneWidget);
+      // The fox's art isn't decoded in a widget test, so it has no width
+      // to tap; call the fox's own handler instead.
+      tester
+          .widget<GestureDetector>(
+            find.descendant(
+              of: find.byType(TappableMascot),
+              matching: find.byType(GestureDetector),
+            ),
+          )
+          .onTap!();
+      expect(taps, 1);
+      semantics.dispose();
+    });
+
+    testWidgets('with no handler it is decoration, not a button', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(withFox());
+      expect(find.bySemanticsLabel('Make TutoLys sing'), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byType(TappableMascot),
+          matching: find.byType(GestureDetector),
+        ),
+        findsNothing,
+      );
+      expect(find.byType(TappableMascot), findsOneWidget);
+      semantics.dispose();
+    });
+  });
 }
