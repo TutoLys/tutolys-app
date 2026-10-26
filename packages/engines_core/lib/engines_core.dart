@@ -41,3 +41,4 @@ export 'src/counters_board/counters_board_engine.dart';
 export 'src/sky_model/sky_model_engine.dart';
 export 'src/mail_studio/mail_studio_engine.dart';
 export 'src/widgets/village_characters.dart';
+export 'src/feedback_studio/feedback_studio_engine.dart';
