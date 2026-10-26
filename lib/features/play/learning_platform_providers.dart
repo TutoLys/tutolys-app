@@ -36,6 +36,7 @@ final learningEngineRegistryProvider = Provider<LearningEngineRegistry>(
     eraseEngine(const PathPlannerEngine()),
     eraseEngine(const FractionSliceEngine()),
     eraseEngine(const GeometryLabEngine()),
+    eraseEngine(const ExperimentLabEngine()),
   ]),
 );
 
@@ -59,6 +60,7 @@ final evaluatorRegistryProvider = Provider<EvaluatorRegistry>(
     PathPlannerEvaluator(),
     FractionSliceEvaluator(),
     GeometryLabEvaluator(),
+    ExperimentLabEvaluator(),
   ]),
 );
 
