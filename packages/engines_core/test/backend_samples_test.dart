@@ -14,6 +14,7 @@ const _samples = {
   'math_pattern_machine.json': PatternMachineEngine(),
   'math_measure_tool.json': MeasureToolEngine(),
   'soc_path_planner.json': PathPlannerEngine(),
+  'math_fraction_slice.json': FractionSliceEngine(),
 };
 
 final _dir = Directory('../../../tutolys-backend/content/samples');

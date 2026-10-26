@@ -34,3 +34,4 @@ export 'src/pattern_machine/pattern_machine_engine.dart';
 export 'src/measure_tool/measure_tool_engine.dart';
 export 'src/widgets/pick_one.dart';
 export 'src/path_planner/path_planner_engine.dart';
+export 'src/fraction_slice/fraction_slice_engine.dart';
