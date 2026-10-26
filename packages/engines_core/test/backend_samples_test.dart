@@ -15,6 +15,7 @@ const _samples = {
   'math_measure_tool.json': MeasureToolEngine(),
   'soc_path_planner.json': PathPlannerEngine(),
   'math_fraction_slice.json': FractionSliceEngine(),
+  'math_geometry_lab.json': GeometryLabEngine(),
 };
 
 final _dir = Directory('../../../tutolys-backend/content/samples');
