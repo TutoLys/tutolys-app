@@ -253,6 +253,7 @@ class TimedChoiceEngine
                 key: ValueKey('speed-option-$id'),
                 label: view.content.choice.option(id)!.label,
                 imageRef: view.content.choice.option(id)!.imageRef,
+                audioRef: view.content.choice.option(id)!.audioRef,
                 state: switch (id) {
                   _ when s.tried.contains(id) => AnswerTileState.retry,
                   _ when s.selected == id && s.solved =>

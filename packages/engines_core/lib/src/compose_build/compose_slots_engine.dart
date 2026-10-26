@@ -5,9 +5,12 @@ import '../widgets/answer_slot.dart';
 import '../widgets/answer_tile.dart';
 
 class ComposeTile {
-  const ComposeTile({required this.id, required this.label});
+  const ComposeTile({required this.id, required this.label, this.audioRef});
   final String id;
   final String label;
+
+  /// The tile read aloud on request (a syllable, a sound).
+  final String? audioRef;
 }
 
 class ComposeContent {
@@ -117,7 +120,14 @@ class ComposeSlotsEngine
       if (!ids.add(id)) {
         return const ParseResult.invalid('Tile ids must be unique.');
       }
-      tiles.add(ComposeTile(id: id, label: label));
+      final audio = t['audio_ref'];
+      tiles.add(
+        ComposeTile(
+          id: id,
+          label: label,
+          audioRef: audio is String && audio.isNotEmpty ? audio : null,
+        ),
+      );
     }
     final target = config['target'];
     if (target is! List || target.isEmpty) {
@@ -268,6 +278,9 @@ class ComposeSlotsEngine
                         label: s.slots[i] == null
                             ? null
                             : view.content.tile(s.slots[i]!).label,
+                        audioRef: s.slots[i] == null
+                            ? null
+                            : view.content.tile(s.slots[i]!).audioRef,
                         state: s.locked.contains(i)
                             ? AnswerTileState.correct
                             : AnswerTileState.picked,
@@ -297,6 +310,7 @@ class ComposeSlotsEngine
                         child: AnswerTile(
                           key: ValueKey('compose-tile-$id'),
                           label: view.content.tile(id).label,
+                          audioRef: view.content.tile(id).audioRef,
                           state: AnswerTileState.idle,
                           onTap: view.enabled && !s.full
                               ? () => view.dispatch(PlaceTile(id))

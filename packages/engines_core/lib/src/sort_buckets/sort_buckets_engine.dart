@@ -5,17 +5,29 @@ import 'package:flutter/material.dart';
 import '../widgets/answer_tile.dart';
 
 class SortBucket {
-  const SortBucket({required this.id, required this.label, this.imageRef});
+  const SortBucket({
+    required this.id,
+    required this.label,
+    this.imageRef,
+    this.audioRef,
+  });
   final String id;
   final String label;
   final String? imageRef;
+  final String? audioRef;
 }
 
 class SortItem {
-  const SortItem({required this.id, required this.label, this.imageRef});
+  const SortItem({
+    required this.id,
+    required this.label,
+    this.imageRef,
+    this.audioRef,
+  });
   final String id;
   final String label;
   final String? imageRef;
+  final String? audioRef;
 }
 
 class SortContent {
@@ -124,6 +136,11 @@ class SortBucketsEngine
     return v is String && v.isNotEmpty ? v : null;
   }
 
+  static String? _audio(Object? raw) {
+    final v = raw is Map ? raw['audio_ref'] : null;
+    return v is String && v.isNotEmpty ? v : null;
+  }
+
   static (String, String)? _entry(Object? raw) {
     if (raw is! Map) return null;
     final id = raw['id'];
@@ -156,7 +173,14 @@ class SortBucketsEngine
           'Every bucket needs an id and a label.',
         );
       }
-      buckets.add(SortBucket(id: e.$1, label: e.$2, imageRef: _image(b)));
+      buckets.add(
+        SortBucket(
+          id: e.$1,
+          label: e.$2,
+          imageRef: _image(b),
+          audioRef: _audio(b),
+        ),
+      );
     }
     final bucketIds = {for (final b in buckets) b.id};
     if (bucketIds.length != buckets.length) {
@@ -177,7 +201,14 @@ class SortBucketsEngine
           'Item ${e.$1} belongs in $target, which is not a bucket.',
         );
       }
-      items.add(SortItem(id: e.$1, label: e.$2, imageRef: _image(i)));
+      items.add(
+        SortItem(
+          id: e.$1,
+          label: e.$2,
+          imageRef: _image(i),
+          audioRef: _audio(i),
+        ),
+      );
       answer[e.$1] = target;
     }
     if (answer.length != items.length) {
@@ -352,6 +383,7 @@ class SortBucketsEngine
                           key: ValueKey('sort-item-$id'),
                           label: view.content.item(id).label,
                           imageRef: view.content.item(id).imageRef,
+                          audioRef: view.content.item(id).audioRef,
                           state: s.selected == id
                               ? AnswerTileState.picked
                               : AnswerTileState.idle,
@@ -394,6 +426,7 @@ class SortBucketsEngine
                             key: ValueKey('sort-bucket-${b.id}'),
                             label: b.label,
                             imageRef: b.imageRef,
+                            audioRef: b.audioRef,
                             highlighted: holding && view.enabled,
                             dropHint: fr
                                 ? 'touche pour déposer ici'
@@ -408,6 +441,7 @@ class SortBucketsEngine
                                     key: ValueKey('sort-placed-$id'),
                                     label: view.content.item(id).label,
                                     imageRef: view.content.item(id).imageRef,
+                                    audioRef: view.content.item(id).audioRef,
                                     state: s.locked.contains(id)
                                         ? AnswerTileState.correct
                                         : AnswerTileState.idle,
@@ -446,6 +480,7 @@ class _BucketCard extends StatelessWidget {
   const _BucketCard({
     required this.label,
     this.imageRef,
+    this.audioRef,
     required this.highlighted,
     required this.dropHint,
     required this.onTap,
@@ -455,6 +490,7 @@ class _BucketCard extends StatelessWidget {
 
   final String label;
   final String? imageRef;
+  final String? audioRef;
   final bool highlighted;
   final String dropHint;
   final VoidCallback? onTap;
@@ -463,6 +499,9 @@ class _BucketCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = VillagePalette.of(context);
+    final speaker = ContentSpeakerScope.maybeOf(context);
+    final ref = audioRef;
+    final en = Localizations.maybeLocaleOf(context)?.languageCode == 'en';
     return Material(
       color: highlighted ? p.navHoverFill : p.surface,
       shape: RoundedRectangleBorder(
@@ -496,25 +535,44 @@ class _BucketCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                Semantics(
-                  button: true,
-                  enabled: onTap != null,
-                  label: label,
-                  hint: onTap != null ? dropHint : null,
-                  excludeSemantics: true,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Text(
-                      label,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: VillageType.display,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 16,
-                        color: p.ink,
+                Row(
+                  children: [
+                    // A bucket's name read on request, like a tile's
+                    // (app ADR 0087): never by itself.
+                    if (speaker != null && ref != null)
+                      IconButton(
+                        key: ValueKey('bucket-speak-$ref'),
+                        onPressed: () =>
+                            speaker.speak(audioRef: ref, partId: ref),
+                        tooltip: en ? 'Listen' : 'Écouter',
+                        iconSize: 20,
+                        visualDensity: VisualDensity.compact,
+                        color: p.quebecBlue,
+                        icon: const Icon(Icons.volume_up_rounded),
+                      ),
+                    Expanded(
+                      child: Semantics(
+                        button: true,
+                        enabled: onTap != null,
+                        label: label,
+                        hint: onTap != null ? dropHint : null,
+                        excludeSemantics: true,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Text(
+                            label,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontFamily: VillageType.display,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                              color: p.ink,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
                 for (final c in children) ...[c, const SizedBox(height: 8)],
               ],

@@ -1,6 +1,7 @@
 import 'package:design_system/design_system.dart';
 import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 
 /// What an answer tile shows about itself.
 enum AnswerTileState {
@@ -35,6 +36,7 @@ class AnswerTile extends StatelessWidget {
     this.badge,
     this.imageRef,
     this.dense = false,
+    this.audioRef,
     super.key,
   });
 
@@ -63,6 +65,13 @@ class AnswerTile extends StatelessWidget {
   /// state still reads without colour.
   final bool dense;
 
+  /// A recording of [label] (`audio_ref`), for a child who can't read it
+  /// yet. Played only when asked: the small speaker on the tile, or a long
+  /// press. A plain tap still just chooses, so answers are never read
+  /// aloud by default (Hafid's rule). Nothing is drawn when the host has no
+  /// [ContentSpeakerScope].
+  final String? audioRef;
+
   Widget _dense(Color text, IconData? icon, Color border) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
     child: Column(
@@ -89,6 +98,12 @@ class AnswerTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = VillagePalette.of(context);
+    final speaker = ContentSpeakerScope.maybeOf(context);
+    final ref = audioRef;
+    final speak = speaker == null || ref == null
+        ? null
+        : () => speaker.speak(audioRef: ref, partId: ref);
+    final en = Localizations.maybeLocaleOf(context)?.languageCode == 'en';
     final (border, fill, text, icon) = switch (state) {
       AnswerTileState.idle => (p.line, p.surface, p.ink, null),
       AnswerTileState.picked => (
@@ -118,6 +133,10 @@ class AnswerTile extends StatelessWidget {
       label: label,
       hint: semanticsState,
       excludeSemantics: true,
+      onLongPress: speak,
+      customSemanticsActions: speak == null
+          ? null
+          : {CustomSemanticsAction(label: en ? 'Listen' : 'Écouter'): speak},
       child: Material(
         color: fill,
         shape: RoundedRectangleBorder(
@@ -126,6 +145,7 @@ class AnswerTile extends StatelessWidget {
         ),
         child: InkWell(
           onTap: onTap,
+          onLongPress: speak,
           borderRadius: Radii.cardMd,
           child: ConstrainedBox(
             // ≥48px: the frontend spec's tap-target floor.
@@ -136,6 +156,23 @@ class AnswerTile extends StatelessWidget {
                     padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                     child: Row(
                       children: [
+                        if (speak != null)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: IconButton(
+                              key: ValueKey('tile-speak-$ref'),
+                              onPressed: speak,
+                              tooltip: en ? 'Listen' : 'Écouter',
+                              iconSize: 20,
+                              visualDensity: VisualDensity.compact,
+                              constraints: const BoxConstraints(
+                                minWidth: 40,
+                                minHeight: 40,
+                              ),
+                              color: p.quebecBlue,
+                              icon: const Icon(Icons.volume_up_rounded),
+                            ),
+                          ),
                         if (imageRef != null)
                           Padding(
                             padding: const EdgeInsets.only(right: 12),

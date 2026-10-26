@@ -18,6 +18,7 @@ class AnswerSlot extends StatelessWidget {
     required this.emptyLabel,
     this.semanticsState,
     this.imageRef,
+    this.audioRef,
     super.key,
   });
 
@@ -36,6 +37,9 @@ class AnswerSlot extends StatelessWidget {
   /// The placed item's picture, passed on to its [AnswerTile].
   final String? imageRef;
 
+  /// The placed item's recording, passed on to its [AnswerTile].
+  final String? audioRef;
+
   @override
   Widget build(BuildContext context) {
     final text = label;
@@ -46,6 +50,7 @@ class AnswerSlot extends StatelessWidget {
         onTap: onTap,
         semanticsState: semanticsState,
         imageRef: imageRef,
+        audioRef: audioRef,
       );
     }
     final p = VillagePalette.of(context);

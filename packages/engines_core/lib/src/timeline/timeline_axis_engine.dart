@@ -14,10 +14,16 @@ class AxisTick {
 }
 
 class AxisItem {
-  const AxisItem({required this.id, required this.label, this.imageRef});
+  const AxisItem({
+    required this.id,
+    required this.label,
+    this.imageRef,
+    this.audioRef,
+  });
   final String id;
   final String label;
   final String? imageRef;
+  final String? audioRef;
 }
 
 class AxisContent {
@@ -152,6 +158,11 @@ class TimelineAxisEngine
     return v is String && v.isNotEmpty ? v : null;
   }
 
+  static String? _audio(Object? raw) {
+    final v = raw is Map ? raw['audio_ref'] : null;
+    return v is String && v.isNotEmpty ? v : null;
+  }
+
   static String? _optionalLabel(Object? raw) =>
       raw is String && raw.isNotEmpty ? raw : null;
 
@@ -258,7 +269,14 @@ class TimelineAxisEngine
         return const ParseResult.invalid('given must be true or false.');
       }
       if (g == true) given.add(id);
-      items.add(AxisItem(id: id, label: label, imageRef: _image(i)));
+      items.add(
+        AxisItem(
+          id: id,
+          label: label,
+          imageRef: _image(i),
+          audioRef: _audio(i),
+        ),
+      );
       answer[id] = tick;
     }
     if (items.length - given.length < 2) {
@@ -283,7 +301,14 @@ class TimelineAxisEngine
         if (answer.containsKey(id) || distractors.any((x) => x.id == id)) {
           return const ParseResult.invalid('Item ids must be unique.');
         }
-        distractors.add(AxisItem(id: id, label: label, imageRef: _image(d)));
+        distractors.add(
+          AxisItem(
+            id: id,
+            label: label,
+            imageRef: _image(d),
+            audioRef: _audio(d),
+          ),
+        );
       }
     }
     return ParseResult.ok(
@@ -488,6 +513,7 @@ class TimelineAxisEngine
           dense: dense,
           label: content.item(item).label,
           imageRef: content.item(item).imageRef,
+          audioRef: content.item(item).audioRef,
           state: given
               ? AnswerTileState.idle
               : fixed
@@ -700,6 +726,7 @@ class TimelineAxisEngine
                           key: ValueKey('axis-item-$id'),
                           label: content.item(id).label,
                           imageRef: content.item(id).imageRef,
+                          audioRef: content.item(id).audioRef,
                           state: s.held == id
                               ? AnswerTileState.picked
                               : AnswerTileState.idle,

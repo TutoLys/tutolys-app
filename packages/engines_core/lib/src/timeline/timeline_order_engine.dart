@@ -6,10 +6,16 @@ import '../widgets/answer_slot.dart';
 import '../widgets/answer_tile.dart';
 
 class TimelineItem {
-  const TimelineItem({required this.id, required this.label, this.imageRef});
+  const TimelineItem({
+    required this.id,
+    required this.label,
+    this.imageRef,
+    this.audioRef,
+  });
   final String id;
   final String label;
   final String? imageRef;
+  final String? audioRef;
 }
 
 class TimelineContent {
@@ -135,6 +141,11 @@ class TimelineOrderEngine
     return v is String && v.isNotEmpty ? v : null;
   }
 
+  static String? _audio(Object? raw) {
+    final v = raw is Map ? raw['audio_ref'] : null;
+    return v is String && v.isNotEmpty ? v : null;
+  }
+
   static String? _optionalLabel(Object? raw) =>
       raw is String && raw.isNotEmpty ? raw : null;
 
@@ -175,7 +186,14 @@ class TimelineOrderEngine
         return const ParseResult.invalid('given must be true or false.');
       }
       if (given == true) givenIds.add(id);
-      items.add(TimelineItem(id: id, label: label, imageRef: _image(i)));
+      items.add(
+        TimelineItem(
+          id: id,
+          label: label,
+          imageRef: _image(i),
+          audioRef: _audio(i),
+        ),
+      );
       byOrder[order] = id;
     }
     if (items.length - givenIds.length < 2) {
@@ -201,7 +219,12 @@ class TimelineOrderEngine
           return const ParseResult.invalid('Item ids must be unique.');
         }
         distractors.add(
-          TimelineItem(id: id, label: label, imageRef: _image(d)),
+          TimelineItem(
+            id: id,
+            label: label,
+            imageRef: _image(d),
+            audioRef: _audio(d),
+          ),
         );
       }
     }
@@ -380,6 +403,7 @@ class TimelineOrderEngine
       index: i + 1,
       label: s.slots[i] == null ? null : content.item(s.slots[i]!).label,
       imageRef: s.slots[i] == null ? null : content.item(s.slots[i]!).imageRef,
+      audioRef: s.slots[i] == null ? null : content.item(s.slots[i]!).audioRef,
       // A given item is part of the question, not a verdict: neutral, not
       // green.
       state: content.given.contains(i)
@@ -495,6 +519,7 @@ class TimelineOrderEngine
                           key: ValueKey('timeline-item-$id'),
                           label: content.item(id).label,
                           imageRef: content.item(id).imageRef,
+                          audioRef: content.item(id).audioRef,
                           state: AnswerTileState.idle,
                           onTap: view.enabled && !s.full
                               ? () => view.dispatch(PlaceInOrder(id))

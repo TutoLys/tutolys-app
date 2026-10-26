@@ -297,6 +297,7 @@ class SingleChoiceEngine
                       key: ValueKey('mcq-option-$id'),
                       label: option.label,
                       imageRef: option.imageRef,
+                      audioRef: option.audioRef,
                       state: state,
                       semanticsState: switch (state) {
                         AnswerTileState.retry =>

@@ -4,10 +4,16 @@ import 'package:flutter/material.dart';
 import '../widgets/answer_tile.dart';
 
 class MatchItem {
-  const MatchItem({required this.id, required this.label, this.imageRef});
+  const MatchItem({
+    required this.id,
+    required this.label,
+    this.imageRef,
+    this.audioRef,
+  });
   final String id;
   final String label;
   final String? imageRef;
+  final String? audioRef;
 }
 
 class PairMatchContent {
@@ -122,10 +128,12 @@ class PairMatchBoardEngine
       return null;
     }
     final image = raw['image_ref'];
+    final audio = raw['audio_ref'];
     return MatchItem(
       id: id,
       label: label,
       imageRef: image is String && image.isNotEmpty ? image : null,
+      audioRef: audio is String && audio.isNotEmpty ? audio : null,
     );
   }
 
@@ -354,6 +362,7 @@ class PairMatchBoardEngine
                     key: ValueKey('pair-left-$l'),
                     label: view.content.left(l).label,
                     imageRef: view.content.left(l).imageRef,
+                    audioRef: view.content.left(l).audioRef,
                     state: stateOf(
                       s.locked.contains(l),
                       s.selectedLeft == l || s.links.containsKey(l),
@@ -382,6 +391,7 @@ class PairMatchBoardEngine
                         key: ValueKey('pair-right-$r'),
                         label: view.content.right(r).label,
                         imageRef: view.content.right(r).imageRef,
+                        audioRef: view.content.right(r).audioRef,
                         state: stateOf(lockedRight, badge != null),
                         badge: lockedRight ? null : badge,
                         semanticsState: lockedRight
