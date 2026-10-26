@@ -64,9 +64,14 @@ class ProgressCache {
 ///
 /// The backend degrades gracefully: when it can't reach telemetry, the
 /// streak, freeze balance and daily quest come back null. That means
-/// "unknown this time", not "gone", so the last known values stay. XP is a
-/// ledger that never shrinks, so a smaller total is a bad read and the
-/// larger stands. Mastery is the server's own table and is taken as read.
+/// "unknown this time", not "gone", so the last known values stay.
+///
+/// XP is taken as read. It used to be "the larger stands", on the theory
+/// that a ledger never shrinks, but `total_xp` is never null and never
+/// degraded, and the backend can lower it on purpose: XP option A
+/// recomputed every total (Léa 390 → 98, backend ADR 0047), and the old
+/// rule kept showing the pre-recompute number forever. Mastery is the
+/// server's own table and is also taken as read.
 ProgressSnapshot mergeWithCached(
   ProgressSnapshot fresh,
   ProgressSnapshot? cached,
@@ -78,7 +83,7 @@ ProgressSnapshot mergeWithCached(
     currentStreakDays: fresh.currentStreakDays ?? cached.currentStreakDays,
     freezesAvailable: fresh.freezesAvailable ?? cached.freezesAvailable,
     dailyQuest: fresh.dailyQuest ?? cached.dailyQuest,
-    totalXp: fresh.totalXp > cached.totalXp ? fresh.totalXp : cached.totalXp,
+    totalXp: fresh.totalXp,
     level: hasLevel ? fresh.level : cached.level,
     skillsCompleted: hasLevel ? fresh.skillsCompleted : cached.skillsCompleted,
     skillsTotal: hasLevel ? fresh.skillsTotal : cached.skillsTotal,

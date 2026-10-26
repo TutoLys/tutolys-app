@@ -697,6 +697,21 @@ void main() {
       expect(curriculum.requested.length, before + 1);
     });
 
+    testWidgets('tapping the subject already shown re-syncs it only when '
+        'stale', (tester) async {
+      final curriculum = FakeCurriculumApi({
+        'MATH': const [_compter],
+      });
+      await openCarte(
+        tester,
+        appUnder(leaves: const [], content: const {}, curriculum: curriculum),
+      );
+      final before = curriculum.requested.length;
+      await tester.tap(find.byKey(const ValueKey('subject-pill-MATH')));
+      await tester.pumpAndSettle();
+      expect(curriculum.requested.length, before, reason: 'just synced');
+    });
+
     testWidgets('never synced and failing says lessons may be missing', (
       tester,
     ) async {

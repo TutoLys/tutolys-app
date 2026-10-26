@@ -202,13 +202,33 @@ class PathController extends Notifier<PathState> {
   Future<void> refreshIfStale({Duration maxAge = const Duration(minutes: 2)}) {
     final last = _lastLoad;
     if (state.loading || last == null) return Future.value();
-    if (DateTime.now().difference(last) < maxAge) return Future.value();
+    // Lessons cached in the wrong language are stale whatever their age:
+    // a subject synced before its English versions existed kept showing
+    // French in an English app (Hafid, Social studies).
+    final wanted = contentLocaleFor(
+      state.subject,
+      _localeOf(ref.read(settingsControllerProvider).english),
+    );
+    if (wanted != state.contentLocale) return _load();
+    // A lesson served in the other language is a translation that may
+    // have been published since: worth asking again sooner.
+    final fallbacks = state.lessonsByNodeId.values.any(
+      (lessons) => lessons.any(
+        (l) => (l['locale'] as String? ?? 'fr-CA') != state.contentLocale,
+      ),
+    );
+    final age = fallbacks ? const Duration(seconds: 30) : maxAge;
+    if (DateTime.now().difference(last) < age) return Future.value();
     return _load();
   }
 
   /// Switches the Carte to another subject and loads it.
   Future<void> selectSubject(String subject) {
-    if (subject == state.subject && !state.loading) return Future.value();
+    // Tapping the subject already shown re-syncs it if it's stale, rather
+    // than doing nothing: it's the obvious "show me the latest" gesture.
+    if (subject == state.subject) {
+      return state.loading ? Future.value() : refreshIfStale();
+    }
     state = PathState(subject: subject);
     return _load();
   }

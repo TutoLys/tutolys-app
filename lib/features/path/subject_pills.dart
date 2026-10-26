@@ -65,7 +65,9 @@ class SubjectPills extends StatelessWidget {
               child: InkWell(
                 key: ValueKey('subject-pill-$code'),
                 customBorder: const StadiumBorder(),
-                onTap: active ? null : () => onSelect(code),
+                // The active pill stays tappable: on the Carte it re-syncs a
+                // stale subject.
+                onTap: () => onSelect(code),
                 mouseCursor: active
                     ? SystemMouseCursors.basic
                     : SystemMouseCursors.click,

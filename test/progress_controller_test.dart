@@ -334,20 +334,25 @@ void main() {
       expect(state.offline, isTrue);
     });
 
-    test('a degraded read keeps what it left empty; XP never drops', () async {
+    test('a degraded read keeps what it left empty; XP follows the server, '
+        'down too (the option A recompute)', () async {
       container = build();
       api.result = good;
       await container.read(progressControllerProvider.notifier).refresh();
 
       api.result = const ProgressFetched(
-        ProgressSnapshot(masteries: [], currentStreakDays: null, totalXp: 0),
+        ProgressSnapshot(masteries: [], currentStreakDays: null, totalXp: 98),
       );
       await container.read(progressControllerProvider.notifier).refresh();
 
       final state = container.read(progressControllerProvider);
       expect(state.currentStreakDays, 4);
       expect(state.dailyQuest, isNotNull);
-      expect(state.totalXp, 240);
+      expect(
+        state.totalXp,
+        98,
+        reason: 'Léa showed her pre-recompute 390 when the larger won',
+      );
       expect(state.stale, isFalse, reason: 'the read itself succeeded');
     });
   });
