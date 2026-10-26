@@ -31,3 +31,5 @@ export 'src/balance_scale/balance_scale_engine.dart';
 export 'src/label_image/label_image_engine.dart';
 export 'src/fill_blank/fill_blank_engine.dart';
 export 'src/pattern_machine/pattern_machine_engine.dart';
+export 'src/measure_tool/measure_tool_engine.dart';
+export 'src/widgets/pick_one.dart';
