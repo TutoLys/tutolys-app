@@ -380,4 +380,81 @@ void main() {
       expect(await outbox.depth(), 0);
     });
   });
+
+  group('leaving a lesson early', () {
+    List<String> types(InMemoryEventOutbox o) => [
+      for (final e in o.all) e['event_type'] as String,
+    ];
+
+    test('between two questions: an abandon, then session_end', () async {
+      final (client: client, outbox: outbox) = build();
+      await client.logSessionStart();
+      await client.startExercise(identity);
+      await client.logAttempt(answer: {'option_id': 'a'}, isCorrect: true);
+      await client.logComplete();
+      await client.logSessionEnd(finished: false);
+
+      expect(types(outbox).sublist(types(outbox).length - 2), [
+        'exercise_abandon',
+        'session_end',
+      ]);
+      final abandon = outbox.all.firstWhere(
+        (e) => e['event_type'] == 'exercise_abandon',
+      );
+      expect(abandon['exercise_id'], identity.exerciseId);
+      expect(
+        abandon['exercise_run_id'],
+        isNot(
+          outbox.all.firstWhere(
+            (e) => e['event_type'] == 'exercise_complete',
+          )['exercise_run_id'],
+        ),
+        reason: 'the finished question stays finished',
+      );
+      for (final e in outbox.all) {
+        expectValid(e);
+      }
+    });
+
+    test('mid-question: the open run is the one abandoned', () async {
+      final (client: client, outbox: outbox) = build();
+      await client.logSessionStart();
+      await client.startExercise(identity);
+      await client.logSessionEnd(finished: false);
+      expect(types(outbox), [
+        'session_start',
+        'exercise_start',
+        'exercise_abandon',
+        'session_end',
+      ]);
+    });
+
+    test('never a second abandon in the same frame', () async {
+      final (client: client, outbox: outbox) = build();
+      await client.logSessionStart();
+      await client.startExercise(identity);
+      // A disposing screen: the runner's abandon isn't awaited.
+      final pending = client.logAbandon();
+      await client.logSessionEnd(finished: false);
+      await pending;
+      expect(types(outbox).where((t) => t == 'exercise_abandon'), hasLength(1));
+    });
+
+    test('a finished lesson ends with session_end alone', () async {
+      final (client: client, outbox: outbox) = build();
+      await client.logSessionStart();
+      await client.startExercise(identity);
+      await client.logAttempt(answer: {'option_id': 'a'}, isCorrect: true);
+      await client.logComplete();
+      await client.logSessionEnd();
+      expect(types(outbox), isNot(contains('exercise_abandon')));
+    });
+
+    test('nothing started: no abandon to send', () async {
+      final (client: client, outbox: outbox) = build();
+      await client.logSessionStart();
+      await client.logSessionEnd(finished: false);
+      expect(types(outbox), ['session_start', 'session_end']);
+    });
+  });
 }

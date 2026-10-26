@@ -128,13 +128,39 @@ class TelemetryClient {
 
   int _correctCount = 0;
 
+  /// The last run's identity, kept after it ends, so a lesson left between
+  /// two questions can still say which lesson it abandoned.
+  ExerciseIdentity? _lastIdentity;
+
+  /// Whether this session already logged an `exercise_abandon`.
+  bool _abandoned = false;
+
   String? get currentRunId => _runId;
 
   // --- session ----------------------------------------------------------
 
   Future<void> logSessionStart() => _write(PlayEventType.sessionStart);
 
-  Future<void> logSessionEnd() => _write(PlayEventType.sessionEnd);
+  /// Ends the session. [finished] false means the kid left the lesson
+  /// before its end (the X, back, the app closing). Then the session
+  /// always carries an `exercise_abandon` before its `session_end`, even
+  /// when no question was open at that moment: on its own, a `session_end`
+  /// reads as a finished lesson, and a quest would count it (telemetry ADR
+  /// 0017). Never a second abandon if one was already logged.
+  Future<void> logSessionEnd({bool finished = true}) async {
+    if (!finished && !_abandoned) {
+      if (_runId != null) {
+        await logAbandon();
+      } else if (_lastIdentity != null) {
+        // Between questions: a run of its own, holding only the abandon.
+        _runId = _uuid.v4();
+        _identity = _lastIdentity;
+        _runStartedAt = _now();
+        await logAbandon();
+      }
+    }
+    await _write(PlayEventType.sessionEnd);
+  }
 
   // --- exercise run -----------------------------------------------------
 
@@ -142,6 +168,7 @@ class TelemetryClient {
   Future<void> startExercise(ExerciseIdentity identity) async {
     _runId = _uuid.v4();
     _identity = identity;
+    _lastIdentity = identity;
     _runStartedAt = _now();
     _attemptIndex = 0;
     _hintIndex = 0;
@@ -210,6 +237,9 @@ class TelemetryClient {
   /// the rule inputs — so it is logged rather than dropped.
   Future<void> logAbandon() async {
     _requireRun('logAbandon');
+    // Set before the write's await, so a session end in the same frame
+    // (a disposing screen) sees it and doesn't log a second one.
+    _abandoned = true;
     await _write(PlayEventType.exerciseAbandon);
     _endRun();
   }

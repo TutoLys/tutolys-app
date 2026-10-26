@@ -173,7 +173,9 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     // Not exited and not finished means the screen went away mid-session:
     // leave the snapshot in place so the next visit resumes it.
     _controller?.dispose();
-    _telemetry?.logSessionEnd();
+    // Left before the celebration: the session says so (an abandon
+    // before its end), so no quest counts it.
+    _telemetry?.logSessionEnd(finished: _summary != null);
     _bridge?.dispose();
     _director.dispose();
     super.dispose();

@@ -113,6 +113,10 @@ class V2EventRecorder implements RuntimeEventRecorder {
         if (_questionIndex != null) _hints += 1;
       case AudioRequested(:final replay):
         if (replay && _questionIndex != null) _audioReplays += 1;
+      // Left between two questions: v1 writes the abandon on the next one,
+      // so it names that question here too.
+      case ActivityAbandoned(:final questionIndex):
+        _questionIndex ??= questionIndex;
       case _:
     }
 

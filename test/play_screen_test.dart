@@ -10,6 +10,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
+import 'package:tutolys_app/data/local_db/home_stats.dart';
 import 'package:tutolys_app/data/local_db/node_progress_local.dart';
 import 'package:tutolys_app/features/pairing/pairing_controller.dart';
 import 'package:tutolys_app/features/play/learning_platform_providers.dart';
@@ -477,6 +478,42 @@ void main() {
         isEmpty,
         reason: 'only finishing every question of the série counts',
       );
+      // Quests count finished lessons only (Hafid, 2026-10-26).
+      final today = await tester.runAsync(
+        () => HomeStats(db, kidId: 'kid-lea').today(),
+      );
+      expect(today!.exercisesCompleted, 0, reason: '"5 exercices" unmoved');
+      expect(today.msPlayed, 0, reason: '"10 minutes" unmoved');
+      // And telemetry can tell it apart from a finished lesson.
+      final types = (await outbox()).map((e) => e['event_type']).toList();
+      expect(types.sublist(types.length - 2), [
+        'exercise_abandon',
+        'session_end',
+      ]);
+    },
+  );
+
+  testWidgets(
+    'the legacy fallback, left mid-lesson, sends an abandon before its end',
+    (tester) async {
+      await tester.pumpWidget(app(_composeEnvelope, legacyOnly: true));
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip("Quitter l'exercice"));
+      await settle(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text('open'), findsOneWidget);
+      final types = (await outbox()).map((e) => e['event_type']).toList();
+      expect(types.where((t) => t == 'exercise_abandon'), hasLength(1));
+      expect(types.sublist(types.length - 2), [
+        'exercise_abandon',
+        'session_end',
+      ]);
+      final today = await tester.runAsync(
+        () => HomeStats(db, kidId: 'kid-lea').today(),
+      );
+      expect(today!.exercisesCompleted, 0);
     },
   );
 

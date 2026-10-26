@@ -60,7 +60,7 @@ class RecorderFrame {
 /// | `AnswerEvaluated` (graded) | `attempt` |
 /// | `HintRequested` | `hint_used` |
 /// | `QuestionCompleted` | `exercise_complete` (summary from the tallies) |
-/// | `ActivityAbandoned` | `exercise_abandon` (if a question is open) + `session_end` |
+/// | `ActivityAbandoned` | `exercise_abandon` (always, once started) + `session_end` |
 /// | `ActivityCompleted` | `session_end` |
 ///
 /// Everything else durable — selections, audio requests, pauses — has no v1
@@ -196,8 +196,17 @@ class V1EventRecorder implements RuntimeEventRecorder {
         _runIdentity = null;
         return out;
 
-      case ActivityAbandoned():
+      case ActivityAbandoned(:final questionIndex):
         final out = <Map<String, Object?>>[];
+        if (_runId == null && _sessionStarted) {
+          // No question open (left between two): the abandon still goes
+          // out, on the question the kid would have seen next. Alone, a
+          // session_end reads as a finished lesson (telemetry ADR 0017).
+          _questionIndex = questionIndex;
+          _runIdentity = f.identity;
+          _runStartActiveMs = f.activeMs;
+          _prevEventActiveMs = null;
+        }
         if (_runId != null) {
           out.add(
             _runEvent(PlayEventType.exerciseAbandon, f, idName: 'abandon'),

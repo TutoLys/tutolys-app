@@ -87,3 +87,38 @@ controller's default (`ActivitySessionController.recorderFactory`).
 - engine_sdk 139, engines_core 163, app 476, all passing; analyze clean.
 - **Not done:** a live POST of a device's v2 batch to the dev-stack ingest.
   Telemetry accepted its own copy of the same fixture live, 15/15.
+
+## Addendum (2026-10-26): leaving a lesson always sends an abandon
+
+Hafid got "Daily challenge done!" without finishing the lesson. His rule:
+**a quest, achievement or badge counts only when the lesson is
+finished.** Telemetry now counts an attempt only if its lesson has a
+`session_end` and no `exercise_abandon` (telemetry `041b90d`, its ADR
+0017). A `session_end` on its own reads as a finished lesson, so every
+early exit must carry an abandon first:
+
+- **Runtime (v1 and v2 recorders):** `ActivityAbandoned` always writes
+  `exercise_abandon` once the session has started. If no question is
+  open, it goes on the question the kid would have seen next, as a run
+  of its own, so a finished question stays finished. Through the
+  controller a question is always open while a lesson runs (it emits
+  `QuestionCompleted` and the next `QuestionPresented` together), so
+  this is a guarantee, pinned by recorder tests.
+- **Legacy path (`TelemetryClient`):** `logSessionEnd(finished: false)`
+  writes the abandon before `session_end`: on the open run, or, between
+  two questions, on a new run carrying the last question's lesson. Never
+  a second one: `logAbandon` marks the session before its write awaits,
+  so a runner disposing in the same frame isn't doubled. The play screen
+  passes `finished` from whether the celebration was reached.
+- Leaving without pressing X (back, app closed) on the runtime path
+  keeps the snapshot to resume and writes no `session_end`, so telemetry
+  doesn't count that lesson either. A stale snapshot is later closed
+  with an abandon (`_abandonStale`).
+
+The app's own quests already follow the rule. `HomeStats` (the
+"5 exercices" and "10 minutes" quests) is written only when a lesson
+reaches its celebration, with that lesson's active time only, and
+achievements and the weekly badge are built from those quests and from
+server data. The daily challenge has no local mirror: it is the
+server's `daily_quest`. A play-screen test now checks that quitting
+after one of two questions moves neither local quest.

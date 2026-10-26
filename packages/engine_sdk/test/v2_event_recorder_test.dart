@@ -243,6 +243,73 @@ void main() {
     expectAllValid(outbox.all);
   });
 
+  group('left between two questions', () {
+    // The controller emits QuestionCompleted and the next QuestionPresented
+    // together, so this can't be reached through it today; the recorder
+    // still guarantees it (telemetry ADR 0017: a session_end on its own
+    // reads as a finished lesson).
+    final f = RecorderFrame(
+      now: DateTime.utc(2026, 10, 26),
+      activeMs: 4000,
+      identity: const ExerciseIdentity(
+        exerciseId: '6f1a4a18-7a3b-4c1e-9f51-6d2a1b2c3d4e',
+        exerciseVersion: 1,
+        engineKey: 'mcq',
+        engineVersion: 1,
+        skillNodeId: 'ad24bcba-93d0-5b4e-ab56-ec76e3409a53',
+        subject: 'MATH',
+        grade: 1,
+        rank: 0,
+      ),
+    );
+    List<Map<String, Object?>> leaveAfterFirst(RuntimeEventRecorder r) => [
+      ...r.record(const QuestionPresented(questionIndex: 0, questionCount: 2), f),
+      ...r.record(
+        const QuestionCompleted(questionIndex: 0, attempts: 1, solved: true),
+        f,
+      ),
+      ...r.record(
+        const ActivityAbandoned(questionIndex: 1, reason: AbandonReason.exited),
+        f,
+      ),
+    ];
+
+    for (final (name, make) in [
+      ('v1', () => V1EventRecorder(ids: SessionIds.create(), appVersion: '0.2.0')),
+      ('v2', () => V2EventRecorder(ids: SessionIds.create(), appVersion: '0.2.0')),
+    ]) {
+      test('$name still sends an abandon before session_end', () {
+        final events = leaveAfterFirst(make());
+        final types = [for (final e in events) e['event_type']];
+        expect(types.sublist(types.length - 2), [
+          'exercise_abandon',
+          'session_end',
+        ]);
+        expect(types.where((t) => t == 'exercise_abandon'), hasLength(1));
+        final abandon = events[types.indexOf('exercise_abandon')];
+        final complete = events[types.indexOf('exercise_complete')];
+        expect(abandon['exercise_run_id'], isNotNull);
+        expect(
+          abandon['exercise_run_id'],
+          isNot(complete['exercise_run_id']),
+          reason: 'the finished question stays finished',
+        );
+        if (name == 'v2') expectAllValid(events);
+      });
+    }
+
+    test('an abandon before anything started sends nothing', () {
+      final r = V1EventRecorder(ids: SessionIds.create(), appVersion: '0.2.0');
+      expect(
+        r.record(
+          const ActivityAbandoned(questionIndex: 0, reason: AbandonReason.exited),
+          f,
+        ),
+        isEmpty,
+      );
+    });
+  });
+
   test('an unknown interaction type is counted, never sent', () {
     final r = V2EventRecorder(ids: SessionIds.create(), appVersion: '0.2.0');
     final f = RecorderFrame(
