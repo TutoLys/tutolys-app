@@ -511,7 +511,8 @@ class _QuestRow extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Image.asset(
-                      'assets/images/asset-coin.webp',
+                      // The XP star, as on Quêtes: there are no coins.
+                      'assets/images/asset-xpstar.webp',
                       width: 12,
                       height: 12,
                     ),

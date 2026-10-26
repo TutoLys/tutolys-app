@@ -938,7 +938,8 @@ class _FrenchStrings extends Strings {
   String get aboutMadeIn => 'Fait au Québec 🍁';
   @override
   List<HelpEntry> get helpEntries => const [
-        HelpEntry(question: 'Comment je gagne des pièces ?', answer: 'En terminant des exercices et en complétant des quêtes ! Plus tu joues, plus tu en gagnes.'),
+        HelpEntry(question: 'Comment je gagne des XP ?', answer: 'Chaque bonne réponse te donne 1 XP. Quand tu termines une activité, tu gagnes un bonus, et encore un peu plus si tout était juste du premier coup ! Le défi du jour vaut 10 XP. Si tu rejoues une activité déjà terminée, tu gagnes un petit peu.'),
+        HelpEntry(question: 'À quoi sert mon niveau ?', answer: 'Ton niveau monte à mesure que tu réussis de nouvelles notions de ton année scolaire. Il va jusqu\'à 99 !'),
         HelpEntry(question: 'C\'est quoi ma série ?', answer: 'C\'est le nombre de jours de suite où tu as joué. Termine au moins un exercice chaque jour pour ne pas la perdre.'),
         HelpEntry(question: 'Comment débloquer un nouveau bâtiment ?', answer: 'Chaque bâtiment du Village représente une matière. Plus tu avances dans son parcours (onglet Carte), plus sa barre de progression se remplit.'),
         HelpEntry(question: 'J\'ai perdu ma série, que faire ?', answer: 'Pas de panique ! Recommence aujourd\'hui — une nouvelle série démarre tout de suite.'),
@@ -1795,7 +1796,8 @@ class _EnglishStrings extends Strings {
   String get aboutMadeIn => 'Made in Quebec 🍁';
   @override
   List<HelpEntry> get helpEntries => const [
-        HelpEntry(question: 'How do I earn coins?', answer: 'By finishing exercises and completing quests! The more you play, the more you earn.'),
+        HelpEntry(question: 'How do I earn XP?', answer: 'Every right answer gives you 1 XP. When you finish an activity you get a bonus, and a little more if everything was right the first time! The daily challenge is worth 10 XP. Replaying an activity you already finished earns a little bit.'),
+        HelpEntry(question: 'What is my level for?', answer: 'Your level goes up as you master new skills from your school year. It goes all the way to 99!'),
         HelpEntry(question: 'What is my streak?', answer: 'It\'s the number of days in a row you\'ve played. Finish at least one exercise each day to keep it.'),
         HelpEntry(question: 'How do I unlock a new building?', answer: 'Each building in the Village is a subject. The further you get along its path (the Map tab), the more its progress bar fills up.'),
         HelpEntry(question: 'I lost my streak, what now?', answer: 'Don\'t worry! Start again today — a new streak begins right away.'),

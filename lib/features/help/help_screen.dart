@@ -17,8 +17,9 @@ class HelpEntry {
 /// pitched at a child ("Pas de panique !") and point at where to go in the
 /// app, which is harder to get right than it looks.
 ///
-/// Two answers were trimmed against the design: the coins one no longer
-/// promises a Boutique, and the streak one no longer tells a kid to look for
+/// Two answers were changed against the design: the coins one is about XP
+/// (there are no coins; XP option A, Hafid 2026-10-25), with a second entry
+/// on the level beside it, and the streak one no longer tells a kid to look for
 /// a bouclier de série in Quêtes. Both of those exist in the design's intent
 /// but not in the app, and a FAQ that sends a child to a screen that cannot
 /// help them is worse than one that says less.
