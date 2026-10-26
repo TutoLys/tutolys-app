@@ -64,7 +64,7 @@ void main() {
     music = MusicDirector(
       audio,
       enabled: () => musicOn,
-      track: 'music/village-1.ogg',
+      track: 'music/village-1.m4a',
     );
   });
 

@@ -82,9 +82,25 @@ Hafid's call which, if any.
 
 ## Not done
 
-- macOS and iOS: AVFoundation doesn't play Ogg Vorbis. When those
-  targets exist, ship an AAC copy and trim its encoder priming. Linux
-  (GStreamer) and the web (Chrome, Firefox, Edge) play it. Safari on the
-  web is untested.
+- ~~macOS and iOS can't play Ogg.~~ Superseded: AAC everywhere, see the
+  revision below.
 - The legacy engine host doesn't emit `AnswerEvaluated`, so it gets only
   the end jingle. It serves nothing published.
+
+## Revision 2026-10-25: AAC in .m4a everywhere, not Ogg
+
+The scaling plan moves lesson audio to compressed files, and the format
+has to play on every target. Ogg Vorbis doesn't: macOS, iOS, Safari and
+Windows' Media Foundation can't decode it.
+
+- **AAC-LC in an MP4 (.m4a) container** is the one format for the app's
+  own sounds and, as agreed with Backend, for lesson audio. Every
+  browser's `decodeAudioData` and every native platform decodes it.
+  Linux needs GStreamer's libav plugin (`gstreamer1.0-libav`) on top of
+  ADR 0013's GStreamer packages.
+- **The loop stays seamless.** AAC's encoder priming is the usual reason
+  to avoid it for loops, but ffmpeg writes an MP4 edit list, and Chrome
+  honours it. Decoded in the browser, `village-1.m4a` is exactly
+  1,428,000 samples, the same as its source, with no leading silence.
+- Music is 64 kbps mono (about 245 KB per loop, slightly bigger than the
+  Ogg). The jingle is 80 kbps (54 KB). The Ogg files are removed.

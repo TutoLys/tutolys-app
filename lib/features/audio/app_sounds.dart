@@ -13,7 +13,7 @@ const appAudioScope = 'app';
 
 /// The background loops, picked from Hafid's six (ADR 0035). Each was
 /// crossfaded end into start, so it repeats without a seam.
-const musicTracks = ['music/village-1.ogg', 'music/village-2.ogg'];
+const musicTracks = ['music/village-1.m4a', 'music/village-2.m4a'];
 
 /// One loop per launch, so the village doesn't sound the same every time.
 String pickMusicTrack([Random? random]) =>
@@ -41,7 +41,7 @@ enum SfxMoment {
 const sfxAssets = <SfxMoment, String?>{
   SfxMoment.answerRight: null,
   SfxMoment.answerRetry: null,
-  SfxMoment.activityComplete: 'sfx/activity-complete.ogg',
+  SfxMoment.activityComplete: 'sfx/activity-complete.m4a',
 };
 
 /// Bytes for an effect name, for `ChannelAudioCoordinator.effectBytes`.
