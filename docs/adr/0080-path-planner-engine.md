@@ -1,4 +1,4 @@
-# ADR 0050 — `path_planner`: Foxy's route on a grid
+# ADR 0080 — `path_planner`: Foxy's route on a grid
 
 Date: 2026-10-26
 Status: accepted
