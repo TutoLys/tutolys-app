@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tutolys_motion/tutolys_motion.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../data/local_db/creation_store.dart';
 import '../../data/local_db/database.dart';
 import '../../data/local_db/drift_activity_session_store.dart';
 import '../../data/local_db/home_stats.dart';
@@ -239,6 +240,15 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     );
   }
 
+  /// Puts the active kid's "Mes créations" above the engine, so a creative
+  /// engine can keep what the child made and `my_gallery` can hang it
+  /// (ADR 0036). Local only.
+  Widget _creationShelf(Widget child) {
+    final shelf = ref.watch(creationShelfProvider);
+    if (shelf == null) return child;
+    return CreationShelfScope(shelf: shelf, child: child);
+  }
+
   /// The speaker an engine draws beside its own parts (a `passage_reader`
   /// sentence, app ADR 0044). With read-aloud off there is no scope, so the
   /// engine draws no speaker at all. The request is logged as part of the
@@ -449,22 +459,24 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     final c = _controller;
     if (c != null) {
       return Scaffold(
-        body: ImageResolverScope(
-          resolver: _images,
-          exerciseId: _exerciseId,
-          child: _contentSpeaker(
-            c,
-            LearningActivityView(
-              controller: c,
-              locale: locale,
-              character: stage,
-              onDone: _onRuntimeDone,
-              xpEarned: _runtimeXp,
-              speakPrompt: (q) {
-                final plan = _planFor(c, q.index);
-                if (plan == null || plan.promptSource() == null) return null;
-                return () => _speak(c, plan);
-              },
+        body: _creationShelf(
+          ImageResolverScope(
+            resolver: _images,
+            exerciseId: _exerciseId,
+            child: _contentSpeaker(
+              c,
+              LearningActivityView(
+                controller: c,
+                locale: locale,
+                character: stage,
+                onDone: _onRuntimeDone,
+                xpEarned: _runtimeXp,
+                speakPrompt: (q) {
+                  final plan = _planFor(c, q.index);
+                  if (plan == null || plan.promptSource() == null) return null;
+                  return () => _speak(c, plan);
+                },
+              ),
             ),
           ),
         ),

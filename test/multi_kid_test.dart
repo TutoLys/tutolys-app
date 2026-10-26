@@ -7,6 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tutolys_app/core/i18n/strings.dart';
 import 'package:tutolys_app/data/api/pairing_api.dart';
+import 'package:tutolys_app/data/local_db/creation_store.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
 import 'package:tutolys_app/core/net/recovery.dart';
 import 'package:tutolys_app/data/local_db/session_store.dart';
@@ -55,9 +56,20 @@ Future<SessionStore> _storeWith(List<(String, String)> kids) async {
   return store;
 }
 
-ProviderContainer _container(SessionStore store, PairingApi api) =>
+ProviderContainer _container(
+  SessionStore store,
+  PairingApi api, {
+  LocalDatabase? db,
+}) =>
     ProviderContainer(
       overrides: [
+        // Lazy, so only a test that forgets or revokes a kid opens one.
+        localDatabaseProvider.overrideWith((ref) {
+          if (db != null) return db;
+          final memory = LocalDatabase.memory();
+          ref.onDispose(memory.close);
+          return memory;
+        }),
         sessionStoreProvider.overrideWithValue(store),
         pairingApiProvider.overrideWithValue(api),
         sessionAutoRefreshProvider.overrideWithValue(false),
@@ -240,6 +252,31 @@ void main() {
       expect(s.status, SessionStatus.paired);
       expect([for (final k in s.kids) k.id], ['k1', 'k2']);
       expect(s.stage, ProfileStage.choosing);
+    });
+
+    test('a kid who is forgotten or revoked takes their creations along',
+        () async {
+      final db = LocalDatabase.memory();
+      addTearDown(db.close);
+      final store = await _storeWith([('k1', 'Yelhan'), ('k2', 'Lina')]);
+      for (final kid in ['k1', 'k2']) {
+        await CreationStore(db, kidId: kid).save(
+          engineKey: 'compose_build',
+          exerciseId: 'ex-1',
+          payload: {'words': ['Le', 'chat']},
+        );
+      }
+      final c = _container(store, _TokenPairingApi(), db: db);
+      addTearDown(c.dispose);
+      final n = c.read(sessionControllerProvider.notifier);
+      await n.restore();
+      final active = c.read(sessionControllerProvider).kid!.id;
+
+      await n.forget();
+
+      expect(await CreationStore(db, kidId: active).list(), isEmpty);
+      final other = active == 'k1' ? 'k2' : 'k1';
+      expect(await CreationStore(db, kidId: other).list(), hasLength(1));
     });
   });
 

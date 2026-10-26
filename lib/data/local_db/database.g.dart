@@ -3953,6 +3953,525 @@ class AssetCacheTableCompanion extends UpdateCompanion<AssetCacheTableData> {
   }
 }
 
+class $CreationTableTable extends CreationTable
+    with TableInfo<$CreationTableTable, CreationRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CreationTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _kidIdMeta = const VerificationMeta('kidId');
+  @override
+  late final GeneratedColumn<String> kidId = GeneratedColumn<String>(
+    'kid_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _engineKeyMeta = const VerificationMeta(
+    'engineKey',
+  );
+  @override
+  late final GeneratedColumn<String> engineKey = GeneratedColumn<String>(
+    'engine_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _exerciseIdMeta = const VerificationMeta(
+    'exerciseId',
+  );
+  @override
+  late final GeneratedColumn<String> exerciseId = GeneratedColumn<String>(
+    'exercise_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _payloadVersionMeta = const VerificationMeta(
+    'payloadVersion',
+  );
+  @override
+  late final GeneratedColumn<int> payloadVersion = GeneratedColumn<int>(
+    'payload_version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _payloadMeta = const VerificationMeta(
+    'payload',
+  );
+  @override
+  late final GeneratedColumn<String> payload = GeneratedColumn<String>(
+    'payload',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _hungMeta = const VerificationMeta('hung');
+  @override
+  late final GeneratedColumn<bool> hung = GeneratedColumn<bool>(
+    'hung',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("hung" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    kidId,
+    engineKey,
+    exerciseId,
+    payloadVersion,
+    payload,
+    hung,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'creation';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CreationRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('kid_id')) {
+      context.handle(
+        _kidIdMeta,
+        kidId.isAcceptableOrUnknown(data['kid_id']!, _kidIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kidIdMeta);
+    }
+    if (data.containsKey('engine_key')) {
+      context.handle(
+        _engineKeyMeta,
+        engineKey.isAcceptableOrUnknown(data['engine_key']!, _engineKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_engineKeyMeta);
+    }
+    if (data.containsKey('exercise_id')) {
+      context.handle(
+        _exerciseIdMeta,
+        exerciseId.isAcceptableOrUnknown(data['exercise_id']!, _exerciseIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_exerciseIdMeta);
+    }
+    if (data.containsKey('payload_version')) {
+      context.handle(
+        _payloadVersionMeta,
+        payloadVersion.isAcceptableOrUnknown(
+          data['payload_version']!,
+          _payloadVersionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('payload')) {
+      context.handle(
+        _payloadMeta,
+        payload.isAcceptableOrUnknown(data['payload']!, _payloadMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_payloadMeta);
+    }
+    if (data.containsKey('hung')) {
+      context.handle(
+        _hungMeta,
+        hung.isAcceptableOrUnknown(data['hung']!, _hungMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CreationRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CreationRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      kidId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kid_id'],
+      )!,
+      engineKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}engine_key'],
+      )!,
+      exerciseId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}exercise_id'],
+      )!,
+      payloadVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}payload_version'],
+      )!,
+      payload: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payload'],
+      )!,
+      hung: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}hung'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $CreationTableTable createAlias(String alias) {
+    return $CreationTableTable(attachedDatabase, alias);
+  }
+}
+
+class CreationRow extends DataClass implements Insertable<CreationRow> {
+  final String id;
+  final String kidId;
+  final String engineKey;
+  final String exerciseId;
+  final int payloadVersion;
+
+  /// JSON, owned by the engine. The store never looks inside, so an engine
+  /// can change its shape (and bump `payload_version`) with no migration.
+  final String payload;
+
+  /// Hung in the gallery. Hung creations are never evicted.
+  final bool hung;
+  final DateTime createdAt;
+  const CreationRow({
+    required this.id,
+    required this.kidId,
+    required this.engineKey,
+    required this.exerciseId,
+    required this.payloadVersion,
+    required this.payload,
+    required this.hung,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['kid_id'] = Variable<String>(kidId);
+    map['engine_key'] = Variable<String>(engineKey);
+    map['exercise_id'] = Variable<String>(exerciseId);
+    map['payload_version'] = Variable<int>(payloadVersion);
+    map['payload'] = Variable<String>(payload);
+    map['hung'] = Variable<bool>(hung);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  CreationTableCompanion toCompanion(bool nullToAbsent) {
+    return CreationTableCompanion(
+      id: Value(id),
+      kidId: Value(kidId),
+      engineKey: Value(engineKey),
+      exerciseId: Value(exerciseId),
+      payloadVersion: Value(payloadVersion),
+      payload: Value(payload),
+      hung: Value(hung),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory CreationRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CreationRow(
+      id: serializer.fromJson<String>(json['id']),
+      kidId: serializer.fromJson<String>(json['kidId']),
+      engineKey: serializer.fromJson<String>(json['engineKey']),
+      exerciseId: serializer.fromJson<String>(json['exerciseId']),
+      payloadVersion: serializer.fromJson<int>(json['payloadVersion']),
+      payload: serializer.fromJson<String>(json['payload']),
+      hung: serializer.fromJson<bool>(json['hung']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'kidId': serializer.toJson<String>(kidId),
+      'engineKey': serializer.toJson<String>(engineKey),
+      'exerciseId': serializer.toJson<String>(exerciseId),
+      'payloadVersion': serializer.toJson<int>(payloadVersion),
+      'payload': serializer.toJson<String>(payload),
+      'hung': serializer.toJson<bool>(hung),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  CreationRow copyWith({
+    String? id,
+    String? kidId,
+    String? engineKey,
+    String? exerciseId,
+    int? payloadVersion,
+    String? payload,
+    bool? hung,
+    DateTime? createdAt,
+  }) => CreationRow(
+    id: id ?? this.id,
+    kidId: kidId ?? this.kidId,
+    engineKey: engineKey ?? this.engineKey,
+    exerciseId: exerciseId ?? this.exerciseId,
+    payloadVersion: payloadVersion ?? this.payloadVersion,
+    payload: payload ?? this.payload,
+    hung: hung ?? this.hung,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  CreationRow copyWithCompanion(CreationTableCompanion data) {
+    return CreationRow(
+      id: data.id.present ? data.id.value : this.id,
+      kidId: data.kidId.present ? data.kidId.value : this.kidId,
+      engineKey: data.engineKey.present ? data.engineKey.value : this.engineKey,
+      exerciseId: data.exerciseId.present
+          ? data.exerciseId.value
+          : this.exerciseId,
+      payloadVersion: data.payloadVersion.present
+          ? data.payloadVersion.value
+          : this.payloadVersion,
+      payload: data.payload.present ? data.payload.value : this.payload,
+      hung: data.hung.present ? data.hung.value : this.hung,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CreationRow(')
+          ..write('id: $id, ')
+          ..write('kidId: $kidId, ')
+          ..write('engineKey: $engineKey, ')
+          ..write('exerciseId: $exerciseId, ')
+          ..write('payloadVersion: $payloadVersion, ')
+          ..write('payload: $payload, ')
+          ..write('hung: $hung, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    kidId,
+    engineKey,
+    exerciseId,
+    payloadVersion,
+    payload,
+    hung,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CreationRow &&
+          other.id == this.id &&
+          other.kidId == this.kidId &&
+          other.engineKey == this.engineKey &&
+          other.exerciseId == this.exerciseId &&
+          other.payloadVersion == this.payloadVersion &&
+          other.payload == this.payload &&
+          other.hung == this.hung &&
+          other.createdAt == this.createdAt);
+}
+
+class CreationTableCompanion extends UpdateCompanion<CreationRow> {
+  final Value<String> id;
+  final Value<String> kidId;
+  final Value<String> engineKey;
+  final Value<String> exerciseId;
+  final Value<int> payloadVersion;
+  final Value<String> payload;
+  final Value<bool> hung;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const CreationTableCompanion({
+    this.id = const Value.absent(),
+    this.kidId = const Value.absent(),
+    this.engineKey = const Value.absent(),
+    this.exerciseId = const Value.absent(),
+    this.payloadVersion = const Value.absent(),
+    this.payload = const Value.absent(),
+    this.hung = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CreationTableCompanion.insert({
+    required String id,
+    required String kidId,
+    required String engineKey,
+    required String exerciseId,
+    this.payloadVersion = const Value.absent(),
+    required String payload,
+    this.hung = const Value.absent(),
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       kidId = Value(kidId),
+       engineKey = Value(engineKey),
+       exerciseId = Value(exerciseId),
+       payload = Value(payload),
+       createdAt = Value(createdAt);
+  static Insertable<CreationRow> custom({
+    Expression<String>? id,
+    Expression<String>? kidId,
+    Expression<String>? engineKey,
+    Expression<String>? exerciseId,
+    Expression<int>? payloadVersion,
+    Expression<String>? payload,
+    Expression<bool>? hung,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (kidId != null) 'kid_id': kidId,
+      if (engineKey != null) 'engine_key': engineKey,
+      if (exerciseId != null) 'exercise_id': exerciseId,
+      if (payloadVersion != null) 'payload_version': payloadVersion,
+      if (payload != null) 'payload': payload,
+      if (hung != null) 'hung': hung,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CreationTableCompanion copyWith({
+    Value<String>? id,
+    Value<String>? kidId,
+    Value<String>? engineKey,
+    Value<String>? exerciseId,
+    Value<int>? payloadVersion,
+    Value<String>? payload,
+    Value<bool>? hung,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return CreationTableCompanion(
+      id: id ?? this.id,
+      kidId: kidId ?? this.kidId,
+      engineKey: engineKey ?? this.engineKey,
+      exerciseId: exerciseId ?? this.exerciseId,
+      payloadVersion: payloadVersion ?? this.payloadVersion,
+      payload: payload ?? this.payload,
+      hung: hung ?? this.hung,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (kidId.present) {
+      map['kid_id'] = Variable<String>(kidId.value);
+    }
+    if (engineKey.present) {
+      map['engine_key'] = Variable<String>(engineKey.value);
+    }
+    if (exerciseId.present) {
+      map['exercise_id'] = Variable<String>(exerciseId.value);
+    }
+    if (payloadVersion.present) {
+      map['payload_version'] = Variable<int>(payloadVersion.value);
+    }
+    if (payload.present) {
+      map['payload'] = Variable<String>(payload.value);
+    }
+    if (hung.present) {
+      map['hung'] = Variable<bool>(hung.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CreationTableCompanion(')
+          ..write('id: $id, ')
+          ..write('kidId: $kidId, ')
+          ..write('engineKey: $engineKey, ')
+          ..write('exerciseId: $exerciseId, ')
+          ..write('payloadVersion: $payloadVersion, ')
+          ..write('payload: $payload, ')
+          ..write('hung: $hung, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$LocalDatabase extends GeneratedDatabase {
   _$LocalDatabase(QueryExecutor e) : super(e);
   $LocalDatabaseManager get managers => $LocalDatabaseManager(this);
@@ -3976,6 +4495,7 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
   late final $AssetCacheTableTable assetCacheTable = $AssetCacheTableTable(
     this,
   );
+  late final $CreationTableTable creationTable = $CreationTableTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3990,6 +4510,7 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
     audioCacheTable,
     activitySessionTable,
     assetCacheTable,
+    creationTable,
   ];
   @override
   DriftDatabaseOptions get options =>
@@ -6197,6 +6718,278 @@ typedef $$AssetCacheTableTableProcessedTableManager =
       AssetCacheTableData,
       PrefetchHooks Function()
     >;
+typedef $$CreationTableTableCreateCompanionBuilder =
+    CreationTableCompanion Function({
+      required String id,
+      required String kidId,
+      required String engineKey,
+      required String exerciseId,
+      Value<int> payloadVersion,
+      required String payload,
+      Value<bool> hung,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$CreationTableTableUpdateCompanionBuilder =
+    CreationTableCompanion Function({
+      Value<String> id,
+      Value<String> kidId,
+      Value<String> engineKey,
+      Value<String> exerciseId,
+      Value<int> payloadVersion,
+      Value<String> payload,
+      Value<bool> hung,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$CreationTableTableFilterComposer
+    extends Composer<_$LocalDatabase, $CreationTableTable> {
+  $$CreationTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kidId => $composableBuilder(
+    column: $table.kidId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get engineKey => $composableBuilder(
+    column: $table.engineKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get exerciseId => $composableBuilder(
+    column: $table.exerciseId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get payloadVersion => $composableBuilder(
+    column: $table.payloadVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get payload => $composableBuilder(
+    column: $table.payload,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get hung => $composableBuilder(
+    column: $table.hung,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CreationTableTableOrderingComposer
+    extends Composer<_$LocalDatabase, $CreationTableTable> {
+  $$CreationTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kidId => $composableBuilder(
+    column: $table.kidId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get engineKey => $composableBuilder(
+    column: $table.engineKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get exerciseId => $composableBuilder(
+    column: $table.exerciseId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get payloadVersion => $composableBuilder(
+    column: $table.payloadVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get payload => $composableBuilder(
+    column: $table.payload,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get hung => $composableBuilder(
+    column: $table.hung,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CreationTableTableAnnotationComposer
+    extends Composer<_$LocalDatabase, $CreationTableTable> {
+  $$CreationTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get kidId =>
+      $composableBuilder(column: $table.kidId, builder: (column) => column);
+
+  GeneratedColumn<String> get engineKey =>
+      $composableBuilder(column: $table.engineKey, builder: (column) => column);
+
+  GeneratedColumn<String> get exerciseId => $composableBuilder(
+    column: $table.exerciseId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get payloadVersion => $composableBuilder(
+    column: $table.payloadVersion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get payload =>
+      $composableBuilder(column: $table.payload, builder: (column) => column);
+
+  GeneratedColumn<bool> get hung =>
+      $composableBuilder(column: $table.hung, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$CreationTableTableTableManager
+    extends
+        RootTableManager<
+          _$LocalDatabase,
+          $CreationTableTable,
+          CreationRow,
+          $$CreationTableTableFilterComposer,
+          $$CreationTableTableOrderingComposer,
+          $$CreationTableTableAnnotationComposer,
+          $$CreationTableTableCreateCompanionBuilder,
+          $$CreationTableTableUpdateCompanionBuilder,
+          (
+            CreationRow,
+            BaseReferences<_$LocalDatabase, $CreationTableTable, CreationRow>,
+          ),
+          CreationRow,
+          PrefetchHooks Function()
+        > {
+  $$CreationTableTableTableManager(
+    _$LocalDatabase db,
+    $CreationTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CreationTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CreationTableTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CreationTableTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> kidId = const Value.absent(),
+                Value<String> engineKey = const Value.absent(),
+                Value<String> exerciseId = const Value.absent(),
+                Value<int> payloadVersion = const Value.absent(),
+                Value<String> payload = const Value.absent(),
+                Value<bool> hung = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CreationTableCompanion(
+                id: id,
+                kidId: kidId,
+                engineKey: engineKey,
+                exerciseId: exerciseId,
+                payloadVersion: payloadVersion,
+                payload: payload,
+                hung: hung,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String kidId,
+                required String engineKey,
+                required String exerciseId,
+                Value<int> payloadVersion = const Value.absent(),
+                required String payload,
+                Value<bool> hung = const Value.absent(),
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => CreationTableCompanion.insert(
+                id: id,
+                kidId: kidId,
+                engineKey: engineKey,
+                exerciseId: exerciseId,
+                payloadVersion: payloadVersion,
+                payload: payload,
+                hung: hung,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$CreationTableTable, CreationRow>(table),
+                  BaseReferences<
+                    _$LocalDatabase,
+                    $CreationTableTable,
+                    CreationRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CreationTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$LocalDatabase,
+      $CreationTableTable,
+      CreationRow,
+      $$CreationTableTableFilterComposer,
+      $$CreationTableTableOrderingComposer,
+      $$CreationTableTableAnnotationComposer,
+      $$CreationTableTableCreateCompanionBuilder,
+      $$CreationTableTableUpdateCompanionBuilder,
+      (
+        CreationRow,
+        BaseReferences<_$LocalDatabase, $CreationTableTable, CreationRow>,
+      ),
+      CreationRow,
+      PrefetchHooks Function()
+    >;
 
 class $LocalDatabaseManager {
   final _$LocalDatabase _db;
@@ -6219,4 +7012,6 @@ class $LocalDatabaseManager {
       $$ActivitySessionTableTableTableManager(_db, _db.activitySessionTable);
   $$AssetCacheTableTableTableManager get assetCacheTable =>
       $$AssetCacheTableTableTableManager(_db, _db.assetCacheTable);
+  $$CreationTableTableTableManager get creationTable =>
+      $$CreationTableTableTableManager(_db, _db.creationTable);
 }

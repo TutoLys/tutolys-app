@@ -278,6 +278,41 @@ class ActivitySessionTable extends Table {
   Set<Column> get primaryKey => {activitySessionId};
 }
 
+/// What a child made in an engine, kept so they can see it again in their
+/// village gallery (app ADR 0036). Per kid, local only, never uploaded (D6).
+///
+/// The engine's structured result, not a picture: the engine that made it
+/// draws it again. Capped per kid with counted eviction, like the outbox
+/// (`CreationStore`).
+@DataClassName('CreationRow')
+class CreationTable extends Table {
+  @override
+  String get tableName => 'creation';
+
+  TextColumn get id => text()();
+
+  TextColumn get kidId => text().named('kid_id')();
+
+  TextColumn get engineKey => text().named('engine_key')();
+
+  TextColumn get exerciseId => text().named('exercise_id')();
+
+  IntColumn get payloadVersion =>
+      integer().named('payload_version').withDefault(const Constant(1))();
+
+  /// JSON, owned by the engine. The store never looks inside, so an engine
+  /// can change its shape (and bump `payload_version`) with no migration.
+  TextColumn get payload => text()();
+
+  /// Hung in the gallery. Hung creations are never evicted.
+  BoolColumn get hung => boolean().withDefault(const Constant(false))();
+
+  DateTimeColumn get createdAt => dateTime().named('created_at')();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// The `kid_id` value for rows that belong to the device rather than to any
 /// one kid — today only `app_state`'s `outbox_capacity.*` bookkeeping.
 ///
@@ -297,6 +332,7 @@ const String deviceScope = '';
     AudioCacheTable,
     ActivitySessionTable,
     AssetCacheTable,
+    CreationTable,
   ],
 )
 // Timestamp storage is configured in build.yaml
@@ -337,7 +373,7 @@ class LocalDatabase extends _$LocalDatabase {
   Future<String?> Function()? migrationKidIdLoader;
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -367,6 +403,7 @@ class LocalDatabase extends _$LocalDatabase {
         'ON event_outbox (kid_id, delivered_at, queued_at)',
       );
       await _createActivitySessionIndex();
+      await _createCreationIndex();
     },
     onUpgrade: (m, from, to) async {
       if (from < 2) {
@@ -400,6 +437,10 @@ class LocalDatabase extends _$LocalDatabase {
           await m.addColumn(skillNodeTable, column);
         }
       }
+      if (from < 8 && to >= 8) {
+        await m.createTable(creationTable);
+        await _createCreationIndex();
+      }
     },
   );
 
@@ -408,6 +449,12 @@ class LocalDatabase extends _$LocalDatabase {
   Future<void> _createActivitySessionIndex() => customStatement(
     'CREATE INDEX IF NOT EXISTS activity_session_lookup '
     'ON activity_session (kid_id, exercise_id)',
+  );
+
+  /// "This kid's creations, newest first" — every gallery read.
+  Future<void> _createCreationIndex() => customStatement(
+    'CREATE INDEX IF NOT EXISTS creation_kid '
+    'ON creation (kid_id, created_at)',
   );
 
   /// The 3 → 4 upgrade: give the per-kid tables an owner (ADR 0014).

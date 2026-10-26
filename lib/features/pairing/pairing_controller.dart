@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/api/pairing_api.dart';
+import '../../data/local_db/creation_store.dart';
 import '../../data/local_db/database.dart';
 import '../../data/local_db/session_store.dart';
 
@@ -189,7 +190,7 @@ class SessionController extends Notifier<SessionState> {
         _scheduleRefresh(expiresIn);
       case RefreshRejected():
         _refreshTimer?.cancel();
-        await _store.clearPairing();
+        await _forgetActiveKid();
         await _resumeWithRemaining();
       case RefreshOffline() || RefreshFailed():
         // Stay paired and try again later. Offline play continues from the
@@ -228,7 +229,7 @@ class SessionController extends Notifier<SessionState> {
         _scheduleRefresh(expiresIn);
       case RefreshRejected():
         // Revoked or archived: forget that kid's credential.
-        await _store.clearPairing();
+        await _forgetActiveKid();
         await _resumeWithRemaining();
       case RefreshOffline() || RefreshFailed():
         // Offline is NOT a reason to un-pair. The kid should keep playing
@@ -249,6 +250,17 @@ class SessionController extends Notifier<SessionState> {
 
   /// After a kid's pairing is dropped: the next kid paired here, or
   /// unpaired when there is none.
+  /// Forgets the active kid's credential, and with it the local data that
+  /// is theirs alone and never uploads: their creations (ADR 0036). Their
+  /// queued events, streak days and settings are not touched here.
+  Future<void> _forgetActiveKid() async {
+    final kid = await _store.pairedKid();
+    await _store.clearPairing();
+    if (kid != null) {
+      await CreationStore.eraseKid(ref.read(localDatabaseProvider), kid.id);
+    }
+  }
+
   Future<void> _resumeWithRemaining() async {
     final kids = await _store.pairedKids();
     final next = kids.isEmpty ? null : await _store.pairedKid();
@@ -293,7 +305,7 @@ class SessionController extends Notifier<SessionState> {
         );
         _scheduleRefresh(expiresIn);
       case RefreshRejected():
-        await _store.clearPairing();
+        await _forgetActiveKid();
         await _resumeWithRemaining();
       case RefreshOffline() || RefreshFailed():
         state = SessionState(
@@ -370,7 +382,7 @@ class SessionController extends Notifier<SessionState> {
   Future<void> forget() async {
     _refreshTimer?.cancel();
     _refreshTimer = null;
-    await _store.clearPairing();
+    await _forgetActiveKid();
     final kids = await _store.pairedKids();
     if (kids.isEmpty) {
       state = const SessionState.unpaired();
