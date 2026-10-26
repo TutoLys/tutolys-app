@@ -22,6 +22,7 @@ const _samples = {
   'fr_passage_discuss.json': PassageReaderEngine(),
   'fr_mail_studio.json': MailStudioEngine(),
   'fr_feedback_studio.json': FeedbackStudioEngine(),
+  'en_stage_presenter.json': StagePresenterEngine(),
 };
 
 final _dir = Directory('../../../tutolys-backend/content/samples');
