@@ -42,7 +42,18 @@ NodeLessons nodeLessons(
     // its first, and that is the one that was finished.
     done = {ids.first};
   } else {
-    done = ids.where(recorded.contains).toSet();
+    // A lesson counts once whatever language it was played in. The
+    // backend's `lesson_group` is the original lesson's exercise id, shared
+    // by its translations: a French lesson's group is its own id, and its
+    // English twin carries that same id as its group. So a lesson is done
+    // when the record holds its id or its group (2026-10-26: Yelhan's
+    // French completions read 0/2 once the app was set to English).
+    done = {
+      for (final lesson in lessons)
+        if (recorded.contains(lesson['exercise_id']) ||
+            recorded.contains(lesson['lesson_group']))
+          lesson['exercise_id'] as String,
+    };
   }
   return NodeLessons(lessons: lessons, done: done);
 }

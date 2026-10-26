@@ -209,4 +209,45 @@ void main() {
       expect(find.text('page content'), findsOneWidget);
     }
   });
+
+  group('a destination with its own icon (Profil shows the avatar)', () {
+    final withAvatar = [
+      ..._primary.take(4),
+      VillageDestination(
+        label: 'Profil',
+        asset: 'asset-profil.png',
+        icon: (size) => SizedBox.square(
+          key: ValueKey('avatar-$size'),
+          dimension: size,
+        ),
+      ),
+    ];
+
+    for (final (name, size, iconSize) in [
+      ('sidebar', desktop, 22.0),
+      ('rail', tablet, 24.0),
+      ('bottom bar', phone, 23.0),
+    ]) {
+      testWidgets('draws it in the $name', (tester) async {
+        await tester.pumpWidget(
+          harness(size: size, destinations: withAvatar),
+        );
+        expect(find.byKey(ValueKey('avatar-$iconSize')), findsOneWidget);
+      });
+    }
+
+    testWidgets('without one, the asset icon stays', (tester) async {
+      await tester.pumpWidget(harness(size: desktop));
+      expect(
+        find.byWidgetPredicate(
+          (w) =>
+              w is Image &&
+              w.image is AssetImage &&
+              (w.image as AssetImage).assetName ==
+                  'assets/images/asset-profil.png',
+        ),
+        findsOneWidget,
+      );
+    });
+  });
 }

@@ -7,6 +7,7 @@ class VillageDestination {
     required this.label,
     required this.asset,
     this.badge,
+    this.icon,
   });
 
   final String label;
@@ -19,6 +20,19 @@ class VillageDestination {
   /// Unread/pending count, rendered as the red pill. Null means no badge;
   /// zero is treated the same, so a caller never has to special-case it.
   final int? badge;
+
+  /// Draws the icon at a given size instead of [asset], for an icon that is
+  /// the kid's own (Profil shows their avatar). [asset] stays the fallback.
+  final Widget Function(double size)? icon;
+
+  Widget iconAt(double size) =>
+      icon?.call(size) ??
+      Image.asset(
+        'assets/images/$asset',
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+      );
 }
 
 /// The shell chrome every page sits inside, in all three of the design's
@@ -207,12 +221,7 @@ class VillageNavShell extends StatelessWidget {
     required bool active,
     required VoidCallback onTap,
   }) {
-    final icon = Image.asset(
-      'assets/images/${destination.asset}',
-      width: expanded ? 22 : 24,
-      height: expanded ? 22 : 24,
-      fit: BoxFit.contain,
-    );
+    final icon = destination.iconAt(expanded ? 22 : 24);
 
     final row = Material(
       color: active ? _activeFill : Colors.transparent,
@@ -419,12 +428,7 @@ class VillageNavShell extends StatelessWidget {
             Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Image.asset(
-                  'assets/images/${destination.asset}',
-                  width: 23,
-                  height: 23,
-                  fit: BoxFit.contain,
-                ),
+                destination.iconAt(23),
                 const SizedBox(height: 3),
                 Text(
                   destination.label,

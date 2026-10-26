@@ -84,4 +84,50 @@ void main() {
     expect(p.plays, 3);
     expect(p.everPerfect, isTrue);
   });
+
+  group('a lesson counts once, whatever language it was played in', () {
+    // The backend's lesson_group is the original (French) exercise's id,
+    // shared by its English twin.
+    Map<String, Object?> twin(String id, String group, String locale) => {
+      ...lesson(id, 0, locale),
+      'lesson_group': group,
+    };
+
+    test('French completions count on the English lessons', () {
+      final en = [
+        twin('en-0', 'fr-0', 'en-CA'),
+        {...twin('en-1', 'fr-1', 'en-CA'), 'rank': 1},
+      ];
+      final n = nodeLessons(en, progress({'fr-0'}));
+      expect((n.doneCount, n.total), (1, 2));
+      expect(n.next['exercise_id'], 'en-1');
+    });
+
+    test('an English completion counts on the French lesson', () async {
+      final db = LocalDatabase.memory();
+      addTearDown(db.close);
+      final local = NodeProgressLocal(db, kidId: 'k1');
+      await local.recordCompleted(
+        'n',
+        perfect: false,
+        exerciseId: 'en-0',
+        lessonGroup: 'fr-0',
+      );
+      final p = (await local.all())['n']!;
+      expect(p.exerciseIds, {'en-0', 'fr-0'});
+
+      final fr = [
+        twin('fr-0', 'fr-0', 'fr-CA'),
+        {...twin('fr-1', 'fr-1', 'fr-CA'), 'rank': 1},
+      ];
+      expect(nodeLessons(fr, p).doneCount, 1);
+    });
+
+    test('a lesson done in both languages still counts once', () {
+      final en = [twin('en-0', 'fr-0', 'en-CA')];
+      final n = nodeLessons(en, progress({'fr-0', 'en-0'}));
+      expect((n.doneCount, n.total), (1, 1));
+      expect(n.complete, isTrue);
+    });
+  });
 }

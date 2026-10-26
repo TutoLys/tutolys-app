@@ -185,6 +185,16 @@ List<PathSection> buildCarteSections({
                 frontierTaken = true;
                 state = PathNodeState.active;
               }
+              // A node shown as done never reads short ("0/2" under a
+              // gold check): server mastery can arrive for lessons this
+              // device never finished, and then the counter is left out.
+              final counts = switch (lessonCounts[leaf.id]) {
+                (final done, final total)
+                    when total > 1 &&
+                        !(state == PathNodeState.mastered && done < total) =>
+                  (done, total),
+                _ => null,
+              };
               return PathNode(
                 id: leaf.id,
                 // A missing English label is a content gap, not a reason to
@@ -195,15 +205,14 @@ List<PathSection> buildCarteSections({
                 state: state,
                 masteryPct: mastery == null ? null : mastery.masteryPct / 100,
                 // Only worth showing when there is more than one lesson.
-                lessons: switch (lessonCounts[leaf.id]) {
-                  (final done, final total) when total > 1 => (done, total),
-                  _ => null,
-                },
+                lessons: counts,
                 stateLabel: describeState?.call(state),
-                lessonsLabel: switch (lessonCounts[leaf.id]) {
-                  (final done, final total) when total > 1 =>
-                    describeLessons?.call(done, total),
-                  _ => null,
+                lessonsLabel: switch (counts) {
+                  (final done, final total) => describeLessons?.call(
+                    done,
+                    total,
+                  ),
+                  null => null,
                 },
                 otherLanguage: _otherLanguage(lessonLocales[leaf.id], asked),
                 otherLanguageLabel:

@@ -207,6 +207,32 @@ void main() {
     expect(nodes[1].masteryPct, closeTo(0.6, 1e-9));
   });
 
+  test('a mastered node never reads short: no "0/2" under a gold check', () {
+    final sections = buildCarteSections(
+      subject: 'MATH',
+      leaves: [
+        leaf('a', 'mathematique/mesure/b:A/o:1'),
+        leaf('b', 'mathematique/mesure/b:A/o:2'),
+        leaf('c', 'mathematique/mesure/b:A/o:3'),
+      ],
+      playable: {'a', 'b', 'c'},
+      masteries: [
+        mastery('a', 90, mastered: true),
+        mastery('b', 95, mastered: true),
+      ],
+      appLocale: const Locale('fr', 'CA'),
+      lessonCounts: {'a': (0, 2), 'b': (2, 2), 'c': (0, 2)},
+      describeLessons: (done, total) => '$done/$total',
+    );
+    final [a, b, c] = sections.single.nodes;
+    expect(a.state, PathNodeState.mastered);
+    expect(a.lessons, isNull);
+    expect(a.lessonsLabel, isNull);
+    expect(b.lessons, (2, 2), reason: 'all done: the count agrees');
+    expect(c.state, PathNodeState.active);
+    expect(c.lessonsLabel, '0/2', reason: 'the node being played keeps it');
+  });
+
   test('never-played is null, not zero — the card must not show a score', () {
     final sections = build([leaf('a', 'mathematique/mesure/b:A/o:1')]);
     expect(sections.single.nodes.single.masteryPct, isNull);

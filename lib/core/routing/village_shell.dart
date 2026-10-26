@@ -18,6 +18,7 @@ import '../../features/quests/quests_screen.dart';
 import '../../features/help/help_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../i18n/strings.dart';
+import '../widgets/kid_avatar.dart';
 import '../../features/pairing/pairing_controller.dart';
 import 'village_header.dart';
 import 'village_nav.dart';
@@ -125,7 +126,11 @@ class _VillageShellState extends ConsumerState<VillageShell> {
   ///
   /// Quêtes carries a badge counting today's quests still open, from the
   /// same board the page draws — none once all are done or while unknown.
-  static List<VillageDestination> _primary(Strings s, {int openQuests = 0}) => [
+  static List<VillageDestination> _primary(
+    Strings s, {
+    int openQuests = 0,
+    String? avatarKey,
+  }) => [
         VillageDestination(label: s.navVillage, asset: 'asset-village.png'),
         VillageDestination(label: s.navCarte, asset: 'asset-carte.png'),
         VillageDestination(
@@ -134,7 +139,16 @@ class _VillageShellState extends ConsumerState<VillageShell> {
           badge: openQuests > 0 ? openQuests : null,
         ),
         VillageDestination(label: s.navProgres, asset: 'asset-progres.png'),
-        VillageDestination(label: s.navProfil, asset: 'asset-profil.png'),
+        // Profil is the kid's own page, so its icon is their avatar, the
+        // same one the header shows. The generic icon stays for a kid with
+        // no avatar yet, or one whose art isn't drawn.
+        VillageDestination(
+          label: s.navProfil,
+          asset: 'asset-profil.png',
+          icon: avatarKey == null || avatarFor(avatarKey).asset == null
+              ? null
+              : (size) => KidAvatar(avatarKey: avatarKey, size: size),
+        ),
       ];
 
   static List<VillageDestination> _secondary(Strings s) => [
@@ -168,6 +182,7 @@ class _VillageShellState extends ConsumerState<VillageShell> {
         destinations: _primary(
           t,
           openQuests: board?.openCount ?? 0,
+          avatarKey: ref.watch(avatarControllerProvider).value?.selected,
         ),
         secondary: _secondary(t),
         currentIndex: _index,

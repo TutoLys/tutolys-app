@@ -25,9 +25,11 @@ class NodeProgress {
   /// At least one run answered every question right on the first try.
   final bool everPerfect;
 
-  /// Which of the node's lessons (exercise ids) were finished, for a node
-  /// with several. Null on a record written before lessons were tracked:
-  /// all it knows is that *a* lesson was finished.
+  /// Which of the node's lessons were finished, for a node with several:
+  /// exercise ids, and since 2026-10-26 their `lesson_group` too, so a
+  /// lesson finished in one language counts for its twin in the other
+  /// (see `nodeLessons`). Null on a record written before lessons were
+  /// tracked: all it knows is that *a* lesson was finished.
   final Set<String>? exerciseIds;
 
   Map<String, Object?> toJson() => {
@@ -84,6 +86,7 @@ class NodeProgressLocal {
     String skillNodeId, {
     required bool perfect,
     String? exerciseId,
+    String? lessonGroup,
   }) async {
     final key = '$_prefix$skillNodeId';
     final existing =
@@ -101,7 +104,11 @@ class NodeProgressLocal {
       everPerfect: (before?.everPerfect ?? false) || perfect,
       exerciseIds: exerciseId == null
           ? before?.exerciseIds
-          : {...?before?.exerciseIds, exerciseId},
+          : {
+              ...?before?.exerciseIds,
+              exerciseId,
+              if (lessonGroup != null && lessonGroup.isNotEmpty) lessonGroup,
+            },
     );
     await db
         .into(db.appStateTable)

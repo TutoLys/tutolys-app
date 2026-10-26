@@ -382,6 +382,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
             widget.node.id,
             perfect: summary.perfect,
             exerciseId: lessonId,
+            lessonGroup: widget.envelope['lesson_group'] as String?,
           )
           .then((_) => ref.invalidate(nodeProgressProvider)),
     );
