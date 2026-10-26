@@ -57,6 +57,10 @@ abstract class Strings {
   String welcomeGreeting(String name);
   String get welcomeFoxLine;
   String get welcomeFoxLineNew;
+
+  /// The greeting when several kids share the device: nobody named.
+  String get welcomeHello;
+  String get welcomeWhoToday;
   String get welcomePlay;
   String get welcomeStart;
 
@@ -472,6 +476,12 @@ class _FrenchStrings extends Strings {
 
   @override
   String get welcomeFoxLineNew => 'Viens découvrir le village avec moi !';
+
+  @override
+  String get welcomeHello => 'Salut !';
+
+  @override
+  String get welcomeWhoToday => 'Qui joue aujourd’hui ?';
 
   @override
   String get welcomePlay => 'Jouer';
@@ -1328,6 +1338,12 @@ class _EnglishStrings extends Strings {
 
   @override
   String get welcomeFoxLineNew => 'Come explore the village with me!';
+
+  @override
+  String get welcomeHello => 'Hi!';
+
+  @override
+  String get welcomeWhoToday => 'Who’s playing today?';
 
   @override
   String get welcomePlay => 'Play';

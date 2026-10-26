@@ -112,3 +112,35 @@ The work order's P3 pins it with tests.
   (2026-10-25, 22/22) pairs two kids on one `device_id` and checks
   `/me/profile` GET/PATCH and per-kid token refresh against the real
   backend. The Flutter UI driving those calls was not run live.
+
+## Revision 2026-10-25: with several kids, the launch screen is the picker
+
+With Yelhan and Léa paired, the launch screen said "Salut Léa ! On repart à
+l'aventure ?" and only showed "Qui joue ?" after Jouer (Hafid: "it shows
+Léa first then shows the switch").
+- **One kid**: unchanged, "Salut <name> !" and Jouer.
+- **Several kids**: the welcome screen itself is the picker. The fox says
+  "Salut ! Qui joue aujourd'hui ?", and one avatar tile per kid plus
+  "Ajouter un profil" replace Jouer. One tap enters that kid. No kid is
+  named or highlighted, not even the last one who played.
+- Chosen over going straight to "Qui joue ?" after the splash. That would
+  be two screens and a cross-fade where one does the job, and it would
+  drop the title screen (the village at dawn, the fox) only for families
+  with several kids. Both screens use the same tiles
+  (`KidProfileTile`, `AddProfileTile`).
+- **Nothing of the last kid's loads first.** Tapping another kid runs the
+  switch, including its token refresh, while the welcome screen stays up.
+  The shell is built only after that, so it is only ever built for the kid
+  who was tapped. Tapping the last kid just closes the picker.
+- "Qui joue ?" as its own screen stays for the header and Profil.
+- Tests (`test/launch_picker_test.dart`) cover:
+  - one kid greeted by name;
+  - two kids with no name, no Jouer and no Village built before a tap;
+  - the Village appearing only for the tapped kid while the refresh is
+    held open;
+  - the last kid entering with no second picker;
+  - "Ajouter un profil" opening pairing;
+  - three kids on a 360×640 phone with no overflow.
+
+  Without the fix, the four multi-kid tests fail.
+- Not checked in a browser.

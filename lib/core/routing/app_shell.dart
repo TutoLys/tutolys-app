@@ -124,6 +124,16 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
           _ => LaunchStage.ready,
         },
         kidName: session.status == SessionStatus.paired ? session.kid?.displayName : null,
+        // Several kids: the welcome screen is the picker, so a cold start
+        // never greets the last kid who played (ADR 0024).
+        kids: session.status == SessionStatus.paired && session.hasSeveralKids
+            ? session.kids
+            : null,
+        onPickKid: _enterAs,
+        onAddProfile: () {
+          ref.read(sessionControllerProvider.notifier).addProfile();
+          setState(() => _launched = true);
+        },
         onFinished: () => setState(() => _launched = true),
       ));
     }
@@ -151,6 +161,19 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
               ),
           },
       });
+  }
+
+  /// Leaves the launch screen as [kidId]. The switch (and its token
+  /// refresh) finishes first, so the shell is only ever built for the kid
+  /// who was tapped and nothing of the last kid's loads in between.
+  Future<void> _enterAs(String kidId) async {
+    final controller = ref.read(sessionControllerProvider.notifier);
+    if (kidId == ref.read(sessionControllerProvider).kid?.id) {
+      controller.closeProfileStage();
+    } else {
+      await controller.switchTo(kidId);
+    }
+    if (mounted) setState(() => _launched = true);
   }
 
   /// One switcher for every top-level screen, launch included, so the

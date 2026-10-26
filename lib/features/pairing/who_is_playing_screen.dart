@@ -34,8 +34,9 @@ final kidAvatarKeyProvider = FutureProvider.family<String, String>((
 /// picture passcode that would stop a sibling choosing someone else's tile
 /// (B-A0.5) isn't built on the backend yet.
 ///
-/// Shown on launch when several kids share the device, and from the header
-/// or Profil. In that case "Retour" goes back to the app as the same kid.
+/// Opened from the header or Profil, where "Retour" goes back to the app as
+/// the same kid. On launch with several kids, the welcome screen is the
+/// picker instead (ADR 0024), so a cold start never names one of them.
 class WhoIsPlayingScreen extends ConsumerWidget {
   const WhoIsPlayingScreen({super.key});
 
@@ -96,14 +97,14 @@ class WhoIsPlayingScreen extends ConsumerWidget {
                           alignment: WrapAlignment.center,
                           children: [
                             for (final kid in session.kids)
-                              _KidTile(
+                              KidProfileTile(
                                 kid: kid,
                                 current: kid.id == session.kid?.id,
                                 onTap: () => kid.id == session.kid?.id
                                     ? controller.closeProfileStage()
                                     : controller.switchTo(kid.id),
                               ),
-                            _AddTile(onTap: controller.addProfile),
+                            AddProfileTile(onTap: controller.addProfile),
                           ],
                         ),
                       ],
@@ -125,6 +126,7 @@ class _Tile extends StatelessWidget {
     required this.onTap,
     required this.label,
     required this.child,
+    required this.width,
     this.highlighted = false,
   });
 
@@ -132,6 +134,7 @@ class _Tile extends StatelessWidget {
   final VoidCallback onTap;
   final String label;
   final Widget child;
+  final double width;
   final bool highlighted;
 
   @override
@@ -156,7 +159,7 @@ class _Tile extends StatelessWidget {
           borderRadius: VillageMetrics.mdAll,
           onTap: onTap,
           child: SizedBox(
-            width: 150,
+            width: width,
             child: Padding(
               padding: const EdgeInsets.symmetric(
                 vertical: Space.md,
@@ -188,16 +191,21 @@ class _Tile extends StatelessWidget {
   }
 }
 
-class _KidTile extends ConsumerWidget {
-  const _KidTile({
+/// One paired kid's tile: their avatar and name. Also the launch screen's
+/// picker when several kids share the device.
+class KidProfileTile extends ConsumerWidget {
+  const KidProfileTile({
     required this.kid,
-    required this.current,
     required this.onTap,
+    this.current = false,
+    this.avatarSize = 92,
+    super.key,
   });
 
   final PairedKid kid;
   final bool current;
   final VoidCallback onTap;
+  final double avatarSize;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -208,15 +216,18 @@ class _KidTile extends ConsumerWidget {
       onTap: onTap,
       label: kid.displayName,
       highlighted: current,
-      child: KidAvatar(avatarKey: key, size: 92),
+      width: avatarSize + 58,
+      child: KidAvatar(avatarKey: key, size: avatarSize),
     );
   }
 }
 
-class _AddTile extends StatelessWidget {
-  const _AddTile({required this.onTap});
+/// "Ajouter un profil": opens the pairing-code screen.
+class AddProfileTile extends StatelessWidget {
+  const AddProfileTile({required this.onTap, this.avatarSize = 92, super.key});
 
   final VoidCallback onTap;
+  final double avatarSize;
 
   @override
   Widget build(BuildContext context) {
@@ -225,11 +236,16 @@ class _AddTile extends StatelessWidget {
       tileKey: const ValueKey('who-add'),
       onTap: onTap,
       label: context.s.addProfile,
+      width: avatarSize + 58,
       child: Container(
-        width: 92,
-        height: 92,
+        width: avatarSize,
+        height: avatarSize,
         decoration: BoxDecoration(shape: BoxShape.circle, color: p.track),
-        child: Icon(Icons.add_rounded, size: 44, color: p.quebecBlue),
+        child: Icon(
+          Icons.add_rounded,
+          size: avatarSize * 0.48,
+          color: p.quebecBlue,
+        ),
       ),
     );
   }

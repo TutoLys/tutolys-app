@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/i18n/strings.dart';
 import '../../core/widgets/breathing_mascot.dart';
+import '../../data/local_db/session_store.dart';
+import '../pairing/who_is_playing_screen.dart';
 import 'widgets/ambient_loop.dart';
 import 'widgets/launch_backdrop.dart';
 import 'widgets/tutolys_animated_logo.dart';
@@ -19,19 +21,34 @@ import 'widgets/tutolys_animated_logo.dart';
 /// - not yet paired: an invitation and **Commencer l'aventure**, into
 ///   pairing.
 ///
-/// It is also where "Qui joue ?" belongs once a device can hold several
-/// kids (B-A0.4/B-A0.5): this is the one screen every session passes.
+/// - several kids paired here: "Salut ! Qui joue aujourd'hui ?" and one
+///   avatar tile per kid in place of the button, plus "Ajouter un profil".
+///   One tap enters that kid. No kid is named or highlighted, so a sibling
+///   is never greeted as the last one who played (ADR 0024).
 ///
 /// The village along the bottom shows all six subjects, matching the
 /// Village scene (which shows Culture québécoise as "coming soon"). It is
 /// decoration here, so nothing marks which ones have content yet.
 class TutolysWelcomeScreen extends StatefulWidget {
-  const TutolysWelcomeScreen({required this.onStart, this.kidName, super.key});
+  const TutolysWelcomeScreen({
+    required this.onStart,
+    this.kidName,
+    this.kids,
+    this.onPickKid,
+    this.onAddProfile,
+    super.key,
+  });
 
   /// The paired kid's first name, or null on an unpaired device.
   final String? kidName;
 
   final VoidCallback onStart;
+
+  /// The kids paired here, when there are several: the screen is then the
+  /// picker and [kidName] is ignored.
+  final List<PairedKid>? kids;
+  final ValueChanged<String>? onPickKid;
+  final VoidCallback? onAddProfile;
 
   @override
   State<TutolysWelcomeScreen> createState() => _TutolysWelcomeScreenState();
@@ -72,6 +89,18 @@ class _TutolysWelcomeScreenState extends State<TutolysWelcomeScreen>
     widget.onStart();
   }
 
+  void _pick(String kidId) {
+    if (_started) return;
+    _started = true;
+    widget.onPickKid?.call(kidId);
+  }
+
+  void _add() {
+    if (_started) return;
+    _started = true;
+    widget.onAddProfile?.call();
+  }
+
   Animation<double> _stage(double from, double to, {Curve curve = Curves.easeOutCubic}) {
     return CurvedAnimation(parent: _enter, curve: Interval(from, to, curve: curve));
   }
@@ -79,7 +108,9 @@ class _TutolysWelcomeScreenState extends State<TutolysWelcomeScreen>
   @override
   Widget build(BuildContext context) {
     final s = context.s;
-    final name = widget.kidName;
+    final kids = widget.kids;
+    final picking = kids != null && kids.length > 1;
+    final name = picking ? null : widget.kidName;
 
     return Material(
       color: LaunchBackdrop.night,
@@ -141,24 +172,48 @@ class _TutolysWelcomeScreenState extends State<TutolysWelcomeScreen>
                             _FadeUp(
                               animation: _stage(0.35, 0.7),
                               child: _SpeechBubble(
-                                title: name == null ? null : s.welcomeGreeting(name),
-                                line: name == null ? s.welcomeFoxLineNew : s.welcomeFoxLine,
+                                title: picking
+                                    ? s.welcomeHello
+                                    : name == null ? null : s.welcomeGreeting(name),
+                                line: picking
+                                    ? s.welcomeWhoToday
+                                    : name == null ? s.welcomeFoxLineNew : s.welcomeFoxLine,
                                 scale: scale,
                               ),
                             ),
                             SizedBox(height: 6 * scale),
                             ScaleTransition(
                               scale: _stage(0.2, 0.75, curve: Curves.elasticOut),
-                              child: BreathingMascot(height: 170 * scale, hoverLift: false),
+                              // Smaller when the tiles need the room.
+                              child: BreathingMascot(
+                                height: (picking ? 120 : 170) * scale,
+                                hoverLift: false,
+                              ),
                             ),
                             SizedBox(height: 22 * scale),
                             _FadeUp(
                               animation: _stage(0.6, 1.0),
-                              child: _GlowingCta(
-                                label: name == null ? s.welcomeStart : s.welcomePlay,
-                                scale: scale,
-                                onPressed: _start,
-                              ),
+                              child: picking
+                                  ? Wrap(
+                                      key: const ValueKey('welcome-kids'),
+                                      spacing: Space.md,
+                                      runSpacing: Space.md,
+                                      alignment: WrapAlignment.center,
+                                      children: [
+                                        for (final kid in kids)
+                                          KidProfileTile(
+                                            kid: kid,
+                                            avatarSize: 72 * scale,
+                                            onTap: () => _pick(kid.id),
+                                          ),
+                                        AddProfileTile(avatarSize: 72 * scale, onTap: _add),
+                                      ],
+                                    )
+                                  : _GlowingCta(
+                                      label: name == null ? s.welcomeStart : s.welcomePlay,
+                                      scale: scale,
+                                      onPressed: _start,
+                                    ),
                             ),
                           ],
                         ),

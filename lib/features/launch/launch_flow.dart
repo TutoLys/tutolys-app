@@ -5,6 +5,7 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
+import '../../data/local_db/session_store.dart';
 import 'boot_handoff.dart';
 import 'tutolys_loader_screen.dart';
 import 'tutolys_welcome_screen.dart';
@@ -39,6 +40,9 @@ class LaunchFlow extends StatefulWidget {
     required this.stage,
     required this.onFinished,
     this.kidName,
+    this.kids,
+    this.onPickKid,
+    this.onAddProfile,
     this.startProgress,
     super.key,
   });
@@ -50,6 +54,12 @@ class LaunchFlow extends StatefulWidget {
 
   /// Called when the child presses the welcome screen's button.
   final VoidCallback onFinished;
+
+  /// With several kids paired here, the welcome screen is the picker: see
+  /// [TutolysWelcomeScreen.kids].
+  final List<PairedKid>? kids;
+  final ValueChanged<String>? onPickKid;
+  final VoidCallback? onAddProfile;
 
   /// Where the bar starts. Defaults to what the web HTML stage reached, or
   /// a small head start on desktop.
@@ -157,6 +167,9 @@ class _LaunchFlowState extends State<LaunchFlow> {
               key: const ValueKey('welcome'),
               kidName: widget.kidName,
               onStart: widget.onFinished,
+              kids: widget.kids,
+              onPickKid: widget.onPickKid,
+              onAddProfile: widget.onAddProfile,
             )
           : TutolysLoaderScreen(
               key: const ValueKey('loader'),
