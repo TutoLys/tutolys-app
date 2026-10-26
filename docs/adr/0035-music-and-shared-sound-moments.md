@@ -130,10 +130,10 @@ masters, so the next swap is one line there:
   the app. The old jingle was -16; it now matches the other effects.
 - Loops: leading silence trimmed, then the last 250 ms folded into the
   first at equal power. The jump at the wrap is 0.014 and 0.008, under
-  each track's own 99th-percentile sample step (0.035, 0.015). The
-  container's length is exact (1,403,184 samples for loop #4); the
-  ffmpeg command-line decoder appends 720 samples of encoder padding,
-  but browsers honour the container.
+  each track's own 99th-percentile sample step (0.035, 0.015).
+  Checked in Chrome's own decoder too: 0.015 and 0.009, with lengths
+  within 4 and 14 samples of the source (the ffmpeg command-line decoder
+  instead appends 720 samples of encoder padding).
 - Songs are about 28 and 34 s, 340 and 415 KB. Fetched on first tap.
 
 ### The mascot's song
