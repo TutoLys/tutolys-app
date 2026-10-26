@@ -30,3 +30,4 @@ export 'src/passage_reader/passage_reader_engine.dart';
 export 'src/balance_scale/balance_scale_engine.dart';
 export 'src/label_image/label_image_engine.dart';
 export 'src/fill_blank/fill_blank_engine.dart';
+export 'src/pattern_machine/pattern_machine_engine.dart';
