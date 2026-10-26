@@ -4,6 +4,8 @@ import 'package:design_system/design_system.dart';
 import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
 
+import '../widgets/creations.dart';
+
 typedef Peg = (int row, int col);
 
 enum GeoTask { build, copy }
@@ -529,6 +531,16 @@ class GeometryLabEngine
                   label: Text(fr ? 'Recommencer' : 'Start over'),
                 ),
               ),
+              if (s.solved)
+                KeepCreationButton(
+                  engineKey: GeometryLabEngine.key,
+                  payload: {
+                    'pegs': c.pegs,
+                    'band': [
+                      for (final peg in s.band) [peg.$1, peg.$2],
+                    ],
+                  },
+                ),
             ],
           ),
         ),

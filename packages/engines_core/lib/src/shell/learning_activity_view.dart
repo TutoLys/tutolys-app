@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
 
+import '../widgets/creations.dart';
+
 import 'activity_shell.dart';
 import 'shell_strings.dart';
 
@@ -211,13 +213,18 @@ class _LearningActivityViewState extends State<LearningActivityView> {
       notice: c.failure == ActivityFailure.storage ? s.storageError : null,
       body: q == null
           ? const SizedBox.shrink()
-          : q.engine.buildView(
-              context,
-              content: q.content,
-              state: q.state,
-              dispatch: (a) => unawaited(c.dispatch(a)),
-              locale: widget.locale,
-              enabled: interactive,
+          // Lets an engine save a creation without the contract carrying
+          // ids (ADR 0092).
+          : CurrentExercise(
+              exerciseId: c.envelope.exerciseId,
+              child: q.engine.buildView(
+                context,
+                content: q.content,
+                state: q.state,
+                dispatch: (a) => unawaited(c.dispatch(a)),
+                locale: widget.locale,
+                enabled: interactive,
+              ),
             ),
     );
   }

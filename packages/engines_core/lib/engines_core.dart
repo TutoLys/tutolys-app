@@ -43,3 +43,5 @@ export 'src/mail_studio/mail_studio_engine.dart';
 export 'src/widgets/village_characters.dart';
 export 'src/feedback_studio/feedback_studio_engine.dart';
 export 'src/stage_presenter/stage_presenter_engine.dart';
+export 'src/my_gallery/my_gallery_engine.dart';
+export 'src/widgets/creations.dart';

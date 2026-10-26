@@ -2,6 +2,8 @@ import 'package:design_system/design_system.dart';
 import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
 
+import '../widgets/creations.dart';
+
 import '../widgets/answer_tile.dart';
 import '../widgets/village_characters.dart';
 
@@ -613,6 +615,18 @@ class _MailView extends StatelessWidget {
                 ],
                 fr: fr,
               ),
+              if (s.solved)
+                KeepCreationButton(
+                  engineKey: MailStudioEngine.key,
+                  payload: {
+                    'recipient': c.recipient.key,
+                    'template': template.name,
+                    'lines': [
+                      for (final t in chosen)
+                        if (t.template == null) t.label,
+                    ],
+                  },
+                ),
             ],
           ),
         ),

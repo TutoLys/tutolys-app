@@ -42,6 +42,7 @@ final learningEngineRegistryProvider = Provider<LearningEngineRegistry>(
     eraseEngine(const MailStudioEngine()),
     eraseEngine(const FeedbackStudioEngine()),
     eraseEngine(const StagePresenterEngine()),
+    eraseEngine(const MyGalleryEngine()),
   ]),
 );
 
@@ -71,6 +72,7 @@ final evaluatorRegistryProvider = Provider<EvaluatorRegistry>(
     MailStudioEvaluator(),
     FeedbackStudioEvaluator(),
     StagePresenterEvaluator(),
+    MyGalleryEvaluator(),
   ]),
 );
 

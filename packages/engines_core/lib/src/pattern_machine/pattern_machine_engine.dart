@@ -4,6 +4,7 @@ import 'package:design_system/design_system.dart';
 import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
 
+import '../widgets/creations.dart';
 import '../widgets/answer_tile.dart';
 
 enum PatternShape {
@@ -44,6 +45,20 @@ class PatternPiece {
   /// Clockwise quarter turns in degrees: 0, 90, 180 or 270.
   final int turn;
   final String? text;
+
+  /// The inverse of [fromJson], for a saved creation.
+  Map<String, Object?> toJson() => text != null
+      ? {'text': text}
+      : {
+          'shape': shape!.name,
+          'color': color.name,
+          'size': const {
+            PatternSize.small: 's',
+            PatternSize.medium: 'm',
+            PatternSize.large: 'l',
+          }[size],
+          'turn': turn,
+        };
 
   String get key => text != null
       ? 't:$text'
@@ -657,6 +672,13 @@ class PatternMachineEngine
                     ),
                 ],
               ),
+              if (s.locked.length == s.gaps.length)
+                KeepCreationButton(
+                  engineKey: PatternMachineEngine.key,
+                  payload: {
+                    'pieces': [for (final piece in c.sequence) piece.toJson()],
+                  },
+                ),
             ],
           ),
         ),

@@ -1,6 +1,7 @@
 import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
 
+import '../widgets/creations.dart';
 import '../widgets/answer_slot.dart';
 import '../widgets/answer_tile.dart';
 
@@ -322,6 +323,15 @@ class ComposeSlotsEngine
                       const SizedBox(width: 120, height: 52),
                 ],
               ),
+              if (s.locked.length == s.slots.length)
+                KeepCreationButton(
+                  engineKey: ComposeSlotsEngine.key,
+                  payload: {
+                    'labels': [
+                      for (final id in s.slots) view.content.tile(id!).label,
+                    ],
+                  },
+                ),
             ],
           ),
         ),

@@ -23,6 +23,7 @@ const _samples = {
   'fr_mail_studio.json': MailStudioEngine(),
   'fr_feedback_studio.json': FeedbackStudioEngine(),
   'en_stage_presenter.json': StagePresenterEngine(),
+  'fr_my_gallery.json': MyGalleryEngine(),
 };
 
 final _dir = Directory('../../../tutolys-backend/content/samples');
