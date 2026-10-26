@@ -148,7 +148,7 @@ class RemovePathMove extends PathAction {
   final int index;
 }
 
-/// "Le chemin de Foxy" — the `path_planner` engine (app ADR 0050; Hafid's
+/// "Le chemin de Foxy" — the `path_planner` engine (app ADR 0080; Hafid's
 /// catalogue B15, merged with code_robot B25 and map_navigator B13).
 ///
 /// A small grid with a start, a goal, walls and named landmarks. The child

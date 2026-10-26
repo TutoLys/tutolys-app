@@ -138,8 +138,8 @@ class PickConclusion extends ExperimentAction {
   final String id;
 }
 
-/// "Petit scientifique" — the `experiment_lab` engine (app ADR pending a
-/// number; Hafid's catalogue B18, with ecosystem_sim B20's plant).
+/// "Petit scientifique" — the `experiment_lab` engine (app ADR 0083;
+/// Hafid's catalogue B18, with ecosystem_sim B20's plant).
 ///
 /// Change one or two things, run the experiment, see what happens, then
 /// say what you found. The child sets each variable (water: none, a

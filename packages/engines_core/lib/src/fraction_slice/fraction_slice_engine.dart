@@ -134,7 +134,7 @@ class ToggleSlice extends FractionAction {
   final int index;
 }
 
-/// "La découpe magique" — the `fraction_slice` engine (app ADR 0051;
+/// "La découpe magique" — the `fraction_slice` engine (app ADR 0081;
 /// Hafid's catalogue B10).
 ///
 /// A pizza or a bar cut into 2–8 equal parts, drawn in code:

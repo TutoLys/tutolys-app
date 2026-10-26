@@ -200,7 +200,7 @@ class ClearBand extends GeoAction {
 }
 
 /// "Atelier des formes" — the `geometry_lab` engine, geoboard form (app
-/// ADR pending a number; Hafid's catalogue B9).
+/// ADR 0082; Hafid's catalogue B9).
 ///
 /// A board of pegs; the child stretches an elastic band peg to peg and
 /// closes it on the first one.
