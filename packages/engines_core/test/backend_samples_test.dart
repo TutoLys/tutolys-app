@@ -18,6 +18,7 @@ const _samples = {
   'math_geometry_lab.json': GeometryLabEngine(),
   'sci_experiment_lab.json': ExperimentLabEngine(),
   'math_counters_board.json': CountersBoardEngine(),
+  'sci_sky_model.json': SkyModelEngine(),
 };
 
 final _dir = Directory('../../../tutolys-backend/content/samples');
