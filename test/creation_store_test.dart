@@ -58,6 +58,10 @@ void main() {
       'colour': 'blue',
     });
     expect(back.hung, isFalse);
+    // What save() hands back is the stored shape, not the caller's map,
+    // so an engine can draw it straight away.
+    expect(made.payload, back.payload);
+    expect(made.payload, isNot(same(back.payload)));
   });
 
   test('lists newest first, filtered by engine and by hung', () async {
