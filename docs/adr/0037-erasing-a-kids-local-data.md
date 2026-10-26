@@ -93,3 +93,29 @@ The field Backend should send: `{"detail": "...", "reason": "revoked" |
 Tests: `pairing_api_refresh_test.dart` (each reason parses; a missing,
 unknown, wrongly-cased or non-string reason is bare) and
 `multi_kid_test.dart` (each reason erases; a bare 401 keeps the data).
+
+## Known gap (2026-10-26): erasure never reaches the device
+
+Backend shipped `reason` in `9002326`, with only `revoked` and `archived`.
+Any other 401 has no `reason` key at all. The seat gate stays a 403 with
+its own code, so it never reaches this path.
+
+**`erased` will never arrive.** The server's erasure flow hard-deletes the
+kid's `Device` row (backend ADR 0018). After that, the kid's token is
+unknown to the server, so its refresh comes back as a **bare 401**. By the
+rule above, a bare 401 keeps the local data. So **erasing a kid on the
+server does not erase anything on their devices**: their queued results,
+streak days, settings, unfinished sessions and creations stay until a
+guardian removes the profile through the dialog. `/me/profile` can't
+signal it either, because the token is already dead.
+
+The app still parses `erased`, so it costs nothing to keep, but nothing
+sends it today. Don't assume a server-side erasure wipes devices.
+
+Backend is writing up options for Hafid and counsel:
+- a non-identifying tombstone of the token hash, so refresh can answer
+  `erased`;
+- guardian instructions in the erase flow;
+- on the app side, offering the removal dialog after N days of bare 401s.
+
+Nothing changes in the app until that's decided.
