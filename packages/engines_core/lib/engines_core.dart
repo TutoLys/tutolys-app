@@ -37,3 +37,4 @@ export 'src/path_planner/path_planner_engine.dart';
 export 'src/fraction_slice/fraction_slice_engine.dart';
 export 'src/geometry_lab/geometry_lab_engine.dart';
 export 'src/experiment_lab/experiment_lab_engine.dart';
+export 'src/counters_board/counters_board_engine.dart';

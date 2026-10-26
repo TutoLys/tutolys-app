@@ -17,6 +17,7 @@ const _samples = {
   'math_fraction_slice.json': FractionSliceEngine(),
   'math_geometry_lab.json': GeometryLabEngine(),
   'sci_experiment_lab.json': ExperimentLabEngine(),
+  'math_counters_board.json': CountersBoardEngine(),
 };
 
 final _dir = Directory('../../../tutolys-backend/content/samples');
