@@ -1,6 +1,6 @@
 # ADR 0036: "Mes créations", a per-kid local store of what a child made
 
-Date: 2026-10-26. Status: accepted.
+Date: 2026-10-26. Status: accepted. Erasure revised by ADR 0037.
 
 ## Context
 
@@ -70,3 +70,9 @@ the thing the child built is gone.
 - An engine that wants to keep a creation reads
   `CreationShelfScope.maybeOf(context)` and calls `save`. It doesn't need
   to know anything else.
+
+## Revision (2026-10-26)
+
+ADR 0037 replaces `CreationStore.eraseKid` with `KidLocalData.wipe`,
+which erases creations together with every other kid-scoped row. The
+first "Not done" item above is closed by it.

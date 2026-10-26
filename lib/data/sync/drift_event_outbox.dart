@@ -51,8 +51,14 @@ class DriftEventOutbox implements EventOutbox {
         );
   }
 
+  /// [ignoreBackoff] is for a guardian's "send, then erase" only (ADR
+  /// 0037): a person is waiting on that one attempt, and the events are
+  /// about to be deleted either way, so nothing is hammered.
   @override
-  Future<List<Map<String, Object?>>> pending({int limit = 50}) async {
+  Future<List<Map<String, Object?>>> pending({
+    int limit = 50,
+    bool ignoreBackoff = false,
+  }) async {
     final now = _now();
 
     final rows = await (db.select(db.eventOutboxTable)
@@ -61,7 +67,10 @@ class DriftEventOutbox implements EventOutbox {
           // Respect backoff: an event that failed recently is not retried
           // until its window opens, or one bad event would be hammered.
           ..where(
-            (t) => t.nextRetryAt.isNull() | t.nextRetryAt.isSmallerOrEqualValue(now),
+            (t) =>
+                Constant(ignoreBackoff) |
+                t.nextRetryAt.isNull() |
+                t.nextRetryAt.isSmallerOrEqualValue(now),
           )
           // Oldest first, so a report can reconstruct the attempt sequence.
           ..orderBy([(t) => OrderingTerm.asc(t.queuedAt)])

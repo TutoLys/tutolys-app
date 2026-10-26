@@ -254,7 +254,7 @@ void main() {
       expect(s.stage, ProfileStage.choosing);
     });
 
-    test('a kid who is forgotten or revoked takes their creations along',
+    test('a kid who is forgotten or revoked takes their local data along',
         () async {
       final db = LocalDatabase.memory();
       addTearDown(db.close);

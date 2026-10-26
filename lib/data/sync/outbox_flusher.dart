@@ -88,9 +88,28 @@ class OutboxFlusher {
   /// tick that may never come.
   Future<void> flushNow() => flush();
 
+  /// Uploads everything this kid still has queued, before a guardian
+  /// removes them from the device (ADR 0037). Backoff is ignored: a person
+  /// is waiting, and the rows are deleted next either way.
+  ///
+  /// True once nothing is left. False as soon as a round sends nothing:
+  /// offline, a rejected credential, or events the server refuses.
+  Future<bool> sendAllNow({int maxRounds = 100}) async {
+    while (_flushing) {
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+    }
+    for (var round = 0; round < maxRounds; round++) {
+      final before = await outbox.depth();
+      if (before == 0) return true;
+      await flush(ignoreBackoff: true);
+      if (await outbox.depth() >= before) return false;
+    }
+    return await outbox.depth() == 0;
+  }
+
   /// Upload what is pending. Safe to call concurrently: overlapping calls
   /// return immediately rather than double-sending.
-  Future<void> flush() async {
+  Future<void> flush({bool ignoreBackoff = false}) async {
     if (_flushing) return;
     _flushing = true;
 
@@ -110,7 +129,10 @@ class OutboxFlusher {
       // One batch per call. Draining everything in a loop would mean a device
       // returning from a week offline blocks startup; the timer picks up the
       // rest.
-      final batch = await outbox.pending(limit: batchSize);
+      final batch = await outbox.pending(
+        limit: batchSize,
+        ignoreBackoff: ignoreBackoff,
+      );
       if (batch.isEmpty) return;
 
       final result = await api.uploadBatch(events: batch, accessToken: token);

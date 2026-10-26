@@ -127,22 +127,6 @@ class CreationStore implements CreationShelf {
     db.creationTable,
   )..where((t) => t.kidId.equals(kidId) & t.id.equals(id))).go();
 
-  /// Deletes every creation [kidId] has, with its eviction counters: the
-  /// kid was removed from this device or revoked, so nothing of theirs
-  /// should outlive them here.
-  static Future<void> eraseKid(LocalDatabase db, String kidId) =>
-      db.transaction(() async {
-        await (db.delete(
-          db.creationTable,
-        )..where((t) => t.kidId.equals(kidId))).go();
-        await (db.delete(db.appStateTable)..where(
-              (t) =>
-                  t.kidId.equals(kidId) &
-                  t.key.isIn([_evictedCountKey, _lastEvictedAtKey]),
-            ))
-            .go();
-      });
-
   /// How many of this kid's creations the cap has ever evicted, and when
   /// it last did. Never silent: the creation is gone, the fact isn't.
   Future<({int totalEvicted, DateTime? lastEvictedAt})> evictionStats() async {

@@ -150,19 +150,6 @@ void main() {
     },
   );
 
-  test('erasing a kid removes their creations and counters only', () async {
-    final lea = store('lea', max: 1);
-    await save(lea);
-    await save(lea);
-    await save(store('sami'));
-
-    await CreationStore.eraseKid(db, 'lea');
-
-    expect(await lea.list(), isEmpty);
-    expect((await lea.evictionStats()).totalEvicted, 0);
-    expect(await store('sami').list(), hasLength(1));
-  });
-
   testWidgets('the scope hands an engine the shelf, or nothing', (
     tester,
   ) async {

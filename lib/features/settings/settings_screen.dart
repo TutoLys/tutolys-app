@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/i18n/strings.dart';
 import '../pairing/pairing_controller.dart';
 import '../profile/pin_gate.dart';
+import 'remove_kid_dialog.dart';
 import 'settings_controller.dart';
 
 /// Réglages, as `docs/design/01-design-system-gallery.html` draws it.
@@ -575,6 +576,12 @@ class _SignOutButton extends ConsumerWidget {
       onPressed: () async {
         final allowed = await requireGuardianPin(context, ref);
         if (!allowed || !context.mounted) return;
+        final kid = ref.read(sessionControllerProvider).kid;
+        final erase = await confirmRemoveKid(
+          context,
+          kidName: kid?.displayName ?? '',
+        );
+        if (!erase) return;
         ref.read(sessionControllerProvider.notifier).forget();
       },
     );

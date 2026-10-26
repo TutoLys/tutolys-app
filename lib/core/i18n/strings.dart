@@ -149,6 +149,17 @@ abstract class Strings {
   String get pinGateCreate;
   String get pinGateConfirmSignOut;
 
+  // --- removing a kid from the device (ADR 0037) ----------------------------
+  String removeKidTitle(String name);
+  String get removeKidIntro;
+  String removeKidUnsent(int count);
+  String removeKidCreations(int count);
+  String get removeKidSendThenErase;
+  String get removeKidEraseNow;
+  String get removeKidSending;
+  String get removeKidSendFailed;
+  String get removeKidEraseAnyway;
+
   // --- nav -----------------------------------------------------------------
   String get navHome;
   String get navPath;
@@ -657,6 +668,45 @@ class _FrenchStrings extends Strings {
 
   @override
   String get pinGateConfirmSignOut => 'Déconnecter';
+
+  @override
+  String removeKidTitle(String name) =>
+      name.isEmpty ? 'Retirer ce profil de l’appareil ?' : 'Retirer $name de l’appareil ?';
+
+  @override
+  String get removeKidIntro =>
+      'Tout ce qui est gardé sur cet appareil pour ce profil sera effacé :';
+
+  @override
+  String removeKidUnsent(int count) => switch (count) {
+    0 => 'tous ses résultats de jeu ont déjà été envoyés ;',
+    1 => '1 résultat de jeu pas encore envoyé ;',
+    _ => '$count résultats de jeu pas encore envoyés ;',
+  };
+
+  @override
+  String removeKidCreations(int count) => switch (count) {
+    0 => 'aucune création dans « Mes créations ».',
+    1 => '1 création dans « Mes créations ».',
+    _ => '$count créations dans « Mes créations ».',
+  };
+
+  @override
+  String get removeKidSendThenErase => 'Envoyer puis effacer';
+
+  @override
+  String get removeKidEraseNow => 'Effacer maintenant';
+
+  @override
+  String get removeKidSending => 'Envoi des résultats…';
+
+  @override
+  String get removeKidSendFailed =>
+      'L’envoi n’a pas marché. Si tu effaces quand même, les résultats '
+      'pas encore envoyés seront perdus.';
+
+  @override
+  String get removeKidEraseAnyway => 'Effacer quand même';
 
   @override
   String get navHome => 'Accueil';
@@ -1519,6 +1569,45 @@ class _EnglishStrings extends Strings {
 
   @override
   String get pinGateConfirmSignOut => 'Sign out';
+
+  @override
+  String removeKidTitle(String name) =>
+      name.isEmpty ? 'Remove this profile from the device?' : 'Remove $name from this device?';
+
+  @override
+  String get removeKidIntro =>
+      'Everything kept on this device for this profile will be erased:';
+
+  @override
+  String removeKidUnsent(int count) => switch (count) {
+    0 => 'all their play results have already been sent;',
+    1 => '1 play result not sent yet;',
+    _ => '$count play results not sent yet;',
+  };
+
+  @override
+  String removeKidCreations(int count) => switch (count) {
+    0 => 'no creations in “My creations”.',
+    1 => '1 creation in “My creations”.',
+    _ => '$count creations in “My creations”.',
+  };
+
+  @override
+  String get removeKidSendThenErase => 'Send, then erase';
+
+  @override
+  String get removeKidEraseNow => 'Erase now';
+
+  @override
+  String get removeKidSending => 'Sending results…';
+
+  @override
+  String get removeKidSendFailed =>
+      "Sending didn't work. If you erase anyway, the results not sent yet "
+      'will be lost.';
+
+  @override
+  String get removeKidEraseAnyway => 'Erase anyway';
 
   @override
   String get navHome => 'Home';

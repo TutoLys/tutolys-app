@@ -623,4 +623,39 @@ void main() {
       expect(server.presented.values, everyElement(1));
     });
   });
+
+  group('sending everything before a kid is removed (ADR 0037)', () {
+    test('drains past one batch and past backoff', () async {
+      for (var i = 0; i < 120; i++) {
+        await outbox.add(event('e$i'));
+      }
+      server.offline = true;
+      await flusher.flush();
+      server.offline = false;
+
+      expect(await flusher.sendAllNow(), isTrue);
+      expect(await outbox.depth(), 0);
+      expect(server.stored, hasLength(120));
+    });
+
+    test('reports failure when offline, refused or rejected', () async {
+      await outbox.add(event('e1'));
+      server.offline = true;
+      expect(await flusher.sendAllNow(), isFalse);
+
+      server.offline = false;
+      server.alwaysReject.add('e1');
+      expect(await flusher.sendAllNow(), isFalse);
+
+      server.alwaysReject.clear();
+      server.unauthorized = true;
+      expect(await flusher.sendAllNow(), isFalse);
+      expect(await outbox.depth(), 1);
+    });
+
+    test('nothing queued is a success', () async {
+      expect(await flusher.sendAllNow(), isTrue);
+      expect(server.uploadCalls, 0);
+    });
+  });
 }

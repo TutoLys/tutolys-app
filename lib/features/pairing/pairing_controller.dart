@@ -6,8 +6,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/api/pairing_api.dart';
-import '../../data/local_db/creation_store.dart';
 import '../../data/local_db/database.dart';
+import '../../data/local_db/kid_local_data.dart';
 import '../../data/local_db/session_store.dart';
 
 /// Where the app is, credential-wise.
@@ -250,14 +250,15 @@ class SessionController extends Notifier<SessionState> {
 
   /// After a kid's pairing is dropped: the next kid paired here, or
   /// unpaired when there is none.
-  /// Forgets the active kid's credential, and with it the local data that
-  /// is theirs alone and never uploads: their creations (ADR 0036). Their
-  /// queued events, streak days and settings are not touched here.
+  /// Forgets the active kid's credential and erases everything of theirs
+  /// on this device (ADR 0037). A guardian chose this after being told
+  /// what's stored, and was offered a last upload first; on a rejected
+  /// credential there is nobody to ask, and nothing could upload anyway.
   Future<void> _forgetActiveKid() async {
     final kid = await _store.pairedKid();
     await _store.clearPairing();
     if (kid != null) {
-      await CreationStore.eraseKid(ref.read(localDatabaseProvider), kid.id);
+      await KidLocalData(ref.read(localDatabaseProvider), kidId: kid.id).wipe();
     }
   }
 
@@ -377,7 +378,9 @@ class SessionController extends Notifier<SessionState> {
     }
   }
 
-  /// Remove the current kid from this device, at a guardian's request.
+  /// Remove the current kid from this device, at a guardian's request,
+  /// erasing their local data. The confirmation in front of it
+  /// (`RemoveKidDialog`) offers to upload their unsent results first.
   /// Other kids paired here stay; "Qui joue ?" opens if several remain.
   Future<void> forget() async {
     _refreshTimer?.cancel();

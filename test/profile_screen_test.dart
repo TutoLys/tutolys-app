@@ -148,6 +148,18 @@ ProviderContainer _buildContainer({SessionStore? store}) {
   return container;
 }
 
+/// Past the PIN, the removal confirmation (ADR 0037) reads its summary
+/// from drift, which needs real time; nothing is unsent here, so the one
+/// way on is "Effacer maintenant".
+Future<void> _confirmErase(WidgetTester tester) async {
+  await tester.runAsync(
+    () => Future<void>.delayed(const Duration(milliseconds: 50)),
+  );
+  await tester.pump();
+  await tester.tap(find.text(Strings.fr.removeKidEraseNow));
+  await tester.pumpAndSettle();
+}
+
 Widget _widgetFor(ProviderContainer container) {
   return UncontrolledProviderScope(
     container: container,
@@ -508,6 +520,7 @@ void main() {
       await tester.enterText(find.byType(TextFormField).last, '1234');
       await tester.tap(find.text(Strings.fr.pinGateCreate));
       await tester.pumpAndSettle();
+      await _confirmErase(tester);
 
       expect(await store.hasGuardianPin(), isTrue);
       final controller = container.read(
@@ -562,6 +575,7 @@ void main() {
       await tester.enterText(find.byType(TextField), '1234');
       await tester.tap(find.text(Strings.fr.pinGateConfirmSignOut));
       await tester.pumpAndSettle();
+      await _confirmErase(tester);
 
       final controller = container.read(
         sessionControllerProvider.notifier,
