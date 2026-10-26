@@ -70,3 +70,12 @@ explicit submit. The answer is a `BlanksAnswer` holding the final board:
 - Its sample is added to `backend_samples_test.dart`.
 - The sample's near-miss codes are proposals. The backend's error
   taxonomy doesn't hold them yet.
+
+## Revision 2026-10-26: plates in any order
+
+The Questions Maker's request 9. With target plates `[10, 3]`, a child who
+put 3 in frame 1 and 10 in frame 2 showed 13 correctly but was graded
+wrong. `target.plates_any_order` compares the plates as a multiset. **It
+defaults to true with `ten_frames`**: groups of ten have no order. Plain
+plates keep their order unless a lesson says otherwise, because a story
+can name its plates ("2 in Léa's, 5 in Omar's").

@@ -20,6 +20,7 @@ class CountersTarget {
     this.rows,
     this.cols,
     this.eitherWay = false,
+    this.platesAnyOrder = false,
   });
 
   final int? total;
@@ -40,6 +41,10 @@ class CountersTarget {
 
   /// rows × cols and cols × rows are both right.
   final bool eitherWay;
+
+  /// [plates] compared as a multiset: 3 in frame 1 and 10 in frame 2 shows
+  /// 13 as well as the other way round. The default on ten-frames.
+  final bool platesAnyOrder;
 }
 
 /// A board state a lesson expects as a typical mistake, and what it means.
@@ -296,10 +301,16 @@ class CountersBoardEngine
     int? t(String k, {int max = CountersContent.maxTotal}) =>
         rawTarget[k] == null ? null : _count(rawTarget[k], max: max);
     for (final k in rawTarget.keys) {
-      if (!{..._metricKeys, 'plates', 'either_way'}.contains(k)) {
+      if (!{
+        ..._metricKeys,
+        'plates',
+        'either_way',
+        'plates_any_order',
+      }.contains(k)) {
         return ParseResult.invalid('target has an unknown rule: $k.');
       }
-      if (k != 'plates' && k != 'either_way' && t(k as String) == null) {
+      if (!const {'plates', 'either_way', 'plates_any_order'}.contains(k) &&
+          t(k as String) == null) {
         return ParseResult.invalid('target $k is a count, 0 to 40.');
       }
     }
@@ -321,6 +332,9 @@ class CountersBoardEngine
       rows: t('rows', max: 10),
       cols: t('cols', max: 10),
       eitherWay: rawTarget['either_way'] == true,
+      platesAnyOrder: rawTarget['plates_any_order'] is bool
+          ? rawTarget['plates_any_order']! as bool
+          : tenFrames,
     );
 
     // Rules that don't fit the mode can never be met.
@@ -677,15 +691,23 @@ class CountersBoardEngine
       if (t.total != null) 'total': m['total'] == t.total,
       if (t.mat != null) 'mat': m['mat'] == t.mat,
       if (t.perPlate != null) 'per_plate': m['per_plate'] == t.perPlate,
-      if (t.plates != null)
-        'plates': [for (var i = 0; i < t.plates!.length; i++) m['plate_$i']]
-            .indexed
-            .every((e) => e.$2 == t.plates![e.$1]),
+      if (t.plates != null) 'plates': _samePlates(m, t),
       if (t.removed != null) 'removed': m['removed'] == t.removed,
       if (t.rows != null) 'rows': m['rows'] == t.rows || swapped,
       if (t.cols != null) 'cols': m['cols'] == t.cols || swapped,
     };
   }
+
+  static bool _samePlates(Map<String, int> m, CountersTarget t) {
+    final want = t.plates!;
+    final got = [for (var i = 0; i < want.length; i++) m['plate_$i'] ?? 0];
+    if (!t.platesAnyOrder) {
+      return got.indexed.every((e) => e.$2 == want[e.$1]);
+    }
+    return _sorted(got).join(',') == _sorted(want).join(',');
+  }
+
+  static List<int> _sorted(List<int> xs) => [...xs]..sort();
 
   @override
   Widget buildView(

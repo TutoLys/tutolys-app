@@ -312,6 +312,46 @@ void main() {
       );
     });
 
+    test('ten-frames compare plates in any order; plates keep order', () {
+      final c = parsed(tens);
+      expect(c.target.platesAnyOrder, isTrue);
+      final shuffled = BlanksAnswer({
+        'plate_0': '4',
+        'plate_1': '10',
+        'plate_2': '10',
+      });
+      expect(evaluator.evaluate(c, shuffled, ctx).outcome, Outcome.correct);
+      final ordered = parsed({
+        ...tens,
+        'target': {
+          'plates': [10, 10, 4],
+          'plates_any_order': false,
+        },
+      });
+      expect(
+        evaluator.evaluate(ordered, shuffled, ctx).outcome,
+        Outcome.incorrect,
+      );
+      final plates = parsed({
+        'mode': 'plates',
+        'plates': 2,
+        'target': {
+          'plates': [2, 5],
+        },
+      });
+      expect(plates.target.platesAnyOrder, isFalse);
+      expect(
+        evaluator
+            .evaluate(
+              plates,
+              BlanksAnswer({'plate_0': '5', 'plate_1': '2'}),
+              ctx,
+            )
+            .outcome,
+        Outcome.incorrect,
+      );
+    });
+
     test('arrays: swapped rows and columns are wrong, unless either_way', () {
       final c = parsed(array);
       var s = apply(engine.initialize(c, const EngineSeed(1)), [
