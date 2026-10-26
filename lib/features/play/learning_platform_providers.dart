@@ -33,6 +33,7 @@ final learningEngineRegistryProvider = Provider<LearningEngineRegistry>(
     eraseEngine(const FillBlankEngine()),
     eraseEngine(const PatternMachineEngine()),
     eraseEngine(const MeasureToolEngine()),
+    eraseEngine(const PathPlannerEngine()),
   ]),
 );
 
@@ -53,6 +54,7 @@ final evaluatorRegistryProvider = Provider<EvaluatorRegistry>(
     FillBlankEvaluator(),
     PatternMachineEvaluator(),
     MeasureToolEvaluator(),
+    PathPlannerEvaluator(),
   ]),
 );
 
