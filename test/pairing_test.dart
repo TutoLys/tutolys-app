@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:design_system/design_system.dart';
 
+import 'package:tutolys_app/core/net/recovery.dart';
 import 'package:tutolys_app/features/launch/launch_flow.dart';
 import 'package:tutolys_app/features/launch/tutolys_welcome_screen.dart';
 import 'package:tutolys_app/core/routing/app_shell.dart';
@@ -109,6 +110,18 @@ class FakeSessionStore extends SessionStore {
   Future<void> setActiveKid(String kidId) async {}
 }
 
+/// Fails the first refresh (the backend is down), then succeeds.
+class _DownThenUpPairingApi extends PairingApi {
+  _DownThenUpPairingApi() : super(dio: _unusedDio);
+  int refreshCalls = 0;
+
+  @override
+  Future<RefreshResult> refresh({required String deviceToken}) async =>
+      ++refreshCalls == 1
+      ? const RefreshFailed('502')
+      : const RefreshSucceeded(accessToken: 'fresh', expiresIn: 900);
+}
+
 class FakePairingApi extends PairingApi {
   FakePairingApi({required this.exchangeResult, required this.refreshResult})
     : super(dio: _unusedDio);
@@ -199,6 +212,7 @@ ProviderContainer containerWith({
       // fail the pending-timer check too.
       outboxFlusherAutoStartProvider.overrideWithValue(false),
       notificationsPollingProvider.overrideWithValue(false),
+      recoveryRetriesProvider.overrideWithValue(false),
       localDatabaseProvider.overrideWithValue(LocalDatabase.memory()),
       curriculumApiProvider.overrideWithValue(_OfflineCurriculumApi()),
       contentApiProvider.overrideWithValue(_OfflineContentApi()),
@@ -318,6 +332,29 @@ void main() {
       );
       expect(store.cleared, isFalse);
       expect(store.storedToken, 'stored');
+    });
+
+    testWidgets('opened while the server is down, it keeps trying and gets '
+        'a token once it is back (Hafid\'s 40-minute freeze)', (tester) async {
+      final store = FakeSessionStore(storedToken: 'stored');
+      final api = _DownThenUpPairingApi();
+      final container = ProviderContainer(
+        overrides: [
+          sessionStoreProvider.overrideWithValue(store),
+          pairingApiProvider.overrideWithValue(api),
+          sessionAutoRefreshProvider.overrideWithValue(true),
+        ],
+      );
+
+      await container.read(sessionControllerProvider.notifier).restore();
+      expect(container.read(sessionControllerProvider).accessToken, isNull);
+
+      // Before the fix, nothing was scheduled here, ever.
+      await tester.pump(const Duration(seconds: 49));
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      expect(api.refreshCalls, 2);
+      expect(container.read(sessionControllerProvider).accessToken, 'fresh');
+      container.dispose();
     });
 
     test('pairing stores the device token and goes paired', () async {
@@ -633,73 +670,70 @@ void main() {
     // is deliberately left at its real default (true) here — proving AppShell
     // actually starts the flusher is the entire point. A short interval
     // override keeps the periodic tick inside a fast test.
-    testWidgets(
-      'AppShell boots a running flusher that uploads a queued event '
-      'with no manual intervention',
-      (tester) async {
-        final db = LocalDatabase.memory();
-        final outbox = DriftEventOutbox(db, kidId: 'kid-1');
-        final server = _RecordingTelemetryServer();
+    testWidgets('AppShell boots a running flusher that uploads a queued event '
+        'with no manual intervention', (tester) async {
+      final db = LocalDatabase.memory();
+      final outbox = DriftEventOutbox(db, kidId: 'kid-1');
+      final server = _RecordingTelemetryServer();
 
-        final container = ProviderContainer(
-          overrides: [
-            sessionStoreProvider.overrideWithValue(
-              FakeSessionStore(storedToken: 'stored'),
-            ),
-            pairingApiProvider.overrideWithValue(
-              FakePairingApi(
-                exchangeResult: _success,
-                refreshResult: const RefreshSucceeded(
-                  accessToken: 'fresh',
-                  expiresIn: 900,
-                ),
+      final container = ProviderContainer(
+        overrides: [
+          sessionStoreProvider.overrideWithValue(
+            FakeSessionStore(storedToken: 'stored'),
+          ),
+          pairingApiProvider.overrideWithValue(
+            FakePairingApi(
+              exchangeResult: _success,
+              refreshResult: const RefreshSucceeded(
+                accessToken: 'fresh',
+                expiresIn: 900,
               ),
             ),
-            sessionAutoRefreshProvider.overrideWithValue(false),
-            localDatabaseProvider.overrideWithValue(db),
-            curriculumApiProvider.overrideWithValue(_OfflineCurriculumApi()),
-            contentApiProvider.overrideWithValue(_OfflineContentApi()),
-            progressApiProvider.overrideWithValue(_OfflineProgressApi()),
-            eventOutboxProvider.overrideWithValue(outbox),
-            outboxFlusherProvider.overrideWithValue(
-              OutboxFlusher(
-                outbox: outbox,
-                api: server,
-                accessToken: () => 'fresh',
-                interval: const Duration(seconds: 1),
-              ),
+          ),
+          sessionAutoRefreshProvider.overrideWithValue(false),
+          localDatabaseProvider.overrideWithValue(db),
+          curriculumApiProvider.overrideWithValue(_OfflineCurriculumApi()),
+          contentApiProvider.overrideWithValue(_OfflineContentApi()),
+          progressApiProvider.overrideWithValue(_OfflineProgressApi()),
+          eventOutboxProvider.overrideWithValue(outbox),
+          outboxFlusherProvider.overrideWithValue(
+            OutboxFlusher(
+              outbox: outbox,
+              api: server,
+              accessToken: () => 'fresh',
+              interval: const Duration(seconds: 1),
             ),
-          ],
-        );
-        addTearDown(container.dispose);
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
 
-        // As if an exercise had already been played before this boot.
-        await outbox.add({
-          'schema_version': 1,
-          'event_id': 'evt-1',
-          'event_ts': DateTime.utc(2026, 10, 23).toIso8601String(),
-          'session_id': 'session-1',
-          'event_type': 'exercise_complete',
-          'app_version': '0.1.0',
-        });
+      // As if an exercise had already been played before this boot.
+      await outbox.add({
+        'schema_version': 1,
+        'event_id': 'evt-1',
+        'event_ts': DateTime.utc(2026, 10, 23).toIso8601String(),
+        'session_id': 'session-1',
+        'event_type': 'exercise_complete',
+        'app_version': '0.1.0',
+      });
 
-        await tester.pumpWidget(appUnder(container, const AppShell()));
-        // initState runs on the first frame, which is what starts the timer.
-        await tester.pump();
-        expect(
-          server.uploadCalls,
-          0,
-          reason: 'nothing should upload before the first tick',
-        );
+      await tester.pumpWidget(appUnder(container, const AppShell()));
+      // initState runs on the first frame, which is what starts the timer.
+      await tester.pump();
+      expect(
+        server.uploadCalls,
+        0,
+        reason: 'nothing should upload before the first tick',
+      );
 
-        // No pumpAndSettle: a live periodic timer would never let it settle.
-        await tester.pump(const Duration(seconds: 2));
+      // No pumpAndSettle: a live periodic timer would never let it settle.
+      await tester.pump(const Duration(seconds: 2));
 
-        expect(server.uploadCalls, greaterThan(0));
-        expect(server.delivered, contains('evt-1'));
-        expect(await outbox.pending(limit: 10), isEmpty);
-      },
-    );
+      expect(server.uploadCalls, greaterThan(0));
+      expect(server.delivered, contains('evt-1'));
+      expect(await outbox.pending(limit: 10), isEmpty);
+    });
   });
 
   group('outbox flusher follows the active kid', () {
@@ -744,60 +778,63 @@ void main() {
       'app_version': '0.1.0',
     };
 
-    testWidgets(
-      'a kid restored at launch has their queued events uploaded',
-      (tester) async {
-        final db = LocalDatabase.memory();
-        final server = _RecordingTelemetryServer();
-        final container = realFlusherContainer(db, server);
-        addTearDown(container.dispose);
+    testWidgets('a kid restored at launch has their queued events uploaded', (
+      tester,
+    ) async {
+      final db = LocalDatabase.memory();
+      final server = _RecordingTelemetryServer();
+      final container = realFlusherContainer(db, server);
+      addTearDown(container.dispose);
 
-        // Played before this launch; queued under the kid's own scope.
-        await DriftEventOutbox(db, kidId: 'k1').add(event('evt-restored'));
+      // Played before this launch; queued under the kid's own scope.
+      await DriftEventOutbox(db, kidId: 'k1').add(event('evt-restored'));
 
-        await tester.pumpWidget(appUnder(container, const AppShell()));
-        // The session restores after the first frame — after AppShell's
-        // initState, which is where the old code captured the flusher.
-        await tester.pump();
-        await tester.pump();
-        expect(container.read(activeKidIdProvider), 'k1');
+      await tester.pumpWidget(appUnder(container, const AppShell()));
+      // The session restores after the first frame — after AppShell's
+      // initState, which is where the old code captured the flusher.
+      await tester.pump();
+      await tester.pump();
+      expect(container.read(activeKidIdProvider), 'k1');
 
-        await tester.pump(OutboxFlusher.defaultInterval + const Duration(seconds: 1));
+      await tester.pump(
+        OutboxFlusher.defaultInterval + const Duration(seconds: 1),
+      );
 
-        expect(server.delivered, contains('evt-restored'));
-        expect(await DriftEventOutbox(db, kidId: 'k1').pending(limit: 10), isEmpty);
+      expect(server.delivered, contains('evt-restored'));
+      expect(
+        await DriftEventOutbox(db, kidId: 'k1').pending(limit: 10),
+        isEmpty,
+      );
 
-        // Tear down the tree so the flusher's periodic timer is cancelled.
-        await tester.pumpWidget(const SizedBox());
-      },
-    );
+      // Tear down the tree so the flusher's periodic timer is cancelled.
+      await tester.pumpWidget(const SizedBox());
+    });
 
-    testWidgets(
-      'a kid paired during this run has their events uploaded',
-      (tester) async {
-        final db = LocalDatabase.memory();
-        final server = _RecordingTelemetryServer();
-        final container = realFlusherContainer(db, server, storedToken: null);
-        addTearDown(container.dispose);
+    testWidgets('a kid paired during this run has their events uploaded', (
+      tester,
+    ) async {
+      final db = LocalDatabase.memory();
+      final server = _RecordingTelemetryServer();
+      final container = realFlusherContainer(db, server, storedToken: null);
+      addTearDown(container.dispose);
 
-        await tester.pumpWidget(appUnder(container, const AppShell()));
-        await tester.pump();
-        await tester.pump();
-        expect(container.read(activeKidIdProvider), isNull);
+      await tester.pumpWidget(appUnder(container, const AppShell()));
+      await tester.pump();
+      await tester.pump();
+      expect(container.read(activeKidIdProvider), isNull);
 
-        await container
-            .read(sessionControllerProvider.notifier)
-            .pair('ABC123');
-        await tester.pump();
-        expect(container.read(activeKidIdProvider), 'k1');
+      await container.read(sessionControllerProvider.notifier).pair('ABC123');
+      await tester.pump();
+      expect(container.read(activeKidIdProvider), 'k1');
 
-        await DriftEventOutbox(db, kidId: 'k1').add(event('evt-after-pairing'));
-        await tester.pump(OutboxFlusher.defaultInterval + const Duration(seconds: 1));
+      await DriftEventOutbox(db, kidId: 'k1').add(event('evt-after-pairing'));
+      await tester.pump(
+        OutboxFlusher.defaultInterval + const Duration(seconds: 1),
+      );
 
-        expect(server.delivered, contains('evt-after-pairing'));
-        await tester.pumpWidget(const SizedBox());
-      },
-    );
+      expect(server.delivered, contains('evt-after-pairing'));
+      await tester.pumpWidget(const SizedBox());
+    });
   });
 
   group('token refresh (review findings)', () {

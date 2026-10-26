@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tutolys_app/core/net/recovery.dart';
 import 'package:tutolys_app/core/routing/paired_router.dart';
 import 'package:tutolys_app/data/api/content_api.dart';
 import 'package:tutolys_app/data/api/curriculum_api.dart';
@@ -144,6 +145,9 @@ Widget appUnder({
   return ProviderScope(
     overrides: [
       localDatabaseProvider.overrideWithValue(db ?? LocalDatabase.memory()),
+      // The inbox has no fake here and fails; recovery would then re-run
+      // every reader and skew the sync counts these tests assert.
+      recoveryRetriesProvider.overrideWithValue(false),
       curriculumApiProvider.overrideWithValue(
         curriculum ?? FakeCurriculumApi({'MATH': leaves, ...otherSubjects}),
       ),

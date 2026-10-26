@@ -171,7 +171,15 @@ class SessionController extends Notifier<SessionState> {
       return;
     }
 
-    final result = await _api.refresh(deviceToken: token);
+    final RefreshResult result;
+    try {
+      result = await _api.refresh(deviceToken: token);
+    } catch (e) {
+      // A malformed answer is a failure to retry, never a reason to stop
+      // refreshing for the rest of the session.
+      _scheduleRefresh(60);
+      return;
+    }
     switch (result) {
       case RefreshSucceeded(:final accessToken, :final expiresIn):
         state = state.copyWith(
@@ -232,6 +240,10 @@ class SessionController extends Notifier<SessionState> {
           kids: kids,
           stage: stage,
         );
+        // And keep trying: without this, an app opened while the server
+        // was down stayed tokenless, so every read skipped its request
+        // for good (Hafid's 40-minute freeze).
+        _scheduleRefresh(60);
     }
   }
 

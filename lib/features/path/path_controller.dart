@@ -11,6 +11,7 @@ import '../../data/sync/lesson_key.dart';
 import '../pairing/pairing_controller.dart';
 import '../settings/settings_controller.dart';
 import 'subject_language.dart';
+import '../../core/net/recovery.dart';
 
 /// Where the Carte opens. Math was A7's whole thin slice and is still the
 /// subject with the most real content; the subject pills switch from here.
@@ -152,6 +153,12 @@ class PathController extends Notifier<PathState> {
     _lastLoad = DateTime.now();
     final freshness = ContentFreshness(ref.read(localDatabaseProvider));
     final synced = curriculumReport.isOk && contentReport.isOk;
+    final recovery = ref.read(recoveryProvider);
+    if (synced) {
+      recovery.reportSuccess();
+    } else {
+      recovery.reportFailure();
+    }
     final syncedAt = synced
         ? await freshness.markSynced(subject, kid.gradeLevel)
         : await freshness.lastSynced(subject, kid.gradeLevel);

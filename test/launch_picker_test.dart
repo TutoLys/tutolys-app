@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tutolys_app/core/i18n/strings.dart';
+import 'package:tutolys_app/core/net/recovery.dart';
 import 'package:tutolys_app/core/routing/app_shell.dart';
 import 'package:tutolys_app/core/routing/village_shell.dart';
 import 'package:tutolys_app/data/api/content_api.dart';
@@ -82,6 +83,7 @@ ProviderContainer _container(SessionStore store, _Api api) {
       sessionAutoRefreshProvider.overrideWithValue(false),
       outboxFlusherAutoStartProvider.overrideWithValue(false),
       notificationsPollingProvider.overrideWithValue(false),
+      recoveryRetriesProvider.overrideWithValue(false),
       localDatabaseProvider.overrideWithValue(db),
       curriculumApiProvider.overrideWithValue(_OfflineCurriculumApi()),
       contentApiProvider.overrideWithValue(_OfflineContentApi()),

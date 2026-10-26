@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tutolys_app/core/i18n/strings.dart';
 import 'package:tutolys_app/data/api/pairing_api.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
+import 'package:tutolys_app/core/net/recovery.dart';
 import 'package:tutolys_app/data/local_db/session_store.dart';
 import 'package:tutolys_app/features/pairing/pairing_controller.dart';
 import 'package:tutolys_app/features/pairing/who_is_playing_screen.dart';
@@ -253,6 +254,7 @@ void main() {
           pairingApiProvider.overrideWithValue(_TokenPairingApi()),
           sessionAutoRefreshProvider.overrideWithValue(false),
           localDatabaseProvider.overrideWithValue(db),
+          recoveryRetriesProvider.overrideWithValue(false),
         ],
       );
       addTearDown(c.dispose);

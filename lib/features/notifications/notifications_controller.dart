@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/api/notifications_api.dart';
 import '../pairing/pairing_controller.dart';
+import '../../core/net/recovery.dart';
 
 final notificationsApiProvider = Provider<NotificationsApi>(
   (ref) => NotificationsApi(dio: ref.watch(dioProvider)),
@@ -45,12 +46,22 @@ class NotificationsController extends Notifier<NotificationsState> {
   }
 
   Future<void> refresh() async {
-    final token = ref.read(sessionControllerProvider).accessToken;
-    if (token == null) return;
+    final session = ref.read(sessionControllerProvider);
+    final token = session.accessToken;
+    final recovery = ref.read(recoveryProvider);
+    if (token == null) {
+      if (session.status == SessionStatus.paired) recovery.reportFailure();
+      return;
+    }
     final result = await ref
         .read(notificationsApiProvider)
         .fetch(accessToken: token);
     if (!ref.mounted) return;
+    if (result is NotificationsFetched) {
+      recovery.reportSuccess();
+    } else {
+      recovery.reportFailure();
+    }
     if (result case NotificationsFetched(:final inbox)) {
       state = NotificationsState(
         unreadCount: inbox.unreadCount,

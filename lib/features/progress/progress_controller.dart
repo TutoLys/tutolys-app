@@ -6,6 +6,7 @@ import '../pairing/pairing_controller.dart';
 import 'grade_level.dart';
 import 'progress_cache.dart';
 import 'local_progress.dart';
+import '../../core/net/recovery.dart';
 
 /// Real mastery/streak counts only — `null` streak means "couldn't read it
 /// this time at all, not even an offline estimate", never a fabricated 0.
@@ -112,8 +113,13 @@ class ProgressController extends Notifier<ProgressState> {
   }
 
   Future<void> _load() async {
-    final token = ref.read(sessionControllerProvider).accessToken;
+    final session = ref.read(sessionControllerProvider);
+    final token = session.accessToken;
+    final recovery = ref.read(recoveryProvider);
     if (token == null) {
+      // Paired with no token yet (the refresh failed): a failure to
+      // recover from, not "nothing to show" for good.
+      if (session.status == SessionStatus.paired) recovery.reportFailure();
       state = const ProgressState(loading: false);
       return;
     }
@@ -121,6 +127,11 @@ class ProgressController extends Notifier<ProgressState> {
     final result = await ref
         .read(progressApiProvider)
         .fetchMyProgress(accessToken: token);
+    if (result is ProgressFetched) {
+      recovery.reportSuccess();
+    } else {
+      recovery.reportFailure();
+    }
     // This device's own count of consecutive days played. Today's play
     // reaches the server only once telemetry uploads, so the server can
     // trail it; the streak shown is whichever is larger, so a child never
