@@ -102,6 +102,56 @@ void main() {
       },
     );
 
+    group('prompt.speech never downgrades a lesson (Hafid: "too wide")', () {
+      Map<String, Object?> withSpeech(Object? speech) => _v1()
+        ..['prompt'] = {
+          'text': '8, 10, ▢, 14',
+          'audio_ref': 'audio',
+          'speech': speech,
+        };
+
+      test('the backend\'s plain string is the narration text', () {
+        final env = QuestionEnvelope.parse(
+          withSpeech('8, 10, une case vide, 14'),
+        ).valueOrNull!;
+        final speech = env.questions.single.prompt.speech!;
+        expect(speech.text, '8, 10, une case vide, 14');
+        expect(speech.mode, SpeechMode.prerecorded);
+      });
+
+      test('inside config.questions too', () {
+        final json = _v1()
+          ..['config'] = {
+            'questions': [
+              {
+                'prompt': {'text': '8, 10, ▢, 14', 'speech': 'huit, dix…'},
+                'config': {
+                  'options': [
+                    {'id': 'a', 'label': '12'},
+                  ],
+                  'correct': 'a',
+                },
+              },
+            ],
+          };
+        expect(QuestionEnvelope.parse(json), isA<ParseOk<QuestionEnvelope>>());
+      });
+
+      test('a shape it doesn\'t know, or an unknown mode, is just ignored', () {
+        for (final odd in [
+          42,
+          ['a'],
+          {'mode': 'whisper', 'text': 'x'},
+        ]) {
+          expect(
+            QuestionEnvelope.parse(withSpeech(odd)),
+            isA<ParseOk<QuestionEnvelope>>(),
+            reason: '$odd',
+          );
+        }
+      });
+    });
+
     test('a known key with the wrong type is invalid, with a reason', () {
       final json = _v1()..['grade'] = 'one';
       final r = QuestionEnvelope.parse(json);

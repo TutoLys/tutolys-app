@@ -42,6 +42,9 @@ import 'xp_estimate.dart';
 /// - **legacy** — anything else (all content, in Phase 2): the existing
 ///   `ExerciseRunner` inside the shell via [LegacyEngineHost], with its own
 ///   telemetry unchanged and its reactions bridged to the director.
+/// The legacy host's width on a wide screen, the new shell's widest.
+const double legacyMaxWidth = 720;
+
 class PlayScreen extends ConsumerStatefulWidget {
   const PlayScreen({required this.node, required this.envelope, super.key});
 
@@ -290,8 +293,9 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   bool _replay = false;
 
   Future<void> _readReplay() async {
-    final done = (await ref.read(nodeProgressProvider.future))[widget.node.id]
-        ?.exerciseIds;
+    final done = (await ref.read(
+      nodeProgressProvider.future,
+    ))[widget.node.id]?.exerciseIds;
     if (done == null || done.isEmpty) return;
     final key = lessonKeyOf(widget.envelope);
     if (done.contains(widget.envelope['exercise_id'])) {
@@ -471,16 +475,25 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       body: ImageResolverScope(
         resolver: _images,
         exerciseId: _exerciseId,
-        child: LegacyEngineHost(
-          envelope: widget.envelope,
-          registry: ref.watch(engineRegistryProvider),
-          telemetry: _telemetry!,
-          feedback: _bridge!,
-          audio: _legacyAudio,
-          locale: locale,
-          character: stage,
-          onFinished: _handleFinished,
-          onClose: () => Navigator.of(context).pop(),
+        // The legacy host has no width cap of its own: on a wide desktop
+        // its answers stretched edge to edge (Hafid: "too wide"). Nothing
+        // published takes this path now; if anything ever does, it reads
+        // at the new shell's width.
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: legacyMaxWidth),
+            child: LegacyEngineHost(
+              envelope: widget.envelope,
+              registry: ref.watch(engineRegistryProvider),
+              telemetry: _telemetry!,
+              feedback: _bridge!,
+              audio: _legacyAudio,
+              locale: locale,
+              character: stage,
+              onFinished: _handleFinished,
+              onClose: () => Navigator.of(context).pop(),
+            ),
+          ),
         ),
       ),
     );

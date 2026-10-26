@@ -301,21 +301,28 @@ class QuestionEnvelope {
   ) {
     if (m == null) return PromptSpec.empty;
     final r = _Reader(m, parent.errors, '${parent.prefix}$path.');
-    final speechMap = r.optMap('speech');
+    // What narration should say, when it differs from what is shown. Two
+    // shapes reach us: the backend's plain string (the text Piper voiced
+    // for `audio_ref`, backend d66a824), and the object form `{text,
+    // locale, mode}`. Narration is never worth losing a lesson over, so
+    // any other shape, or an unknown mode, means "no speech hint", not a
+    // parse error that sends the lesson to the legacy host.
+    final rawSpeech = m['speech'];
     SpeechSpec? speech;
-    if (speechMap != null) {
-      final sr = _Reader(speechMap, parent.errors, '${r.prefix}speech.');
+    if (rawSpeech is String && rawSpeech.isNotEmpty) {
+      speech = SpeechSpec(text: rawSpeech);
+    } else if (rawSpeech is Map) {
+      final speechMap = rawSpeech.cast<String, Object?>();
       final mode = switch (speechMap['mode']) {
         null || 'prerecorded' => SpeechMode.prerecorded,
         'tts' => SpeechMode.tts,
         _ => null,
       };
-      if (mode == null) {
-        parent.errors.add('${r.prefix}speech.mode is not a known mode');
-      }
+      final text = speechMap['text'];
+      final locale = speechMap['locale'];
       speech = SpeechSpec(
-        text: sr.optString('text'),
-        locale: sr.optString('locale'),
+        text: text is String ? text : null,
+        locale: locale is String ? locale : null,
         mode: mode ?? SpeechMode.prerecorded,
       );
     }

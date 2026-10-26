@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:design_system/design_system.dart';
 import 'package:engine_sdk/engine_sdk.dart';
 import 'package:engine_sdk/testing.dart';
+import 'package:engines_core/engines_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -569,6 +570,42 @@ void main() {
       findsOneWidget,
       reason: 'half of 1 question, rounded down, and no lesson bonus',
     );
+  });
+
+  group('Hafid\'s "too wide" mcq', () {
+    testWidgets('an mcq whose prompt carries a speech string plays on the '
+        'new runtime, not the legacy host', (tester) async {
+      final envelope = {
+        ..._mcqEnvelope,
+        'prompt': {
+          'text': '8, 10, ▢, 14',
+          'audio_ref': 'audio',
+          'speech': '8, 10, une case vide, 14',
+        },
+      };
+      await tester.pumpWidget(app(envelope));
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await settle(tester);
+
+      expect(find.byType(LegacyEngineHost), findsNothing);
+      expect(find.text('VALIDER'), findsOneWidget);
+    });
+
+    testWidgets('the legacy fallback, if ever used, stays readable on a wide '
+        'desktop', (tester) async {
+      tester.view.physicalSize = const Size(1918, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(app(_composeEnvelope, legacyOnly: true));
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await settle(tester);
+
+      final host = tester.getRect(find.byType(LegacyEngineHost));
+      expect(host.width, lessThanOrEqualTo(legacyMaxWidth));
+      expect(host.center.dx, closeTo(1918 / 2, 1), reason: 'centred');
+    });
   });
 
   testWidgets('in the dark theme, the game chrome is dark too', (tester) async {
