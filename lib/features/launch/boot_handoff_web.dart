@@ -1,5 +1,6 @@
 import 'dart:js_interop';
 
+import '../../core/diagnostics/diag_log.dart';
 import 'boot_handoff_types.dart';
 
 /// `web/index.html` keeps `globalThis.tutolysBoot` up to date while the app
@@ -23,7 +24,8 @@ BootHandoff? readBootHandoff() {
       progress: progress.clamp(0.0, 1.0),
       messageIndex: index == null || index.isNaN ? 0 : index.toInt(),
     );
-  } catch (_) {
+  } catch (e, s) {
+    recordCaught('boot_handoff_read', e, s);
     return null;
   }
 }
@@ -46,7 +48,8 @@ extension type _Storage._(JSObject _) implements JSObject {
 void rememberBootLocale(String languageCode) {
   try {
     _localStorage?.setItem('tutolys.locale', languageCode);
-  } catch (_) {
+  } catch (e, s) {
     // Private mode, blocked storage: the HTML stage defaults to French.
+    recordCaught('boot_handoff_locale', e, s);
   }
 }

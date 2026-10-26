@@ -50,6 +50,15 @@ abstract class Strings {
   /// Shown only when startup has genuinely finished.
   String get launchDone;
 
+  // --- boot stuck screen and technical log (ADR 0038) ----------------------
+  String get bootStuckTitle;
+  String get bootStuckBody;
+  String get bootDetails;
+  String bootStuckOn(String step);
+  String get bootPreviousRun;
+  String get diagJournalTitle;
+  String get diagEmpty;
+
   /// Screen-reader label for the launch progress bar.
   String get launchProgressLabel;
 
@@ -472,6 +481,28 @@ class _FrenchStrings extends Strings {
 
   @override
   String get launchDone => 'Bienvenue dans TutoLys !';
+
+  @override
+  String get bootStuckTitle => 'Le village prend son temps';
+
+  @override
+  String get bootStuckBody =>
+      'Ça prend plus de temps que d’habitude. On réessaie ?';
+
+  @override
+  String get bootDetails => 'Détails';
+
+  @override
+  String bootStuckOn(String step) => 'Étape en attente : $step';
+
+  @override
+  String get bootPreviousRun => 'Session précédente';
+
+  @override
+  String get diagJournalTitle => 'Journal technique';
+
+  @override
+  String get diagEmpty => 'Aucune erreur enregistrée.';
 
   @override
   String get launchProgressLabel => 'Chargement de TutoLys';
@@ -1374,6 +1405,28 @@ class _EnglishStrings extends Strings {
 
   @override
   String get launchDone => 'Welcome to TutoLys!';
+
+  @override
+  String get bootStuckTitle => 'The village is taking its time';
+
+  @override
+  String get bootStuckBody =>
+      'This is taking longer than usual. Shall we try again?';
+
+  @override
+  String get bootDetails => 'Details';
+
+  @override
+  String bootStuckOn(String step) => 'Waiting on: $step';
+
+  @override
+  String get bootPreviousRun => 'Previous run';
+
+  @override
+  String get diagJournalTitle => 'Technical log';
+
+  @override
+  String get diagEmpty => 'No errors recorded.';
 
   @override
   String get launchProgressLabel => 'Loading TutoLys';

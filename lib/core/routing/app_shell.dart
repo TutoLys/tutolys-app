@@ -4,6 +4,7 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../diagnostics/boot_log.dart';
 import '../../data/sync/outbox_flusher.dart';
 import '../../data/sync/outbox_flusher_provider.dart';
 import '../../features/launch/launch_flow.dart';
@@ -55,8 +56,10 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
       // The Flutter loader is on screen from the first frame and looks the
       // same as the native one, so the native splash can go now — the
       // loader, not the splash, is what waits for the session (ADR 0018).
+      BootLog.instance.mark('first_frame');
       FlutterNativeSplash.remove();
-      ref.read(sessionControllerProvider.notifier).restore();
+      BootLog.instance.mark('splash_release');
+      _restore();
     });
     // Started unconditionally (outside tests), before pairing status is even
     // known: flush() itself no-ops without an access token (see
@@ -72,6 +75,26 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
       },
       fireImmediately: true,
     );
+  }
+
+  /// Restores the session as a boot step (ADR 0038). A restore that never
+  /// finishes is recorded as a timeout, and the loader's stuck screen
+  /// names it.
+  void _restore() {
+    BootLog.instance
+        .run(
+          'session_restore',
+          ref.read(sessionControllerProvider.notifier).restore,
+          timeout: BootLog.networkTimeout + BootLog.localTimeout,
+        )
+        .ignore();
+  }
+
+  /// "Réessayer" on the stuck screen: boot again from the session.
+  void _retryBoot() {
+    BootLog.instance.reset();
+    ref.invalidate(storedSettingsProvider);
+    _restore();
   }
 
   @override
@@ -135,6 +158,7 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
           setState(() => _launched = true);
         },
         onFinished: () => setState(() => _launched = true),
+        onRetry: _retryBoot,
       ));
     }
 

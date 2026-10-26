@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:design_system/design_system.dart';
 import 'package:engine_sdk/engine_sdk.dart' show AudioOutputKeepAlive;
 import 'package:flutter/foundation.dart' show kReleaseMode;
@@ -6,6 +8,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/diagnostics/boot_log.dart';
+import 'core/diagnostics/diag_log.dart';
+import 'core/diagnostics/diag_store.dart';
 import 'core/routing/app_shell.dart';
 import 'core/routing/paired_router.dart' show rememberLaunchLocation;
 import 'core/startup/release_config_guard.dart';
@@ -20,7 +25,14 @@ import 'features/quests/quest_celebration.dart';
 import 'features/settings/settings_controller.dart';
 
 void main() {
+  // Every uncaught error reaches the console and the on-device log
+  // (ADR 0038): framework errors, platform errors, and this zone.
+  runZonedGuarded(_main, DiagLog.instance.onZoneError);
+}
+
+void _main() {
   final binding = WidgetsFlutterBinding.ensureInitialized();
+  DiagLog.instance.installHooks();
   // From the first tap, keep the audio output awake (web only), so the first
   // read-aloud isn't clipped while the OS wakes the sink (ADR 0043).
   AudioOutputKeepAlive.instance.armOnFirstGesture();
@@ -46,10 +58,16 @@ void main() {
   // reads as a hang and cost a real session chasing the environment
   // instead (2026-10-24). `assertReleaseConfigIsReal` still throws, for
   // tests and for anything that wants the hard failure.
+  final configStep = BootLog.instance.start('config_guard');
   final configError = releaseConfigError(
     isReleaseMode: kReleaseMode,
     apiBaseUrl: apiBaseUrl,
     telemetryBaseUrl: telemetryBaseUrl,
+  );
+  BootLog.instance.finish(
+    configStep,
+    configError == null ? BootOutcome.ok : BootOutcome.error,
+    configError,
   );
   if (configError != null) {
     runApp(MisconfiguredApp(message: configError));
@@ -67,6 +85,18 @@ void main() {
   final db = openLocalDatabase(
     migrationKidId: () async => (await SessionStore().pairedKid())?.id,
   );
+
+  // The first query opens the database and runs any migration, so it is
+  // its own boot step: a database that never opens is named as such
+  // rather than surfacing as whichever read happened to come first.
+  BootLog.instance
+      .run('db_open', () => db.customSelect('SELECT 1').get())
+      .then(
+        (_) => startDiagPersistence(db, DiagLog.instance).catchError(
+          (Object e, StackTrace s) => recordCaught('diag_store', e, s),
+        ),
+      )
+      .ignore();
 
   runApp(
     ProviderScope(

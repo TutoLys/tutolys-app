@@ -5,8 +5,11 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
+import '../../core/diagnostics/boot_log.dart';
+import '../../core/diagnostics/diag_log.dart';
 import '../../data/local_db/session_store.dart';
 import 'boot_handoff.dart';
+import 'boot_stuck_view.dart';
 import 'tutolys_loader_screen.dart';
 import 'tutolys_welcome_screen.dart';
 
@@ -44,8 +47,25 @@ class LaunchFlow extends StatefulWidget {
     this.onPickKid,
     this.onAddProfile,
     this.startProgress,
+    this.onRetry,
+    this.bootLog,
+    this.diagLog,
+    this.stuckAfter = defaultStuckAfter,
     super.key,
   });
+
+  /// Re-runs boot from the stuck screen. Without it there is no stuck
+  /// screen, only the loader.
+  final VoidCallback? onRetry;
+
+  /// What the stuck screen's "Détails" shows. Default to the app's own.
+  final BootLog? bootLog;
+  final DiagLog? diagLog;
+
+  /// How long the loader may stay up before the stuck screen replaces it
+  /// (ADR 0038).
+  final Duration stuckAfter;
+  static const Duration defaultStuckAfter = Duration(seconds: 15);
 
   final LaunchStage stage;
 
@@ -76,7 +96,7 @@ class LaunchFlow extends StatefulWidget {
   State<LaunchFlow> createState() => _LaunchFlowState();
 }
 
-enum _Phase { loading, done, welcome }
+enum _Phase { loading, stuck, done, welcome }
 
 class _LaunchFlowState extends State<LaunchFlow> {
   late final BootHandoff? _handoff = readBootHandoff();
@@ -88,6 +108,7 @@ class _LaunchFlowState extends State<LaunchFlow> {
   _Phase _phase = _Phase.loading;
   Timer? _creep;
   Timer? _beat;
+  Timer? _stuckTimer;
 
   /// The end of the span the current stage owns.
   double get _ceiling => _ceilingFor(widget.stage);
@@ -102,6 +123,25 @@ class _LaunchFlowState extends State<LaunchFlow> {
   void initState() {
     super.initState();
     _onStage();
+    _armStuckTimer();
+  }
+
+  /// Boot that hasn't finished after [LaunchFlow.stuckAfter] shows the
+  /// stuck screen instead of a loader that never ends.
+  void _armStuckTimer() {
+    _stuckTimer?.cancel();
+    if (widget.onRetry == null) return;
+    _stuckTimer = Timer(widget.stuckAfter, () {
+      if (mounted && _phase == _Phase.loading) {
+        setState(() => _phase = _Phase.stuck);
+      }
+    });
+  }
+
+  void _retry() {
+    setState(() => _phase = _Phase.loading);
+    _armStuckTimer();
+    widget.onRetry?.call();
   }
 
   @override
@@ -118,12 +158,18 @@ class _LaunchFlowState extends State<LaunchFlow> {
   void dispose() {
     _creep?.cancel();
     _beat?.cancel();
+    _stuckTimer?.cancel();
     super.dispose();
   }
 
   void _onStage() {
+    // Boot finishing while the stuck screen is up simply carries on.
+    if (_phase == _Phase.stuck && widget.stage == LaunchStage.ready) {
+      _phase = _Phase.loading;
+    }
     if (_phase != _Phase.loading) return;
     if (widget.stage == LaunchStage.ready) {
+      _stuckTimer?.cancel();
       _creep?.cancel();
       _creep = null;
       _progress = 1;
@@ -162,7 +208,14 @@ class _LaunchFlowState extends State<LaunchFlow> {
       duration: still ? Duration.zero : Motion.slow,
       switchInCurve: Motion.enter,
       switchOutCurve: Motion.exit,
-      child: _phase == _Phase.welcome
+      child: _phase == _Phase.stuck
+          ? BootStuckView(
+              key: const ValueKey('stuck'),
+              onRetry: _retry,
+              bootLog: widget.bootLog ?? BootLog.instance,
+              diagLog: widget.diagLog ?? DiagLog.instance,
+            )
+          : _phase == _Phase.welcome
           ? TutolysWelcomeScreen(
               key: const ValueKey('welcome'),
               kidName: widget.kidName,

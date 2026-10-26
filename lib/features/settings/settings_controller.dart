@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/diagnostics/boot_log.dart';
 import '../../data/local_db/app_settings.dart';
 import '../pairing/pairing_controller.dart';
 
@@ -15,8 +16,21 @@ final appSettingsStoreProvider = Provider<AppSettingsStore>((ref) {
 /// Watches the kid-scoped store: the app first builds this at boot, before
 /// the session has restored the paired kid, so it re-reads when the kid
 /// arrives. Reading only once loaded defaults on every launch.
+///
+/// The read is a boot step with a timeout (ADR 0038): it is the app's first
+/// database query, and a database that never answers held every launch on
+/// the loader forever (2026-10-26). Past the timeout it fails, which
+/// [settingsReadyProvider] counts as ready, so the app opens on defaults.
+///
+/// No automatic retry: Riverpod 3 would otherwise re-run a timed-out read
+/// every few seconds, each one another 10 s wait. One timeout means
+/// defaults; the stuck screen's "Réessayer" reads again.
 final storedSettingsProvider = FutureProvider<AppSettings>(
-  (ref) => ref.watch(appSettingsStoreProvider).read(),
+  (ref) {
+    final store = ref.watch(appSettingsStoreProvider);
+    return BootLog.instance.run('settings_read', store.read);
+  },
+  retry: (_, _) => null,
 );
 
 /// Whether the active kid's settings have been read.
@@ -25,9 +39,13 @@ final storedSettingsProvider = FutureProvider<AppSettings>(
 /// frame a kid sees is already in their theme and language. Without it the
 /// app drew in the default light theme and switched to dark a moment later.
 /// A failed read counts as ready: defaults beat a splash that never ends.
-final settingsReadyProvider = Provider<bool>(
-  (ref) => !ref.watch(storedSettingsProvider).isLoading,
-);
+/// Under Riverpod 3 a failure can arrive as `AsyncLoading` *carrying* the
+/// error, so `isLoading` alone isn't enough (ADR 0038). A reload for a new
+/// kid is still not ready, even with the last kid's value in hand.
+final settingsReadyProvider = Provider<bool>((ref) {
+  final stored = ref.watch(storedSettingsProvider);
+  return !stored.isLoading || stored.hasError;
+});
 
 /// Holds Réglages' state, writing through on every change.
 ///

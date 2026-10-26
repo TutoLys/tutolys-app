@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/diagnostics/boot_log.dart';
 import '../../data/api/pairing_api.dart';
 import '../../data/local_db/database.dart';
 import '../../data/local_db/kid_local_data.dart';
@@ -216,7 +217,17 @@ class SessionController extends Notifier<SessionState> {
     }
     final stage = kids.length > 1 ? ProfileStage.choosing : ProfileStage.none;
 
-    final result = await _api.refresh(deviceToken: token);
+    RefreshResult result;
+    try {
+      result = await BootLog.instance.run(
+        'pairing_refresh',
+        () => _api.refresh(deviceToken: token),
+        timeout: BootLog.networkTimeout,
+      );
+    } on TimeoutException {
+      // Treated like offline: stay paired, play from the cache, retry.
+      result = const RefreshOffline();
+    }
     switch (result) {
       case RefreshSucceeded(:final accessToken, :final expiresIn):
         state = SessionState(

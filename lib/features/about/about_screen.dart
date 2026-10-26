@@ -1,6 +1,8 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/diagnostics/boot_log.dart';
+import '../../core/diagnostics/diag_log.dart';
 import '../../core/i18n/strings.dart';
 import '../pairing/pairing_controller.dart';
 
@@ -56,7 +58,17 @@ class AboutScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(Space.md),
                   child: Column(
                     children: [
-                      _Row(label: t.aboutVersion, value: appVersion, p: p),
+                      // A long-press opens the technical log, for an adult
+                      // helping with support (ADR 0038). Nothing in it
+                      // leaves the device.
+                      GestureDetector(
+                        onLongPress: () => showTechnicalLog(context),
+                        child: _Row(
+                          label: t.aboutVersion,
+                          value: appVersion,
+                          p: p,
+                        ),
+                      ),
                       Divider(height: Space.lg, color: p.line),
                       _Row(label: t.aboutCurriculum, value: 'PFEQ', p: p),
                     ],
@@ -112,4 +124,45 @@ class _Row extends StatelessWidget {
       ],
     );
   }
+}
+
+/// The on-device technical log: boot steps, this run's errors and the
+/// previous run's (ADR 0038).
+Future<void> showTechnicalLog(
+  BuildContext context, {
+  BootLog? bootLog,
+  DiagLog? diagLog,
+}) {
+  final boot = bootLog ?? BootLog.instance;
+  final diag = diagLog ?? DiagLog.instance;
+  final t = context.s;
+  final lines = [
+    for (final step in boot.steps) step.describe(),
+    for (final entry in diag.entries.reversed) '$entry',
+    if (diag.previousRun.isNotEmpty) ...[
+      '— ${t.bootPreviousRun} —',
+      for (final entry in diag.previousRun.reversed) '$entry',
+    ],
+  ];
+  return showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(t.diagJournalTitle),
+      content: SizedBox(
+        width: 560,
+        child: SingleChildScrollView(
+          child: SelectableText(
+            lines.isEmpty ? t.diagEmpty : lines.join('\n'),
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(MaterialLocalizations.of(context).closeButtonLabel),
+        ),
+      ],
+    ),
+  );
 }

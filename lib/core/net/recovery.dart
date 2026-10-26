@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../diagnostics/diag_log.dart';
 import '../../features/notifications/notifications_controller.dart';
 import '../../features/pairing/pairing_controller.dart';
 import '../../features/path/path_controller.dart';
@@ -105,8 +106,9 @@ class RecoveryScheduler {
     _running = true;
     try {
       await retryAll();
-    } catch (_) {
+    } catch (e, s) {
       // A reader that throws counts as a failure, never as a stop.
+      recordCaught('recovery_retry', e, s);
       reportFailure();
     } finally {
       _running = false;
@@ -153,7 +155,9 @@ final recoveryProvider = Provider<RecoveryScheduler>((ref) {
       onShow: scheduler.nudge,
       onResume: scheduler.nudge,
     );
-  } catch (_) {}
+  } catch (e, s) {
+    recordCaught('recovery_lifecycle', e, s);
+  }
   listenForNetworkOnline(scheduler.nudge);
   ref.onDispose(() {
     lifecycle?.dispose();

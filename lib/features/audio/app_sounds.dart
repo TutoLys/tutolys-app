@@ -3,6 +3,8 @@ import 'dart:math';
 import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/diagnostics/diag_log.dart';
+
 /// The app's own sounds (ADR 0035): background music and the shell's three
 /// effect moments. Bundled assets, fetched only when first played, so on
 /// the web they aren't part of the first download.
@@ -58,7 +60,8 @@ Future<Uint8List?> _load(AssetBundle bundle, String path) async {
   try {
     final data = await bundle.load('assets/sounds/$path');
     return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-  } catch (_) {
+  } catch (e, s) {
+    recordCaught('app_sounds', e, s);
     return null;
   }
 }
