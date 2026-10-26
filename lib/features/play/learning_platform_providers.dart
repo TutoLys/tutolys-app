@@ -39,6 +39,7 @@ final learningEngineRegistryProvider = Provider<LearningEngineRegistry>(
     eraseEngine(const ExperimentLabEngine()),
     eraseEngine(const CountersBoardEngine()),
     eraseEngine(const SkyModelEngine()),
+    eraseEngine(const MailStudioEngine()),
   ]),
 );
 
@@ -65,6 +66,7 @@ final evaluatorRegistryProvider = Provider<EvaluatorRegistry>(
     ExperimentLabEvaluator(),
     CountersBoardEvaluator(),
     SkyModelEvaluator(),
+    MailStudioEvaluator(),
   ]),
 );
 
