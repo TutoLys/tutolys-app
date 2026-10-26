@@ -50,9 +50,7 @@ void main() {
       final expected = {
         Reaction.celebrating: '$dir/pose-celebrating.webp',
         Reaction.victory: '$dir/pose-victory.webp',
-        Reaction.explaining: '$dir/pose-surprised.webp',
-        Reaction.speaking: '$dir/pose-surprised.webp', // via explaining
-        Reaction.curious: '$dir/pose-surprised.webp',
+        Reaction.encouraging: '$dir/pose-surprised.webp',
       };
       for (final r in Reaction.values) {
         expect(
@@ -63,14 +61,36 @@ void main() {
       }
     });
 
-    test('"Presque" never borrows a sad or worried face', () {
-      expect(
-        BitmapCharacterRenderer.poseAsset(
-          BitmapCharacterRenderer.fox,
-          Reaction.encouraging,
-        ),
-        'assets/characters/fox/pose-default.webp',
+    test('the surprised face shows only for a wrong or partial answer', () {
+      // Hafid, 2026-10-26: not at every new question, not on a hint.
+      const policy = DefaultReactionPolicy();
+      String? faceFor(RuntimeEvent e) => BitmapCharacterRenderer.poseAsset(
+        BitmapCharacterRenderer.fox,
+        policy.onEvent(e).firstWhere((c) => c.role == ActorRole.guide).reaction,
       );
+      EvaluationResult eval(Outcome o) => EvaluationResult(
+        outcome: o,
+        score: o == Outcome.correct ? 1 : 0,
+        attemptNumber: 1,
+        evaluator: 'e',
+      );
+      AnswerEvaluated answered(Outcome o) =>
+          AnswerEvaluated(questionIndex: 0, result: eval(o));
+      const dir = 'assets/characters/fox';
+      const surprised = '$dir/pose-surprised.webp';
+
+      expect(
+        faceFor(const QuestionPresented(questionIndex: 0, questionCount: 5)),
+        isNot(surprised),
+      );
+      expect(
+        faceFor(const HintRequested(questionIndex: 0, hintIndex: 0)),
+        isNot(surprised),
+      );
+      for (final o in [Outcome.incorrect, Outcome.partial]) {
+        expect(faceFor(answered(o)), surprised, reason: '$o');
+      }
+      expect(faceFor(answered(Outcome.correct)), '$dir/pose-celebrating.webp');
     });
 
     test('every pose the fox names ships in the package', () {

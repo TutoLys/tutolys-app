@@ -194,3 +194,23 @@ A neutral, idle render in the new style for `pose.default` (and
   `engines_core`, which the Engines session owns.
 - Not checked in a live browser from this session. The manager rebuilds
   the :8080 preview.
+
+## Addendum (2026-10-26): the surprised face is for a wrong answer only
+
+Hafid, after playing "Count back from 10": the fox showed the surprised,
+open-mouthed face at the start of every new question. Every
+`QuestionPresented` cues `curious`, and `pose.curious` was the surprised
+render. His rule: **the surprised face shows only when the answer is
+wrong.**
+
+- `pose.encouraging` ("Presque": `incorrect` and `partial`) is now the
+  surprised render. This is Hafid's explicit call and supersedes the
+  "stays on the default pose" line above. Surprise isn't disappointment,
+  so Sad, Worried and Fierce stay unused.
+- `pose.curious` and `pose.explaining` (a hint) are empty again: the
+  default pose plus their motion recipe. `speaking` falls back to
+  `explaining`, so it gets the default pose too.
+- The manifest is now version 3. `bitmap_renderer_test.dart` checks the
+  whole path from event to image: `QuestionPresented` and `HintRequested`
+  never show the surprised face, `incorrect` and `partial` do, and
+  `correct` still celebrates.
