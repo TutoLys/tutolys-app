@@ -318,10 +318,12 @@ class ComposeSlotsEngine
 
 /// Grades a built answer slot by slot.
 ///
-/// Ordered: a slot is right when it holds the target's tile for that
-/// position. Unordered: when its tile belongs in the answer at all. Score is
-/// the share of slots right; [EvaluationResult.itemResults] is keyed by slot
-/// index.
+/// Tiles are compared by label, not id: two tiles that read the same are
+/// interchangeable, so "3 + 3 + 3" or "balle" grades on what the child
+/// sees. Ordered: a slot is right when its label is the target's label for
+/// that position. Unordered: when its label is still owed by the answer (a
+/// multiset, so two "3"s need two "3"s). Score is the share of slots
+/// right; [EvaluationResult.itemResults] is keyed by slot index.
 class ComposeBuildEvaluator
     implements Evaluator<ComposeContent, OrderingAnswer> {
   const ComposeBuildEvaluator();
@@ -345,13 +347,23 @@ class ComposeBuildEvaluator
     if (placed.length != content.target.length) {
       throw ArgumentError('An answer must fill every slot.');
     }
-    final wanted = content.target.toSet();
-    final items = <String, bool>{
-      for (var i = 0; i < placed.length; i++)
-        '$i': content.ordered
-            ? placed[i] == content.target[i]
-            : wanted.contains(placed[i]),
-    };
+    String label(String id) => content.tile(id).label;
+    final want = [for (final id in content.target) label(id)];
+    final owed = <String, int>{};
+    for (final l in want) {
+      owed[l] = (owed[l] ?? 0) + 1;
+    }
+    final items = <String, bool>{};
+    for (var i = 0; i < placed.length; i++) {
+      final got = label(placed[i]);
+      if (content.ordered) {
+        items['$i'] = got == want[i];
+      } else {
+        final left = owed[got] ?? 0;
+        items['$i'] = left > 0;
+        if (left > 0) owed[got] = left - 1;
+      }
+    }
     final right = items.values.where((v) => v).length;
     return EvaluationResult(
       outcome: right == items.length
