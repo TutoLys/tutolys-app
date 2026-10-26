@@ -132,7 +132,7 @@ void main() {
             ParseInvalid(:final reason) => reason,
             _ => null,
           };
-      expect(reason({...findConfig, 'task': 'read'}), contains('find or'));
+      expect(reason({...findConfig, 'task': 'read'}), contains('find, choose or discuss'));
       expect(
         reason({
           'sentences': [sentences.first],
@@ -237,7 +237,10 @@ void main() {
       s = engine.reduce(s, const TapPassageChoice('s3')).state;
       s = engine.reduce(s, const TapPassageChoice('s4')).state;
       expect(s.selected, {'s3', 's4'});
-      expect(engine.extractAnswer(s)!.selectedOptionIds, ['s3', 's4']);
+      expect(
+        (engine.extractAnswer(s)! as MultiSelectAnswer).selectedOptionIds,
+        ['s3', 's4'],
+      );
     });
 
     test('an unknown or already tried choice changes nothing', () {

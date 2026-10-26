@@ -3,6 +3,7 @@ import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
 
 import '../widgets/answer_tile.dart';
+import 'passage_discuss.dart';
 
 /// What the child does with the passage.
 enum PassageTask {
@@ -12,6 +13,10 @@ enum PassageTask {
 
   /// Pick an answer below the passage, which stays on screen.
   choose,
+
+  /// Answer, compare two characters' readings with the sentences they rest
+  /// on, then revise after a new clue (app ADR 0088).
+  discuss,
 }
 
 class PassageSentence {
@@ -36,6 +41,7 @@ class PassageContent {
     required this.correct,
     this.title,
     this.options = const [],
+    this.discuss,
   });
 
   final PassageTask task;
@@ -47,8 +53,12 @@ class PassageContent {
   /// `choose` only.
   final List<PassageOption> options;
 
-  /// Sentence ids (`find`) or the one option id (`choose`).
+  /// Sentence ids (`find`) or the one option id (`choose`). Empty for
+  /// `discuss`, which grades its own parts.
   final Set<String> correct;
+
+  /// `discuss` only.
+  final DiscussPart? discuss;
 
   bool get multiple => correct.length > 1;
 
@@ -65,6 +75,8 @@ class PassageState {
     this.selected = const {},
     this.found = const {},
     this.tried = const {},
+    this.discuss,
+    this.discussPart,
   });
 
   /// The ids a tap can pick, in display order. Options may be shuffled;
@@ -81,16 +93,25 @@ class PassageState {
   /// Checked wrong — amber, and no longer tappable.
   final Set<String> tried;
 
+  /// `discuss` only.
+  final DiscussState? discuss;
+
+  /// `discuss` only: the content the reducer checks actions against.
+  final DiscussPart? discussPart;
+
   PassageState copyWith({
     Set<String>? selected,
     Set<String>? found,
     Set<String>? tried,
+    DiscussState? discuss,
   }) => PassageState(
     order: order,
     single: single,
     selected: selected ?? this.selected,
     found: found ?? this.found,
     tried: tried ?? this.tried,
+    discuss: discuss ?? this.discuss,
+    discussPart: discussPart,
   );
 }
 
@@ -101,6 +122,25 @@ sealed class PassageAction {
 /// Tap a sentence (`find`) or an option (`choose`).
 class TapPassageChoice extends PassageAction {
   const TapPassageChoice(this.id);
+  final String id;
+}
+
+/// `discuss`: the child's first answer.
+class DiscussPickFirst extends PassageAction {
+  const DiscussPickFirst(this.id);
+  final String id;
+}
+
+/// `discuss`: the sentence a take rests on.
+class DiscussCite extends PassageAction {
+  const DiscussCite(this.takeId, this.sentenceId);
+  final String takeId;
+  final String sentenceId;
+}
+
+/// `discuss`: the answer after the clue.
+class DiscussPickFinal extends PassageAction {
+  const DiscussPickFinal(this.id);
   final String id;
 }
 
@@ -117,6 +157,9 @@ class TapPassageChoice extends PassageAction {
 /// - `find`: tap the sentence that proves the answer. Several right
 ///   sentences make it "trouve toutes les phrases…", with partial credit.
 /// - `choose`: pick one answer below the passage.
+/// - `discuss`: answer a question, then match two village characters'
+///   readings to the sentences they rest on, then keep or change the
+///   answer after a new clue ([Discuss]).
 ///
 /// A child who can't read the passage yet taps the speaker beside each
 /// sentence. Nothing is read aloud unless tapped, and no speaker is drawn
@@ -127,7 +170,7 @@ class PassageReaderEngine
           PassageContent,
           PassageState,
           PassageAction,
-          MultiSelectAnswer
+          AnswerValue
         > {
   const PassageReaderEngine();
 
@@ -149,10 +192,11 @@ class PassageReaderEngine
     final task = switch (config['task']) {
       null || 'find' => PassageTask.find,
       'choose' => PassageTask.choose,
+      'discuss' => PassageTask.discuss,
       _ => null,
     };
     if (task == null) {
-      return const ParseResult.invalid('task is find or choose.');
+      return const ParseResult.invalid('task is find, choose or discuss.');
     }
     final rawSentences = config['sentences'];
     if (rawSentences is! List ||
@@ -228,6 +272,37 @@ class PassageReaderEngine
       }
       options.add(PassageOption(id: id, label: label));
     }
+    if (task == PassageTask.discuss) {
+      if (config.containsKey('correct')) {
+        return const ParseResult.invalid(
+          'discuss has no correct: the clue\'s accepts says what is right.',
+        );
+      }
+      final part = Discuss.parse(
+        config,
+        sentenceIds: {for (final s in sentences) s.id},
+        optionIds: {for (final o in options) o.id},
+      );
+      return switch (part) {
+        ParseOk(:final value) => ParseResult.ok(
+          PassageContent(
+            task: task,
+            title: title,
+            sentences: List.unmodifiable(sentences),
+            options: List.unmodifiable(options),
+            correct: const {},
+            discuss: value,
+          ),
+        ),
+        ParseInvalid(:final reason) => ParseResult.invalid(reason),
+        ParseUnsupported(:final reason) => ParseResult.unsupported(reason),
+      };
+    }
+    for (final key in const ['question', 'takes', 'clue']) {
+      if (config.containsKey(key)) {
+        return ParseResult.invalid('$key belongs to task discuss.');
+      }
+    }
     final correct = config['correct'];
     if (correct is! String || !options.any((o) => o.id == correct)) {
       return const ParseResult.invalid('correct must name one of the options.');
@@ -248,16 +323,26 @@ class PassageReaderEngine
     final order = content.choiceIds;
     // Options shuffle so the right one isn't always first; a passage's
     // sentences are a text and keep their order.
-    if (content.task == PassageTask.choose) order.shuffle(seed.random());
+    if (content.task != PassageTask.find) order.shuffle(seed.random());
     return PassageState(
       order: List.unmodifiable(order),
       single: !content.multiple,
+      discuss: content.task == PassageTask.discuss
+          ? const DiscussState()
+          : null,
+      discussPart: content.discuss,
     );
   }
 
   @override
   Transition<PassageState> reduce(PassageState s, PassageAction action) {
     switch (action) {
+      case DiscussPickFirst() || DiscussCite() || DiscussPickFinal():
+        final d = s.discuss;
+        final part = s.discussPart;
+        if (d == null || part == null) return Transition(s);
+        final (next, events) = Discuss.reduce(part, d, action);
+        return Transition(s.copyWith(discuss: next), events);
       case TapPassageChoice(:final id):
         if (!s.order.contains(id) ||
             s.found.contains(id) ||
@@ -279,13 +364,19 @@ class PassageReaderEngine
   }
 
   @override
-  MultiSelectAnswer? extractAnswer(PassageState s) => s.selected.isEmpty
-      ? null
-      : MultiSelectAnswer({...s.found, ...s.selected});
+  AnswerValue? extractAnswer(PassageState s) {
+    final d = s.discuss;
+    if (d != null) return Discuss.extract(s.discussPart!, d);
+    return s.selected.isEmpty
+        ? null
+        : MultiSelectAnswer({...s.found, ...s.selected});
+  }
 
   @override
   PassageState applyFeedback(PassageState s, EvaluationResult result) {
     if (result.outcome == Outcome.ungraded) return s;
+    final d = s.discuss;
+    if (d != null) return s.copyWith(discuss: Discuss.feedback(d, result));
     return s.copyWith(
       selected: const {},
       found: {
@@ -307,6 +398,7 @@ class PassageReaderEngine
     'selected': s.selected.toList(),
     'found': s.found.toList(),
     'tried': s.tried.toList(),
+    if (s.discuss != null) 'discuss': s.discuss!.toJson(),
   };
 
   @override
@@ -317,6 +409,27 @@ class PassageReaderEngine
       final known = authored.toSet();
       if (order.length != known.length || !order.every(known.contains)) {
         return null;
+      }
+      final part = content.discuss;
+      if (part != null) {
+        final d = DiscussState.fromJson(
+          (snap['discuss']! as Map).cast<String, Object?>(),
+        );
+        final takes = {for (final t in part.takes) t.id: t.cites};
+        bool option(String? id) => id == null || known.contains(id);
+        if (!option(d.first) ||
+            !option(d.finalPick) ||
+            !d.cites.keys.every(takes.containsKey) ||
+            !d.cites.values.every(part.sentenceIds.contains) ||
+            !d.lockedTakes.every((t) => d.cites[t] == takes[t]) ||
+            (d.cites.isNotEmpty && d.first == null)) {
+          return null;
+        }
+        return PassageState(
+          order: List.unmodifiable(order),
+          discuss: d,
+          discussPart: part,
+        );
       }
       if (content.task == PassageTask.find) {
         // A text is never reordered.
@@ -402,6 +515,22 @@ class PassageReaderEngine
           ),
       ],
     );
+
+    final part = content.discuss;
+    if (part != null) {
+      return DiscussView(
+        part: part,
+        state: s.discuss!,
+        sentences: [for (final x in content.sentences) (x.id, x.text)],
+        options: {for (final o in content.options) o.id: o.label},
+        optionOrder: s.order,
+        locale: view.locale,
+        enabled: view.enabled,
+        dispatch: view.dispatch,
+        passage: passage,
+        speaker: speaker,
+      );
+    }
 
     final toFind = content.correct.length;
     return Center(
@@ -628,9 +757,9 @@ class _SentenceRow extends StatelessWidget {
 ///
 /// `find` grades like `find_it`: one item per pick, right picks over (right
 /// sentences + wrong picks), so tapping every sentence never scores well.
-/// `choose` is one pick, right or wrong.
-class PassageReaderEvaluator
-    implements Evaluator<PassageContent, MultiSelectAnswer> {
+/// `choose` is one pick, right or wrong. `discuss` grades its takes and,
+/// when the clue decides, its revision ([Discuss.evaluate]).
+class PassageReaderEvaluator implements Evaluator<PassageContent, AnswerValue> {
   const PassageReaderEvaluator();
 
   @override
@@ -645,9 +774,24 @@ class PassageReaderEvaluator
   @override
   EvaluationResult evaluate(
     PassageContent content,
-    MultiSelectAnswer answer,
+    AnswerValue answer,
     EvaluationContext ctx,
   ) {
+    final part = content.discuss;
+    if (part != null) {
+      if (answer is! BlanksAnswer) {
+        throw ArgumentError('A discuss answer is its steps, as blanks.');
+      }
+      return Discuss.evaluate(
+        part: part,
+        answer: answer,
+        ctx: ctx,
+        evaluator: '$engineKey.$policy@$version',
+      );
+    }
+    if (answer is! MultiSelectAnswer) {
+      throw ArgumentError('A find or choose answer is a pick.');
+    }
     final picks = answer.selectedOptionIds;
     if (picks.isEmpty) throw ArgumentError('An answer must pick something.');
     final items = {for (final id in picks) id: content.correct.contains(id)};

@@ -63,6 +63,21 @@ class ErrorClassification {
   };
 }
 
+/// How much a result says about the skill (the Questions Maker's rule for
+/// the ELA creative engines, app ADR 0088).
+///
+/// - [direct]: the answer is the skill, as for nearly every engine.
+/// - [proxy]: a planned or chosen stand-in for it (choosing a voice volume
+///   on a slider is not presenting to a room).
+/// - [practice]: participation only; no mastery may come from it.
+///
+/// Reports stay honest only if mastery reads this. Telemetry's v2
+/// `evaluation` object doesn't accept it yet (`additionalProperties:
+/// false`), so the recorder keeps it local until work order LE-T3 lands;
+/// the backend can derive the same level from the engine and mode
+/// meanwhile (LE-B9).
+enum EvidenceLevel { direct, proxy, practice }
+
 /// Everything an evaluator needs beyond the content and the answer.
 class EvaluationContext {
   const EvaluationContext({
@@ -89,6 +104,7 @@ class EvaluationResult {
     this.skillNodeIds = const [],
     this.needsReview = false,
     this.itemResults = const {},
+    this.evidence = EvidenceLevel.direct,
   }) : assert(score >= 0 && score <= 1, 'score is 0..1');
 
   /// The result recorded when an evaluator throws. The kid did nothing wrong,
@@ -104,7 +120,8 @@ class EvaluationResult {
        feedbackCode = null,
        errors = const [],
        needsReview = true,
-       itemResults = const {};
+       itemResults = const {},
+       evidence = EvidenceLevel.direct;
 
   final Outcome outcome;
 
@@ -130,6 +147,9 @@ class EvaluationResult {
   /// without ever grading anything itself.
   final Map<String, bool> itemResults;
 
+  /// What this result is evidence of; see [EvidenceLevel].
+  final EvidenceLevel evidence;
+
   bool get isCorrect => outcome == Outcome.correct;
 
   Map<String, Object?> toJson() => {
@@ -143,6 +163,7 @@ class EvaluationResult {
     'skill_node_ids': skillNodeIds,
     if (needsReview) 'needs_review': true,
     if (itemResults.isNotEmpty) 'items': itemResults,
+    if (evidence != EvidenceLevel.direct) 'evidence': evidence.name,
   };
 }
 

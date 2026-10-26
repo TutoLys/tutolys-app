@@ -19,6 +19,7 @@ const _samples = {
   'sci_experiment_lab.json': ExperimentLabEngine(),
   'math_counters_board.json': CountersBoardEngine(),
   'sci_sky_model.json': SkyModelEngine(),
+  'fr_passage_discuss.json': PassageReaderEngine(),
 };
 
 final _dir = Directory('../../../tutolys-backend/content/samples');
