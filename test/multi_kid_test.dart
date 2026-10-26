@@ -17,10 +17,16 @@ import 'package:tutolys_app/features/pairing/who_is_playing_screen.dart';
 /// Refresh answers per device token, so a test can see which kid's
 /// credential each call used.
 class _TokenPairingApi extends PairingApi {
-  _TokenPairingApi({this.rejected = const {}, this.offline = false})
-      : super(dio: Dio());
+  _TokenPairingApi({
+    this.rejected = const {},
+    this.offline = false,
+    this.reason,
+  }) : super(dio: Dio());
 
   final Set<String> rejected;
+
+  /// What a rejection says about why; null is a bare 401.
+  final RejectionReason? reason;
   final bool offline;
   final refreshedWith = <String>[];
   PairingResult exchange = const PairingFailed('unused');
@@ -29,7 +35,9 @@ class _TokenPairingApi extends PairingApi {
   Future<RefreshResult> refresh({required String deviceToken}) async {
     refreshedWith.add(deviceToken);
     if (offline) return const RefreshOffline();
-    if (rejected.contains(deviceToken)) return const RefreshRejected();
+    if (rejected.contains(deviceToken)) {
+      return RefreshRejected(reason: reason);
+    }
     return RefreshSucceeded(accessToken: 'access-$deviceToken', expiresIn: 900);
   }
 
@@ -252,6 +260,54 @@ void main() {
       expect(s.status, SessionStatus.paired);
       expect([for (final k in s.kids) k.id], ['k1', 'k2']);
       expect(s.stage, ProfileStage.choosing);
+    });
+
+    group('a rejected credential (ADR 0037)', () {
+      Future<LocalDatabase> seeded() async {
+        final db = LocalDatabase.memory();
+        addTearDown(db.close);
+        await CreationStore(db, kidId: 'k2').save(
+          engineKey: 'compose_build',
+          exerciseId: 'ex-1',
+          payload: {'words': <String>[]},
+        );
+        return db;
+      }
+
+      for (final reason in RejectionReason.values) {
+        test('erases local data when the server says "${reason.name}"',
+            () async {
+          final db = await seeded();
+          final store = await _storeWith([('k1', 'Yelhan'), ('k2', 'Lina')]);
+          final c = _container(
+            store,
+            _TokenPairingApi(rejected: {'tok-k2'}, reason: reason),
+            db: db,
+          );
+          addTearDown(c.dispose);
+
+          await c.read(sessionControllerProvider.notifier).restore();
+
+          expect(await CreationStore(db, kidId: 'k2').list(), isEmpty);
+        });
+      }
+
+      test('a bare 401 drops the credential but keeps the data', () async {
+        final db = await seeded();
+        final store = await _storeWith([('k1', 'Yelhan'), ('k2', 'Lina')]);
+        final c = _container(
+          store,
+          _TokenPairingApi(rejected: {'tok-k2'}),
+          db: db,
+        );
+        addTearDown(c.dispose);
+
+        await c.read(sessionControllerProvider.notifier).restore();
+
+        final s = c.read(sessionControllerProvider);
+        expect([for (final k in s.kids) k.id], ['k1']);
+        expect(await CreationStore(db, kidId: 'k2').list(), hasLength(1));
+      });
     });
 
     test('a kid who is forgotten or revoked takes their local data along',

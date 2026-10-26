@@ -1,6 +1,6 @@
 # ADR 0037: Erasing a kid's local data when they leave the device
 
-Date: 2026-10-26. Status: accepted.
+Date: 2026-10-26. Status: accepted, revised the same day (see the end).
 
 ## Context
 
@@ -72,3 +72,24 @@ revoked, archived or erased.
   three choices, a failed send, and nothing unsent), `multi_kid_test.dart`
   (forget erases), and `profile_screen_test.dart` (the PIN then the
   confirmation).
+
+## Revision (2026-10-26): erase on rejection only when the server says why
+
+The Manager's call, on the risk above: don't rely on the backend never
+sending a wrong 401. A rejected refresh erases local data **only when the
+401's body carries `"reason"` set to exactly `revoked`, `archived` or
+`erased`** (`RejectionReason`, parsed in `PairingApi.refresh`). A bare
+401, or one with any other value, still drops the token and asks for a
+re-pair, as before ADR 0037, and keeps the kid's local data. If the same
+kid is paired again, their queued results upload under the new token.
+
+Until Backend sends the field, no rejection erases anything. That's the
+safe side. A guardian's removal through the dialog is unchanged and
+always erases.
+
+The field Backend should send: `{"detail": "...", "reason": "revoked" |
+"archived" | "erased"}` on `POST /api/v1/pairing/refresh` 401s.
+
+Tests: `pairing_api_refresh_test.dart` (each reason parses; a missing,
+unknown, wrongly-cased or non-string reason is bare) and
+`multi_kid_test.dart` (each reason erases; a bare 401 keeps the data).

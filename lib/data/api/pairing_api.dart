@@ -66,8 +66,30 @@ class RefreshSucceeded extends RefreshResult {
 ///
 /// This is the signal to return to the pairing screen — the one case where the
 /// app must forget its stored credential.
+///
+/// [reason] is set only when the server says *why* in the body's `reason`
+/// field. Only then does the app erase the kid's local data (ADR 0037): a
+/// bare or unknown 401 might be a backend fault, and a fault must cost a
+/// re-pair, never a child's unsent results.
 class RefreshRejected extends RefreshResult {
-  const RefreshRejected();
+  const RefreshRejected({this.reason});
+
+  final RejectionReason? reason;
+}
+
+/// Why the server rejected a kid's credential, when it says.
+enum RejectionReason {
+  revoked,
+  archived,
+  erased;
+
+  /// Null for anything but an exact, known value.
+  static RejectionReason? parse(Object? raw) {
+    for (final reason in values) {
+      if (reason.name == raw) return reason;
+    }
+    return null;
+  }
 }
 
 class RefreshOffline extends RefreshResult {
@@ -135,7 +157,10 @@ class PairingApi {
       if (_isOffline(error)) return const RefreshOffline();
       if (error.response?.statusCode == 401) {
         // Revoked or archived. The caller must clear the stored token.
-        return const RefreshRejected();
+        final data = error.response?.data;
+        return RefreshRejected(
+          reason: data is Map ? RejectionReason.parse(data['reason']) : null,
+        );
       }
       return RefreshFailed(error.message ?? 'refresh failed');
     }

@@ -188,9 +188,9 @@ class SessionController extends Notifier<SessionState> {
           accessToken: accessToken,
         );
         _scheduleRefresh(expiresIn);
-      case RefreshRejected():
+      case RefreshRejected(:final reason):
         _refreshTimer?.cancel();
-        await _forgetActiveKid();
+        await _forgetActiveKid(erase: reason != null);
         await _resumeWithRemaining();
       case RefreshOffline() || RefreshFailed():
         // Stay paired and try again later. Offline play continues from the
@@ -227,9 +227,9 @@ class SessionController extends Notifier<SessionState> {
           stage: stage,
         );
         _scheduleRefresh(expiresIn);
-      case RefreshRejected():
+      case RefreshRejected(:final reason):
         // Revoked or archived: forget that kid's credential.
-        await _forgetActiveKid();
+        await _forgetActiveKid(erase: reason != null);
         await _resumeWithRemaining();
       case RefreshOffline() || RefreshFailed():
         // Offline is NOT a reason to un-pair. The kid should keep playing
@@ -250,14 +250,15 @@ class SessionController extends Notifier<SessionState> {
 
   /// After a kid's pairing is dropped: the next kid paired here, or
   /// unpaired when there is none.
-  /// Forgets the active kid's credential and erases everything of theirs
-  /// on this device (ADR 0037). A guardian chose this after being told
-  /// what's stored, and was offered a last upload first; on a rejected
-  /// credential there is nobody to ask, and nothing could upload anyway.
-  Future<void> _forgetActiveKid() async {
+  /// Forgets the active kid's credential and, when [erase], everything of
+  /// theirs on this device (ADR 0037). A guardian chose to erase after
+  /// being told what's stored. A rejected credential erases only when the
+  /// server named why (revoked, archived, erased); a bare 401 keeps the
+  /// data, so a backend fault costs a re-pair and nothing more.
+  Future<void> _forgetActiveKid({bool erase = true}) async {
     final kid = await _store.pairedKid();
     await _store.clearPairing();
-    if (kid != null) {
+    if (erase && kid != null) {
       await KidLocalData(ref.read(localDatabaseProvider), kidId: kid.id).wipe();
     }
   }
@@ -305,8 +306,8 @@ class SessionController extends Notifier<SessionState> {
           kids: all,
         );
         _scheduleRefresh(expiresIn);
-      case RefreshRejected():
-        await _forgetActiveKid();
+      case RefreshRejected(:final reason):
+        await _forgetActiveKid(erase: reason != null);
         await _resumeWithRemaining();
       case RefreshOffline() || RefreshFailed():
         state = SessionState(
