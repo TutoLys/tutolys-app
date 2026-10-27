@@ -99,4 +99,28 @@ void main() {
           '${offenders.join('\n')}',
     );
   });
+
+  test('no maple anywhere: the maple is Canada, not Québec', () {
+    // Hafid's correction (2026-10-27): Québec's symbol is the fleur-de-lys.
+    // Checks both locales' values, then every source file the app ships,
+    // so a 🍁 can't come back through a widget or an engine either.
+    for (final s in [Strings.fr, Strings.en]) {
+      expect(s.villageSignTitle, contains('⚜'));
+      expect(s.aboutMadeIn, contains('⚜'));
+    }
+    final maple = RegExp(r'🍁|\bmaple\b|érable', caseSensitive: false);
+    final offenders = <String>[];
+    for (final root in ['lib', 'packages']) {
+      for (final file in Directory(root).listSync(recursive: true)) {
+        if (file is! File || !file.path.endsWith('.dart')) continue;
+        if (file.path.contains('.dart_tool')) continue;
+        if (file.path.contains('/test/')) continue;
+        final lines = file.readAsLinesSync();
+        for (var i = 0; i < lines.length; i++) {
+          if (maple.hasMatch(lines[i])) offenders.add('${file.path}:${i + 1}');
+        }
+      }
+    }
+    expect(offenders, isEmpty, reason: 'maple, not fleur-de-lys');
+  });
 }

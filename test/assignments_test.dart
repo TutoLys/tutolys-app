@@ -12,7 +12,7 @@ void main() {
       AssignmentDto.fromJson({
         'id': 'a1',
         'title': 'Les mesures',
-        'from_name': 'École des Érables',
+        'from_name': 'École du Boisé',
         'skill_node_id': 'skill-1',
         'exercise_id': null,
         'due_on': due,
@@ -22,7 +22,7 @@ void main() {
   test('reads the backend shape', () {
     final a = dto(due: '2026-11-03');
     expect(a.title, 'Les mesures');
-    expect(a.fromName, 'École des Érables');
+    expect(a.fromName, 'École du Boisé');
     expect(a.skillNodeId, 'skill-1');
     expect(a.dueOn, DateTime(2026, 11, 3));
     expect(a.done, isFalse);
@@ -55,7 +55,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('De ton enseignant·e'), findsOneWidget);
     expect(find.text('Les mesures'), findsNWidgets(2));
-    expect(find.textContaining('De École des Érables'), findsNWidgets(2));
+    expect(find.textContaining('De École du Boisé'), findsNWidgets(2));
     expect(find.textContaining('Pour le 3/11'), findsOneWidget);
     expect(find.text('Fait !'), findsOneWidget);
   });

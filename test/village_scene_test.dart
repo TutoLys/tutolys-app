@@ -14,7 +14,7 @@ void main() {
         height: 580,
         child: VillageScene(
           buildings: buildings,
-          signTitle: '🍁 Village des Érables',
+          signTitle: '⚜️ Village des Lys',
           signSubtitle: '1re année',
         ),
       ),
@@ -32,7 +32,7 @@ void main() {
 
   testWidgets('the sign renders', (tester) async {
     await tester.pumpWidget(harness(_buildings));
-    expect(find.text('🍁 Village des Érables'), findsOneWidget);
+    expect(find.text('⚜️ Village des Lys'), findsOneWidget);
     expect(find.text('1re année'), findsOneWidget);
   });
 
