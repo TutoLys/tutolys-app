@@ -952,7 +952,7 @@ class _FrenchStrings extends Strings {
   String get subjectCulture => 'Culture québécoise';
 
   @override
-  String get villageSignTitle => '⚜️ Village des Lys';
+  String get villageSignTitle => 'Village des Lys';
 
   @override
   String get villageRecommendedLabel => 'ACTIVITÉ RECOMMANDÉE';
@@ -1109,7 +1109,7 @@ class _FrenchStrings extends Strings {
   String get aboutCurriculum => 'Programme';
 
   @override
-  String get aboutMadeIn => 'Fait au Québec ⚜️';
+  String get aboutMadeIn => 'Fait au Québec';
   @override
   List<HelpEntry> get helpEntries => const [
         HelpEntry(question: 'Comment je gagne des XP ?', answer: 'Chaque bonne réponse te donne 1 XP. Quand tu termines une activité, tu gagnes un bonus, et encore un peu plus si tout était juste du premier coup ! Le défi du jour vaut 10 XP. Si tu rejoues une activité déjà terminée, tu gagnes un petit peu.'),
@@ -2066,7 +2066,7 @@ class _EnglishStrings extends Strings {
   String get subjectCulture => 'Quebec culture';
 
   @override
-  String get villageSignTitle => '⚜️ Lys Village';
+  String get villageSignTitle => 'Lys Village';
 
   @override
   String get villageRecommendedLabel => 'RECOMMENDED ACTIVITY';
@@ -2221,7 +2221,7 @@ class _EnglishStrings extends Strings {
   String get aboutCurriculum => 'Curriculum';
 
   @override
-  String get aboutMadeIn => 'Made in Québec ⚜️';
+  String get aboutMadeIn => 'Made in Québec';
   @override
   List<HelpEntry> get helpEntries => const [
         HelpEntry(question: 'How do I earn XP?', answer: 'Every right answer gives you 1 XP. When you finish an activity you get a bonus, and a little more if everything was right the first time! The daily challenge is worth 10 XP. Replaying an activity you already finished earns a little bit.'),

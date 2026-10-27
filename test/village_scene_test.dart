@@ -14,7 +14,7 @@ void main() {
         height: 580,
         child: VillageScene(
           buildings: buildings,
-          signTitle: '⚜️ Village des Lys',
+          signTitle: 'Village des Lys',
           signSubtitle: '1re année',
         ),
       ),
@@ -32,8 +32,10 @@ void main() {
 
   testWidgets('the sign renders', (tester) async {
     await tester.pumpWidget(harness(_buildings));
-    expect(find.text('⚜️ Village des Lys'), findsOneWidget);
+    expect(find.text('Village des Lys'), findsOneWidget);
     expect(find.text('1re année'), findsOneWidget);
+    // Drawn, not an emoji (the emoji fell back to a flat glyph).
+    expect(find.byKey(const ValueKey('sign-fleur-de-lys')), findsOneWidget);
   });
 
   testWidgets('every live building shows a track, measured or not', (

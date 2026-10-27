@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/i18n/strings.dart';
 import '../../core/widgets/breathing_mascot.dart';
+import '../../core/widgets/fleur_de_lys.dart';
 import '../path/path_controller.dart' show pathSubjects;
 
 /// One subject's building in the village.
@@ -333,14 +334,26 @@ class _Sign extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontFamily: VillageType.display,
-                fontWeight: FontWeight.w700,
-                fontSize: 15,
-                color: Colors.white,
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Dark-wood outline: Québec blue disappears into the board.
+                const FleurDeLys(
+                  key: ValueKey('sign-fleur-de-lys'),
+                  size: 15,
+                  outline: Color(0xFF5C3A17),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontFamily: VillageType.display,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
             ),
             Padding(
               padding: EdgeInsets.only(top: 1),

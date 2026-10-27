@@ -102,11 +102,14 @@ void main() {
 
   test('no maple anywhere: the maple is Canada, not Québec', () {
     // Hafid's correction (2026-10-27): Québec's symbol is the fleur-de-lys.
-    // Checks both locales' values, then every source file the app ships,
-    // so a 🍁 can't come back through a widget or an engine either.
+    // It is drawn (`FleurDeLys`), never typed: the emoji falls back to a
+    // flat monochrome glyph on some platforms. So no ⚜ or 🍁 in either
+    // locale, and no maple in any source file the app ships.
+    final strings = File('lib/core/i18n/strings.dart').readAsStringSync();
+    expect(strings, isNot(contains('⚜')));
+    expect(strings, isNot(contains('🍁')));
     for (final s in [Strings.fr, Strings.en]) {
-      expect(s.villageSignTitle, contains('⚜'));
-      expect(s.aboutMadeIn, contains('⚜'));
+      expect(s.villageSignTitle, contains('Lys'));
     }
     final maple = RegExp(r'🍁|\bmaple\b|érable', caseSensitive: false);
     final offenders = <String>[];

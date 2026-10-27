@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../core/diagnostics/boot_log.dart';
 import '../../core/diagnostics/diag_log.dart';
 import '../../core/i18n/strings.dart';
+import '../../core/widgets/fleur_de_lys.dart';
 import '../pairing/pairing_controller.dart';
 
 /// À propos de TutoLys.
@@ -76,10 +77,19 @@ class AboutScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: Space.md),
-              Text(
-                t.aboutMadeIn,
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: p.inkMuted),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    t.aboutMadeIn,
+                    style: TextStyle(fontSize: 12, color: p.inkMuted),
+                  ),
+                  const SizedBox(width: 5),
+                  const FleurDeLys(
+                    key: ValueKey('about-fleur-de-lys'),
+                    size: 14,
+                  ),
+                ],
               ),
               const SizedBox(height: Space.xl),
             ],
