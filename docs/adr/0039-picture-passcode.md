@@ -1,4 +1,4 @@
-# ADR 0093 — The picture passcode on "Qui joue ?" (B-A0.5)
+# ADR 0039 — The picture passcode on "Qui joue ?" (B-A0.5)
 
 Date: 2026-10-26
 Status: accepted
@@ -108,9 +108,7 @@ its wording.
   exists, which was the work order's aim.
 - 504 sequences and a verifier on the device are a deliberate choice, not
   a weakness to fix: the backend's model says the same.
-- No "Qui joue ?" on resume past a threshold yet (CLAUDE.md's design asks
-  for it); only launch and the header/Profil entry points ask.
-- Setting the code at pairing time (the work order's "at pairing") isn't
-  prompted. The guardian sets it from Réglages, or in the portal.
+- Asking again on resume, prompting the guardian at pairing, and class
+  tablets came next, in ADR 0031.
 - If the backend's shapes change before it commits, `passcode_api.dart`
   is the one file that knows them.
