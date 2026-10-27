@@ -4,6 +4,8 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:uuid/uuid.dart';
 
+import '../api/passcode_api.dart';
+
 /// Persistent credential storage for a paired device.
 ///
 /// The device token is a long-lived credential. It goes in the platform secure
@@ -29,6 +31,7 @@ class SessionStore {
   static const _guardianPinSaltKey = 'guardian_pin_salt';
   static const _guardianPinHashKey = 'guardian_pin_hash';
   static const _guardianPinDigitsKey = 'guardian_pin_digits';
+  static const _passcodeKeyPrefix = 'passcode_';
 
   /// How many digits a new guardian PIN has. It was 4 before 2026-10-26;
   /// a PIN set then still opens the gate once, then must be replaced.
@@ -185,6 +188,9 @@ class SessionStore {
       for (final p in await pairings())
         if (p.kid.id != active?.kid.id) p,
     ];
+    if (active != null) {
+      await _storage.delete(key: '$_passcodeKeyPrefix${active.kid.id}');
+    }
     if (rest.isNotEmpty) {
       await _writePairings(rest);
       await _storage.write(key: _activeKidKey, value: rest.first.kid.id);
@@ -241,6 +247,35 @@ class SessionStore {
     if (salt == null || storedHash == null) return false;
     return _hashPin(pin, salt) == storedHash;
   }
+
+  /// What this device last learned about [kidId]'s picture passcode, or
+  /// null when it never has (B-A0.5).
+  ///
+  /// Kept per kid so "Qui joue ?" can ask for it offline. Only the
+  /// server's verifier is kept, never the sequence.
+  Future<PasscodeState?> passcodeFor(String kidId) async {
+    final raw = await _storage.read(key: '$_passcodeKeyPrefix$kidId');
+    if (raw == null) return null;
+    if (raw == 'none') return const NoPasscode();
+    try {
+      return HasPasscode(
+        PasscodeVerifier.fromJson(
+          (jsonDecode(raw) as Map).cast<String, Object?>(),
+        ),
+      );
+    } on Object {
+      return null;
+    }
+  }
+
+  Future<void> savePasscode(String kidId, PasscodeState state) =>
+      _storage.write(
+        key: '$_passcodeKeyPrefix$kidId',
+        value: switch (state) {
+          NoPasscode() => 'none',
+          HasPasscode(:final verifier) => jsonEncode(verifier.toJson()),
+        },
+      );
 
   String _hashPin(String pin, String salt) =>
       sha256.convert(utf8.encode('$salt:$pin')).toString();

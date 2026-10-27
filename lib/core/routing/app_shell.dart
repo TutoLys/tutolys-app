@@ -10,6 +10,8 @@ import '../../data/sync/outbox_flusher_provider.dart';
 import '../../features/launch/launch_flow.dart';
 import '../../features/pairing/pairing_controller.dart';
 import '../../features/pairing/pairing_screen.dart';
+import '../../features/passcode/passcode_entry_screen.dart';
+import '../../features/passcode/passcode_service.dart';
 import '../../features/pairing/who_is_playing_screen.dart';
 import '../../features/settings/settings_controller.dart';
 import 'paired_router.dart';
@@ -136,6 +138,16 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
       if (next.status == SessionStatus.paired) {
         _flusher.resume();
       }
+      // A picker is about to show: learn every kid's picture passcode, so
+      // one set in the portal is asked for from this choice on (B-A0.5).
+      final picking = next.status == SessionStatus.paired &&
+          next.hasSeveralKids &&
+          (previous?.status != SessionStatus.paired ||
+              (next.stage == ProfileStage.choosing &&
+                  previous?.stage != ProfileStage.choosing));
+      if (picking && ref.read(passcodeSyncEnabledProvider)) {
+        ref.read(passcodeServiceProvider).syncAll().ignore();
+      }
     });
 
     if (!_launched) {
@@ -190,12 +202,23 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
   /// Leaves the launch screen as [kidId]. The switch (and its token
   /// refresh) finishes first, so the shell is only ever built for the kid
   /// who was tapped and nothing of the last kid's loads in between.
+  ///
+  /// On launch every kid is asked for their picture passcode, the last one
+  /// to play included: the device doesn't know who picked it up.
   Future<void> _enterAs(String kidId) async {
+    final session = ref.read(sessionControllerProvider);
     final controller = ref.read(sessionControllerProvider.notifier);
-    if (kidId == ref.read(sessionControllerProvider).kid?.id) {
+    final kid = session.kids.firstWhere((k) => k.id == kidId);
+    final ok = await confirmItsMe(context, ref, kid);
+    if (ok == null || !mounted) return;
+    if (kidId == session.kid?.id && ok.accessToken == null) {
       controller.closeProfileStage();
     } else {
-      await controller.switchTo(kidId);
+      await controller.switchTo(
+        kidId,
+        accessToken: ok.accessToken,
+        expiresIn: ok.expiresIn,
+      );
     }
     if (mounted) setState(() => _launched = true);
   }

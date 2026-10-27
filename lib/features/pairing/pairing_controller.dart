@@ -290,7 +290,16 @@ class SessionController extends Notifier<SessionState> {
   /// kid's own device token *before* the state changes, so nothing loads
   /// for the new kid with the old kid's credential. Offline, the switch
   /// still happens, with no access token, like an offline launch.
-  Future<void> switchTo(String kidId, {List<PairedKid>? kids}) async {
+  ///
+  /// A passcode check that the server confirmed already brought an access
+  /// token for that kid ([accessToken], [expiresIn]), so it isn't
+  /// refreshed a second time.
+  Future<void> switchTo(
+    String kidId, {
+    List<PairedKid>? kids,
+    String? accessToken,
+    int? expiresIn,
+  }) async {
     final token = await _store.deviceTokenFor(kidId);
     if (token == null) {
       // Not paired here (any more): nothing to switch to.
@@ -307,7 +316,9 @@ class SessionController extends Notifier<SessionState> {
     // land on this one.
     await _inFlightRefresh;
 
-    final result = await _api.refresh(deviceToken: token);
+    final result = accessToken != null
+        ? RefreshSucceeded(accessToken: accessToken, expiresIn: expiresIn ?? 900)
+        : await _api.refresh(deviceToken: token);
     switch (result) {
       case RefreshSucceeded(:final accessToken, :final expiresIn):
         state = SessionState(

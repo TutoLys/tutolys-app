@@ -14,6 +14,7 @@ import 'package:tutolys_app/core/routing/village_shell.dart';
 import 'package:tutolys_app/data/api/content_api.dart';
 import 'package:tutolys_app/data/api/curriculum_api.dart';
 import 'package:tutolys_app/data/api/pairing_api.dart';
+import 'package:tutolys_app/data/api/passcode_api.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
 import 'package:tutolys_app/data/local_db/session_store.dart';
 import 'package:tutolys_app/data/sync/outbox_flusher_provider.dart';
@@ -23,6 +24,8 @@ import 'package:tutolys_app/features/notifications/notifications_controller.dart
 import 'package:tutolys_app/features/assignments/assignments_controller.dart';
 import 'package:tutolys_app/features/pairing/pairing_controller.dart';
 import 'package:tutolys_app/features/pairing/pairing_screen.dart';
+import 'package:tutolys_app/features/passcode/passcode_entry_screen.dart';
+import 'package:tutolys_app/features/passcode/passcode_service.dart';
 import 'package:tutolys_app/features/path/path_controller.dart';
 
 /// Refreshes succeed, except that a switch to another kid can be held open
@@ -37,6 +40,36 @@ class _Api extends PairingApi {
     await hold?.future;
     return RefreshSucceeded(accessToken: 'access-$deviceToken', expiresIn: 900);
   }
+}
+
+/// Nobody has a passcode, unless [leaHasOne]: then Léa's is the flame, the
+/// star, the fox.
+class _PasscodeApi extends PasscodeApi {
+  _PasscodeApi() : super(dio: Dio());
+
+  bool leaHasOne = false;
+
+  static const _lea = PasscodeVerifier(
+    salt: 's',
+    verifier: 'v',
+    algorithm: 'hmac-sha256-v1',
+    imageSet: 'v1',
+  );
+
+  @override
+  Future<PasscodeState?> fetch({required String accessToken}) async =>
+      leaHasOne && accessToken == 'access-tok-k2'
+          ? const HasPasscode(_lea)
+          : const NoPasscode();
+
+  @override
+  Future<PasscodeVerifyResult> verify({
+    required String accessToken,
+    required List<int> sequence,
+  }) async =>
+      sequence.join() == '056'
+          ? const PasscodeVerified(accessToken: 'verified-k2', expiresIn: 900)
+          : const PasscodeWrong();
 }
 
 class _OfflineCurriculumApi extends CurriculumApi {
@@ -75,7 +108,11 @@ Future<SessionStore> _storeWith(List<(String, String)> kids) async {
   return store;
 }
 
-ProviderContainer _container(SessionStore store, _Api api) {
+ProviderContainer _container(
+  SessionStore store,
+  _Api api, {
+  _PasscodeApi? passcodes,
+}) {
   final db = LocalDatabase.memory();
   final c = ProviderContainer(
     overrides: [
@@ -89,6 +126,7 @@ ProviderContainer _container(SessionStore store, _Api api) {
       localDatabaseProvider.overrideWithValue(db),
       curriculumApiProvider.overrideWithValue(_OfflineCurriculumApi()),
       contentApiProvider.overrideWithValue(_OfflineContentApi()),
+      passcodeApiProvider.overrideWithValue(passcodes ?? _PasscodeApi()),
     ],
   );
   addTearDown(() async {
@@ -277,5 +315,35 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     expect(find.byKey(const ValueKey('who-kid-k3')), findsOneWidget);
+  });
+
+  testWidgets('a kid with a passcode taps it on launch, even the last one '
+      'who played', (tester) async {
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final c = _container(
+      await _storeWith([('k1', 'Yelhan'), ('k2', 'Léa')]),
+      _Api(),
+      passcodes: _PasscodeApi()..leaHasOne = true,
+    );
+    await tester.pumpWidget(_app(c));
+    await _toWelcome(tester);
+    // The picker's sync has learned Léa's passcode by now.
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('who-kid-k2')));
+    await tester.pumpAndSettle();
+    expect(find.byType(PasscodeEntryScreen), findsOneWidget);
+    expect(find.byType(VillageShell), findsNothing);
+
+    for (final i in [0, 5, 6]) {
+      await tester.tap(find.byKey(ValueKey('passcode-picture-$i')));
+      await tester.pump();
+    }
+    await tester.pumpAndSettle();
+    expect(find.byType(VillageShell), findsOneWidget);
+    expect(c.read(sessionControllerProvider).kid!.id, 'k2');
+    expect(c.read(sessionControllerProvider).accessToken, 'verified-k2');
   });
 }

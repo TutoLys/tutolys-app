@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/i18n/strings.dart';
 import '../../core/widgets/kid_avatar.dart';
 import '../../data/local_db/session_store.dart';
+import '../passcode/passcode_entry_screen.dart';
 import '../profile/avatars.dart';
 import 'pairing_controller.dart';
 
@@ -30,9 +31,9 @@ final kidAvatarKeyProvider = FutureProvider.family<String, String>((
 ///
 /// Framed as choosing who you are, never as logging in. Every kid's play
 /// is written to the kid chosen here, so the point is that a sibling's
-/// play lands on the sibling's profile. A tap is enough for now: the
-/// picture passcode that would stop a sibling choosing someone else's tile
-/// (B-A0.5) isn't built on the backend yet.
+/// play lands on the sibling's profile. A kid with a picture passcode taps
+/// their three pictures before the switch ([confirmItsMe], B-A0.5); one
+/// without is a tap.
 ///
 /// Opened from the header or Profil, where "Retour" goes back to the app as
 /// the same kid. On launch with several kids, the welcome screen is the
@@ -102,7 +103,7 @@ class WhoIsPlayingScreen extends ConsumerWidget {
                                 current: kid.id == session.kid?.id,
                                 onTap: () => kid.id == session.kid?.id
                                     ? controller.closeProfileStage()
-                                    : controller.switchTo(kid.id),
+                                    : _enter(context, ref, kid),
                               ),
                             AddProfileTile(onTap: controller.addProfile),
                           ],
@@ -118,6 +119,15 @@ class WhoIsPlayingScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Plays as [kid] once their passcode, if they have one, says it's them.
+Future<void> _enter(BuildContext context, WidgetRef ref, PairedKid kid) async {
+  final ok = await confirmItsMe(context, ref, kid);
+  if (ok == null) return;
+  await ref
+      .read(sessionControllerProvider.notifier)
+      .switchTo(kid.id, accessToken: ok.accessToken, expiresIn: ok.expiresIn);
 }
 
 class _Tile extends StatelessWidget {

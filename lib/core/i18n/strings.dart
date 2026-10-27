@@ -420,6 +420,40 @@ abstract class Strings {
   String get switchProfile;
   String get whoIsPlaying;
   String get notMe;
+
+  // Picture passcode (B-A0.5): "who's playing?", never "log in".
+  String get pictureFlame;
+  String get pictureChest;
+  String get pictureCoin;
+  String get pictureBell;
+  String get pictureTarget;
+  String get pictureStar;
+  String get pictureFox;
+  String get pictureMathHouse;
+  String get pictureScienceHouse;
+  String passcodeIsItYou(String name);
+  String get passcodePrompt;
+  String get passcodeWrong;
+  String get passcodeTooMany;
+  String get passcodeUndo;
+  String passcodeSlot(int position);
+  String get passcodesTitle;
+  String get passcodesBody;
+  String get passcodeIsSet;
+  String get passcodeNotSet;
+  String get passcodeChoose;
+  String get passcodeChange;
+  String get passcodeRemove;
+  String passcodeSetupTitle(String name);
+  String get passcodeSetupPick;
+  String get passcodeSetupConfirm;
+  String get passcodeSetupMismatch;
+  String get passcodeSaved;
+  String get passcodeRemoved;
+  String get passcodeNeedsInternet;
+  String get pinGateContinue;
+  String get passcodesPinCreate;
+  String get passcodesPinEnter;
   String get addProfile;
   String get addProfileHint;
   String get addProfileCancel;
@@ -1373,6 +1407,110 @@ class _FrenchStrings extends Strings {
   String get notMe => 'Ce n\'est pas moi';
 
   @override
+  String get pictureFlame => 'la flamme';
+
+  @override
+  String get pictureChest => 'le coffre';
+
+  @override
+  String get pictureCoin => 'la pièce';
+
+  @override
+  String get pictureBell => 'la cloche';
+
+  @override
+  String get pictureTarget => 'la cible';
+
+  @override
+  String get pictureStar => 'l\'étoile';
+
+  @override
+  String get pictureFox => 'le renard';
+
+  @override
+  String get pictureMathHouse => 'la maison des maths';
+
+  @override
+  String get pictureScienceHouse => 'la maison des sciences';
+
+  @override
+  String passcodeIsItYou(String name) => 'C\'est toi, $name ?';
+
+  @override
+  String get passcodePrompt => 'Touche tes 3 images, dans l\'ordre.';
+
+  @override
+  String get passcodeWrong => 'Oups ! Ce ne sont pas tes images. Essaie encore.';
+
+  @override
+  String get passcodeTooMany => 'Fais une petite pause, puis réessaie.';
+
+  @override
+  String get passcodeUndo => 'Effacer';
+
+  @override
+  String passcodeSlot(int position) => 'Image $position';
+
+  @override
+  String get passcodesTitle => 'Codes images';
+
+  @override
+  String get passcodesBody =>
+      'Chaque enfant touche ses 3 images pour dire « c\'est moi ». Ce n\'est '
+      'pas un mot de passe : ça garde les progrès de chacun à leur place.';
+
+  @override
+  String get passcodeIsSet => 'Code choisi';
+
+  @override
+  String get passcodeNotSet => 'Pas de code';
+
+  @override
+  String get passcodeChoose => 'Choisir';
+
+  @override
+  String get passcodeChange => 'Changer';
+
+  @override
+  String get passcodeRemove => 'Retirer';
+
+  @override
+  String passcodeSetupTitle(String name) => 'Code images de $name';
+
+  @override
+  String get passcodeSetupPick =>
+      'Choisis 3 images différentes, dans l\'ordre.';
+
+  @override
+  String get passcodeSetupConfirm => 'Encore une fois, pour confirmer.';
+
+  @override
+  String get passcodeSetupMismatch =>
+      'Ce n\'était pas le même ordre. On recommence.';
+
+  @override
+  String get passcodeSaved => 'Code enregistré.';
+
+  @override
+  String get passcodeRemoved => 'Code retiré.';
+
+  @override
+  String get passcodeNeedsInternet =>
+      'Impossible pour l\'instant : vérifie la connexion Internet.';
+
+  @override
+  String get pinGateContinue => 'Continuer';
+
+  @override
+  String get passcodesPinCreate =>
+      'Crée d\'abord un NIP parent à 6 chiffres : seul un adulte pourra '
+      'changer les codes images.';
+
+  @override
+  String get passcodesPinEnter =>
+      'Demande à un adulte d\'entrer le NIP pour gérer les codes images.';
+
+  @override
   String get addProfile => 'Ajouter un profil';
 
   @override
@@ -2309,6 +2447,109 @@ class _EnglishStrings extends Strings {
 
   @override
   String get notMe => 'That\'s not me';
+
+  @override
+  String get pictureFlame => 'the flame';
+
+  @override
+  String get pictureChest => 'the chest';
+
+  @override
+  String get pictureCoin => 'the coin';
+
+  @override
+  String get pictureBell => 'the bell';
+
+  @override
+  String get pictureTarget => 'the target';
+
+  @override
+  String get pictureStar => 'the star';
+
+  @override
+  String get pictureFox => 'the fox';
+
+  @override
+  String get pictureMathHouse => 'the math house';
+
+  @override
+  String get pictureScienceHouse => 'the science house';
+
+  @override
+  String passcodeIsItYou(String name) => 'Is that you, $name?';
+
+  @override
+  String get passcodePrompt => 'Tap your 3 pictures, in order.';
+
+  @override
+  String get passcodeWrong => 'Oops! Those aren\'t your pictures. Try again.';
+
+  @override
+  String get passcodeTooMany => 'Take a little break, then try again.';
+
+  @override
+  String get passcodeUndo => 'Undo';
+
+  @override
+  String passcodeSlot(int position) => 'Picture $position';
+
+  @override
+  String get passcodesTitle => 'Picture codes';
+
+  @override
+  String get passcodesBody =>
+      'Each child taps their 3 pictures to say "that\'s me". It isn\'t a '
+      'password: it keeps everyone\'s progress in the right place.';
+
+  @override
+  String get passcodeIsSet => 'Code set';
+
+  @override
+  String get passcodeNotSet => 'No code';
+
+  @override
+  String get passcodeChoose => 'Choose';
+
+  @override
+  String get passcodeChange => 'Change';
+
+  @override
+  String get passcodeRemove => 'Remove';
+
+  @override
+  String passcodeSetupTitle(String name) => '$name\'s picture code';
+
+  @override
+  String get passcodeSetupPick => 'Choose 3 different pictures, in order.';
+
+  @override
+  String get passcodeSetupConfirm => 'Once more, to confirm.';
+
+  @override
+  String get passcodeSetupMismatch =>
+      'That wasn\'t the same order. Let\'s start again.';
+
+  @override
+  String get passcodeSaved => 'Code saved.';
+
+  @override
+  String get passcodeRemoved => 'Code removed.';
+
+  @override
+  String get passcodeNeedsInternet =>
+      'Not right now: check the internet connection.';
+
+  @override
+  String get pinGateContinue => 'Continue';
+
+  @override
+  String get passcodesPinCreate =>
+      'First set a 6-digit parent PIN, so only a grown-up can change '
+      'picture codes.';
+
+  @override
+  String get passcodesPinEnter =>
+      'Ask a grown-up to enter the PIN to manage picture codes.';
 
   @override
   String get addProfile => 'Add a profile';

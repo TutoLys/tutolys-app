@@ -20,8 +20,17 @@ import '../pairing/pairing_controller.dart' show sessionStoreProvider;
 /// they back out of that, the old PIN is left as it was, so nobody is ever
 /// locked out (ADR 0010, 2026-10-26 revision).
 ///
-/// Returns whether the caller may proceed with the sign-out.
-Future<bool> requireGuardianPin(BuildContext context, WidgetRef ref) async {
+/// The dialogs' wording defaults to sign-out's. Another action passes its
+/// own [confirmLabel] (the entry button) and subtitles for creating
+/// ([createSubtitle]) and entering ([enterSubtitle]) the PIN. Returns
+/// whether the caller may proceed.
+Future<bool> requireGuardianPin(
+  BuildContext context,
+  WidgetRef ref, {
+  String? confirmLabel,
+  String? createSubtitle,
+  String? enterSubtitle,
+}) async {
   final store = ref.read(sessionStoreProvider);
   final digits = await store.guardianPinDigits();
   if (!context.mounted) return false;
@@ -29,14 +38,20 @@ Future<bool> requireGuardianPin(BuildContext context, WidgetRef ref) async {
   if (digits == null) {
     return await showDialog<bool>(
           context: context,
-          builder: (context) => _CreatePinDialog(store: store),
+          builder: (context) =>
+              _CreatePinDialog(store: store, subtitle: createSubtitle),
         ) ??
         false;
   }
 
   final entered = await showDialog<bool>(
     context: context,
-    builder: (context) => _EnterPinDialog(store: store, digits: digits),
+    builder: (context) => _EnterPinDialog(
+      store: store,
+      digits: digits,
+      confirmLabel: confirmLabel,
+      subtitle: enterSubtitle,
+    ),
   );
   if (entered != true) return false;
   if (digits == SessionStore.guardianPinLength) return true;
@@ -50,9 +65,14 @@ Future<bool> requireGuardianPin(BuildContext context, WidgetRef ref) async {
 }
 
 class _CreatePinDialog extends StatefulWidget {
-  const _CreatePinDialog({required this.store, this.upgrade = false});
+  const _CreatePinDialog({
+    required this.store,
+    this.upgrade = false,
+    this.subtitle,
+  });
 
   final SessionStore store;
+  final String? subtitle;
 
   /// Replacing a 4-digit PIN rather than setting the first one.
   final bool upgrade;
@@ -103,7 +123,7 @@ class _CreatePinDialogState extends State<_CreatePinDialog> {
       title: widget.upgrade ? s.pinGateUpgradeTitle : s.pinGateCreateTitle,
       subtitle: widget.upgrade
           ? s.pinGateUpgradeSubtitle
-          : s.pinGateCreateSubtitle,
+          : widget.subtitle ?? s.pinGateCreateSubtitle,
       error: _error,
       busy: _submitting,
       primaryLabel: s.pinGateCreate,
@@ -129,9 +149,16 @@ class _CreatePinDialogState extends State<_CreatePinDialog> {
 }
 
 class _EnterPinDialog extends StatefulWidget {
-  const _EnterPinDialog({required this.store, required this.digits});
+  const _EnterPinDialog({
+    required this.store,
+    required this.digits,
+    this.confirmLabel,
+    this.subtitle,
+  });
 
   final SessionStore store;
+  final String? confirmLabel;
+  final String? subtitle;
 
   /// Digits in the stored PIN: 6, or 4 for one set before the change.
   final int digits;
@@ -177,10 +204,10 @@ class _EnterPinDialogState extends State<_EnterPinDialog> {
     final s = context.s;
     return _PinDialogFrame(
       title: s.pinGateEnterTitle,
-      subtitle: s.pinGateEnterSubtitle,
+      subtitle: widget.subtitle ?? s.pinGateEnterSubtitle,
       error: _error,
       busy: _submitting,
-      primaryLabel: s.pinGateConfirmSignOut,
+      primaryLabel: widget.confirmLabel ?? s.pinGateConfirmSignOut,
       onPrimary: _submit,
       fields: [
         _PinField(

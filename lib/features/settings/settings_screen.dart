@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/i18n/strings.dart';
 import '../pairing/pairing_controller.dart';
+import '../passcode/passcode_setup_screen.dart';
 import '../profile/pin_gate.dart';
 import 'remove_kid_dialog.dart';
 import 'settings_controller.dart';
@@ -132,6 +133,16 @@ class SettingsScreen extends ConsumerWidget {
 
               const _ParentZone(),
               const SizedBox(height: Space.md),
+
+              // Each kid's "c'est moi" pictures, behind the guardian PIN
+              // (B-A0.5).
+              _LinkRow(
+                key: const ValueKey('settings-passcodes'),
+                icon: Icons.grid_view_rounded,
+                label: t.passcodesTitle,
+                onTap: () => openPasscodes(context, ref),
+              ),
+              const SizedBox(height: Space.xs),
 
               _LinkRow(
                 icon: Icons.help_outline,
@@ -506,6 +517,7 @@ class _ParentZone extends StatelessWidget {
 class _LinkRow extends StatelessWidget {
   const _LinkRow({
     required this.icon,
+    super.key,
     required this.label,
     required this.onTap,
   });
