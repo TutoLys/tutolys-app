@@ -142,6 +142,7 @@ List<PathSection> buildCarteSections({
   Set<String> completed = const {},
   Map<String, String> lessonLocales = const {},
   Map<String, (int done, int total)> lessonCounts = const {},
+  Set<String> assigned = const {},
   String Function(String locale)? describeLanguage,
   String Function(int done, int total)? describeLessons,
   String? Function(PathNodeState state)? describeState,
@@ -214,6 +215,8 @@ List<PathSection> buildCarteSections({
                   ),
                   null => null,
                 },
+                // Open teacher-assigned work on this skill (backend ADR 0123).
+                assigned: assigned.contains(leaf.id),
                 otherLanguage: _otherLanguage(lessonLocales[leaf.id], asked),
                 otherLanguageLabel:
                     _otherLanguage(lessonLocales[leaf.id], asked) == null

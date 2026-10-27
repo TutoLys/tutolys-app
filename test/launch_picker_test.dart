@@ -20,6 +20,7 @@ import 'package:tutolys_app/data/sync/outbox_flusher_provider.dart';
 import 'package:tutolys_app/features/launch/launch_flow.dart';
 import 'package:tutolys_app/features/launch/tutolys_welcome_screen.dart';
 import 'package:tutolys_app/features/notifications/notifications_controller.dart';
+import 'package:tutolys_app/features/assignments/assignments_controller.dart';
 import 'package:tutolys_app/features/pairing/pairing_controller.dart';
 import 'package:tutolys_app/features/pairing/pairing_screen.dart';
 import 'package:tutolys_app/features/path/path_controller.dart';
@@ -83,6 +84,7 @@ ProviderContainer _container(SessionStore store, _Api api) {
       sessionAutoRefreshProvider.overrideWithValue(false),
       outboxFlusherAutoStartProvider.overrideWithValue(false),
       notificationsPollingProvider.overrideWithValue(false),
+      assignmentsPollingProvider.overrideWithValue(false),
       recoveryRetriesProvider.overrideWithValue(false),
       localDatabaseProvider.overrideWithValue(db),
       curriculumApiProvider.overrideWithValue(_OfflineCurriculumApi()),

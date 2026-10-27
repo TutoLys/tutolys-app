@@ -9,6 +9,7 @@ import 'package:tutolys_app/data/api/progress_api.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
 import 'package:tutolys_app/data/local_db/session_store.dart';
 import 'package:tutolys_app/features/notifications/notifications_controller.dart';
+import 'package:tutolys_app/features/assignments/assignments_controller.dart';
 import 'package:tutolys_app/features/pairing/pairing_controller.dart';
 import 'package:tutolys_app/features/path/path_controller.dart';
 import 'package:tutolys_app/features/progress/progress_controller.dart';
@@ -109,6 +110,7 @@ void main() {
         progressApiProvider.overrideWithValue(progress),
         notificationsApiProvider.overrideWithValue(inbox),
         notificationsPollingProvider.overrideWithValue(false),
+        assignmentsPollingProvider.overrideWithValue(false),
         pathControllerProvider.overrideWith(() => path),
         localDatabaseProvider.overrideWithValue(db),
         activeKidIdProvider.overrideWithValue('k1'),

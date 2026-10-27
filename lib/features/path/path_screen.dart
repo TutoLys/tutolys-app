@@ -8,6 +8,7 @@ import '../../core/i18n/strings.dart';
 import '../../data/local_db/node_progress_local.dart';
 import '../../core/routing/paired_router.dart';
 import '../pairing/pairing_controller.dart';
+import '../assignments/assignments_controller.dart';
 import '../progress/progress_controller.dart';
 import 'carte_model.dart';
 import 'node_lessons.dart';
@@ -276,6 +277,7 @@ class _PathScreenState extends ConsumerState<PathScreen> {
         for (final MapEntry(:key, :value) in lessons.entries)
           key: (value.doneCount, value.total),
       },
+      assigned: ref.watch(assignedSkillIdsProvider),
       describeLanguage: t.lessonLanguage,
       describeLessons: t.pathLessonsDone,
       describeState: (state) => switch (state) {

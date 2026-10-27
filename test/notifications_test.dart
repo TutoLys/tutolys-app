@@ -8,6 +8,7 @@ import 'package:tutolys_app/core/i18n/strings.dart';
 import 'package:tutolys_app/core/routing/village_header.dart';
 import 'package:tutolys_app/data/api/notifications_api.dart';
 import 'package:tutolys_app/features/notifications/notifications_controller.dart';
+import 'package:tutolys_app/features/assignments/assignments_controller.dart';
 import 'package:tutolys_app/features/notifications/notifications_panel.dart';
 import 'package:tutolys_app/features/pairing/pairing_controller.dart';
 
@@ -52,6 +53,7 @@ ProviderContainer _container(_FakeApi api) => ProviderContainer(
   overrides: [
     notificationsApiProvider.overrideWithValue(api),
     notificationsPollingProvider.overrideWithValue(false),
+    assignmentsPollingProvider.overrideWithValue(false),
     sessionControllerProvider.overrideWith(_Session.new),
   ],
 );

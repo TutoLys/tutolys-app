@@ -4,6 +4,7 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/widgets/breathing_mascot.dart';
+import '../../core/i18n/strings.dart';
 
 /// Where a node sits in a kid's progress through a strand.
 /// `completed` is local and immediate (the kid finished it on this device);
@@ -30,7 +31,12 @@ class PathNode {
     this.lessons,
     this.lessonsLabel,
     this.stateLabel,
+    this.assigned = false,
   });
+
+  /// A teacher gave this skill as homework and it isn't done yet: the orb
+  /// wears a small tag (backend ADR 0123). Never says who else has it.
+  final bool assigned;
 
   final String id;
   final String label;
@@ -330,6 +336,17 @@ class _Node extends StatelessWidget {
                   right: -10,
                   child: ExcludeSemantics(
                     child: LanguageTag(tag: tag, palette: p),
+                  ),
+                ),
+              if (node.assigned && !locked)
+                Positioned(
+                  top: -8,
+                  left: -14,
+                  child: ExcludeSemantics(
+                    child: HomeworkTag(
+                      key: ValueKey('homework-tag-${node.id}'),
+                      palette: p,
+                    ),
                   ),
                 ),
               if (node.state == PathNodeState.soon && node.stateLabel != null)
@@ -898,6 +915,36 @@ class LessonCountTag extends StatelessWidget {
           fontSize: 9.5,
           fontWeight: FontWeight.w800,
           color: finished ? p.ink : p.quebecBlueBright,
+          height: 1.1,
+        ),
+      ),
+    );
+  }
+}
+
+/// "Devoir": open teacher-assigned work on this skill.
+class HomeworkTag extends StatelessWidget {
+  const HomeworkTag({super.key, required this.palette});
+
+  final VillagePalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = palette;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+      decoration: BoxDecoration(
+        color: p.goldPale,
+        border: Border.all(color: p.gold),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        context.s.homeworkTag.toUpperCase(),
+        style: TextStyle(
+          fontSize: 8.5,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.4,
+          color: p.ink,
           height: 1.1,
         ),
       ),

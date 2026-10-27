@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/i18n/strings.dart';
+import '../../data/api/assignments_api.dart';
+import '../assignments/assignments_controller.dart';
 import '../progress/progress_controller.dart';
 import 'quest_board.dart';
 import 'quests_model.dart';
@@ -148,6 +150,11 @@ class _QuestsScreenState extends ConsumerState<QuestsScreen> {
                 onTap: played == null ? null : () => _showSerie(true),
               ),
               SizedBox(height: gap),
+              if (ref.watch(assignmentsControllerProvider) case final work
+                  when work.isNotEmpty) ...[
+                HomeworkCard(work: work, onOpenPath: onOpenPath),
+                SizedBox(height: gap),
+              ],
               LayoutBuilder(
                 builder: (context, constraints) {
                   final list = QuestListCard(
@@ -998,6 +1005,85 @@ class TodayRing extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// "De ton enseignant·e": work a teacher gave this kid (backend ADR 0123).
+/// The kid's own list only; nothing about who else has it or has done it.
+class HomeworkCard extends StatelessWidget {
+  const HomeworkCard({super.key, required this.work, this.onOpenPath});
+
+  final List<AssignmentDto> work;
+  final VoidCallback? onOpenPath;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.s;
+    final p = VillagePalette.of(context);
+    return QuestPanel(
+      key: const ValueKey('homework-card'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            t.homeworkTitle,
+            style: TextStyle(
+              fontFamily: VillageType.display,
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: p.ink,
+            ),
+          ),
+          const SizedBox(height: Space.sm),
+          for (final a in work)
+            InkWell(
+              onTap: a.done ? null : onOpenPath,
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    Icon(
+                      a.done ? Icons.check_circle : Icons.assignment_outlined,
+                      color: a.done ? p.success : p.gold,
+                    ),
+                    const SizedBox(width: Space.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            a.title,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: p.ink,
+                            ),
+                          ),
+                          Text(
+                            [
+                              t.homeworkFrom(a.fromName),
+                              if (a.dueOn != null) t.homeworkDue(a.dueOn!),
+                            ].join(' · '),
+                            style: TextStyle(fontSize: 12.5, color: p.inkMuted),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (a.done)
+                      Text(
+                        t.homeworkDone,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: p.success,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

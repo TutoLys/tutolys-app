@@ -244,6 +244,14 @@ abstract class Strings {
   /// message names the tutor and the time; English has no such parameters
   /// on the wire yet, so it says the same thing without them.
   String notificationTutoringSession(String serverMessage);
+
+  /// Teacher-assigned work (backend ADR 0123): the Carte's tag, and the
+  /// Quêtes card. Never names a classmate (#12).
+  String get homeworkTag;
+  String get homeworkTitle;
+  String homeworkFrom(String organization);
+  String homeworkDue(DateTime day);
+  String get homeworkDone;
   String notificationsBellLabel(int unread);
   String notificationsAgo(Duration elapsed);
   String get villageNoQuests;
@@ -935,6 +943,21 @@ class _FrenchStrings extends Strings {
 
   @override
   String notificationTutoringSession(String serverMessage) => serverMessage;
+
+  @override
+  String get homeworkTag => 'Devoir';
+
+  @override
+  String get homeworkTitle => 'De ton enseignant·e';
+
+  @override
+  String homeworkFrom(String organization) => 'De $organization';
+
+  @override
+  String homeworkDue(DateTime day) => 'Pour le ${day.day}/${day.month}';
+
+  @override
+  String get homeworkDone => 'Fait !';
 
   @override
   String notificationsBellLabel(int unread) => switch (unread) {
@@ -1870,6 +1893,21 @@ class _EnglishStrings extends Strings {
   @override
   String notificationTutoringSession(String serverMessage) =>
       'Your tutoring session is coming up soon.';
+
+  @override
+  String get homeworkTag => 'Homework';
+
+  @override
+  String get homeworkTitle => 'From your teacher';
+
+  @override
+  String homeworkFrom(String organization) => 'From $organization';
+
+  @override
+  String homeworkDue(DateTime day) => 'Due ${day.month}/${day.day}';
+
+  @override
+  String get homeworkDone => 'Done!';
 
   @override
   String notificationsBellLabel(int unread) => switch (unread) {
