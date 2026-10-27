@@ -68,6 +68,17 @@ class PasscodeService {
     }
   }
 
+  /// Re-reads one kid's state from the server, when it answers. Returns
+  /// what is cached afterwards.
+  Future<PasscodeState?> refresh(String kidId) async {
+    final token = await _accessTokenFor(kidId);
+    if (token != null) {
+      final state = await api.fetch(accessToken: token);
+      if (state != null) await store.savePasscode(kidId, state);
+    }
+    return store.passcodeFor(kidId);
+  }
+
   /// Checks [sequence] for [kidId]: with the server when it answers, else
   /// against the cached verifier.
   Future<PasscodeCheck> check(String kidId, List<int> sequence) async {

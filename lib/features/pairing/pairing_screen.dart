@@ -21,6 +21,10 @@ import 'pairing_controller.dart';
 /// [onCancel] makes it the "add a profile" screen, opened from "Qui joue ?"
 /// on a device that already has a kid: a back button appears, and the
 /// subtitle says a parent's code adds a child rather than signing in.
+///
+/// "Ajouter une classe" switches it to a teacher's class code, which pairs
+/// a shared tablet for the whole class at once (O8). Same six characters,
+/// same field: only the words and the endpoint change.
 class PairingScreen extends ConsumerStatefulWidget {
   const PairingScreen({this.onCancel, super.key});
 
@@ -33,6 +37,9 @@ class PairingScreen extends ConsumerStatefulWidget {
 class _PairingScreenState extends ConsumerState<PairingScreen> {
   String _code = '';
 
+  /// A teacher's class code rather than a kid's pairing code.
+  bool _classMode = false;
+
   /// Mirrors the server's alphabet. Characters outside it never appear, so a
   /// mistyped `O` or `1` is visibly ignored rather than silently "fixed".
   static const _alphabet = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
@@ -42,7 +49,8 @@ class _PairingScreenState extends ConsumerState<PairingScreen> {
 
   Future<void> _submit() async {
     if (!_isComplete) return;
-    await ref.read(pairingFormProvider.notifier).submit(_code);
+    final form = ref.read(pairingFormProvider.notifier);
+    await (_classMode ? form.submitClass(_code) : form.submit(_code));
   }
 
   MascotMood _moodFor(PairingUiState ui) {
@@ -54,7 +62,10 @@ class _PairingScreenState extends ConsumerState<PairingScreen> {
 
   String? _errorText(PairingUiState ui, Strings s) {
     return switch (ui.error) {
-      PairingError.invalidCode => s.pairingCodeInvalid,
+      PairingError.invalidCode =>
+        _classMode ? s.pairingClassInvalid : s.pairingCodeInvalid,
+      PairingError.emptyClass => s.pairingClassEmpty,
+      PairingError.classNotEntitled => s.pairingClassNotEntitled,
       PairingError.offline => s.pairingOffline,
       // Shown in the kid's own terms: a child does not need to hear the words
       // "rate limit", only that waiting is the fix.
@@ -85,7 +96,25 @@ class _PairingScreenState extends ConsumerState<PairingScreen> {
       },
       onCompleted: (_) => _submit(),
       onSubmit: _submit,
-      subtitle: widget.onCancel == null ? null : s.addProfileHint,
+      title: _classMode ? s.pairingClassTitle : null,
+      subtitle: _classMode
+          ? s.pairingClassSubtitle
+          : widget.onCancel == null
+              ? null
+              : s.addProfileHint,
+      footer: TextButton.icon(
+        key: const ValueKey('pairing-mode'),
+        onPressed: ui.isSubmitting
+            ? null
+            : () {
+                setState(() => _classMode = !_classMode);
+                ref.read(pairingFormProvider.notifier).clearError();
+              },
+        icon: Icon(
+          _classMode ? Icons.person_add_alt_1_rounded : Icons.groups_rounded,
+        ),
+        label: Text(_classMode ? s.pairingKidLink : s.pairingClassLink),
+      ),
     );
 
     return Scaffold(
@@ -192,7 +221,9 @@ class _PairingForm extends StatelessWidget {
     required this.onChanged,
     required this.onCompleted,
     required this.onSubmit,
+    this.title,
     this.subtitle,
+    this.footer,
   });
 
   final String alphabet;
@@ -205,8 +236,12 @@ class _PairingForm extends StatelessWidget {
   final ValueChanged<String> onCompleted;
   final VoidCallback onSubmit;
 
-  /// Replaces the default subtitle, when adding a profile.
+  /// Replace the default title and subtitle: adding a profile, or a class.
+  final String? title;
   final String? subtitle;
+
+  /// Under the button: the switch between a kid's code and a class code.
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
@@ -229,7 +264,7 @@ class _PairingForm extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              s.pairingTitle,
+              title ?? s.pairingTitle,
               textAlign: TextAlign.center,
               style: context.text.displaySmall,
             ),
@@ -318,6 +353,10 @@ class _PairingForm extends StatelessWidget {
                     )
                   : Text(s.pairingConnect),
             ),
+            if (footer != null) ...[
+              const SizedBox(height: Space.sm),
+              footer!,
+            ],
           ],
         ),
       ),

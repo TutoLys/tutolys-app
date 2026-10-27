@@ -35,6 +35,12 @@ final kidAvatarKeyProvider = FutureProvider.family<String, String>((
 /// their three pictures before the switch ([confirmItsMe], B-A0.5); one
 /// without is a tap.
 ///
+/// When nobody has said who they are yet (`SessionState.mustConfirm`: after
+/// a pause past the threshold, and always on a class tablet), the kid
+/// already active is asked too, and there is no "Retour". On a class
+/// tablet every kid needs a passcode, and the class's name sits under the
+/// title.
+///
 /// Opened from the header or Profil, where "Retour" goes back to the app as
 /// the same kid. On launch with several kids, the welcome screen is the
 /// picker instead (ADR 0024), so a cold start never names one of them.
@@ -61,7 +67,7 @@ class WhoIsPlayingScreen extends ConsumerWidget {
         child: SafeArea(
           child: Stack(
             children: [
-              if (session.kid != null)
+              if (session.kid != null && !session.mustConfirm)
                 Positioned(
                   top: Space.sm,
                   left: Space.sm,
@@ -91,6 +97,20 @@ class WhoIsPlayingScreen extends ConsumerWidget {
                             color: p.ink,
                           ),
                         ),
+                        if (session.classroom case final c?) ...[
+                          const SizedBox(height: Space.xxs),
+                          Text(
+                            t.whoIsPlayingClass(c.className),
+                            key: const ValueKey('who-class'),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontFamily: VillageType.display,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                              color: p.inkMuted,
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: Space.lg),
                         Wrap(
                           spacing: Space.md,
@@ -100,10 +120,13 @@ class WhoIsPlayingScreen extends ConsumerWidget {
                             for (final kid in session.kids)
                               KidProfileTile(
                                 kid: kid,
-                                current: kid.id == session.kid?.id,
-                                onTap: () => kid.id == session.kid?.id
-                                    ? controller.closeProfileStage()
-                                    : _enter(context, ref, kid),
+                                current: kid.id == session.kid?.id &&
+                                    !session.mustConfirm,
+                                onTap: () =>
+                                    kid.id == session.kid?.id &&
+                                            !session.mustConfirm
+                                        ? controller.closeProfileStage()
+                                        : _enter(context, ref, kid),
                               ),
                             AddProfileTile(onTap: controller.addProfile),
                           ],
@@ -123,7 +146,12 @@ class WhoIsPlayingScreen extends ConsumerWidget {
 
 /// Plays as [kid] once their passcode, if they have one, says it's them.
 Future<void> _enter(BuildContext context, WidgetRef ref, PairedKid kid) async {
-  final ok = await confirmItsMe(context, ref, kid);
+  final ok = await confirmItsMe(
+    context,
+    ref,
+    kid,
+    classroom: ref.read(sessionControllerProvider).isClassroom,
+  );
   if (ok == null) return;
   await ref
       .read(sessionControllerProvider.notifier)

@@ -12,6 +12,8 @@ import '../../features/pairing/pairing_controller.dart';
 import '../../features/pairing/pairing_screen.dart';
 import '../../features/passcode/passcode_entry_screen.dart';
 import '../../features/passcode/passcode_service.dart';
+import '../../features/passcode/passcode_setup_screen.dart';
+import '../i18n/strings.dart';
 import '../../features/pairing/who_is_playing_screen.dart';
 import '../../features/settings/settings_controller.dart';
 import 'paired_router.dart';
@@ -115,6 +117,13 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
     if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
       _flusher.flushNow();
     }
+    // Away long enough, "Qui joue ?" asks again on return (B-A0.5).
+    final session = ref.read(sessionControllerProvider.notifier);
+    if (state == AppLifecycleState.hidden || state == AppLifecycleState.paused) {
+      session.noteAway(DateTime.now());
+    } else if (state == AppLifecycleState.resumed) {
+      session.noteBack(DateTime.now());
+    }
   }
 
   @override
@@ -141,12 +150,21 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
       // A picker is about to show: learn every kid's picture passcode, so
       // one set in the portal is asked for from this choice on (B-A0.5).
       final picking = next.status == SessionStatus.paired &&
-          next.hasSeveralKids &&
+          next.choosesWhoPlays &&
           (previous?.status != SessionStatus.paired ||
               (next.stage == ProfileStage.choosing &&
                   previous?.stage != ProfileStage.choosing));
       if (picking && ref.read(passcodeSyncEnabledProvider)) {
         ref.read(passcodeServiceProvider).syncAll().ignore();
+      }
+      // A second kid was just paired on a family device: offer the
+      // guardian, who is holding it with the code, to choose picture codes.
+      if (previous?.status == SessionStatus.paired &&
+          next.status == SessionStatus.paired &&
+          !next.isClassroom &&
+          next.kids.length >= 2 &&
+          next.kids.length > previous!.kids.length) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _offerPasscodes());
       }
     });
 
@@ -161,7 +179,7 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
         kidName: session.status == SessionStatus.paired ? session.kid?.displayName : null,
         // Several kids: the welcome screen is the picker, so a cold start
         // never greets the last kid who played (ADR 0024).
-        kids: session.status == SessionStatus.paired && session.hasSeveralKids
+        kids: session.status == SessionStatus.paired && session.choosesWhoPlays
             ? session.kids
             : null,
         onPickKid: _enterAs,
@@ -209,7 +227,12 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
     final session = ref.read(sessionControllerProvider);
     final controller = ref.read(sessionControllerProvider.notifier);
     final kid = session.kids.firstWhere((k) => k.id == kidId);
-    final ok = await confirmItsMe(context, ref, kid);
+    final ok = await confirmItsMe(
+      context,
+      ref,
+      kid,
+      classroom: session.isClassroom,
+    );
     if (ok == null || !mounted) return;
     if (kidId == session.kid?.id && ok.accessToken == null) {
       controller.closeProfileStage();
@@ -221,6 +244,42 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
       );
     }
     if (mounted) setState(() => _launched = true);
+  }
+
+  /// After pairing another kid: "Plusieurs enfants sur cet appareil", when
+  /// some kid here has no picture code yet. "Choisir les codes" goes
+  /// through the guardian PIN to the Codes images list.
+  Future<void> _offerPasscodes() async {
+    if (!mounted || !ref.read(passcodeSyncEnabledProvider)) return;
+    final service = ref.read(passcodeServiceProvider);
+    var missing = false;
+    for (final kid in ref.read(sessionControllerProvider).kids) {
+      if (!await service.isRequired(kid.id)) missing = true;
+    }
+    if (!missing || !mounted) return;
+    final choose = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        final s = context.s;
+        return AlertDialog(
+          key: const ValueKey('passcode-offer'),
+          title: Text(s.passcodePromptTitle),
+          content: Text(s.passcodePromptBody),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(s.passcodePromptLater),
+            ),
+            FilledButton(
+              key: const ValueKey('passcode-offer-choose'),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(s.passcodePromptChoose),
+            ),
+          ],
+        );
+      },
+    );
+    if (choose == true && mounted) await openPasscodes(context, ref);
   }
 
   /// One switcher for every top-level screen, launch included, so the

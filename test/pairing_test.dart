@@ -13,6 +13,7 @@ import 'package:tutolys_app/core/routing/village_shell.dart';
 import 'package:tutolys_app/data/api/content_api.dart';
 import 'package:tutolys_app/data/api/curriculum_api.dart';
 import 'package:tutolys_app/data/api/pairing_api.dart';
+import 'package:tutolys_app/data/api/passcode_api.dart';
 import 'package:tutolys_app/data/api/progress_api.dart';
 import 'package:tutolys_app/data/api/telemetry_api.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
@@ -109,6 +110,13 @@ class FakeSessionStore extends SessionStore {
 
   @override
   Future<void> setActiveKid(String kidId) async {}
+
+  // A family device: never a class tablet, no picture passcodes.
+  @override
+  Future<Classroom?> classroom() async => null;
+
+  @override
+  Future<PasscodeState?> passcodeFor(String kidId) async => null;
 }
 
 /// Fails the first refresh (the backend is down), then succeeds.

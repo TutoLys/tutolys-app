@@ -44,6 +44,8 @@ class SessionState {
     this.accessToken,
     this.kids = const [],
     this.stage = ProfileStage.none,
+    this.classroom,
+    this.confirmEveryone = false,
   });
 
   const SessionState.checking() : this._(SessionStatus.checking);
@@ -53,7 +55,9 @@ class SessionState {
       : kid = null,
         accessToken = null,
         kids = const [],
-        stage = ProfileStage.none;
+        stage = ProfileStage.none,
+        classroom = null,
+        confirmEveryone = false;
 
   final SessionStatus status;
 
@@ -65,7 +69,23 @@ class SessionState {
   final List<PairedKid> kids;
   final ProfileStage stage;
 
+  /// Set on a classroom tablet paired with a class code (O8).
+  final Classroom? classroom;
+
+  /// "Qui joue ?" asks every kid for their passcode, the one already
+  /// playing included, and offers no way back: after a pause past the
+  /// threshold, and always on a class tablet. Nobody holding the device
+  /// has said who they are yet.
+  final bool confirmEveryone;
+
   bool get hasSeveralKids => kids.length > 1;
+  bool get isClassroom => classroom != null;
+
+  /// Whether this device asks who's playing: several kids, or a class.
+  bool get choosesWhoPlays => hasSeveralKids || isClassroom;
+
+  /// [confirmEveryone], or a class tablet, where it always holds.
+  bool get mustConfirm => confirmEveryone || isClassroom;
 
   SessionState copyWith({
     SessionStatus? status,
@@ -73,6 +93,7 @@ class SessionState {
     String? accessToken,
     List<PairedKid>? kids,
     ProfileStage? stage,
+    bool? confirmEveryone,
   }) {
     return SessionState(
       status: status ?? this.status,
@@ -80,6 +101,8 @@ class SessionState {
       accessToken: accessToken ?? this.accessToken,
       kids: kids ?? this.kids,
       stage: stage ?? this.stage,
+      classroom: classroom,
+      confirmEveryone: confirmEveryone ?? this.confirmEveryone,
     );
   }
 }
@@ -103,7 +126,18 @@ class PairingUiState {
   }
 }
 
-enum PairingError { invalidCode, offline, rateLimited, unexpected }
+enum PairingError {
+  invalidCode,
+  offline,
+  rateLimited,
+  unexpected,
+
+  /// A class code for a class with no learners yet.
+  emptyClass,
+
+  /// The school isn't entitled to class tablets.
+  classNotEntitled,
+}
 
 /// Owns the session: pairing, refreshing, and forgetting a revoked device.
 class SessionController extends Notifier<SessionState> {
@@ -215,7 +249,10 @@ class SessionController extends Notifier<SessionState> {
       state = const SessionState.unpaired();
       return;
     }
-    final stage = kids.length > 1 ? ProfileStage.choosing : ProfileStage.none;
+    final classroom = await _store.classroom();
+    final stage = kids.length > 1 || classroom != null
+        ? ProfileStage.choosing
+        : ProfileStage.none;
 
     RefreshResult result;
     try {
@@ -236,6 +273,7 @@ class SessionController extends Notifier<SessionState> {
           accessToken: accessToken,
           kids: kids,
           stage: stage,
+          classroom: classroom,
         );
         _scheduleRefresh(expiresIn);
       case RefreshRejected(:final reason):
@@ -251,6 +289,7 @@ class SessionController extends Notifier<SessionState> {
           kid: await _store.pairedKid(),
           kids: kids,
           stage: stage,
+          classroom: classroom,
         );
         // And keep trying: without this, an app opened while the server
         // was down stayed tokenless, so every read skipped its request
@@ -274,6 +313,10 @@ class SessionController extends Notifier<SessionState> {
     }
   }
 
+  ///
+  /// With several kids left, or on a class tablet, it opens "Qui joue ?"
+  /// asking everyone, because the next kid was picked by the app, not by
+  /// whoever is holding the device.
   Future<void> _resumeWithRemaining() async {
     final kids = await _store.pairedKids();
     final next = kids.isEmpty ? null : await _store.pairedKid();
@@ -282,6 +325,12 @@ class SessionController extends Notifier<SessionState> {
       return;
     }
     await switchTo(next.id, kids: kids);
+    if (state.status == SessionStatus.paired && state.choosesWhoPlays) {
+      state = state.copyWith(
+        stage: ProfileStage.choosing,
+        confirmEveryone: true,
+      );
+    }
   }
 
   /// Play as [kidId], another kid paired on this device.
@@ -326,6 +375,7 @@ class SessionController extends Notifier<SessionState> {
           kid: kid,
           accessToken: accessToken,
           kids: all,
+          classroom: await _store.classroom(),
         );
         _scheduleRefresh(expiresIn);
       case RefreshRejected(:final reason):
@@ -336,6 +386,7 @@ class SessionController extends Notifier<SessionState> {
           status: SessionStatus.paired,
           kid: kid,
           kids: all,
+          classroom: await _store.classroom(),
         );
         _scheduleRefresh(60);
     }
@@ -345,6 +396,36 @@ class SessionController extends Notifier<SessionState> {
   void chooseProfile() {
     if (state.status != SessionStatus.paired) return;
     state = state.copyWith(stage: ProfileStage.choosing);
+  }
+
+  /// How long the app may be away before "Qui joue ?" asks again: long
+  /// enough for a kid to answer the door, short enough that a sibling who
+  /// picks the device up later is asked. Shorter on a class tablet, which
+  /// changes hands between activities.
+  static const resumeLockAfter = Duration(minutes: 10);
+  static const classroomResumeLockAfter = Duration(minutes: 2);
+
+  DateTime? _awaySince;
+
+  /// The app went to the background (or was hidden) at [at].
+  void noteAway(DateTime at) => _awaySince ??= at;
+
+  /// The app is back at [at]: past the threshold, [lockForResume].
+  void noteBack(DateTime at) {
+    final since = _awaySince;
+    _awaySince = null;
+    if (since == null) return;
+    final limit =
+        state.isClassroom ? classroomResumeLockAfter : resumeLockAfter;
+    if (at.difference(since) >= limit) lockForResume();
+  }
+
+  /// After the app was away past the threshold: "Qui joue ?", asking
+  /// everyone, so a sibling who picks the device up can't carry on as the
+  /// kid who put it down. Ignored where only one kid plays.
+  void lockForResume() {
+    if (state.status != SessionStatus.paired || !state.choosesWhoPlays) return;
+    state = state.copyWith(stage: ProfileStage.choosing, confirmEveryone: true);
   }
 
   /// Open the pairing-code screen to add another kid.
@@ -387,6 +468,7 @@ class SessionController extends Notifier<SessionState> {
           ),
           accessToken: result.accessToken,
           kids: await _store.pairedKids(),
+          classroom: await _store.classroom(),
         );
         _scheduleRefresh(result.expiresIn);
         return null;
@@ -396,7 +478,50 @@ class SessionController extends Notifier<SessionState> {
         return PairingError.offline;
       case PairingRateLimited():
         return PairingError.rateLimited;
-      case PairingFailed():
+      case PairingFailed() ||
+            ClassPairingSucceeded() ||
+            ClassIsEmpty() ||
+            ClassNotEntitled():
+        return PairingError.unexpected;
+    }
+  }
+
+  /// Exchange a teacher's class code: this tablet is paired for every
+  /// learner of the class, and opens on "Qui joue ?" with nobody chosen.
+  Future<PairingError?> pairClass(String code) async {
+    final result = await _api.exchangeClassCode(
+      code: code,
+      deviceId: await _store.deviceId(),
+      platform: currentPlatform(),
+      appVersion: appVersion,
+    );
+    switch (result) {
+      case ClassPairingSucceeded(:final classroom, :final kids):
+        await _store.saveClassPairings(classroom, kids);
+        // Someone must be "active" for the state to be paired; nothing of
+        // theirs loads while the picker is up, and the picker asks first.
+        final current = await _store.pairedKid();
+        _refreshTimer?.cancel();
+        state = SessionState(
+          status: SessionStatus.paired,
+          kid: current,
+          kids: await _store.pairedKids(),
+          stage: ProfileStage.choosing,
+          classroom: classroom,
+          confirmEveryone: true,
+        );
+        return null;
+      case PairingCodeRejected():
+        return PairingError.invalidCode;
+      case ClassIsEmpty():
+        return PairingError.emptyClass;
+      case ClassNotEntitled():
+        return PairingError.classNotEntitled;
+      case PairingOffline():
+        return PairingError.offline;
+      case PairingRateLimited():
+        return PairingError.rateLimited;
+      case PairingSucceeded() || PairingFailed():
         return PairingError.unexpected;
     }
   }
@@ -427,6 +552,14 @@ class PairingFormController extends Notifier<PairingUiState> {
   Future<void> submit(String code) async {
     state = state.copyWith(isSubmitting: true, error: null);
     final error = await ref.read(sessionControllerProvider.notifier).pair(code);
+    state = PairingUiState(isSubmitting: false, error: error);
+  }
+
+  /// A teacher's class code instead of a kid's.
+  Future<void> submitClass(String code) async {
+    state = state.copyWith(isSubmitting: true, error: null);
+    final error =
+        await ref.read(sessionControllerProvider.notifier).pairClass(code);
     state = PairingUiState(isSubmitting: false, error: error);
   }
 

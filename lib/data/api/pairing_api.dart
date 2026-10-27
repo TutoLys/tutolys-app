@@ -51,6 +51,69 @@ class PairingFailed extends PairingResult {
   final String detail;
 }
 
+/// The class a shared classroom tablet was paired for (O8, backend
+/// ADR 0125).
+class Classroom {
+  const Classroom({
+    required this.classId,
+    required this.className,
+    required this.organizationName,
+  });
+
+  factory Classroom.fromJson(Map<String, Object?> json) => Classroom(
+        classId: json['class_id']! as String,
+        className: json['class_name'] as String? ?? '',
+        organizationName: json['organization_name'] as String? ?? '',
+      );
+
+  final String classId;
+  final String className;
+  final String organizationName;
+
+  Map<String, Object?> toJson() => {
+        'class_id': classId,
+        'class_name': className,
+        'organization_name': organizationName,
+      };
+}
+
+/// One learner of a class, paired on this tablet: a normal pairing, plus
+/// whether they have a picture passcode yet.
+class ClassKid {
+  const ClassKid({
+    required this.kidId,
+    required this.displayName,
+    required this.gradeLevel,
+    required this.deviceToken,
+    required this.hasPasscode,
+    this.avatarKey = '',
+  });
+
+  final String kidId;
+  final String displayName;
+  final int gradeLevel;
+  final String deviceToken;
+  final bool hasPasscode;
+  final String avatarKey;
+}
+
+/// A class code worked: one pairing per consented learner.
+class ClassPairingSucceeded extends PairingResult {
+  const ClassPairingSucceeded({required this.classroom, required this.kids});
+  final Classroom classroom;
+  final List<ClassKid> kids;
+}
+
+/// A valid class code for a class with no learners yet.
+class ClassIsEmpty extends PairingResult {
+  const ClassIsEmpty();
+}
+
+/// The school isn't entitled (no agreement, or it lapsed).
+class ClassNotEntitled extends PairingResult {
+  const ClassNotEntitled();
+}
+
 /// Result of refreshing an access token from a stored device token.
 sealed class RefreshResult {
   const RefreshResult();
@@ -138,6 +201,54 @@ class PairingApi {
         gradeLevel: body['grade_level'] as int,
       );
     } on DioException catch (error) {
+      return _mapPairingError(error);
+    }
+  }
+
+  /// A teacher's class code: pairs this tablet for every consented learner
+  /// of the class at once (`POST /pairing/class-exchange`).
+  Future<PairingResult> exchangeClassCode({
+    required String code,
+    required String deviceId,
+    required String platform,
+    required String appVersion,
+  }) async {
+    try {
+      final response = await dio.post<Map<String, dynamic>>(
+        '/api/v1/pairing/class-exchange',
+        data: {
+          'code': code,
+          'device_id': deviceId,
+          'platform': platform,
+          'app_version': appVersion,
+        },
+      );
+      final body = response.data!.cast<String, Object?>();
+      return ClassPairingSucceeded(
+        classroom: Classroom.fromJson(body),
+        kids: [
+          for (final raw in body['kids']! as List<dynamic>)
+            if (raw case final Map<dynamic, dynamic> k)
+              ClassKid(
+                kidId: k['kid_id']! as String,
+                displayName: k['display_name']! as String,
+                gradeLevel: k['grade_level'] as int? ?? 1,
+                deviceToken: k['device_token']! as String,
+                hasPasscode: k['has_passcode'] == true,
+                avatarKey: k['avatar_key'] as String? ?? '',
+              ),
+        ],
+      );
+    } on DioException catch (error) {
+      final data = error.response?.data;
+      final code = data is Map ? data['code'] : null;
+      if (error.response?.statusCode == 400 && code == 'empty_class') {
+        return const ClassIsEmpty();
+      }
+      if (error.response?.statusCode == 403 &&
+          code == 'organization_not_entitled') {
+        return const ClassNotEntitled();
+      }
       return _mapPairingError(error);
     }
   }

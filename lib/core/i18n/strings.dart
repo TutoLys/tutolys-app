@@ -454,6 +454,21 @@ abstract class Strings {
   String get pinGateContinue;
   String get passcodesPinCreate;
   String get passcodesPinEnter;
+  String get pairingClassLink;
+  String get pairingKidLink;
+  String get pairingClassTitle;
+  String get pairingClassSubtitle;
+  String get pairingClassInvalid;
+  String get pairingClassEmpty;
+  String get pairingClassNotEntitled;
+  String whoIsPlayingClass(String className);
+  String passcodeWaitTitle(String name);
+  String get passcodeWaitBody;
+  String get passcodeWaitAdult;
+  String get passcodePromptTitle;
+  String get passcodePromptBody;
+  String get passcodePromptLater;
+  String get passcodePromptChoose;
   String get addProfile;
   String get addProfileHint;
   String get addProfileCancel;
@@ -1511,6 +1526,66 @@ class _FrenchStrings extends Strings {
       'Demande à un adulte d\'entrer le NIP pour gérer les codes images.';
 
   @override
+  String get pairingClassLink =>
+      'Ajouter une classe';
+
+  @override
+  String get pairingKidLink =>
+      'Ajouter un enfant';
+
+  @override
+  String get pairingClassTitle =>
+      'Code de la classe';
+
+  @override
+  String get pairingClassSubtitle =>
+      'Entre le code que ton enseignant·e montre à la classe.';
+
+  @override
+  String get pairingClassInvalid =>
+      'Ce code ne marche pas. Demande un nouveau code à ton enseignant·e.';
+
+  @override
+  String get pairingClassEmpty =>
+      'Cette classe n\'a pas encore d\'élèves.';
+
+  @override
+  String get pairingClassNotEntitled =>
+      'Demande à ton enseignant·e : l\'école doit d\'abord activer TutoLys.';
+
+  @override
+  String whoIsPlayingClass(String className) =>
+      'Classe : $className';
+
+  @override
+  String passcodeWaitTitle(String name) =>
+      'Ton code images n\'est pas encore prêt, $name.';
+
+  @override
+  String get passcodeWaitBody =>
+      'Demande à un adulte de le choisir avec toi.';
+
+  @override
+  String get passcodeWaitAdult =>
+      'Je suis l\'adulte';
+
+  @override
+  String get passcodePromptTitle =>
+      'Plusieurs enfants sur cet appareil';
+
+  @override
+  String get passcodePromptBody =>
+      'Choisis un code images pour chacun : ainsi, chacun garde ses propres progrès.';
+
+  @override
+  String get passcodePromptLater =>
+      'Plus tard';
+
+  @override
+  String get passcodePromptChoose =>
+      'Choisir les codes';
+
+  @override
   String get addProfile => 'Ajouter un profil';
 
   @override
@@ -2550,6 +2625,66 @@ class _EnglishStrings extends Strings {
   @override
   String get passcodesPinEnter =>
       'Ask a grown-up to enter the PIN to manage picture codes.';
+
+  @override
+  String get pairingClassLink =>
+      'Add a class';
+
+  @override
+  String get pairingKidLink =>
+      'Add a child';
+
+  @override
+  String get pairingClassTitle =>
+      'Class code';
+
+  @override
+  String get pairingClassSubtitle =>
+      'Enter the code your teacher is showing the class.';
+
+  @override
+  String get pairingClassInvalid =>
+      'That code doesn\'t work. Ask your teacher for a new one.';
+
+  @override
+  String get pairingClassEmpty =>
+      'This class has no learners yet.';
+
+  @override
+  String get pairingClassNotEntitled =>
+      'Ask your teacher: the school has to turn TutoLys on first.';
+
+  @override
+  String whoIsPlayingClass(String className) =>
+      'Class: $className';
+
+  @override
+  String passcodeWaitTitle(String name) =>
+      'Your picture code isn\'t ready yet, $name.';
+
+  @override
+  String get passcodeWaitBody =>
+      'Ask a grown-up to choose it with you.';
+
+  @override
+  String get passcodeWaitAdult =>
+      'I\'m the grown-up';
+
+  @override
+  String get passcodePromptTitle =>
+      'Several children on this device';
+
+  @override
+  String get passcodePromptBody =>
+      'Choose a picture code for each of them, so everyone keeps their own progress.';
+
+  @override
+  String get passcodePromptLater =>
+      'Later';
+
+  @override
+  String get passcodePromptChoose =>
+      'Choose codes';
 
   @override
   String get addProfile => 'Add a profile';

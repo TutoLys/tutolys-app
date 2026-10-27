@@ -35,6 +35,23 @@ class _Api extends PairingApi {
 
   Completer<void>? hold;
 
+  /// What a typed kid code pairs: a new kid, Noé.
+  @override
+  Future<PairingResult> exchangeCode({
+    required String code,
+    required String deviceId,
+    required String platform,
+    required String appVersion,
+  }) async =>
+      const PairingSucceeded(
+        deviceToken: 'tok-k3',
+        accessToken: 'access-tok-k3',
+        expiresIn: 900,
+        kidId: 'k3',
+        kidDisplayName: 'Noé',
+        gradeLevel: 1,
+      );
+
   @override
   Future<RefreshResult> refresh({required String deviceToken}) async {
     await hold?.future;
@@ -345,5 +362,26 @@ void main() {
     expect(find.byType(VillageShell), findsOneWidget);
     expect(c.read(sessionControllerProvider).kid!.id, 'k2');
     expect(c.read(sessionControllerProvider).accessToken, 'verified-k2');
+  });
+
+  testWidgets('pairing a second kid offers the guardian picture codes', (
+    tester,
+  ) async {
+    final c = _container(await _storeWith([('k1', 'Yelhan')]), _Api());
+    await tester.pumpWidget(_app(c));
+    await _toWelcome(tester);
+    await tester.tap(find.text(fr.welcomePlay));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('passcode-offer')), findsNothing);
+
+    await c.read(sessionControllerProvider.notifier).pair('ABC234');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('passcode-offer')), findsOneWidget);
+    expect(find.text(fr.passcodePromptTitle), findsOneWidget);
+
+    await tester.tap(find.text(fr.passcodePromptLater));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('passcode-offer')), findsNothing);
+    expect(c.read(sessionControllerProvider).kid!.id, 'k3');
   });
 }

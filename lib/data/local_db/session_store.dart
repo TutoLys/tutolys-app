@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:uuid/uuid.dart';
 
+import '../api/pairing_api.dart' show ClassKid, Classroom;
 import '../api/passcode_api.dart';
 
 /// Persistent credential storage for a paired device.
@@ -32,6 +33,7 @@ class SessionStore {
   static const _guardianPinHashKey = 'guardian_pin_hash';
   static const _guardianPinDigitsKey = 'guardian_pin_digits';
   static const _passcodeKeyPrefix = 'passcode_';
+  static const _classroomKey = 'classroom';
 
   /// How many digits a new guardian PIN has. It was 4 before 2026-10-26;
   /// a PIN set then still opens the gate once, then must be replaced.
@@ -172,6 +174,55 @@ class SessionStore {
   /// The active kid.
   Future<PairedKid?> pairedKid() async => (await _active())?.kid;
 
+  /// The class this tablet was paired for with a class code, or null on a
+  /// family device (O8). A class tablet asks every kid for their picture
+  /// passcode, always.
+  Future<Classroom?> classroom() async {
+    final raw = await _storage.read(key: _classroomKey);
+    if (raw == null) return null;
+    try {
+      return Classroom.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
+    } on Object {
+      return null;
+    }
+  }
+
+  /// Stores a class code's pairings: every learner of [classroom], added
+  /// or re-tokened, and the tablet marked as that class's. A kid's
+  /// passcode state is cached as "none" when the server says so; one who
+  /// has a passcode is left for the next sync to fetch its verifier.
+  ///
+  /// Doesn't choose an active kid: on a class tablet, nobody is anyone
+  /// until they tap their pictures.
+  Future<void> saveClassPairings(
+    Classroom classroom,
+    List<ClassKid> kids,
+  ) async {
+    final all = await pairings();
+    for (final k in kids) {
+      final next = StoredPairing(
+        kid: PairedKid(
+          id: k.kidId,
+          displayName: k.displayName,
+          gradeLevel: k.gradeLevel,
+        ),
+        deviceToken: k.deviceToken,
+      );
+      final i = all.indexWhere((p) => p.kid.id == k.kidId);
+      if (i < 0) {
+        all.add(next);
+      } else {
+        all[i] = next;
+      }
+      if (!k.hasPasscode) await savePasscode(k.kidId, const NoPasscode());
+    }
+    await _writePairings(all);
+    await _storage.write(
+      key: _classroomKey,
+      value: jsonEncode(classroom.toJson()),
+    );
+  }
+
   /// Forget the active kid's credential. Other kids stay paired, and the
   /// next one becomes active.
   ///
@@ -199,6 +250,7 @@ class SessionStore {
     await Future.wait([
       _storage.delete(key: _pairingsKey),
       _storage.delete(key: _activeKidKey),
+      _storage.delete(key: _classroomKey),
       _storage.delete(key: _guardianPinSaltKey),
       _storage.delete(key: _guardianPinHashKey),
       _storage.delete(key: _guardianPinDigitsKey),
