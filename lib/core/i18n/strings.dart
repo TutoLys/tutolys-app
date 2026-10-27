@@ -239,6 +239,11 @@ abstract class Strings {
   /// A shield spent on a day that turned out to be played (offline play
   /// uploaded late) is given back (backend ADR 0060).
   String get notificationStreakFreezeRefunded;
+
+  /// A tutoring session coming up (backend ADR 0119). The server's French
+  /// message names the tutor and the time; English has no such parameters
+  /// on the wire yet, so it says the same thing without them.
+  String notificationTutoringSession(String serverMessage);
   String notificationsBellLabel(int unread);
   String notificationsAgo(Duration elapsed);
   String get villageNoQuests;
@@ -927,6 +932,9 @@ class _FrenchStrings extends Strings {
   @override
   String get notificationStreakFreezeRefunded =>
       "Tu avais joué ce jour-là : ton bouclier t'est rendu.";
+
+  @override
+  String notificationTutoringSession(String serverMessage) => serverMessage;
 
   @override
   String notificationsBellLabel(int unread) => switch (unread) {
@@ -1858,6 +1866,10 @@ class _EnglishStrings extends Strings {
   @override
   String get notificationStreakFreezeRefunded =>
       'You played that day after all, so your shield is back.';
+
+  @override
+  String notificationTutoringSession(String serverMessage) =>
+      'Your tutoring session is coming up soon.';
 
   @override
   String notificationsBellLabel(int unread) => switch (unread) {

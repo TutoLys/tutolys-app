@@ -135,6 +135,16 @@ void main() {
       notificationText(Strings.en, n('a', 'streak_freeze_refunded')),
       'You played that day after all, so your shield is back.',
     );
+    // A tutoring reminder: the server's French names the tutor and time;
+    // English says the same without them (no parameters on the wire yet).
+    expect(
+      notificationText(Strings.fr, n('a', 'tutoring_session_soon')),
+      'Message du serveur',
+    );
+    expect(
+      notificationText(Strings.en, n('a', 'tutoring_session_soon')),
+      'Your tutoring session is coming up soon.',
+    );
     expect(
       notificationText(Strings.en, n('a', 'something_new')),
       'Message du serveur',

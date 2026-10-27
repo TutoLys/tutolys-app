@@ -176,6 +176,7 @@ String notificationText(Strings t, NotificationDto n) => switch (n.type) {
   'daily_quest_completed' => t.notificationDailyQuest,
   'streak_freeze_spent' => t.notificationStreakFreeze,
   'streak_freeze_refunded' => t.notificationStreakFreezeRefunded,
+  'tutoring_session_soon' => t.notificationTutoringSession(n.message),
   _ => n.message,
 };
 
@@ -184,6 +185,7 @@ String notificationText(Strings t, NotificationDto n) => switch (n.type) {
       'daily_quest_completed' => ('asset-target.webp', p.goldPale),
       'streak_freeze_spent' ||
       'streak_freeze_refunded' => ('asset-flame.webp', p.navActiveFill),
+      'tutoring_session_soon' => ('asset-mascot-welcome.webp', p.goldPale),
       _ => ('asset-bell.webp', p.track),
     };
 
