@@ -146,6 +146,29 @@ void main() {
       expect(await store.isPaired, isFalse);
       expect(await store.hasGuardianPin(), isFalse);
     });
+
+    test('a PIN stored before the move to 6 digits reads as 4 digits',
+        () async {
+      final store = await _storeWith([('k1', 'Yelhan')]);
+      expect(await store.guardianPinDigits(), isNull);
+
+      // The old code wrote only the salt and hash, never a digit count.
+      await store.setGuardianPin('1234');
+      await const FlutterSecureStorage().delete(key: 'guardian_pin_digits');
+      expect(await store.guardianPinDigits(), 4);
+      expect(await store.verifyGuardianPin('1234'), isTrue);
+
+      await store.setGuardianPin('123456');
+      expect(await store.guardianPinDigits(), 6);
+      expect(await store.verifyGuardianPin('1234'), isFalse);
+
+      await store.clearPairing();
+      expect(await store.guardianPinDigits(), isNull);
+      expect(
+        await const FlutterSecureStorage().read(key: 'guardian_pin_digits'),
+        isNull,
+      );
+    });
   });
 
   group('SessionController', () {

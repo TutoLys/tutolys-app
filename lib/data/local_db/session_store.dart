@@ -28,6 +28,11 @@ class SessionStore {
   static const _activeKidKey = 'active_kid_id';
   static const _guardianPinSaltKey = 'guardian_pin_salt';
   static const _guardianPinHashKey = 'guardian_pin_hash';
+  static const _guardianPinDigitsKey = 'guardian_pin_digits';
+
+  /// How many digits a new guardian PIN has. It was 4 before 2026-10-26;
+  /// a PIN set then still opens the gate once, then must be replaced.
+  static const guardianPinLength = 6;
 
   /// The installation's stable id, created once and kept.
   ///
@@ -190,6 +195,7 @@ class SessionStore {
       _storage.delete(key: _activeKidKey),
       _storage.delete(key: _guardianPinSaltKey),
       _storage.delete(key: _guardianPinHashKey),
+      _storage.delete(key: _guardianPinDigitsKey),
     ]);
   }
 
@@ -197,6 +203,16 @@ class SessionStore {
   Future<bool> hasGuardianPin() async {
     final hash = await _storage.read(key: _guardianPinHashKey);
     return hash != null && hash.isNotEmpty;
+  }
+
+  /// How many digits the stored PIN has, or null when none is set.
+  ///
+  /// A PIN set before the move to 6 digits stored no count, and every PIN
+  /// then had 4, so a missing count means 4.
+  Future<int?> guardianPinDigits() async {
+    if (!await hasGuardianPin()) return null;
+    final raw = await _storage.read(key: _guardianPinDigitsKey);
+    return int.tryParse(raw ?? '') ?? 4;
   }
 
   /// Set (or replace) the guardian PIN.
@@ -210,6 +226,7 @@ class SessionStore {
     await Future.wait([
       _storage.write(key: _guardianPinSaltKey, value: salt),
       _storage.write(key: _guardianPinHashKey, value: _hashPin(pin, salt)),
+      _storage.write(key: _guardianPinDigitsKey, value: '${pin.length}'),
     ]);
   }
 

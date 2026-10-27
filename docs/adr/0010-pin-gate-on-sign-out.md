@@ -84,3 +84,33 @@ repeated wrong PIN entry — deliberately out of scope, since the PIN is
 a friction gate, not a security boundary, and a kid who keeps guessing
 4-digit combinations is already getting the friction it exists to add.
 Screen-time controls remain a separate, unscoped product decision.
+
+## Revision (2026-10-26): 6 digits, and a restyled dialog
+
+Hafid: the PIN is **6 digits**, not 4. This is the interview decision
+recorded in `CLAUDE.md`, now built.
+
+- `SessionStore.guardianPinLength = 6`. Every field is digits only
+  (`FilteringTextInputFormatter.digitsOnly`), hidden, with the numeric
+  keyboard and a `0/6` counter. Create refuses anything shorter.
+- **Migration.** The hash doesn't reveal the length, so `setGuardianPin`
+  now also stores `guardian_pin_digits`. A PIN stored without it was set
+  when every PIN had 4 digits, so `guardianPinDigits()` reads it as 4.
+  Such a PIN is asked for at 4 digits and still opens the gate, then the
+  guardian must choose a 6-digit PIN before the action goes ahead. If they
+  back out, the old PIN is left as it was and works next time: nobody is
+  ever locked out. `clearPairing` removes the count with the PIN.
+- **Look.** The plain Material `AlertDialog` is replaced by the design's
+  modal card (`.streak-modal`: surface, 24px corners, navy shadow, at most
+  380 wide), a Baloo 2 title, `VillagePalette` colours, Réglages' rounded
+  fields, and a `.btn-gold` pill. Errors use the amber `retry` colour; the
+  design never uses red. The buttons wrap rather than overflow.
+
+Tests: the store reads a legacy PIN as 4 digits (`multi_kid_test`), and
+the gate covers create at 6, short and non-digit input, enter at 6, and
+both legacy paths: upgrade then proceed, and back out with the old PIN
+still working (`profile_screen_test`). A rendered check of the dialog in
+light and dark looked right. It was not checked in a browser.
+
+The "Not done" items above still stand, with "4-digit combinations" now
+6-digit ones.

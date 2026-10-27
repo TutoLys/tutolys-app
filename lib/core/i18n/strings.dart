@@ -151,10 +151,12 @@ abstract class Strings {
   String get pinGateCreateSubtitle;
   String get pinGateEnterTitle;
   String get pinGateEnterSubtitle;
-  String get pinGatePinLabel;
+  String pinGatePinLabel(int digits);
   String get pinGateConfirmPinLabel;
   String get pinGateMismatch;
-  String get pinGateTooShort;
+  String pinGateTooShort(int digits);
+  String get pinGateUpgradeTitle;
+  String get pinGateUpgradeSubtitle;
   String get pinGateWrong;
   String get pinGateCreate;
   String get pinGateConfirmSignOut;
@@ -674,7 +676,7 @@ class _FrenchStrings extends Strings {
 
   @override
   String get pinGateCreateSubtitle =>
-      'Crée un NIP à 4 chiffres pour que seul un adulte puisse déconnecter cet appareil.';
+      'Crée un NIP à 6 chiffres pour que seul un adulte puisse déconnecter cet appareil.';
 
   @override
   String get pinGateEnterTitle => 'NIP parent';
@@ -684,7 +686,7 @@ class _FrenchStrings extends Strings {
       'Demande à un adulte d\'entrer le NIP pour déconnecter cet appareil.';
 
   @override
-  String get pinGatePinLabel => 'NIP (4 chiffres)';
+  String pinGatePinLabel(int digits) => 'NIP ($digits chiffres)';
 
   @override
   String get pinGateConfirmPinLabel => 'Confirme le NIP';
@@ -693,7 +695,14 @@ class _FrenchStrings extends Strings {
   String get pinGateMismatch => 'Les NIP ne correspondent pas.';
 
   @override
-  String get pinGateTooShort => 'Le NIP doit avoir 4 chiffres.';
+  String pinGateTooShort(int digits) => 'Le NIP doit avoir $digits chiffres.';
+
+  @override
+  String get pinGateUpgradeTitle => 'Choisis un nouveau NIP';
+
+  @override
+  String get pinGateUpgradeSubtitle =>
+      'Le NIP parent a maintenant 6 chiffres. Choisis-en un nouveau pour continuer.';
 
   @override
   String get pinGateWrong => 'NIP incorrect.';
@@ -1600,7 +1609,7 @@ class _EnglishStrings extends Strings {
 
   @override
   String get pinGateCreateSubtitle =>
-      'Set a 4-digit PIN so only a grown-up can sign out this device.';
+      'Set a 6-digit PIN so only a grown-up can sign out this device.';
 
   @override
   String get pinGateEnterTitle => 'Parent PIN';
@@ -1610,7 +1619,7 @@ class _EnglishStrings extends Strings {
       'Ask a grown-up to enter the PIN to sign out this device.';
 
   @override
-  String get pinGatePinLabel => 'PIN (4 digits)';
+  String pinGatePinLabel(int digits) => 'PIN ($digits digits)';
 
   @override
   String get pinGateConfirmPinLabel => 'Confirm PIN';
@@ -1619,7 +1628,14 @@ class _EnglishStrings extends Strings {
   String get pinGateMismatch => "PINs don't match.";
 
   @override
-  String get pinGateTooShort => 'PIN must be 4 digits.';
+  String pinGateTooShort(int digits) => 'PIN must be $digits digits.';
+
+  @override
+  String get pinGateUpgradeTitle => 'Choose a new PIN';
+
+  @override
+  String get pinGateUpgradeSubtitle =>
+      'The parent PIN now has 6 digits. Choose a new one to continue.';
 
   @override
   String get pinGateWrong => 'Incorrect PIN.';

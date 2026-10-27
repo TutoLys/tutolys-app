@@ -47,6 +47,9 @@ class _FakeSessionStore extends SessionStore {
   Future<bool> hasGuardianPin() async => _pin != null;
 
   @override
+  Future<int?> guardianPinDigits() async => _pin?.length;
+
+  @override
   Future<void> setGuardianPin(String pin) async => _pin = pin;
 
   @override
@@ -452,6 +455,25 @@ void main() {
   );
 
   group('PIN gate', () {
+    Future<void> openSignOut(WidgetTester tester) async {
+      // Réglages scrolls; sign-out sits at its foot, so it has to be
+      // brought into view before it can be tapped.
+      await tester.ensureVisible(find.text(Strings.fr.settingsSignOut));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(Strings.fr.settingsSignOut));
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> tapPrimary(WidgetTester tester) async {
+      await tester.tap(find.byKey(const ValueKey('pin-gate-primary')));
+      await tester.pumpAndSettle();
+    }
+
+    bool forgotten(ProviderContainer container) =>
+        (container.read(sessionControllerProvider.notifier)
+                as _FixedSessionController)
+            .forgotten;
+
     testWidgets('with no PIN set yet, sign-out prompts to create one first', (
       tester,
     ) async {
@@ -459,19 +481,51 @@ void main() {
       addTearDown(container.dispose);
       await tester.pumpWidget(_widgetFor(container));
       await tester.pumpAndSettle();
-
-      // Réglages scrolls; sign-out sits at its foot, so it has to be
-      // brought into view before it can be tapped.
-      await tester.ensureVisible(find.text(Strings.fr.settingsSignOut));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(Strings.fr.settingsSignOut));
-      await tester.pumpAndSettle();
+      await openSignOut(tester);
 
       expect(find.text(Strings.fr.pinGateCreateTitle), findsOneWidget);
-      final controller = container.read(
-        sessionControllerProvider.notifier,
-      ) as _FixedSessionController;
-      expect(controller.forgotten, isFalse);
+      expect(find.text(Strings.fr.pinGatePinLabel(6)), findsOneWidget);
+      expect(find.text('0/6'), findsNWidgets(2));
+      expect(forgotten(container), isFalse);
+    });
+
+    testWidgets('the PIN fields are hidden, numeric and take 6 digits only', (
+      tester,
+    ) async {
+      final container = _buildContainer();
+      addTearDown(container.dispose);
+      await tester.pumpWidget(_widgetFor(container));
+      await tester.pumpAndSettle();
+      await openSignOut(tester);
+
+      final field = tester.widget<TextField>(find.byType(TextField).first);
+      expect(field.obscureText, isTrue);
+      expect(field.keyboardType, TextInputType.number);
+      expect(field.maxLength, 6);
+
+      await tester.enterText(find.byType(TextField).first, '12a3-4567890');
+      await tester.pump();
+      expect(
+        tester.widget<TextField>(find.byType(TextField).first).controller!.text,
+        '123456',
+      );
+    });
+
+    testWidgets('a 4-digit PIN is refused when creating one', (tester) async {
+      final store = _FakeSessionStore();
+      final container = _buildContainer(store: store);
+      addTearDown(container.dispose);
+      await tester.pumpWidget(_widgetFor(container));
+      await tester.pumpAndSettle();
+      await openSignOut(tester);
+
+      await tester.enterText(find.byType(TextField).first, '1234');
+      await tester.enterText(find.byType(TextField).last, '1234');
+      await tapPrimary(tester);
+
+      expect(find.text(Strings.fr.pinGateTooShort(6)), findsOneWidget);
+      expect(await store.hasGuardianPin(), isFalse);
+      expect(forgotten(container), isFalse);
     });
 
     testWidgets(
@@ -481,23 +535,14 @@ void main() {
         addTearDown(container.dispose);
         await tester.pumpWidget(_widgetFor(container));
         await tester.pumpAndSettle();
+        await openSignOut(tester);
 
-        // Réglages scrolls; sign-out sits at its foot, so it has to be
-        // brought into view before it can be tapped.
-        await tester.ensureVisible(find.text(Strings.fr.settingsSignOut));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text(Strings.fr.settingsSignOut));
-        await tester.pumpAndSettle();
-        await tester.enterText(find.byType(TextFormField).first, '1234');
-        await tester.enterText(find.byType(TextFormField).last, '9999');
-        await tester.tap(find.text(Strings.fr.pinGateCreate));
-        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField).first, '123456');
+        await tester.enterText(find.byType(TextField).last, '999999');
+        await tapPrimary(tester);
 
         expect(find.text(Strings.fr.pinGateMismatch), findsOneWidget);
-        final controller = container.read(
-          sessionControllerProvider.notifier,
-        ) as _FixedSessionController;
-        expect(controller.forgotten, isFalse);
+        expect(forgotten(container), isFalse);
       },
     );
 
@@ -509,78 +554,105 @@ void main() {
       addTearDown(container.dispose);
       await tester.pumpWidget(_widgetFor(container));
       await tester.pumpAndSettle();
+      await openSignOut(tester);
 
-      // Réglages scrolls; sign-out sits at its foot, so it has to be
-      // brought into view before it can be tapped.
-      await tester.ensureVisible(find.text(Strings.fr.settingsSignOut));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(Strings.fr.settingsSignOut));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextFormField).first, '1234');
-      await tester.enterText(find.byType(TextFormField).last, '1234');
-      await tester.tap(find.text(Strings.fr.pinGateCreate));
-      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, '123456');
+      await tester.enterText(find.byType(TextField).last, '123456');
+      await tapPrimary(tester);
       await _confirmErase(tester);
 
-      expect(await store.hasGuardianPin(), isTrue);
-      final controller = container.read(
-        sessionControllerProvider.notifier,
-      ) as _FixedSessionController;
-      expect(controller.forgotten, isTrue);
+      expect(await store.verifyGuardianPin('123456'), isTrue);
+      expect(forgotten(container), isTrue);
     });
 
     testWidgets(
       'with a PIN already set, the wrong PIN is rejected and does not sign out',
       (tester) async {
+        final store = _FakeSessionStore()..presetPin('123456');
+        final container = _buildContainer(store: store);
+        addTearDown(container.dispose);
+        await tester.pumpWidget(_widgetFor(container));
+        await tester.pumpAndSettle();
+        await openSignOut(tester);
+
+        expect(find.text(Strings.fr.pinGateEnterTitle), findsOneWidget);
+
+        await tester.enterText(find.byType(TextField), '000000');
+        await tapPrimary(tester);
+
+        expect(find.text(Strings.fr.pinGateWrong), findsOneWidget);
+        expect(forgotten(container), isFalse);
+      },
+    );
+
+    testWidgets('the correct PIN signs the device out', (tester) async {
+      final store = _FakeSessionStore()..presetPin('123456');
+      final container = _buildContainer(store: store);
+      addTearDown(container.dispose);
+      await tester.pumpWidget(_widgetFor(container));
+      await tester.pumpAndSettle();
+      await openSignOut(tester);
+
+      expect(find.text(Strings.fr.pinGatePinLabel(6)), findsOneWidget);
+      await tester.enterText(find.byType(TextField), '123456');
+      await tapPrimary(tester);
+      await _confirmErase(tester);
+
+      expect(forgotten(container), isTrue);
+    });
+
+    group('a 4-digit PIN from before the change', () {
+      testWidgets('opens once, then a new 6-digit PIN is required first', (
+        tester,
+      ) async {
         final store = _FakeSessionStore()..presetPin('1234');
         final container = _buildContainer(store: store);
         addTearDown(container.dispose);
         await tester.pumpWidget(_widgetFor(container));
         await tester.pumpAndSettle();
+        await openSignOut(tester);
 
-        // Réglages scrolls; sign-out sits at its foot, so it has to be
-        // brought into view before it can be tapped.
-        await tester.ensureVisible(find.text(Strings.fr.settingsSignOut));
+        // Asked for the old PIN at its old length.
+        expect(find.text(Strings.fr.pinGatePinLabel(4)), findsOneWidget);
+        await tester.enterText(find.byType(TextField), '1234');
+        await tapPrimary(tester);
+
+        expect(find.text(Strings.fr.pinGateUpgradeTitle), findsOneWidget);
+        expect(forgotten(container), isFalse);
+
+        await tester.enterText(find.byType(TextField).first, '246813');
+        await tester.enterText(find.byType(TextField).last, '246813');
+        await tapPrimary(tester);
+        await _confirmErase(tester);
+
+        expect(await store.guardianPinDigits(), 6);
+        expect(await store.verifyGuardianPin('246813'), isTrue);
+        expect(forgotten(container), isTrue);
+      });
+
+      testWidgets('backing out of the new PIN keeps the old one working', (
+        tester,
+      ) async {
+        final store = _FakeSessionStore()..presetPin('1234');
+        final container = _buildContainer(store: store);
+        addTearDown(container.dispose);
+        await tester.pumpWidget(_widgetFor(container));
         await tester.pumpAndSettle();
-        await tester.tap(find.text(Strings.fr.settingsSignOut));
+        await openSignOut(tester);
+
+        await tester.enterText(find.byType(TextField), '1234');
+        await tapPrimary(tester);
+        await tester.tap(find.text(Strings.fr.cancel));
         await tester.pumpAndSettle();
 
+        expect(forgotten(container), isFalse);
+        expect(await store.verifyGuardianPin('1234'), isTrue);
+
+        // And the next try asks for the old PIN again, not a lock-out.
+        await openSignOut(tester);
         expect(find.text(Strings.fr.pinGateEnterTitle), findsOneWidget);
-
-        await tester.enterText(find.byType(TextField), '0000');
-        await tester.tap(find.text(Strings.fr.pinGateConfirmSignOut));
-        await tester.pumpAndSettle();
-
-        expect(find.text(Strings.fr.pinGateWrong), findsOneWidget);
-        final controller = container.read(
-          sessionControllerProvider.notifier,
-        ) as _FixedSessionController;
-        expect(controller.forgotten, isFalse);
-      },
-    );
-
-    testWidgets('the correct PIN signs the device out', (tester) async {
-      final store = _FakeSessionStore()..presetPin('1234');
-      final container = _buildContainer(store: store);
-      addTearDown(container.dispose);
-      await tester.pumpWidget(_widgetFor(container));
-      await tester.pumpAndSettle();
-
-      // Réglages scrolls; sign-out sits at its foot, so it has to be
-      // brought into view before it can be tapped.
-      await tester.ensureVisible(find.text(Strings.fr.settingsSignOut));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(Strings.fr.settingsSignOut));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField), '1234');
-      await tester.tap(find.text(Strings.fr.pinGateConfirmSignOut));
-      await tester.pumpAndSettle();
-      await _confirmErase(tester);
-
-      final controller = container.read(
-        sessionControllerProvider.notifier,
-      ) as _FixedSessionController;
-      expect(controller.forgotten, isTrue);
+        expect(find.text(Strings.fr.pinGatePinLabel(4)), findsOneWidget);
+      });
     });
   });
 }
