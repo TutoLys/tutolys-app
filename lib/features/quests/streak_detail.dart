@@ -2,6 +2,7 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/i18n/strings.dart';
+import '../../data/api/progress_api.dart';
 import 'quest_board.dart';
 import 'quests_model.dart';
 import 'quests_screen.dart';
@@ -24,10 +25,9 @@ import 'quests_screen.dart';
 /// "bientôt", with no handler and nothing behind it. Hafid's call
 /// (2026-10-25): the label stays, the social feature stays out (#12).
 ///
-/// Left out, on purpose:
-/// - **"Rechargé dans 3 jours".** The backend grants a shield a week after
-///   its last grant and does not serve that date; until it does (work order Q2,
-///   `Platforms/BACKEND_WORKORDER_QUESTS.md`), the tag shows the real balance.
+/// The shield card says what the backend serves (backend ADR 0153): the
+/// balance, and when the next one comes ([shieldRecharge]). With nothing
+/// served it says only the balance, never a guess.
 class StreakDetail extends StatefulWidget {
   const StreakDetail({
     super.key,
@@ -35,12 +35,18 @@ class StreakDetail extends StatefulWidget {
     required this.freezesAvailable,
     required this.played,
     required this.onClose,
+    this.streakFreeze,
     this.board,
     this.onOpenPath,
+    this.clock = DateTime.now,
   });
 
   final int? streakDays;
+
+  /// The older field, used only when [streakFreeze] isn't served.
   final int? freezesAvailable;
+  final StreakFreezeDto? streakFreeze;
+  final DateTime Function() clock;
   final PlayedDays played;
   final QuestBoard? board;
   final VoidCallback onClose;
@@ -77,7 +83,11 @@ class _StreakDetailState extends State<StreakDetail> {
     final t = context.s;
     final p = VillagePalette.of(context);
     final streak = widget.streakDays;
-    final freezes = widget.freezesAvailable;
+    final shield = widget.streakFreeze;
+    final freezes = shield?.balance ?? widget.freezesAvailable;
+    final recharge = shield == null
+        ? null
+        : rechargeText(t, shieldRecharge(shield, widget.clock()));
     const gap = SizedBox(height: 18, width: 18);
 
     final calendar = _Panel(
@@ -127,7 +137,8 @@ class _StreakDetailState extends State<StreakDetail> {
               body: t.streakShieldBody,
               tag: freezes > 0
                   ? _Tag.ok(t.streakShieldBalance(freezes))
-                  : _Tag.pending(t.streakShieldNone),
+                  : _Tag.pending(recharge ?? t.streakShieldNone),
+              note: freezes > 0 ? recharge : null,
             ),
           ],
           const SizedBox(height: 10),
@@ -721,6 +732,54 @@ enum _TagKind { ok, pending, active }
 
 /// The design's `.sm-reward-tag`: green for earned, blue for still to come,
 /// a green pill for an active title.
+/// When the next shield comes, as far as the backend says.
+sealed class ShieldRecharge {
+  const ShieldRecharge();
+}
+
+/// "Rechargé dans N jours": the calendar is what the kid is waiting for.
+class RechargeInDays extends ShieldRecharge {
+  const RechargeInDays(this.days);
+  final int days;
+}
+
+/// The week has passed, but no lesson since the last shield.
+class RechargeNeedsPlay extends ShieldRecharge {
+  const RechargeNeedsPlay();
+}
+
+/// The week has passed and a lesson was played: due at the next grant.
+class RechargeDueSoon extends ShieldRecharge {
+  const RechargeDueSoon();
+}
+
+/// What the card says about the next shield, or null to say nothing: the
+/// balance is full (no shield is coming), or the backend couldn't tell.
+///
+/// A [StreakFreezeDto.nextGrantAt] already past (a cached read) counts as
+/// served-null, so it never reads "dans 0 jours".
+ShieldRecharge? shieldRecharge(StreakFreezeDto f, DateTime now) {
+  if (f.balance >= f.maxBalance) return null;
+  final next = f.nextGrantAt;
+  if (next != null && next.isAfter(now)) {
+    final minutes = next.difference(now).inMinutes;
+    final days = (minutes / Duration.minutesPerDay).ceil();
+    return RechargeInDays(days < 1 ? 1 : days);
+  }
+  return switch (f.earnedSinceLastGrant) {
+    false => const RechargeNeedsPlay(),
+    true => const RechargeDueSoon(),
+    null => null,
+  };
+}
+
+String? rechargeText(Strings t, ShieldRecharge? r) => switch (r) {
+  RechargeInDays(:final days) => t.streakShieldRechargeIn(days),
+  RechargeNeedsPlay() => t.streakShieldPlayToRecharge,
+  RechargeDueSoon() => t.streakShieldDueSoon,
+  null => null,
+};
+
 class _Tag {
   const _Tag.ok(this.text) : kind = _TagKind.ok;
   const _Tag.pending(this.text) : kind = _TagKind.pending;
@@ -766,12 +825,16 @@ class _RewardCard extends StatelessWidget {
     required this.title,
     required this.body,
     required this.tag,
+    this.note,
   });
 
   final Widget leading;
   final String title;
   final String body;
   final _Tag tag;
+
+  /// A second, pending-style line under the tag.
+  final String? note;
 
   static const _okGreen = Color(0xFF2E9E5B);
   static const _okPale = Color(0xFFDFF3E6);
@@ -834,6 +897,13 @@ class _RewardCard extends StatelessWidget {
                   )
                 else
                   tagText,
+                if (note != null) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    note!.toUpperCase(),
+                    style: tagStyle.copyWith(color: p.quebecBlueBright),
+                  ),
+                ],
               ],
             ),
           ),

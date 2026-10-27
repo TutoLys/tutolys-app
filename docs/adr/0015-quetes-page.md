@@ -167,3 +167,56 @@ and that card looked like every other panel. Two affordances were added:
 - **A "Voir ma série ›" link on the streak card itself.**
 
 The back arrow in the Série hero stays as a third way back.
+
+## Revision — 2026-10-27: the backend serves quests and the shield
+
+Backend ADRs 0153 and 0154 serve two new things on `/me/progress`:
+`streak_freeze` (the shield card's facts) and `quests` (what each paid
+quest takes and pays). The app stops hard-coding those numbers. It keeps
+measuring quest *progress* locally, because that has to be instant and
+offline.
+
+**Quest rewards are the served ones.** `buildDailyQuests` takes the served
+list:
+
+- A quest the backend serves shows its served target and XP. Today that is
+  the daily challenge and "Résous 5 exercices", both 10 XP. The design said
+  +15 for the second, from before the XP rebalance.
+- **A quest the backend doesn't serve shows no XP chip.** That covers
+  "Joue 10 minutes", which telemetry can't measure yet. With no served
+  list at all (an older backend, or no read yet), there are no chips
+  either, and the local default targets stand.
+- `xpDailyChallenge`, the app's own copy of 10, is deleted.
+
+**"Résous 5 exercices" counts distinct lessons.** That is what the
+backend pays on. `HomeStats` now keeps today's lesson ids alongside its
+running total. Replaying one lesson five times finishes Home's tile
+count, but not the quest. A finish with no lesson id doesn't count
+toward the quest.
+
+**The shield card has three recharge states** (`shieldRecharge`):
+
+| served | the card says |
+|---|---|
+| `next_grant_at` ahead | "Rechargé dans N jours" (whole days, rounded up, never 0) |
+| no date, `earned_since_last_grant: false` | "Joue une leçon pour recharger" |
+| no date, `earned_since_last_grant: true` | "Bientôt rechargé" |
+| `earned` null, or the balance is full | nothing about recharging |
+
+With a shield in hand, the balance stays the tag and the recharge line
+sits under it. With none, the recharge line is the tag. The served
+`balance` replaces the old `freezes_available`, which goes null whenever
+telemetry is down; the old field is still read when the new one isn't
+served.
+
+**Two cache rules**, so a fallback read never puts words in the backend's
+mouth:
+
+- A fresh read's `streak_freeze` is never filled from the cache.
+- A cached read (offline or failed) drops `earned_since_last_grant`. A
+  cached "not earned" would tell a child who has just played to go and
+  play. A cached `next_grant_at` that has since passed counts as not
+  served.
+
+Quest definitions may come from the cache, because they're settings, not
+observations.

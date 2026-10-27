@@ -115,6 +115,7 @@ class _QuestsScreenState extends ConsumerState<QuestsScreen> {
                 StreakDetail(
                   streakDays: progress.currentStreakDays,
                   freezesAvailable: progress.freezesAvailable,
+                  streakFreeze: progress.streakFreeze,
                   played: played,
                   board: board,
                   onClose: () => _showSerie(false),

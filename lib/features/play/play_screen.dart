@@ -372,12 +372,12 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     // Home's stat tiles, the offline streak, and the map's "done" mark all
     // learn about this now, not when the backend next catches up.
     final db = ref.read(localDatabaseProvider);
-    HomeStats(
-      db,
-      kidId: _kidId,
-    ).recordExerciseCompleted(elapsedMs: result.elapsedMs);
-    StreakLocal(db, kidId: _kidId).recordPlayedToday();
     final lessonId = widget.envelope['exercise_id'] as String?;
+    HomeStats(db, kidId: _kidId).recordExerciseCompleted(
+      elapsedMs: result.elapsedMs,
+      exerciseId: lessonId,
+    );
+    StreakLocal(db, kidId: _kidId).recordPlayedToday();
     unawaited(
       NodeProgressLocal(db, kidId: _kidId)
           .recordCompleted(

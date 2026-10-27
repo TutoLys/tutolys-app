@@ -45,9 +45,9 @@ void main() {
 
   test('counts include the exercise just finished', () async {
     final stats = HomeStats(db, kidId: 'kid-1');
-    await stats.recordExerciseCompleted(elapsedMs: 60000);
+    await stats.recordExerciseCompleted(elapsedMs: 60000, exerciseId: 'a');
     // The one the celebration is for: written before it builds.
-    await stats.recordExerciseCompleted(elapsedMs: 120000);
+    await stats.recordExerciseCompleted(elapsedMs: 120000, exerciseId: 'b');
 
     final r = await rows(containerWith());
     expect(r.map((x) => (x.value, x.max)), [(2, 5), (3, 10)]);
@@ -87,14 +87,14 @@ void main() {
     () async {
       final c = containerWith();
       final stats = HomeStats(db, kidId: 'kid-1');
-      await stats.recordExerciseCompleted(elapsedMs: 1000);
+      await stats.recordExerciseCompleted(elapsedMs: 1000, exerciseId: 'a');
 
       var sub = c.listen(celebrationRowsProvider, (_, _) {});
       expect((await c.read(celebrationRowsProvider.future)).first.value, 1);
       sub.close();
       await Future<void>.delayed(Duration.zero);
 
-      await stats.recordExerciseCompleted(elapsedMs: 1000);
+      await stats.recordExerciseCompleted(elapsedMs: 1000, exerciseId: 'b');
       sub = c.listen(celebrationRowsProvider, (_, _) {});
       addTearDown(sub.close);
       expect((await c.read(celebrationRowsProvider.future)).first.value, 2);

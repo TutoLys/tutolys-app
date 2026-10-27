@@ -9,7 +9,7 @@ void main() {
     test('three quests when the daily challenge is known', () {
       final q = buildDailyQuests(
         challenge: const DailyQuestDto(target: 3, progress: 1, completed: false),
-        exercisesToday: 2,
+        lessonsToday: 2,
         msToday: 90 * 1000,
       );
       expect(q.map((e) => e.kind), QuestKind.values);
@@ -19,18 +19,65 @@ void main() {
     });
 
     test('without the challenge, the two local quests still stand', () {
-      final q = buildDailyQuests(challenge: null, exercisesToday: 0, msToday: 0);
+      final q = buildDailyQuests(challenge: null, lessonsToday: 0, msToday: 0);
       expect(q.map((e) => e.kind), [QuestKind.exercises, QuestKind.minutes]);
     });
 
     test('progress caps at the target and marks the quest done', () {
       final q = buildDailyQuests(
         challenge: null,
-        exercisesToday: 9,
+        lessonsToday: 9,
         msToday: 25 * 60000,
       );
       expect(q[0].progress, exercisesQuestTarget);
       expect(q.every((e) => e.done), isTrue);
+    });
+  });
+
+  group('served quest definitions', () {
+    const served = [
+      QuestDefinitionDto(kind: 'daily_challenge', target: 3, xp: 10),
+      QuestDefinitionDto(kind: 'exercises', target: 5, xp: 10),
+    ];
+
+    test('targets and rewards come from the backend', () {
+      final q = buildDailyQuests(
+        challenge: const DailyQuestDto(target: 3, progress: 0, completed: false),
+        lessonsToday: 0,
+        msToday: 0,
+        served: served,
+      );
+      expect([for (final e in q) e.xpReward], [10, 10, null]);
+    });
+
+    test('the minutes quest has no reward until the backend pays it', () {
+      final q = buildDailyQuests(
+        challenge: null,
+        lessonsToday: 0,
+        msToday: 0,
+        served: [
+          ...served,
+          const QuestDefinitionDto(kind: 'minutes', target: 15, xp: 5),
+        ],
+      );
+      expect(q[1].target, 15);
+      expect(q[1].xpReward, 5);
+    });
+
+    test('nothing served: local targets, no rewards', () {
+      final q = buildDailyQuests(challenge: null, lessonsToday: 0, msToday: 0);
+      expect(q[0].target, exercisesQuestTarget);
+      expect(q.every((e) => e.xpReward == null), isTrue);
+    });
+
+    test('a served target moves when the quest is done', () {
+      final q = buildDailyQuests(
+        challenge: null,
+        lessonsToday: 3,
+        msToday: 0,
+        served: const [QuestDefinitionDto(kind: 'exercises', target: 3, xp: 10)],
+      );
+      expect(q[0].done, isTrue);
     });
   });
 

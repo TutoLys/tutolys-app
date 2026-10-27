@@ -36,10 +36,12 @@ Future<List<CelebrationRowData>> questCelebrationRows(Ref ref) async {
       ? Strings.en
       : Strings.fr;
   final stats = await ref.read(homeStatsProvider).today();
+  final progress = ref.read(progressControllerProvider);
   final quests = buildDailyQuests(
-    challenge: ref.read(progressControllerProvider).dailyQuest,
-    exercisesToday: stats.exercisesCompleted,
+    challenge: progress.dailyQuest,
+    lessonsToday: stats.lessonsCompleted,
     msToday: stats.msPlayed,
+    served: progress.questDefinitions,
   );
 
   return [

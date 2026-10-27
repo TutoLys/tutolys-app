@@ -57,6 +57,84 @@ class DailyQuestDto {
   };
 }
 
+/// A quest the backend both measures and pays
+/// (`apps.progress.views.QuestDefinitionSerializer`, backend ADR 0154):
+/// `kind` is `daily_challenge` or `exercises` today. A quest the backend
+/// can't pay yet is simply absent, so the app shows no reward for it.
+class QuestDefinitionDto {
+  const QuestDefinitionDto({
+    required this.kind,
+    required this.target,
+    required this.xp,
+  });
+
+  factory QuestDefinitionDto.fromJson(Map<String, Object?> json) {
+    return QuestDefinitionDto(
+      kind: json['kind'] as String,
+      target: json['target'] as int,
+      xp: json['xp'] as int,
+    );
+  }
+
+  final String kind;
+  final int target;
+  final int xp;
+
+  Map<String, Object?> toJson() => {'kind': kind, 'target': target, 'xp': xp};
+}
+
+/// The shield card's facts (`StreakFreezeSerializer`, backend ADR 0153).
+///
+/// [balance] is a local row on the backend and never degrades.
+/// [nextGrantAt] is null once it's in the past. [earnedSinceLastGrant] is
+/// null when telemetry couldn't be read: unknown, never "hasn't played".
+class StreakFreezeDto {
+  const StreakFreezeDto({
+    required this.balance,
+    required this.maxBalance,
+    this.lastGrantedAt,
+    this.nextGrantAt,
+    this.earnedSinceLastGrant,
+  });
+
+  factory StreakFreezeDto.fromJson(Map<String, Object?> json) {
+    DateTime? at(String key) {
+      final v = json[key] as String?;
+      return v == null ? null : DateTime.tryParse(v);
+    }
+
+    return StreakFreezeDto(
+      balance: json['balance'] as int,
+      maxBalance: json['max_balance'] as int,
+      lastGrantedAt: at('last_granted_at'),
+      nextGrantAt: at('next_grant_at'),
+      earnedSinceLastGrant: json['earned_since_last_grant'] as bool?,
+    );
+  }
+
+  final int balance;
+  final int maxBalance;
+  final DateTime? lastGrantedAt;
+  final DateTime? nextGrantAt;
+  final bool? earnedSinceLastGrant;
+
+  /// The same facts with "earned" unknown, for a cached read.
+  StreakFreezeDto withoutEarned() => StreakFreezeDto(
+    balance: balance,
+    maxBalance: maxBalance,
+    lastGrantedAt: lastGrantedAt,
+    nextGrantAt: nextGrantAt,
+  );
+
+  Map<String, Object?> toJson() => {
+    'balance': balance,
+    'max_balance': maxBalance,
+    'last_granted_at': lastGrantedAt?.toUtc().toIso8601String(),
+    'next_grant_at': nextGrantAt?.toUtc().toIso8601String(),
+    'earned_since_last_grant': earnedSinceLastGrant,
+  };
+}
+
 /// `GET /api/v1/me/progress`'s full body — mastery per skill, the kid's
 /// current streak-with-freeze, their spendable freeze balance, and
 /// today's daily-challenge progress, all read live from telemetry on the
@@ -67,6 +145,8 @@ class ProgressSnapshot {
     required this.currentStreakDays,
     this.freezesAvailable,
     this.dailyQuest,
+    this.streakFreeze,
+    this.quests,
     this.totalXp = 0,
     this.level,
     this.skillsCompleted,
@@ -75,6 +155,8 @@ class ProgressSnapshot {
 
   factory ProgressSnapshot.fromJson(Map<String, Object?> json) {
     final dailyQuestJson = json['daily_quest'] as Map<String, Object?>?;
+    final freezeJson = json['streak_freeze'] as Map<String, Object?>?;
+    final questsJson = json['quests'] as List?;
     return ProgressSnapshot(
       masteries: ((json['masteries'] as List?) ?? const [])
           .cast<Map<String, Object?>>()
@@ -85,6 +167,13 @@ class ProgressSnapshot {
       dailyQuest: dailyQuestJson == null
           ? null
           : DailyQuestDto.fromJson(dailyQuestJson),
+      streakFreeze: freezeJson == null
+          ? null
+          : StreakFreezeDto.fromJson(freezeJson),
+      quests: questsJson
+          ?.cast<Map<String, Object?>>()
+          .map(QuestDefinitionDto.fromJson)
+          .toList(growable: false),
       // Unlike streak/daily-quest, this is never null-means-unknown — the
       // backend reads it from its own local XPAward ledger, not live
       // telemetry, so it's always a real number (0 for a kid who hasn't
@@ -114,6 +203,13 @@ class ProgressSnapshot {
   /// has nothing to show yet either way.
   final DailyQuestDto? dailyQuest;
 
+  /// Null from a backend older than ADR 0153.
+  final StreakFreezeDto? streakFreeze;
+
+  /// The quests the backend pays, with their targets and rewards. Null
+  /// from a backend older than ADR 0154; then no reward is shown.
+  final List<QuestDefinitionDto>? quests;
+
   /// From `manage.py award_xp`'s ledger — see backend ADR 0022. Earned per
   /// question completed, so a multi-question exercise naturally earns
   /// more than a single-question one with no special handling needed here.
@@ -137,6 +233,8 @@ class ProgressSnapshot {
     'current_streak_days': currentStreakDays,
     'freezes_available': freezesAvailable,
     'daily_quest': dailyQuest?.toJson(),
+    'streak_freeze': streakFreeze?.toJson(),
+    'quests': quests?.map((q) => q.toJson()).toList(),
     'total_xp': totalXp,
     'level': level,
     'skills_completed': skillsCompleted,

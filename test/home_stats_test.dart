@@ -54,4 +54,40 @@ void main() {
     expect(today.exercisesCompleted, 1);
     expect(today.msPlayed, 1000);
   });
+
+  group('distinct lessons (backend ADR 0154)', () {
+    test('a replay finishes the tile, not the quest', () async {
+      final stats =
+          HomeStats(db, kidId: 'kid-1', clock: () => DateTime(2026, 10, 27));
+      await stats.recordExerciseCompleted(elapsedMs: 1, exerciseId: 'a');
+      await stats.recordExerciseCompleted(elapsedMs: 1, exerciseId: 'a');
+      await stats.recordExerciseCompleted(elapsedMs: 1, exerciseId: 'b');
+
+      final today = await stats.today();
+      expect(today.exercisesCompleted, 3);
+      expect(today.lessonsCompleted, 2);
+    });
+
+    test('a lesson with no id is not counted toward the quest', () async {
+      final stats =
+          HomeStats(db, kidId: 'kid-1', clock: () => DateTime(2026, 10, 27));
+      await stats.recordExerciseCompleted(elapsedMs: 1);
+      expect((await stats.today()).lessonsCompleted, 0);
+    });
+
+    test('a new day starts the set again, per kid', () async {
+      final day1 =
+          HomeStats(db, kidId: 'kid-1', clock: () => DateTime(2026, 10, 26));
+      await day1.recordExerciseCompleted(elapsedMs: 1, exerciseId: 'a');
+      final day2 =
+          HomeStats(db, kidId: 'kid-1', clock: () => DateTime(2026, 10, 27));
+      expect((await day2.today()).lessonsCompleted, 0);
+      await day2.recordExerciseCompleted(elapsedMs: 1, exerciseId: 'a');
+      expect((await day2.today()).lessonsCompleted, 1);
+
+      final sibling =
+          HomeStats(db, kidId: 'kid-2', clock: () => DateTime(2026, 10, 27));
+      expect((await sibling.today()).lessonsCompleted, 0);
+    });
+  });
 }

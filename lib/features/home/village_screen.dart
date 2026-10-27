@@ -515,27 +515,30 @@ class _QuestRow extends StatelessWidget {
                     color: Colors.white,
                   ),
                 ),
-                const SizedBox(height: 6),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Image.asset(
-                      // The XP star, as on Quêtes: there are no coins.
-                      'assets/images/asset-xpstar.webp',
-                      width: 12,
-                      height: 12,
-                    ),
-                    const SizedBox(width: 2),
-                    Text(
-                      context.s.questRewardXp(quest.xpReward),
-                      style: TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w700,
-                        color: p.gold,
+                // Only a reward the backend pays (quest_board.dart).
+                if (quest.xpReward case final xp?) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Image.asset(
+                        // The XP star, as on Quêtes: there are no coins.
+                        'assets/images/asset-xpstar.webp',
+                        width: 12,
+                        height: 12,
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(width: 2),
+                      Text(
+                        context.s.questRewardXp(xp),
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                          color: p.gold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ],

@@ -39,12 +39,14 @@ ProgressResult _snapshot({
   int? streak = 4,
   int? freezes,
   DailyQuestDto? quest,
+  StreakFreezeDto? shield,
 }) => ProgressFetched(
   ProgressSnapshot(
     masteries: const [],
     currentStreakDays: streak,
     freezesAvailable: freezes,
     dailyQuest: quest,
+    streakFreeze: shield,
   ),
 );
 
@@ -55,7 +57,7 @@ QuestBoard _board({
 }) => QuestBoard(
   quests:
       quests ??
-      buildDailyQuests(challenge: null, exercisesToday: 0, msToday: 0),
+      buildDailyQuests(challenge: null, lessonsToday: 0, msToday: 0),
   weekCompleted: week,
   unlocked: unlocked,
   today: _today,
@@ -251,7 +253,7 @@ void main() {
                 progress: 2,
                 completed: false,
               ),
-              exercisesToday: 3,
+              lessonsToday: 3,
               msToday: 4 * 60000,
             ),
           ),
@@ -266,11 +268,44 @@ void main() {
       expect(find.text('2 / 3'), findsOneWidget);
       expect(find.text('3 / 5'), findsOneWidget);
       expect(find.text('4 / 10'), findsOneWidget);
-      expect(find.byKey(const ValueKey('quest-reward')), findsNWidgets(3));
-      expect(find.text(fr.questRewardXp(20)), findsOneWidget);
+      // Nothing served: no reward is promised.
+      expect(find.byKey(const ValueKey('quest-reward')), findsNothing);
 
       await tester.tap(find.text(fr.streakQuestTitle(3)));
       expect(opened, 1);
+    });
+
+    testWidgets('rewards are the served ones; the minutes quest has none', (
+      tester,
+    ) async {
+      _wide(tester);
+      await tester.pumpWidget(
+        _app(
+          progress: _snapshot(),
+          board: _board(
+            quests: buildDailyQuests(
+              challenge: const DailyQuestDto(
+                target: 3,
+                progress: 0,
+                completed: false,
+              ),
+              lessonsToday: 1,
+              msToday: 0,
+              served: const [
+                QuestDefinitionDto(kind: 'daily_challenge', target: 3, xp: 10),
+                QuestDefinitionDto(kind: 'exercises', target: 4, xp: 12),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(fr.questExercisesTitle(4)), findsOneWidget);
+      expect(find.text('1 / 4'), findsOneWidget);
+      expect(find.byKey(const ValueKey('quest-reward')), findsNWidgets(2));
+      expect(find.text(fr.questRewardXp(10)), findsOneWidget);
+      expect(find.text(fr.questRewardXp(12)), findsOneWidget);
     });
 
     testWidgets('a finished quest is checked, struck and loses its track', (
@@ -283,7 +318,7 @@ void main() {
           board: _board(
             quests: buildDailyQuests(
               challenge: null,
-              exercisesToday: 5,
+              lessonsToday: 5,
               msToday: 0,
             ),
           ),
@@ -364,7 +399,7 @@ void main() {
                 progress: 1,
                 completed: false,
               ),
-              exercisesToday: 1,
+              lessonsToday: 1,
               msToday: 0,
             ),
           ),
@@ -515,6 +550,71 @@ void main() {
         find.text(fr.streakShieldBalance(2).toUpperCase()),
         findsOneWidget,
       );
+    });
+
+    group('the served shield card', () {
+      final now = DateTime.now();
+      StreakFreezeDto shield({
+        int balance = 1,
+        DateTime? next,
+        bool? earned,
+      }) => StreakFreezeDto(
+        balance: balance,
+        maxBalance: 2,
+        nextGrantAt: next,
+        earnedSinceLastGrant: earned,
+      );
+      String up(String s) => s.toUpperCase();
+
+      Future<void> show(WidgetTester tester, StreakFreezeDto f) async {
+        _wide(tester);
+        await tester.pumpWidget(_app(progress: _snapshot(shield: f)));
+        await tester.pumpAndSettle();
+        await open(tester);
+      }
+
+      testWidgets('a date ahead: "Rechargé dans N jours" under the balance', (
+        tester,
+      ) async {
+        await show(
+          tester,
+          shield(next: now.add(const Duration(days: 2, hours: 12))),
+        );
+        expect(find.text(up(fr.streakShieldBalance(1))), findsOneWidget);
+        expect(find.text(up(fr.streakShieldRechargeIn(3))), findsOneWidget);
+      });
+
+      testWidgets('no lesson since the last shield: "Joue une leçon"', (
+        tester,
+      ) async {
+        await show(tester, shield(balance: 0, earned: false));
+        expect(find.text(up(fr.streakShieldPlayToRecharge)), findsOneWidget);
+        expect(find.text(up(fr.streakShieldNone)), findsNothing);
+      });
+
+      testWidgets('week over and a lesson played: due soon', (tester) async {
+        await show(tester, shield(earned: true));
+        expect(find.text(up(fr.streakShieldDueSoon)), findsOneWidget);
+      });
+
+      testWidgets('unknown: the balance only, no recharge line', (
+        tester,
+      ) async {
+        await show(tester, shield());
+        expect(find.text(up(fr.streakShieldBalance(1))), findsOneWidget);
+        expect(find.text(up(fr.streakShieldDueSoon)), findsNothing);
+        expect(find.text(up(fr.streakShieldPlayToRecharge)), findsNothing);
+      });
+
+      testWidgets('served balance wins over the old field', (tester) async {
+        _wide(tester);
+        await tester.pumpWidget(
+          _app(progress: _snapshot(freezes: null, shield: shield(balance: 2))),
+        );
+        await tester.pumpAndSettle();
+        await open(tester);
+        expect(find.text(up(fr.streakShieldBalance(2))), findsOneWidget);
+      });
     });
 
     testWidgets('no shield section when the balance is unknown', (

@@ -7,7 +7,6 @@ import '../home/home_controller.dart';
 import '../home/subject_progress.dart';
 import '../pairing/pairing_controller.dart';
 import '../path/path_controller.dart' show pathSubjects;
-import '../play/xp_estimate.dart';
 import '../progress/progress_controller.dart';
 import 'quests_model.dart';
 
@@ -18,8 +17,14 @@ import 'quests_model.dart';
 /// | quest | measured on |
 /// |---|---|
 /// | the daily challenge | the backend's `daily_quest` (ADR 0019) |
-/// | "Résous 5 exercices" | `HomeStats`' count of exercises finished today |
+/// | "Résous 5 exercices" | `HomeStats`' distinct lessons finished today |
 /// | "Joue 10 minutes" | `HomeStats`' play time today |
+///
+/// Progress is measured here, so it's instant and offline. What a quest
+/// takes and what it pays come from the backend's `quests` (backend ADR
+/// 0154): the backend is the one that pays, so a quest it doesn't serve
+/// shows no reward chip ("Joue 10 minutes", for now). See the 2026-10-27
+/// revision of app ADR 0015.
 ///
 /// A quest's completion is written to [QuestLog] the first time it is seen
 /// complete, which is what the weekly badge and "50 quêtes" count.
@@ -33,13 +38,20 @@ IconData questIconFor(QuestKind kind) => switch (kind) {
   QuestKind.minutes => Icons.timer_outlined,
 };
 
+/// The backend's name for each kind in its `quests` list.
+const _servedKind = {
+  QuestKind.challenge: 'daily_challenge',
+  QuestKind.exercises: 'exercises',
+  QuestKind.minutes: 'minutes',
+};
+
 class DailyQuestItem {
   const DailyQuestItem({
     required this.kind,
     required this.target,
     required this.progress,
     required this.done,
-    required this.xpReward,
+    this.xpReward,
   });
 
   final QuestKind kind;
@@ -47,24 +59,29 @@ class DailyQuestItem {
   final int progress;
   final bool done;
 
-  /// What the design's reward chip shows. **Not yet credited**: XP is a
-  /// server ledger (backend ADR 0022) that only awards per question, so a
-  /// quest bonus needs the backend to award it
-  /// (`Platforms/BACKEND_WORKORDER_QUESTS.md`, item Q1).
-  final int xpReward;
+  /// The XP the backend pays for it, as it serves it. Null when the backend
+  /// doesn't pay this quest (or hasn't said): then no chip, rather than a
+  /// promise nobody keeps.
+  final int? xpReward;
 
   String get key => kind.name;
 }
 
+/// The targets used until the backend serves its own.
 const exercisesQuestTarget = 5;
 const minutesQuestTarget = 10;
 
 List<DailyQuestItem> buildDailyQuests({
   required DailyQuestDto? challenge,
-  required int exercisesToday,
+  required int lessonsToday,
   required int msToday,
+  List<QuestDefinitionDto>? served,
 }) {
+  final byKind = {for (final d in served ?? const []) d.kind: d};
+  QuestDefinitionDto? def(QuestKind k) => byKind[_servedKind[k]];
   final minutes = msToday ~/ 60000;
+  final lessonsTarget = def(QuestKind.exercises)?.target ?? exercisesQuestTarget;
+  final minutesTarget = def(QuestKind.minutes)?.target ?? minutesQuestTarget;
   return [
     if (challenge != null)
       DailyQuestItem(
@@ -72,21 +89,21 @@ List<DailyQuestItem> buildDailyQuests({
         target: challenge.target,
         progress: challenge.progress.clamp(0, challenge.target),
         done: challenge.completed,
-        xpReward: xpDailyChallenge,
+        xpReward: def(QuestKind.challenge)?.xp,
       ),
     DailyQuestItem(
       kind: QuestKind.exercises,
-      target: exercisesQuestTarget,
-      progress: exercisesToday.clamp(0, exercisesQuestTarget),
-      done: exercisesToday >= exercisesQuestTarget,
-      xpReward: 15,
+      target: lessonsTarget,
+      progress: lessonsToday.clamp(0, lessonsTarget),
+      done: lessonsToday >= lessonsTarget,
+      xpReward: def(QuestKind.exercises)?.xp,
     ),
     DailyQuestItem(
       kind: QuestKind.minutes,
-      target: minutesQuestTarget,
-      progress: minutes.clamp(0, minutesQuestTarget),
-      done: minutes >= minutesQuestTarget,
-      xpReward: 20,
+      target: minutesTarget,
+      progress: minutes.clamp(0, minutesTarget),
+      done: minutes >= minutesTarget,
+      xpReward: def(QuestKind.minutes)?.xp,
     ),
   ];
 }
@@ -217,8 +234,9 @@ final questBoardProvider = FutureProvider<QuestBoard>((ref) async {
 
   final quests = buildDailyQuests(
     challenge: progress.dailyQuest,
-    exercisesToday: stats.exercisesCompleted,
+    lessonsToday: stats.lessonsCompleted,
     msToday: stats.msPlayed,
+    served: progress.questDefinitions,
   );
   final history = await log.recordCompleted(
     day,

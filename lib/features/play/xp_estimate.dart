@@ -14,9 +14,6 @@ const int xpLessonComplete = 2;
 /// Every question right on the first try: +1 more.
 const int xpPerfectLesson = 1;
 
-/// The daily challenge, once completed.
-const int xpDailyChallenge = 10;
-
 /// XP for [questions] solved questions. A replay of a lesson this kid has
 /// already finished earns half, rounded down over the lesson.
 int questionXp(int questions, {bool replay = false}) =>

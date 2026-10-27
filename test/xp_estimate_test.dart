@@ -47,10 +47,6 @@ void main() {
     expect(questionXp(3, replay: true), 1);
   });
 
-  test('the daily challenge is worth 10', () {
-    expect(xpDailyChallenge, 10);
-  });
-
   group('the running total, as the ledger pays it (backend ADR 0047)', () {
     test('a clean 5-question lesson pays 1, 1, 1, 1, then 4', () {
       final runs = [q(), q(), q(), q(), q()];

@@ -83,6 +83,10 @@ ProgressSnapshot mergeWithCached(
     currentStreakDays: fresh.currentStreakDays ?? cached.currentStreakDays,
     freezesAvailable: fresh.freezesAvailable ?? cached.freezesAvailable,
     dailyQuest: fresh.dailyQuest ?? cached.dailyQuest,
+    // Never filled from the cache: its balance never degrades, and its
+    // "earned" null means "don't say", which a cached guess would undo.
+    streakFreeze: fresh.streakFreeze,
+    quests: fresh.quests ?? cached.quests,
     totalXp: fresh.totalXp,
     level: hasLevel ? fresh.level : cached.level,
     skillsCompleted: hasLevel ? fresh.skillsCompleted : cached.skillsCompleted,

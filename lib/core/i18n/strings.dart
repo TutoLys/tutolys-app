@@ -335,6 +335,11 @@ abstract class Strings {
   String get streakShieldBody;
   String streakShieldBalance(int count);
   String get streakShieldNone;
+
+  /// When the next shield comes (backend ADR 0153).
+  String streakShieldRechargeIn(int days);
+  String get streakShieldPlayToRecharge;
+  String get streakShieldDueSoon;
   String get streakTabPersonal;
   String get backToQuests;
   String get questsViewQuests;
@@ -1207,6 +1212,16 @@ class _FrenchStrings extends Strings {
 
   @override
   String get streakShieldNone => 'Tu en gagnes un chaque semaine.';
+
+  @override
+  String streakShieldRechargeIn(int days) =>
+      days == 1 ? 'Rechargé dans 1 jour' : 'Rechargé dans $days jours';
+
+  @override
+  String get streakShieldPlayToRecharge => 'Joue une leçon pour recharger';
+
+  @override
+  String get streakShieldDueSoon => 'Bientôt rechargé';
 
 
   @override
@@ -2317,6 +2332,16 @@ class _EnglishStrings extends Strings {
 
   @override
   String get streakShieldNone => 'You earn one every week.';
+
+  @override
+  String streakShieldRechargeIn(int days) =>
+      days == 1 ? 'Recharges in 1 day' : 'Recharges in $days days';
+
+  @override
+  String get streakShieldPlayToRecharge => 'Play a lesson to recharge';
+
+  @override
+  String get streakShieldDueSoon => 'Recharging soon';
 
 
   @override

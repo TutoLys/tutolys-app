@@ -22,6 +22,8 @@ class ProgressState {
     this.isStreakEstimated = false,
     this.freezesAvailable,
     this.dailyQuest,
+    this.streakFreeze,
+    this.questDefinitions,
     this.totalXp = 0,
     this.masteries = const [],
     this.level,
@@ -49,6 +51,13 @@ class ProgressState {
 
   /// Null for the same reasons, or for a kid who's never played.
   final DailyQuestDto? dailyQuest;
+
+  /// The shield card's facts (backend ADR 0153). Null until a read from a
+  /// backend that serves them.
+  final StreakFreezeDto? streakFreeze;
+
+  /// The quests the backend pays (backend ADR 0154). Null when not served.
+  final List<QuestDefinitionDto>? questDefinitions;
 
   /// Always a real number, even offline — see `ProgressSnapshot.totalXp`.
   /// Stays `0` (the default) while offline, same as the local streak
@@ -86,6 +95,8 @@ class ProgressState {
     isStreakEstimated: isStreakEstimated,
     freezesAvailable: freezesAvailable,
     dailyQuest: dailyQuest,
+    streakFreeze: streakFreeze,
+    questDefinitions: questDefinitions,
     totalXp: totalXp,
     masteries: masteries,
     level: g?.level,
@@ -186,6 +197,13 @@ class ProgressController extends Notifier<ProgressState> {
             stale: result is! ProgressFetched,
             freezesAvailable: shown.freezesAvailable,
             dailyQuest: shown.dailyQuest,
+            // A cached "not earned" may be out of date by now: a lesson
+            // played since would make it tell a child who just played to
+            // go and play. Only a fresh read says it.
+            streakFreeze: result is ProgressFetched
+                ? shown.streakFreeze
+                : shown.streakFreeze?.withoutEarned(),
+            questDefinitions: shown.quests,
             totalXp: shown.totalXp,
             masteries: shown.masteries,
           );
