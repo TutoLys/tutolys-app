@@ -164,3 +164,27 @@ awake from the first pointer-down for the whole session, and stops it
 while the app is hidden. Native targets play through audioplayers and
 have no keep-alive. A plain HTML page has none at all, which is why the
 listening page clips.
+
+## Revision 2026-10-27: lead-in on the answer sounds, quiet loop edges
+
+From the sound review (`Platforms/qa/SOUND_REVIEW_2026-10-27.md`, #2, #3
+and #6). Both fixes are in `tools/sounds/build_app_sounds.py`:
+
+- **`answer-right` and `answer-retry` start with 100 ms of digital
+  silence.** Their attack was 0.3 ms in, and the whole two-note sound
+  lasts about 0.3 s, so a sink that drops its first ~100-300 ms while
+  waking could swallow all of it. On the web, effects already play through
+  the shared, warm `AudioContext` that the keep-alive holds open (ADR
+  0043), so there the silence only delays the sound. It is the safety net
+  for native targets, which have no keep-alive. The cost is 100 ms more
+  between a tap and its sound. Loudness is unchanged (−19.0 LUFS measured
+  past the silence).
+- **The loops start and end at their quietest point.** village-2's wrap
+  was a real click: 0.041 in Chrome's own decoder (Chrome 152, measured
+  with `decodeAudioData`), against a typical step of 0.0155 and above even
+  its p99.9 (0.025). The PCM seam was 0.008, so AAC caused the jump: it
+  doesn't keep a file's edge samples exact, since it doesn't know the file
+  loops. Each seamless loop is now rotated to start at its quietest 20 ms
+  (at a zero crossing), with 4 ms fades to zero either side. In Chrome the
+  wrap is now 0.0012 for village-2 and 0.0028 for village-1. Both start
+  at zero, so the first play no longer opens mid-signal (#6).

@@ -10,8 +10,19 @@ Hafid picked them by ear from ``Assets/Sounds/listen_all.html``
   app also plays it at 0.35 of the master volume;
 - music loops made seamless: leading silence trimmed, then the last 250 ms
   crossfaded into the first at equal power, so the wrap has no jump;
+- then the loop rotated so the file starts and ends at its quietest moment,
+  with 4 ms fades to zero either side. AAC doesn't know a file loops, so it
+  doesn't keep the edge samples exact: village-2's wrap measured 0.041 in
+  Chrome against a typical step of 0.016, a click, from a 0.008 seam in the
+  PCM. At a quiet point with zero on both sides there's nothing for the
+  codec to break, and the first play no longer starts mid-signal either;
 - trailing silence trimmed from one-shot sounds, so a clip's length is
-  what you hear.
+  what you hear;
+- 100 ms of digital silence before the two answer sounds, whose attack
+  starts in the first milliseconds: an output that is still waking (a
+  Bluetooth headset, PipeWire after idle) drops its first ~100-300 ms, and
+  the whole two-note marimba lasts about 0.3 s. Web also keeps the output
+  awake (ADR 0043); this is the safety net for native targets.
 
 Usage::
 
@@ -41,6 +52,14 @@ MUSIC_LUFS = -20.0
 FOREGROUND_LUFS = -19.0
 SILENCE_DB = -55.0
 LOOP_CROSSFADE_S = 0.25
+LOOP_EDGE_FADE_S = 0.004
+# Digital silence put before a clip, by output path. Only where the attack
+# is at the very start: activity-complete already has ~105 ms, and the
+# songs open on a quiet fade.
+LEAD_IN_S = {
+    "sfx/answer-right.m4a": 0.1,
+    "sfx/answer-retry.m4a": 0.1,
+}
 
 # (source relative to SOUNDS_DIR, output relative to assets/sounds, kind, kbps)
 SOUNDS = [
@@ -105,6 +124,29 @@ def make_seamless(x: np.ndarray) -> np.ndarray:
     return np.concatenate([head, x[n:-n]])
 
 
+def rotate_to_quiet(x: np.ndarray) -> np.ndarray:
+    """Starts a seamless loop at its quietest 20 ms, fading the edges.
+
+    Rotating a seamless loop changes nothing audible: the old wrap is now
+    an ordinary interior point. The new one sits where the music is
+    quietest (lowest 20 ms RMS), nudged to the nearest zero crossing, and
+    the 4 ms fades meet at zero, so the codec's edge error has nothing loud
+    to distort.
+    """
+    win = int(0.02 * RATE)
+    power = np.convolve(x**2, np.ones(win) / win, mode="same")
+    i = int(np.argmin(power))
+    crossings = np.flatnonzero(np.diff(np.signbit(x)))
+    if crossings.size:
+        i = int(crossings[np.argmin(np.abs(crossings - i))]) + 1
+    x = np.roll(x, -i)
+    n = int(LOOP_EDGE_FADE_S * RATE)
+    ramp = np.sin(np.linspace(0, np.pi / 2, n)) ** 2
+    x[:n] *= ramp
+    x[-n:] *= ramp[::-1]
+    return x
+
+
 def loudness(path: Path) -> float:
     err = subprocess.run(
         ["ffmpeg", "-hide_banner", "-i", str(path), "-af",
@@ -126,7 +168,7 @@ def write_wav(path: Path, x: np.ndarray) -> None:
 def build(src: Path, out: Path, kind: str, kbps: int, tmp: Path) -> dict:
     x = decode(src)
     if kind == "loop":
-        x = make_seamless(trim(x, lead=True, tail=True))
+        x = rotate_to_quiet(make_seamless(trim(x, lead=True, tail=True)))
     else:
         x = trim(x, lead=False, tail=True)
     # Level by measurement: write, measure, scale. Linear gain keeps a
@@ -138,6 +180,10 @@ def build(src: Path, out: Path, kind: str, kbps: int, tmp: Path) -> dict:
     peak = float(np.max(np.abs(x)))
     if peak > 10 ** (-1 / 20):
         x = x * (10 ** (-1 / 20) / peak)
+    # After levelling: LUFS is gated, so silence wouldn't move it, but this
+    # keeps the measurement about the sound alone.
+    lead = int(LEAD_IN_S.get(str(out.relative_to(OUT)), 0) * RATE)
+    x = np.concatenate([np.zeros(lead), x])
     final = tmp / "final.wav"
     write_wav(final, x)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -150,6 +196,7 @@ def build(src: Path, out: Path, kind: str, kbps: int, tmp: Path) -> dict:
     return {
         "out": str(out.relative_to(REPO)),
         "seconds": round(len(x) / RATE, 3),
+        "lead_in_ms": round(lead / RATE * 1000),
         "lufs": loudness(final),
         "peak_dbfs": round(db(float(np.max(np.abs(x)))), 1),
         "seam_jump": None if seam is None else round(seam, 4),
