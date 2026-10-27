@@ -340,8 +340,8 @@ class _Sign extends StatelessWidget {
                 // Dark-wood outline: Québec blue disappears into the board.
                 const FleurDeLys(
                   key: ValueKey('sign-fleur-de-lys'),
-                  size: 15,
-                  outline: Color(0xFF5C3A17),
+                  size: 16,
+                  outline: Color(0xFF4A2C10),
                 ),
                 const SizedBox(width: 6),
                 Text(

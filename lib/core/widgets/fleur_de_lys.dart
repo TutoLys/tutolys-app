@@ -98,15 +98,16 @@ class _FleurDeLysPainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          Color.lerp(gold, Colors.white, 0.35)!,
+          Color.lerp(gold, Colors.white, 0.18)!,
           gold,
-          Color.lerp(gold, Colors.black, 0.22)!,
+          Color.lerp(gold, Colors.black, 0.25)!,
         ],
         stops: const [0, 0.55, 1],
       ).createShader(const Rect.fromLTWH(0, 0, 100, 108));
-    // Drawn under the fill, so half of it shows: about 0.7 px at icon size,
-    // about 2 % of the height when large.
-    final stroke = (1.4 / scale).clamp(4.0, 10.0);
+    // Drawn under the fill, so half of it shows: about 1 px at icon size,
+    // where the gold needs the edge to read on the wooden sign, and about
+    // 2 % of the height when large.
+    final stroke = (2.0 / scale).clamp(4.0, 16.0);
     final line = Paint()
       ..style = PaintingStyle.stroke
       ..strokeJoin = StrokeJoin.round
