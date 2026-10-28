@@ -87,6 +87,7 @@ class ClassKid {
     required this.deviceToken,
     required this.hasPasscode,
     this.avatarKey = '',
+    this.sex = '',
   });
 
   final String kidId;
@@ -94,7 +95,12 @@ class ClassKid {
   final int gradeLevel;
   final String deviceToken;
   final bool hasPasscode;
+
+  /// The learner's own avatar and sex, as the backend keeps them: shown on
+  /// "Qui joue ?" before anyone is chosen, so a class of children doesn't
+  /// see one face repeated.
   final String avatarKey;
+  final String sex;
 }
 
 /// A class code worked: one pairing per consented learner.
@@ -236,6 +242,7 @@ class PairingApi {
                 deviceToken: k['device_token']! as String,
                 hasPasscode: k['has_passcode'] == true,
                 avatarKey: k['avatar_key'] as String? ?? '',
+                sex: k['sex'] as String? ?? '',
               ),
         ],
       );

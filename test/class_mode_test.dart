@@ -19,6 +19,7 @@ import 'package:tutolys_app/features/pairing/pairing_screen.dart';
 import 'package:tutolys_app/features/pairing/who_is_playing_screen.dart';
 import 'package:tutolys_app/features/passcode/passcode_entry_screen.dart';
 import 'package:tutolys_app/features/passcode/passcode_service.dart';
+import 'package:tutolys_app/features/profile/avatars.dart';
 
 /// Answers one request with a canned status and JSON body.
 class _Canned implements HttpClientAdapter {
@@ -417,6 +418,61 @@ void main() {
       expect(c.read(sessionControllerProvider).stage, ProfileStage.choosing);
     });
 
+    testWidgets('no "Ajouter un profil" on a class tablet', (tester) async {
+      final c = await classTablet(tester);
+      await tester.pumpWidget(_app(c, const WhoIsPlayingScreen()));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('who-add')), findsNothing);
+    });
+
+    test('each learner keeps their own avatar and sex from the class code',
+        () async {
+      final api = _Api()
+        ..classResult = ClassPairingSucceeded(
+          classroom: _classroom,
+          kids: [
+            ClassKid(
+              kidId: 'k1',
+              displayName: 'Amira',
+              gradeLevel: 1,
+              deviceToken: 'tok-k1',
+              hasPasscode: true,
+              avatarKey: 'kid_glasses',
+              sex: 'girl',
+            ),
+            ClassKid(
+              kidId: 'k2',
+              displayName: 'Noé',
+              gradeLevel: 1,
+              deviceToken: 'tok-k2',
+              hasPasscode: true,
+              sex: 'boy',
+            ),
+            ClassKid(
+              kidId: 'k3',
+              displayName: 'Lou',
+              gradeLevel: 1,
+              deviceToken: 'tok-k3',
+              hasPasscode: true,
+              avatarKey: 'not-a-real-avatar',
+            ),
+          ],
+        );
+      final c = _container(SessionStore(), api, db);
+      await c.read(sessionControllerProvider.notifier).pairClass('ABC234');
+      expect(await c.read(kidAvatarKeyProvider('k1').future), 'kid_glasses');
+      expect(
+        await c.read(kidAvatarKeyProvider('k2').future),
+        defaultAvatarFor(KidSex.boy),
+        reason: 'no avatar yet, but a boy gets the boy default',
+      );
+      expect(
+        await c.read(kidAvatarKeyProvider('k3').future),
+        defaultAvatarKey,
+        reason: 'an unknown key is ignored, never drawn blank',
+      );
+    });
+
     testWidgets('the pairing screen takes a class code', (tester) async {
       final api = _Api();
       final c = _container(SessionStore(), api, db);
@@ -428,6 +484,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text(fr.pairingClassTitle), findsOneWidget);
       expect(find.text(fr.pairingKidLink), findsOneWidget);
+      // The family's hint ("ask the person in charge of your account") is
+      // not a class's.
+      expect(find.text(fr.pairingHint), findsNothing);
 
       api.classResult = const ClassNotEntitled();
       await tester.enterText(find.byType(EditableText).first, 'ABC234');
@@ -440,6 +499,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text(fr.pairingTitle), findsOneWidget);
       expect(find.text(fr.pairingClassNotEntitled), findsNothing);
+      expect(find.text(fr.pairingHint), findsOneWidget);
     });
   });
 }

@@ -128,7 +128,11 @@ class WhoIsPlayingScreen extends ConsumerWidget {
                                         ? controller.closeProfileStage()
                                         : _enter(context, ref, kid),
                               ),
-                            AddProfileTile(onTap: controller.addProfile),
+                            // Not on a class tablet: the school decides who
+                            // is on it, and a child must not be able to pair
+                            // a family code onto a school's device.
+                            if (!session.isClassroom)
+                              AddProfileTile(onTap: controller.addProfile),
                           ],
                         ),
                       ],

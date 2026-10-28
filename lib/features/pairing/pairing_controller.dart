@@ -11,6 +11,8 @@ import '../../data/local_db/database.dart';
 import '../../data/local_db/kid_local_data.dart';
 import '../../data/local_db/session_store.dart';
 import '../../core/diagnostics/request_id.dart';
+import '../profile/avatars.dart' show AvatarStore, KidSex, isKnownAvatar;
+import '../../core/diagnostics/diag_log.dart' show recordCaught;
 
 /// Where the app is, credential-wise.
 enum SessionStatus {
@@ -499,6 +501,7 @@ class SessionController extends Notifier<SessionState> {
     switch (result) {
       case ClassPairingSucceeded(:final classroom, :final kids):
         await _store.saveClassPairings(classroom, kids);
+        await _rememberClassAvatars(kids);
         // Someone must be "active" for the state to be paired; nothing of
         // theirs loads while the picker is up, and the picker asks first.
         final current = await _store.pairedKid();
@@ -524,6 +527,25 @@ class SessionController extends Notifier<SessionState> {
         return PairingError.rateLimited;
       case PairingSucceeded() || PairingFailed():
         return PairingError.unexpected;
+    }
+  }
+
+  /// Each learner's avatar and sex from the class code's answer, so "Qui
+  /// joue ?" shows every child their own face before anyone is chosen.
+  /// Until now only the active kid synced theirs, which on a class tablet,
+  /// where nobody is chosen, drew one default face for the whole class.
+  /// Best effort: a failed write keeps the default face, nothing else.
+  Future<void> _rememberClassAvatars(List<ClassKid> kids) async {
+    try {
+      final db = ref.read(localDatabaseProvider);
+      for (final k in kids) {
+        final store = AvatarStore(db, kidId: k.kidId);
+        final sex = KidSex.parse(k.sex);
+        if (sex != KidSex.unspecified) await store.setSex(sex);
+        if (isKnownAvatar(k.avatarKey)) await store.select(k.avatarKey);
+      }
+    } on Object catch (e, s) {
+      recordCaught('class_avatars', e, s);
     }
   }
 

@@ -97,6 +97,7 @@ class _PairingScreenState extends ConsumerState<PairingScreen> {
       onCompleted: (_) => _submit(),
       onSubmit: _submit,
       title: _classMode ? s.pairingClassTitle : null,
+      hint: _classMode ? null : s.pairingHint,
       subtitle: _classMode
           ? s.pairingClassSubtitle
           : widget.onCancel == null
@@ -223,6 +224,7 @@ class _PairingForm extends StatelessWidget {
     required this.onSubmit,
     this.title,
     this.subtitle,
+    this.hint,
     this.footer,
   });
 
@@ -239,6 +241,11 @@ class _PairingForm extends StatelessWidget {
   /// Replace the default title and subtitle: adding a profile, or a class.
   final String? title;
   final String? subtitle;
+
+  /// Under the code, until there's an error. None for a class code: the
+  /// subtitle already says the teacher shows it, and "ask the person in
+  /// charge of your account" is a family's hint.
+  final String? hint;
 
   /// Under the button: the switch between a kid's code and a class code.
   final Widget? footer;
@@ -322,8 +329,10 @@ class _PairingForm extends StatelessWidget {
                           ),
                         ],
                       )
+                    : hint == null
+                    ? const SizedBox.shrink(key: ValueKey('hint'))
                     : Text(
-                        s.pairingHint,
+                        hint!,
                         key: const ValueKey('hint'),
                         maxLines: 2,
                         textAlign: TextAlign.center,

@@ -115,3 +115,28 @@ screen.
   a setting.
 - Nothing here changes a single-kid family device: there's no picker, no
   prompt, and nothing on resume.
+
+## Revision — 2026-10-28: three gaps from the pro-role walk-through
+
+The Manager asked for a walk through the app as each school role touches
+it. The API side was walked against the dev-stack demo school, and it
+behaved as the app expects:
+- the class code and the class exchange's fields;
+- a seat through the school;
+- the school removing a learner, after which the refresh is refused with
+  `revoked`.
+
+The screens, rendered with the real fonts, showed three app-side gaps,
+now fixed:
+
+- **Every learner showed the same default face.** The class exchange's
+  `avatar_key` was ignored, so on a class tablet, where nobody is chosen
+  yet, the whole class saw one face. Now `pairClass` stores each
+  learner's `avatar_key` (when it's a known key) and `sex` in their own
+  `AvatarStore`. This supersedes the first consequence above.
+- **"Ajouter un profil" showed on a class tablet.** The school decides who
+  is on its tablet, and a child mustn't be able to pair a family code
+  onto it. The tile now shows only on family devices.
+- **The class-code screen showed the family's hint**, "Demande ton code à
+  la personne responsable de ton compte". Now it shows none; its
+  subtitle already says the teacher shows the code.
