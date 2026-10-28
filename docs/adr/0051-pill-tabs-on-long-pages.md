@@ -83,7 +83,13 @@ Notifications · Zone parent**.
 
 ### Profil
 
-See the revision below once Profil lands.
+The hero stays on top: avatar, name, grade, the three stats and "Changer
+de profil". Under it are three tabs: **Par matière · Badges · Récent**.
+
+- Each card loses its heading, because the pill names it.
+- "Progression par matière" and "Activité récente" were too long for a
+  pill, so the strings became `profileTabSubjects` ("Par matière") and
+  `profileTabRecent` ("Récent").
 
 ## Consequences
 
@@ -97,3 +103,5 @@ See the revision below once Profil lands.
   - the per-kid, per-page memory and the race with a late read;
   - Réglages' tabs, deep link, unknown-name fallback, and every tab at
     360 px with no overflow.
+- `test/profile_screen_test.dart` covers Profil's tabs, the hero above
+  every tab, and every tab at 360 px.

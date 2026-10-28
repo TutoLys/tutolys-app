@@ -125,6 +125,15 @@ Widget appUnder({
   );
 }
 
+/// Opens one of Profil's pill tabs (app ADR 0051): only the chosen tab's
+/// card is built.
+Future<void> _openTab(WidgetTester tester, String tab) async {
+  final pill = find.byKey(ValueKey('profile-tab-$tab'));
+  await tester.ensureVisible(pill);
+  await tester.tap(pill);
+  await tester.pumpAndSettle();
+}
+
 /// Builds a container for the PIN-gate tests, where asserting on the
 /// controller's `forgotten` flag or the store's saved PIN needs a handle
 /// that survives past `pumpWidget` — `appUnder()`'s `ProviderScope` creates
@@ -201,6 +210,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await _openTab(tester, 'badges');
 
     expect(find.byKey(const ValueKey('badge-streak3-earned')), findsOneWidget);
     expect(find.byKey(const ValueKey('badge-level10-locked')), findsOneWidget);
@@ -218,6 +228,7 @@ void main() {
       addTearDown(tester.view.reset);
       await tester.pumpWidget(appUnder());
       await tester.pumpAndSettle();
+      await _openTab(tester, 'badges');
 
       final card = find
           .ancestor(
@@ -225,10 +236,10 @@ void main() {
             matching: find.byType(Material),
           )
           .first;
-      // Two rows of a 54px badge and a two-line label, plus the title: a
-      // grid with square-ish cells made this ~470px.
-      expect(tester.getSize(card).height, lessThan(260));
-      expect(tester.getSize(card).height, greaterThan(180));
+      // Two rows of a 54px badge and a two-line label (the pill names the
+      // card, so no title): a grid with square-ish cells made this ~470px.
+      expect(tester.getSize(card).height, lessThan(240));
+      expect(tester.getSize(card).height, greaterThan(150));
     });
   }
 
@@ -245,7 +256,7 @@ void main() {
         final column = tester.getRect(
           find
               .ancestor(
-                of: find.byKey(const ValueKey('profile-badges')),
+                of: find.byKey(const ValueKey('profile-avatar-edit')),
                 matching: find.byType(ConstrainedBox),
               )
               .last,
@@ -281,6 +292,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await _openTab(tester, 'recent');
 
     final first = tester.getTopLeft(
       find.byKey(const ValueKey('recent-activity-streak7')),
@@ -309,7 +321,40 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await _openTab(tester, 'recent');
     expect(find.text(Strings.fr.profileRecentEmpty), findsOneWidget);
+  });
+
+  testWidgets('three tabs under the hero, Par matière first, one at a time', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(appUnder());
+    await tester.pumpAndSettle();
+
+    expect(find.text(Strings.fr.profileNoSubjects), findsOneWidget);
+    expect(find.byKey(const ValueKey('profile-badges')), findsNothing);
+    // The hero stays above every tab.
+    expect(find.text('Yelhan'), findsOneWidget);
+
+    await _openTab(tester, 'badges');
+    expect(find.byKey(const ValueKey('profile-badges')), findsOneWidget);
+    expect(find.text(Strings.fr.profileNoSubjects), findsNothing);
+    expect(find.text('Yelhan'), findsOneWidget);
+  });
+
+  testWidgets('Profil fits a phone on every tab', (tester) async {
+    tester.view.physicalSize = const Size(360, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(appUnder());
+    await tester.pumpAndSettle();
+    for (final tab in ['subjects', 'badges', 'recent']) {
+      await _openTab(tester, tab);
+      expect(tester.takeException(), isNull, reason: tab);
+    }
   });
 
   testWidgets('no title until it is earned', (tester) async {

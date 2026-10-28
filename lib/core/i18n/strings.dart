@@ -276,9 +276,9 @@ abstract class Strings {
   String get profileEyebrow;
   String get profileTitle;
   String get profileStreakLabel;
-  String get profileBySubject;
+  String get profileTabSubjects;
   String get profileBadges;
-  String get profileRecent;
+  String get profileTabRecent;
   String get profileRecentEmpty;
 
   /// The day a badge was earned, [daysAgo] days before today.
@@ -1066,14 +1066,14 @@ class _FrenchStrings extends Strings {
   String get profileStreakLabel => 'Série en cours';
 
   @override
-  String get profileBySubject => 'Progression par matière';
+  String get profileTabSubjects => 'Par matière';
 
   @override
   String get profileBadges => 'Badges';
 
 
   @override
-  String get profileRecent => 'Activité récente';
+  String get profileTabRecent => 'Récent';
 
   @override
   String get profileRecentEmpty =>
@@ -2192,14 +2192,14 @@ class _EnglishStrings extends Strings {
   String get profileStreakLabel => 'Current streak';
 
   @override
-  String get profileBySubject => 'Progress by subject';
+  String get profileTabSubjects => 'By subject';
 
   @override
   String get profileBadges => 'Badges';
 
 
   @override
-  String get profileRecent => 'Recent activity';
+  String get profileTabRecent => 'Recent';
 
   @override
   String get profileRecentEmpty => 'Finish a quest to earn your first badge.';

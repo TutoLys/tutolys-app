@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/i18n/strings.dart';
+import '../../core/routing/page_tab.dart';
 import '../../core/widgets/kid_avatar.dart';
+import '../../core/widgets/pill_tabs.dart';
 import '../home/subject_progress.dart';
 import '../home/village_scene.dart';
 import '../pairing/pairing_controller.dart';
@@ -15,7 +17,8 @@ import 'avatars.dart';
 
 /// Profil, as the design draws it: an avatar hero card (the kid's avatar,
 /// its edit dot, the design's three stats: level, streak, badges earned)
-/// and per-subject progress.
+/// and, below it, three pill tabs (app ADR 0051): progress by subject, the
+/// badge grid and recent activity, the last tab remembered per kid.
 ///
 /// The streak-freeze balance used to live here, ahead of the design. It now
 /// sits in Quêtes' streak detail as the design's "Bouclier de série", which
@@ -47,9 +50,11 @@ class ProfileScreen extends ConsumerWidget {
     final bySubject =
         ref.watch(subjectProgressProvider).value ?? const <String, double>{};
     final board = ref.watch(questBoardProvider).value;
+    final tab = ProfileTab.from(ref.watch(pageTabProvider(TabbedPage.profile)));
+    final compact = MediaQuery.sizeOf(context).width < Breakpoints.compact;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(Space.lg),
+      padding: EdgeInsets.all(compact ? Space.md : Space.lg),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 680),
@@ -96,50 +101,61 @@ class ProfileScreen extends ConsumerWidget {
                   palette: p,
                 ),
                 const SizedBox(height: Space.md),
-                _Card(
-                  title: t.profileBySubject,
-                  icon: Icons.insights_outlined,
-                  palette: p,
-                  child: bySubject.isEmpty
-                      ? Text(
-                          t.profileNoSubjects,
-                          style: TextStyle(fontSize: 13, color: p.inkMuted),
-                        )
-                      : Column(
-                          children: [
-                            for (final b in villageBuildings(t))
-                              if (bySubject[b.subject] != null)
-                                _SubjectRow(
-                                  label: b.label,
-                                  value: bySubject[b.subject]!,
-                                  accent: b.accent,
-                                  palette: p,
-                                ),
-                          ],
+                PillTabs<ProfileTab>(
+                  keyPrefix: 'profile-tab',
+                  selected: tab,
+                  compact: compact,
+                  onSelect: (next) => ref
+                      .read(pageTabProvider(TabbedPage.profile).notifier)
+                      .select(next.name),
+                  tabs: [
+                    for (final pt in ProfileTab.values)
+                      PillTab(
+                        value: pt,
+                        label: pt.label(t),
+                        leading: Icon(
+                          pt.icon,
+                          size: compact ? 18 : 20,
+                          color: pt == tab ? p.quebecBlueBright : p.inkMuted,
                         ),
+                      ),
+                  ],
                 ),
-                const SizedBox(height: Space.md),
-                _Card(
-                  title: t.profileBadges,
-                  icon: Icons.workspace_premium_outlined,
-                  palette: p,
-                  child: _BadgeGrid(
-                    earned: {
-                      for (final a in Achievement.values)
-                        if (board?.has(a) ?? false) a,
+                PillTabPanel(
+                  tabKey: tab,
+                  child: _Card(
+                    palette: p,
+                    child: switch (tab) {
+                      ProfileTab.subjects => bySubject.isEmpty
+                          ? Text(
+                              t.profileNoSubjects,
+                              style: TextStyle(fontSize: 13, color: p.inkMuted),
+                            )
+                          : Column(
+                              children: [
+                                for (final b in villageBuildings(t))
+                                  if (bySubject[b.subject] != null)
+                                    _SubjectRow(
+                                      label: b.label,
+                                      value: bySubject[b.subject]!,
+                                      accent: b.accent,
+                                      palette: p,
+                                    ),
+                              ],
+                            ),
+                      ProfileTab.badges => _BadgeGrid(
+                          earned: {
+                            for (final a in Achievement.values)
+                              if (board?.has(a) ?? false) a,
+                          },
+                          palette: p,
+                        ),
+                      ProfileTab.recent => _RecentActivity(
+                          items: board?.recent ?? const [],
+                          today: board?.today ?? DateTime.now(),
+                          palette: p,
+                        ),
                     },
-                    palette: p,
-                  ),
-                ),
-                const SizedBox(height: Space.md),
-                _Card(
-                  title: t.profileRecent,
-                  icon: Icons.history,
-                  palette: p,
-                  child: _RecentActivity(
-                    items: board?.recent ?? const [],
-                    today: board?.today ?? DateTime.now(),
-                    palette: p,
                   ),
                 ),
                 const SizedBox(height: Space.xl),
@@ -427,16 +443,11 @@ class _StatCard extends StatelessWidget {
   }
 }
 
+/// The white card holding a tab's content. The pill names it, so the card
+/// has no heading of its own.
 class _Card extends StatelessWidget {
-  const _Card({
-    required this.title,
-    required this.icon,
-    required this.child,
-    required this.palette,
-  });
+  const _Card({required this.child, required this.palette});
 
-  final String title;
-  final IconData icon;
   final Widget child;
   final VillagePalette palette;
 
@@ -449,31 +460,30 @@ class _Card extends StatelessWidget {
       shadowColor: palette.shadowSmall,
       child: Padding(
         padding: const EdgeInsets.all(Space.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 18, color: palette.quebecBlue),
-                const SizedBox(width: Space.xs),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontFamily: VillageType.display,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 15,
-                    color: palette.ink,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: Space.sm),
-            child,
-          ],
-        ),
+        child: SizedBox(width: double.infinity, child: child),
       ),
     );
   }
+}
+
+/// Profil's three tabs under the hero (app ADR 0051).
+enum ProfileTab {
+  subjects(Icons.insights_outlined),
+  badges(Icons.workspace_premium_outlined),
+  recent(Icons.history);
+
+  const ProfileTab(this.icon);
+
+  final IconData icon;
+
+  static ProfileTab from(String? name) =>
+      values.firstWhere((v) => v.name == name, orElse: () => subjects);
+
+  String label(Strings t) => switch (this) {
+    subjects => t.profileTabSubjects,
+    badges => t.profileBadges,
+    recent => t.profileTabRecent,
+  };
 }
 
 class _SubjectRow extends StatelessWidget {
