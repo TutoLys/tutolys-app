@@ -339,6 +339,24 @@ abstract class Strings {
   /// A pill tab's place in its row, for a screen reader: "onglet 2 sur 5".
   String tabPosition(int index, int count);
 
+  /// Learning reminders (ADR 0053): kind, short, never guilt. A grown-up
+  /// may well be the one reading them aloud.
+  String get reminderTitle;
+  String get reminderLearnBody;
+  String get reminderFlameBody;
+
+  /// Several kids at once: no name on a shared lock screen.
+  String get reminderSeveralBody;
+
+  String get settingsReminderTime;
+  String reminderTimeLabel(int minutes);
+  String get settingsRemindersWhileRunning;
+  String get settingsRemindersWebNote;
+  String get settingsRemindersClassNote;
+  String get settingsRemindersBlocked;
+  String get remindersPinCreate;
+  String get remindersPinEnter;
+
   /// When the next shield comes (backend ADR 0153).
   String streakShieldRechargeIn(int days);
   String get streakShieldPlayToRecharge;
@@ -1218,6 +1236,54 @@ class _FrenchStrings extends Strings {
 
   @override
   String tabPosition(int index, int count) => 'onglet $index sur $count';
+
+  @override
+  String get reminderTitle => 'TutoLys';
+
+  @override
+  String get reminderLearnBody =>
+      'Le renard a préparé une nouvelle leçon. On joue ?';
+
+  @override
+  String get reminderFlameBody =>
+      'Ta flamme brille encore aujourd\'hui. Une petite leçon la garde allumée !';
+
+  @override
+  String get reminderSeveralBody => 'Qui veut jouer au village aujourd\'hui ?';
+
+  @override
+  String get settingsReminderTime => 'Heure du rappel';
+
+  @override
+  String reminderTimeLabel(int minutes) {
+    final m = minutes % 60;
+    return '${minutes ~/ 60} h${m == 0 ? '' : ' ${m.toString().padLeft(2, '0')}'}';
+  }
+
+  @override
+  String get settingsRemindersWhileRunning =>
+      'Sur cet ordinateur, seulement quand TutoLys est ouvert.';
+
+  @override
+  String get settingsRemindersWebNote =>
+      'Les rappels arrivent sur l\'application installée, pas dans le navigateur.';
+
+  @override
+  String get settingsRemindersClassNote =>
+      'Pas de rappels sur une tablette de classe.';
+
+  @override
+  String get settingsRemindersBlocked =>
+      'Les notifications sont bloquées pour TutoLys dans les réglages de l\'appareil.';
+
+  @override
+  String get remindersPinCreate =>
+      'Crée d\'abord un NIP parent à 6 chiffres : seul un adulte pourra '
+      'activer les rappels ou choisir leur heure.';
+
+  @override
+  String get remindersPinEnter =>
+      'Demande à un adulte d\'entrer le NIP pour gérer les rappels.';
 
   @override
   String streakShieldRechargeIn(int days) =>
@@ -2341,6 +2407,55 @@ class _EnglishStrings extends Strings {
 
   @override
   String tabPosition(int index, int count) => 'tab $index of $count';
+
+  @override
+  String get reminderTitle => 'TutoLys';
+
+  @override
+  String get reminderLearnBody =>
+      'Your fox has a new lesson ready. Want to play?';
+
+  @override
+  String get reminderFlameBody =>
+      'Your flame is still glowing today. One short lesson keeps it lit!';
+
+  @override
+  String get reminderSeveralBody => 'Who wants to play in the village today?';
+
+  @override
+  String get settingsReminderTime => 'Reminder time';
+
+  @override
+  String reminderTimeLabel(int minutes) {
+    final h = minutes ~/ 60;
+    final m = (minutes % 60).toString().padLeft(2, '0');
+    final h12 = h % 12 == 0 ? 12 : h % 12;
+    return '$h12:$m ${h < 12 ? 'AM' : 'PM'}';
+  }
+
+  @override
+  String get settingsRemindersWhileRunning =>
+      'On this computer, only while TutoLys is open.';
+
+  @override
+  String get settingsRemindersWebNote =>
+      'Reminders come from the installed app, not the browser.';
+
+  @override
+  String get settingsRemindersClassNote => 'No reminders on a class tablet.';
+
+  @override
+  String get settingsRemindersBlocked =>
+      'Notifications are turned off for TutoLys in the device settings.';
+
+  @override
+  String get remindersPinCreate =>
+      'First create a 6-digit parent PIN: only a grown-up can turn reminders '
+      'on or choose their time.';
+
+  @override
+  String get remindersPinEnter =>
+      'Ask a grown-up to enter the PIN to manage reminders.';
 
   @override
   String streakShieldRechargeIn(int days) =>

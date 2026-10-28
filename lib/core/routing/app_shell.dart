@@ -17,6 +17,8 @@ import '../i18n/strings.dart';
 import '../../features/pairing/who_is_playing_screen.dart';
 import '../../features/settings/settings_controller.dart';
 import 'paired_router.dart';
+import '../../features/reminders/reminder_coordinator.dart';
+import '../../data/local_db/node_progress_local.dart';
 
 /// Chooses the screen from the session state.
 ///
@@ -123,7 +125,21 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
       session.noteAway(DateTime.now());
     } else if (state == AppLifecycleState.resumed) {
       session.noteBack(DateTime.now());
+      // A day may have passed, or a lesson been played elsewhere.
+      _rescheduleReminders();
     }
+  }
+
+  /// Rebuilds the device's learning reminders from every kid's settings
+  /// and play (ADR 0053). Cheap, serialised, and never throws.
+  void _rescheduleReminders() {
+    ref
+        .read(reminderCoordinatorProvider)
+        .reschedule(
+          ref.read(sessionControllerProvider),
+          active: ref.read(settingsControllerProvider),
+        )
+        .ignore();
   }
 
   @override
@@ -147,6 +163,12 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
       if (next.status == SessionStatus.paired) {
         _flusher.resume();
       }
+      // Paired, unpaired, a kid added or removed: the reminders follow.
+      if (previous?.status != next.status ||
+          previous?.kids.length != next.kids.length ||
+          previous?.kid?.id != next.kid?.id) {
+        _rescheduleReminders();
+      }
       // A picker is about to show: learn every kid's picture passcode, so
       // one set in the portal is asked for from this choice on (B-A0.5).
       final picking = next.status == SessionStatus.paired &&
@@ -166,6 +188,18 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
           next.kids.length > previous!.kids.length) {
         WidgetsBinding.instance.addPostFrameCallback((_) => _offerPasscodes());
       }
+    });
+
+    // A reminder setting changed, or a lesson was just finished (today is
+    // played, so today's reminder goes).
+    ref.listen(
+      settingsControllerProvider.select(
+        (s) => (s.dailyReminders, s.reminderMinutes, s.english),
+      ),
+      (_, _) => _rescheduleReminders(),
+    );
+    ref.listen(nodeProgressProvider, (_, next) {
+      if (next.hasValue) _rescheduleReminders();
     });
 
     if (!_launched) {

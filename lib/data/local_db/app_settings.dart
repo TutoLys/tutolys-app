@@ -6,8 +6,8 @@ import 'database.dart';
 ///
 /// Defaults match the design's own rendering of the screen: volume at 70%,
 /// sound and music on, read-aloud **on** (a grade-1 reader cannot read the
-/// question — see ADR 0021), French, animations not reduced, notifications
-/// on.
+/// question — see ADR 0021), French, animations not reduced. Learning
+/// reminders are **off** until a guardian turns them on (ADR 0053).
 class AppSettings {
   const AppSettings({
     this.darkTheme = false,
@@ -17,7 +17,9 @@ class AppSettings {
     this.readAloud = true,
     this.english = false,
     this.reduceMotion = false,
-    this.dailyReminders = true,
+    this.dailyReminders = false,
+    this.reminderMinutes = 17 * 60,
+    this.remindersOnSince,
     this.questNotifications = true,
   });
 
@@ -39,7 +41,18 @@ class AppSettings {
   final bool english;
 
   final bool reduceMotion;
+
+  /// "Rappels quotidiens": a local reminder on a day not yet played
+  /// (ADR 0053). Turned on, and its time chosen, behind the guardian PIN.
   final bool dailyReminders;
+
+  /// The reminder's time, in minutes after midnight (08:00–19:00).
+  final int reminderMinutes;
+
+  /// The day reminders were last turned on: the back-off counts from it
+  /// for a kid who hasn't played since.
+  final DateTime? remindersOnSince;
+
   final bool questNotifications;
 
   AppSettings copyWith({
@@ -51,6 +64,8 @@ class AppSettings {
     bool? english,
     bool? reduceMotion,
     bool? dailyReminders,
+    int? reminderMinutes,
+    DateTime? remindersOnSince,
     bool? questNotifications,
   }) {
     return AppSettings(
@@ -62,6 +77,8 @@ class AppSettings {
       english: english ?? this.english,
       reduceMotion: reduceMotion ?? this.reduceMotion,
       dailyReminders: dailyReminders ?? this.dailyReminders,
+      reminderMinutes: reminderMinutes ?? this.reminderMinutes,
+      remindersOnSince: remindersOnSince ?? this.remindersOnSince,
       questNotifications: questNotifications ?? this.questNotifications,
     );
   }
@@ -93,7 +110,12 @@ class AppSettingsStore {
   static const _readAloud = '${_prefix}read_aloud';
   static const _english = '${_prefix}english';
   static const _reduceMotion = '${_prefix}reduce_motion';
-  static const _dailyReminders = '${_prefix}daily_reminders';
+  // A new key, not `daily_reminders`: that flag defaulted to on while it did
+  // nothing, so a stored "true" was never a guardian's choice and must not
+  // start reminders now that they're real (ADR 0053).
+  static const _dailyReminders = '${_prefix}reminders_on';
+  static const _reminderMinutes = '${_prefix}reminder_minutes';
+  static const _remindersOnSince = '${_prefix}reminders_on_since';
   static const _questNotifications = '${_prefix}quest_notifications';
 
   Future<AppSettings> read() async {
@@ -116,6 +138,10 @@ class AppSettingsStore {
       english: flag(_english, defaults.english),
       reduceMotion: flag(_reduceMotion, defaults.reduceMotion),
       dailyReminders: flag(_dailyReminders, defaults.dailyReminders),
+      reminderMinutes:
+          int.tryParse(byKey[_reminderMinutes] ?? '') ??
+          defaults.reminderMinutes,
+      remindersOnSince: DateTime.tryParse(byKey[_remindersOnSince] ?? ''),
       questNotifications:
           flag(_questNotifications, defaults.questNotifications),
     );
@@ -137,6 +163,9 @@ class AppSettingsStore {
       _english: '${settings.english}',
       _reduceMotion: '${settings.reduceMotion}',
       _dailyReminders: '${settings.dailyReminders}',
+      _reminderMinutes: '${settings.reminderMinutes}',
+      if (settings.remindersOnSince case final since?)
+        _remindersOnSince: since.toIso8601String().substring(0, 10),
       _questNotifications: '${settings.questNotifications}',
     };
 
