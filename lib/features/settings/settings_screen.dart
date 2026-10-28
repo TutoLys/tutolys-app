@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/i18n/strings.dart';
+import '../../core/routing/page_tab.dart';
+import '../../core/widgets/pill_tabs.dart';
 import '../pairing/pairing_controller.dart';
 import '../passcode/passcode_setup_screen.dart';
 import '../profile/pin_gate.dart';
@@ -12,8 +14,10 @@ import 'settings_controller.dart';
 /// Réglages, as `docs/design/01-design-system-gallery.html` draws it.
 ///
 /// Five groups in the design's own order — Apparence, Son et musique,
-/// Expérience, Notifications, Zone parent — then the two navigation rows and
-/// sign-out.
+/// Expérience, Notifications, Zone parent — shown one at a time as pill tabs
+/// (Hafid, 2026-10-28; app ADR 0051), the last tab remembered per kid. Zone
+/// parent holds the picture codes and sign-out too. Aide and À propos sit
+/// under every tab.
 ///
 /// Two things here are honest stubs rather than working controls, because
 /// the thing behind them does not exist yet. Both say so on screen instead
@@ -40,140 +44,169 @@ class SettingsScreen extends ConsumerWidget {
     final settings = ref.watch(settingsControllerProvider);
     final controller = ref.read(settingsControllerProvider.notifier);
     final t = context.s;
+    final tab = SettingsTab.from(
+      ref.watch(pageTabProvider(TabbedPage.settings)),
+    );
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(Space.lg),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: 680),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _PageTitle(eyebrow: t.settingsEyebrow, title: t.settingsTitle),
-              const SizedBox(height: Space.lg),
-
-              _Group(
-                icon: Icons.light_mode_outlined,
-                title: t.settingsAppearance,
-                children: [
-                  _SegmentedRow(
-                    label: t.settingsTheme,
-                    sublabel: t.settingsThemeSub,
-                    options: [t.settingsThemeLight, t.settingsThemeDark],
-                    selected: settings.darkTheme ? 1 : 0,
-                    onSelect: (i) => controller.setDarkTheme(i == 1),
-                  ),
-                ],
-              ),
-
-              _Group(
-                icon: Icons.volume_up_outlined,
-                title: t.settingsSound,
-                children: [
-                  _SliderRow(
-                    label: t.settingsVolume,
-                    value: settings.volume,
-                    onChanged: controller.setVolume,
-                  ),
-                  _ToggleRow(
-                    label: t.settingsMusic,
-                    value: settings.music,
-                    onChanged: controller.setMusic,
-                  ),
-                  _ToggleRow(
-                    label: t.settingsSfx,
-                    value: settings.soundEffects,
-                    onChanged: controller.setSoundEffects,
-                  ),
-                  _ToggleRow(
-                    label: t.settingsReadAloud,
-                    sublabel: t.settingsReadAloudSub,
-                    value: settings.readAloud,
-                    onChanged: controller.setReadAloud,
-                  ),
-                ],
-              ),
-
-              _Group(
-                icon: Icons.language_outlined,
-                title: t.settingsExperience,
-                children: [
-                  _SegmentedRow(
-                    label: t.settingsLanguage,
-                    options: ['Français', 'English'],
-                    selected: settings.english ? 1 : 0,
-                    onSelect: (i) => controller.setEnglish(i == 1),
-                  ),
-                  _ToggleRow(
-                    label: t.settingsReduceMotion,
-                    sublabel: t.settingsReduceMotionSub,
-                    value: settings.reduceMotion,
-                    onChanged: controller.setReduceMotion,
-                  ),
-                ],
-              ),
-
-              _Group(
-                icon: Icons.notifications_none,
-                title: t.settingsNotifications,
-                children: [
-                  _ToggleRow(
-                    label: t.settingsDailyReminders,
-                    sublabel: t.settingsDailyRemindersSub,
-                    value: settings.dailyReminders,
-                    onChanged: controller.setDailyReminders,
-                  ),
-                  _ToggleRow(
-                    label: t.settingsQuestNotifications,
-                    value: settings.questNotifications,
-                    onChanged: controller.setQuestNotifications,
-                  ),
-                ],
-              ),
-
-              const _ParentZone(),
-              const SizedBox(height: Space.md),
-
-              // Each kid's "c'est moi" pictures, behind the guardian PIN
-              // (B-A0.5).
-              _LinkRow(
-                key: const ValueKey('settings-passcodes'),
-                icon: Icons.grid_view_rounded,
-                label: t.passcodesTitle,
-                onTap: () => openPasscodes(context, ref),
-              ),
-              const SizedBox(height: Space.xs),
-
-              _LinkRow(
-                icon: Icons.help_outline,
-                label: t.navHelp,
-                onTap: onOpenHelp ?? () => _notBuilt(context, t.navHelp),
-              ),
-              const SizedBox(height: Space.xs),
-              _LinkRow(
-                icon: Icons.info_outline,
-                label: t.settingsAbout,
-                onTap: onOpenAbout ?? () => _notBuilt(context, t.settingsAbout),
-              ),
-
-              const SizedBox(height: Space.lg),
-              const _SignOutButton(),
-              const SizedBox(height: Space.md),
-              Text(
-                'TutoLys · v$appVersion',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: VillageType.display,
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w600,
-                  color: p.inkMuted,
-                ),
-              ),
-              const SizedBox(height: Space.xl),
-            ],
+    final panel = switch (tab) {
+      SettingsTab.appearance => _Group(
+        children: [
+          _SegmentedRow(
+            label: t.settingsTheme,
+            sublabel: t.settingsThemeSub,
+            options: [t.settingsThemeLight, t.settingsThemeDark],
+            selected: settings.darkTheme ? 1 : 0,
+            onSelect: (i) => controller.setDarkTheme(i == 1),
           ),
-        ),
+        ],
       ),
+      SettingsTab.sound => _Group(
+        children: [
+          _SliderRow(
+            label: t.settingsVolume,
+            value: settings.volume,
+            onChanged: controller.setVolume,
+          ),
+          _ToggleRow(
+            label: t.settingsMusic,
+            value: settings.music,
+            onChanged: controller.setMusic,
+          ),
+          _ToggleRow(
+            label: t.settingsSfx,
+            value: settings.soundEffects,
+            onChanged: controller.setSoundEffects,
+          ),
+          _ToggleRow(
+            label: t.settingsReadAloud,
+            sublabel: t.settingsReadAloudSub,
+            value: settings.readAloud,
+            onChanged: controller.setReadAloud,
+          ),
+        ],
+      ),
+      SettingsTab.experience => _Group(
+        children: [
+          _SegmentedRow(
+            label: t.settingsLanguage,
+            options: ['Français', 'English'],
+            selected: settings.english ? 1 : 0,
+            onSelect: (i) => controller.setEnglish(i == 1),
+          ),
+          _ToggleRow(
+            label: t.settingsReduceMotion,
+            sublabel: t.settingsReduceMotionSub,
+            value: settings.reduceMotion,
+            onChanged: controller.setReduceMotion,
+          ),
+        ],
+      ),
+      SettingsTab.notifications => _Group(
+        children: [
+          _ToggleRow(
+            label: t.settingsDailyReminders,
+            sublabel: t.settingsDailyRemindersSub,
+            value: settings.dailyReminders,
+            onChanged: controller.setDailyReminders,
+          ),
+          _ToggleRow(
+            label: t.settingsQuestNotifications,
+            value: settings.questNotifications,
+            onChanged: controller.setQuestNotifications,
+          ),
+        ],
+      ),
+      SettingsTab.parents => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const _ParentZone(),
+          const SizedBox(height: Space.md),
+          // Each kid's "c'est moi" pictures, behind the guardian PIN
+          // (B-A0.5).
+          _LinkRow(
+            key: const ValueKey('settings-passcodes'),
+            icon: Icons.grid_view_rounded,
+            label: t.passcodesTitle,
+            onTap: () => openPasscodes(context, ref),
+          ),
+          const SizedBox(height: Space.lg),
+          const _SignOutButton(),
+          const SizedBox(height: Space.md),
+        ],
+      ),
+    };
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < Breakpoints.compact;
+        return SingleChildScrollView(
+          padding: EdgeInsets.all(compact ? Space.md : Space.lg),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: 680),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _PageTitle(
+                    eyebrow: t.settingsEyebrow,
+                    title: t.settingsTitle,
+                  ),
+                  const SizedBox(height: Space.md),
+                  PillTabs<SettingsTab>(
+                    keyPrefix: 'settings-tab',
+                    selected: tab,
+                    compact: compact,
+                    onSelect: (next) => ref
+                        .read(pageTabProvider(TabbedPage.settings).notifier)
+                        .select(next.name),
+                    tabs: [
+                      for (final s in SettingsTab.values)
+                        PillTab(
+                          value: s,
+                          label: s.label(t),
+                          leading: Icon(
+                            s.icon,
+                            size: compact ? 18 : 20,
+                            color: s == tab ? p.quebecBlueBright : p.inkMuted,
+                          ),
+                        ),
+                    ],
+                  ),
+                  PillTabPanel(tabKey: tab, child: panel),
+
+                  // Under every tab: never more than a tap away.
+                  const SizedBox(height: Space.sm),
+                  _LinkRow(
+                    icon: Icons.help_outline,
+                    label: t.navHelp,
+                    onTap: onOpenHelp ?? () => _notBuilt(context, t.navHelp),
+                  ),
+                  const SizedBox(height: Space.xs),
+                  _LinkRow(
+                    icon: Icons.info_outline,
+                    label: t.settingsAbout,
+                    onTap:
+                        onOpenAbout ??
+                        () => _notBuilt(context, t.settingsAbout),
+                  ),
+                  const SizedBox(height: Space.md),
+                  Text(
+                    'TutoLys · v$appVersion',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: VillageType.display,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: p.inkMuted,
+                    ),
+                  ),
+                  const SizedBox(height: Space.xl),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -219,65 +252,64 @@ class _PageTitle extends StatelessWidget {
   }
 }
 
-/// A white card with a titled header and a list of rows.
+/// A white card holding a tab's rows. The tab's pill names it, so the
+/// card carries no title of its own.
 class _Group extends StatelessWidget {
-  const _Group({
-    required this.icon,
-    required this.title,
-    required this.children,
-  });
+  const _Group({required this.children});
 
-  final IconData icon;
-  final String title;
   final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
     final p = VillagePalette.of(context);
-    return Padding(
-      padding: EdgeInsets.only(bottom: Space.md),
-      child: Material(
-        color: p.surface,
-        borderRadius: VillageMetrics.mdAll,
-        elevation: VillageColors.elevationSmall,
-        shadowColor: p.shadowSmall,
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: Space.md,
-            vertical: Space.sm,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: Space.xs),
-                child: Row(
-                  children: [
-                    Icon(icon, size: 18, color: p.quebecBlue),
-                    const SizedBox(width: Space.xs),
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontFamily: VillageType.display,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: p.ink,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              for (var i = 0; i < children.length; i++) ...[
-                if (i > 0)
-                  Divider(height: 1, color: p.line),
-                children[i],
-              ],
+    return Material(
+      color: p.surface,
+      borderRadius: VillageMetrics.mdAll,
+      elevation: VillageColors.elevationSmall,
+      shadowColor: p.shadowSmall,
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: Space.md,
+          vertical: Space.sm,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var i = 0; i < children.length; i++) ...[
+              if (i > 0) Divider(height: 1, color: p.line),
+              children[i],
             ],
-          ),
+          ],
         ),
       ),
     );
   }
+}
+
+/// Réglages' five tabs, in the design's group order. The stored name is
+/// [Enum.name]; anything else (none yet, or a tab since renamed) opens the
+/// first.
+enum SettingsTab {
+  appearance(Icons.light_mode_outlined),
+  sound(Icons.volume_up_outlined),
+  experience(Icons.language_outlined),
+  notifications(Icons.notifications_none),
+  parents(Icons.family_restroom_outlined);
+
+  const SettingsTab(this.icon);
+
+  final IconData icon;
+
+  static SettingsTab from(String? name) =>
+      values.firstWhere((v) => v.name == name, orElse: () => appearance);
+
+  String label(Strings t) => switch (this) {
+    appearance => t.settingsAppearance,
+    sound => t.settingsSound,
+    experience => t.settingsExperience,
+    notifications => t.settingsNotifications,
+    parents => t.settingsParentZone,
+  };
 }
 
 class _RowLabel extends StatelessWidget {

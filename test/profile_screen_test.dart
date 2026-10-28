@@ -456,8 +456,13 @@ void main() {
 
   group('PIN gate', () {
     Future<void> openSignOut(WidgetTester tester) async {
-      // Réglages scrolls; sign-out sits at its foot, so it has to be
-      // brought into view before it can be tapped.
+      // Sign-out lives in Réglages' Zone parent tab (app ADR 0051), and
+      // the page scrolls, so it has to be brought into view.
+      final parents = find.byKey(const ValueKey('settings-tab-parents'));
+      await tester.ensureVisible(parents);
+      await tester.pumpAndSettle();
+      await tester.tap(parents);
+      await tester.pumpAndSettle();
       await tester.ensureVisible(find.text(Strings.fr.settingsSignOut));
       await tester.pumpAndSettle();
       await tester.tap(find.text(Strings.fr.settingsSignOut));
