@@ -440,7 +440,10 @@ void main() {
         }
         await tester.sendKeyEvent(LogicalKeyboardKey.space);
         await step(tester);
-        expect((c.current!.answer as SingleChoiceAnswer?)?.selectedOptionId, 'b');
+        expect(
+          (c.current!.answer as SingleChoiceAnswer?)?.selectedOptionId,
+          'b',
+        );
 
         await tester.sendKeyEvent(LogicalKeyboardKey.enter);
         await step(tester);

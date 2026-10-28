@@ -132,7 +132,10 @@ void main() {
             ParseInvalid(:final reason) => reason,
             _ => null,
           };
-      expect(reason({...findConfig, 'task': 'read'}), contains('find, choose or discuss'));
+      expect(
+        reason({...findConfig, 'task': 'read'}),
+        contains('find, choose or discuss'),
+      );
       expect(
         reason({
           'sentences': [sentences.first],

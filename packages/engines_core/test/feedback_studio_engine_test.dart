@@ -391,7 +391,12 @@ void main() {
       );
       await tester.tap(find.byKey(const ValueKey('feedback-revision-r_lit')));
       await settle(tester);
-      expect(find.bySemanticsLabel(RegExp('phrase 3, marquée : Il dort sur mon lit')), findsOne);
+      expect(
+        find.bySemanticsLabel(
+          RegExp('phrase 3, marquée : Il dort sur mon lit'),
+        ),
+        findsOne,
+      );
       expect(tester.takeException(), isNull);
       await tester.tap(find.text('VALIDER'));
       await settle(tester);

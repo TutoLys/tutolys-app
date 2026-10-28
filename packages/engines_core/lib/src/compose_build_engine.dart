@@ -87,8 +87,8 @@ class _ComposeBuildView extends StatefulWidget {
 }
 
 class _ComposeBuildViewState extends State<_ComposeBuildView> {
-  late final List<String> _target =
-      (widget.config['target'] as List).cast<String>();
+  late final List<String> _target = (widget.config['target'] as List)
+      .cast<String>();
   late final bool _ordered = widget.config['ordered'] != false;
   late final List<_Tile> _bank = _shuffledTiles();
   late final DateTime _startedAt = widget.engine.clock();
@@ -147,8 +147,10 @@ class _ComposeBuildViewState extends State<_ComposeBuildView> {
           outcome: ExerciseOutcome.completed,
           attempts: _attempts,
           correct: 1,
-          elapsedMs:
-              widget.engine.clock().difference(_startedAt).inMilliseconds,
+          elapsedMs: widget.engine
+              .clock()
+              .difference(_startedAt)
+              .inMilliseconds,
         ),
       );
       return;
