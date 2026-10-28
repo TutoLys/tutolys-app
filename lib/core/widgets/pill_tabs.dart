@@ -1,0 +1,260 @@
+import 'package:design_system/design_system.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart' show SemanticsRole;
+import 'package:flutter/services.dart';
+
+import '../i18n/strings.dart';
+
+/// One pill: what it selects, its words, and its icon (a building image on
+/// the Carte, an icon on Réglages).
+class PillTab<T> {
+  const PillTab({required this.value, required this.label, this.leading});
+
+  final T value;
+  final String label;
+
+  /// Given a tight [PillTabs.leadingSize] square.
+  final Widget? leading;
+}
+
+/// The design's `.subject-tabs`: a horizontally scrolling row of pills.
+///
+/// Shared by every page that switches between categories, so they all look
+/// and behave like the Carte (app ADR 0051):
+///
+/// - **Keyboard:** Tab reaches the row; ←/→ move to the neighbouring pill
+///   and select it, Home/End jump to the ends; Enter and Space select.
+/// - **Screen reader:** a tab bar of tabs, each "selected" or not, with its
+///   place ("onglet 2 sur 5").
+/// - **Phone:** the row scrolls, and the selected pill is brought into view
+///   when it changes, instantly when motion is reduced.
+class PillTabs<T> extends StatefulWidget {
+  const PillTabs({
+    required this.tabs,
+    required this.selected,
+    required this.onSelect,
+    required this.compact,
+    this.keyPrefix = 'pill',
+    super.key,
+  });
+
+  final List<PillTab<T>> tabs;
+  final T selected;
+  final ValueChanged<T> onSelect;
+  final bool compact;
+
+  /// Each pill is keyed `ValueKey('$keyPrefix-$value')`, an enum by its
+  /// name.
+  final String keyPrefix;
+
+  static double leadingSize(bool compact) => compact ? 24 : 30;
+
+  @override
+  State<PillTabs<T>> createState() => _PillTabsState<T>();
+}
+
+class _PillTabsState<T> extends State<PillTabs<T>> {
+  final _nodes = <FocusNode>[];
+  final _keys = <GlobalKey>[];
+
+  @override
+  void initState() {
+    super.initState();
+    _sync();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _reveal(instant: true));
+  }
+
+  @override
+  void didUpdateWidget(PillTabs<T> old) {
+    super.didUpdateWidget(old);
+    _sync();
+    if (old.selected != widget.selected) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _reveal());
+    }
+  }
+
+  void _sync() {
+    while (_nodes.length < widget.tabs.length) {
+      _nodes.add(FocusNode());
+      _keys.add(GlobalKey());
+    }
+    while (_nodes.length > widget.tabs.length) {
+      _nodes.removeLast().dispose();
+      _keys.removeLast();
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final n in _nodes) {
+      n.dispose();
+    }
+    super.dispose();
+  }
+
+  static String _name(Object? v) => v is Enum ? v.name : '$v';
+
+  int get _selectedIndex =>
+      widget.tabs.indexWhere((t) => t.value == widget.selected);
+
+  void _reveal({bool instant = false}) {
+    if (!mounted) return;
+    final i = _selectedIndex;
+    if (i < 0) return;
+    final ctx = _keys[i].currentContext;
+    if (ctx == null) return;
+    final still = instant || MediaQuery.disableAnimationsOf(context);
+    Scrollable.ensureVisible(
+      ctx,
+      alignment: 0.5,
+      duration: still ? Duration.zero : Motion.quick,
+    );
+  }
+
+  KeyEventResult _onKey(int i, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    final last = widget.tabs.length - 1;
+    final target = switch (event.logicalKey) {
+      LogicalKeyboardKey.arrowRight => i < last ? i + 1 : 0,
+      LogicalKeyboardKey.arrowLeft => i > 0 ? i - 1 : last,
+      LogicalKeyboardKey.home => 0,
+      LogicalKeyboardKey.end => last,
+      _ => null,
+    };
+    if (target == null) return KeyEventResult.ignored;
+    _nodes[target].requestFocus();
+    widget.onSelect(widget.tabs[target].value);
+    return KeyEventResult.handled;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final compact = widget.compact;
+    return Padding(
+      padding: EdgeInsets.only(bottom: compact ? 14 : 18),
+      child: SizedBox(
+        height: compact ? 38 : 46,
+        // The tab bar sits inside the scroll view: the scrollable's own
+        // semantics node may not come between a tab bar and its tabs.
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Semantics(
+            role: SemanticsRole.tabBar,
+            container: true,
+            explicitChildNodes: true,
+            child: Row(
+              children: [
+                for (var i = 0; i < widget.tabs.length; i++) ...[
+                  if (i > 0) SizedBox(width: compact ? 8 : 10),
+                  _pill(context, i),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _pill(BuildContext context, int i) {
+    final p = VillagePalette.of(context);
+    final t = context.s;
+    final compact = widget.compact;
+    final tab = widget.tabs[i];
+    final active = tab.value == widget.selected;
+    return Semantics(
+      key: _keys[i],
+      role: SemanticsRole.tab,
+      container: true,
+      selected: active,
+      label: '${tab.label}, ${t.tabPosition(i + 1, widget.tabs.length)}',
+      onTap: () => widget.onSelect(tab.value),
+      child: ExcludeSemantics(
+        child: Focus(
+          canRequestFocus: false,
+          skipTraversal: true,
+          onKeyEvent: (_, e) => _onKey(i, e),
+          child: Material(
+            // `.subject-tab.is-active { background: #E8F0FF; border: none }`
+            color: active ? p.navActiveFill : p.surface,
+            shape: StadiumBorder(
+              side: active ? BorderSide.none : BorderSide(color: p.line),
+            ),
+            child: InkWell(
+              key: ValueKey('${widget.keyPrefix}-${_name(tab.value)}'),
+              focusNode: _nodes[i],
+              customBorder: const StadiumBorder(),
+              // The active pill stays tappable: on the Carte it re-syncs a
+              // stale subject.
+              onTap: () => widget.onSelect(tab.value),
+              mouseCursor: active
+                  ? SystemMouseCursors.basic
+                  : SystemMouseCursors.click,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  tab.leading == null
+                      ? (compact ? 13 : 16)
+                      : (compact ? 6 : 8),
+                  compact ? 6 : 7,
+                  compact ? 13 : 16,
+                  compact ? 6 : 7,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (tab.leading case final leading?) ...[
+                      SizedBox.square(
+                        dimension: PillTabs.leadingSize(compact),
+                        child: leading,
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    Text(
+                      tab.label,
+                      style: TextStyle(
+                        fontFamily: VillageType.display,
+                        fontWeight: FontWeight.w700,
+                        fontSize: compact ? 12 : 13,
+                        color: active ? p.quebecBlueBright : p.inkMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The panel under a [PillTabs]: announced as a tab panel, and swapped in
+/// with a short fade — or instantly when motion is reduced.
+class PillTabPanel extends StatelessWidget {
+  const PillTabPanel({required this.tabKey, required this.child, super.key});
+
+  /// Changes with the selected tab, so the swap is recognised.
+  final Object tabKey;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final still = MediaQuery.disableAnimationsOf(context);
+    return Semantics(
+      role: SemanticsRole.tabPanel,
+      container: true,
+      explicitChildNodes: true,
+      child: AnimatedSwitcher(
+        duration: still ? Duration.zero : Motion.quick,
+        layoutBuilder: (current, previous) => Stack(
+          alignment: Alignment.topCenter,
+          children: [...previous, ?current],
+        ),
+        child: KeyedSubtree(key: ValueKey(tabKey), child: child),
+      ),
+    );
+  }
+}

@@ -336,6 +336,9 @@ abstract class Strings {
   String streakShieldBalance(int count);
   String get streakShieldNone;
 
+  /// A pill tab's place in its row, for a screen reader: "onglet 2 sur 5".
+  String tabPosition(int index, int count);
+
   /// When the next shield comes (backend ADR 0153).
   String streakShieldRechargeIn(int days);
   String get streakShieldPlayToRecharge;
@@ -1212,6 +1215,9 @@ class _FrenchStrings extends Strings {
 
   @override
   String get streakShieldNone => 'Tu en gagnes un chaque semaine.';
+
+  @override
+  String tabPosition(int index, int count) => 'onglet $index sur $count';
 
   @override
   String streakShieldRechargeIn(int days) =>
@@ -2332,6 +2338,9 @@ class _EnglishStrings extends Strings {
 
   @override
   String get streakShieldNone => 'You earn one every week.';
+
+  @override
+  String tabPosition(int index, int count) => 'tab $index of $count';
 
   @override
   String streakShieldRechargeIn(int days) =>
