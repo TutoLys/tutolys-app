@@ -42,6 +42,7 @@ dependencies:
   # has resolved, so the app imports `FlutterNativeSplash.preserve/remove`.
   flutter_native_splash: ^2.4.6
   drift_flutter: ^0.3.1
+  sentry: ^10.2.0
 
 dev_dependencies:
   flutter_test:

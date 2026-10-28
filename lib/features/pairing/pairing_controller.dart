@@ -10,6 +10,7 @@ import '../../data/api/pairing_api.dart';
 import '../../data/local_db/database.dart';
 import '../../data/local_db/kid_local_data.dart';
 import '../../data/local_db/session_store.dart';
+import '../../core/diagnostics/request_id.dart';
 
 /// Where the app is, credential-wise.
 enum SessionStatus {
@@ -592,6 +593,7 @@ String currentPlatform() {
 }
 
 final dioProvider = Provider<Dio>((ref) {
+  // X-Request-ID on every request, failures to the diag log (ADR 0052).
   return Dio(
     BaseOptions(
       baseUrl: apiBaseUrl,
@@ -603,7 +605,7 @@ final dioProvider = Provider<Dio>((ref) {
       // than fall through to the success path and crash parsing a body that
       // has no device_token in it.
     ),
-  );
+  )..interceptors.add(RequestIdInterceptor(service: 'api'));
 });
 
 /// The on-disk database, opened once at app startup (`main.dart`) and

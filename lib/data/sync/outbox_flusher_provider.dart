@@ -5,6 +5,7 @@ import '../../features/pairing/pairing_controller.dart';
 import '../api/telemetry_api.dart';
 import 'drift_event_outbox.dart';
 import 'outbox_flusher.dart';
+import '../../core/diagnostics/request_id.dart';
 
 /// Base URL of the telemetry service.
 ///
@@ -18,6 +19,7 @@ const telemetryBaseUrl = String.fromEnvironment(
 );
 
 final telemetryDioProvider = Provider<Dio>((ref) {
+  // X-Request-ID on every request, failures to the diag log (ADR 0052).
   return Dio(
     BaseOptions(
       baseUrl: telemetryBaseUrl,
@@ -25,7 +27,7 @@ final telemetryDioProvider = Provider<Dio>((ref) {
       receiveTimeout: const Duration(seconds: 8),
       contentType: 'application/json',
     ),
-  );
+  )..interceptors.add(RequestIdInterceptor(service: 'telemetry'));
 });
 
 /// `DriftEventOutbox` is stateless aside from the database handle and its

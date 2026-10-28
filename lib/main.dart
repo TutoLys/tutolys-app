@@ -9,6 +9,7 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/diagnostics/boot_log.dart';
+import 'core/diagnostics/crash_reporting.dart';
 import 'core/diagnostics/diag_log.dart';
 import 'core/diagnostics/diag_store.dart';
 import 'core/routing/app_shell.dart';
@@ -33,6 +34,11 @@ void main() {
 void _main() {
   final binding = WidgetsFlutterBinding.ensureInitialized();
   DiagLog.instance.installHooks();
+  // Off unless built with a DSN; then the hooks above also forward here
+  // (ADR 0052). Never awaited: crash reporting must not hold the launch.
+  startCrashReporting().catchError(
+    (Object e, StackTrace s) => recordCaught('crash_reporting', e, s),
+  ).ignore();
   // From the first tap, keep the audio output awake (web only), so the first
   // read-aloud isn't clipped while the OS wakes the sink (ADR 0043).
   AudioOutputKeepAlive.instance.armOnFirstGesture();

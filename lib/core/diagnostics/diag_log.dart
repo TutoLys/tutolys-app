@@ -17,7 +17,8 @@ class DiagEntry {
 
   final DateTime at;
 
-  /// Where it was caught: `flutter`, `platform`, `zone`, or `caught:<site>`.
+  /// Where it was caught: `flutter`, `platform`, `zone`, `caught:<site>`,
+  /// or `http:<service>` for a failed request.
   final String kind;
 
   /// The error's runtime type.
@@ -80,17 +81,60 @@ class DiagLog extends ChangeNotifier {
   /// Called after each new entry, so a store can keep the latest copy.
   void Function(List<DiagEntry> entries)? onChanged;
 
+  /// Where uncaught errors (the `flutter`, `platform` and `zone` hooks) also
+  /// go, when crash reporting is on (ADR 0052). The hooks stay the ones
+  /// [installHooks] put in place; this only forwards from them.
+  void Function(Object error, StackTrace? stack)? reporter;
+
+  static const _uncaught = {'flutter', 'platform', 'zone'};
+
   List<DiagEntry> get entries => List.unmodifiable(_entries);
 
   /// Records [error], scrubbed, and prints it to the console.
   void record(String kind, Object error, [StackTrace? stack]) {
-    final entry = DiagEntry(
-      at: _now(),
-      kind: kind,
-      type: error.runtimeType.toString(),
-      message: scrub('$error'),
-      frames: topFrames(stack),
+    _add(
+      DiagEntry(
+        at: _now(),
+        kind: kind,
+        type: error.runtimeType.toString(),
+        message: scrub('$error'),
+        frames: topFrames(stack),
+      ),
     );
+    if (_uncaught.contains(kind)) {
+      try {
+        reporter?.call(error, stack);
+      } on Object {
+        // A failing reporter must never take the hooks down with it.
+      }
+    }
+  }
+
+  /// A request that failed: method, path (never its query), status, the
+  /// `X-Request-ID` it was sent with, and the error type. No bodies, no
+  /// headers (ADR 0052).
+  void recordRequestFailure({
+    required String service,
+    required String method,
+    required String path,
+    required int? status,
+    required String? requestId,
+    required String errorType,
+  }) {
+    _add(
+      DiagEntry(
+        at: _now(),
+        kind: 'http:$service',
+        type: errorType,
+        message: scrub(
+          '$method $path → ${status ?? 'no response'}'
+          ' · request_id ${requestId ?? '?'}',
+        ),
+      ),
+    );
+  }
+
+  void _add(DiagEntry entry) {
     _entries.addLast(entry);
     while (_entries.length > capacity) {
       _entries.removeFirst();
