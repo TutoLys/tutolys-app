@@ -9,6 +9,10 @@ import '../pairing/pairing_controller.dart';
 import '../passcode/passcode_setup_screen.dart';
 import '../profile/pin_gate.dart';
 import 'remove_kid_dialog.dart';
+import '../../data/local_db/app_settings.dart';
+import '../reminders/reminder_coordinator.dart';
+import '../reminders/reminder_policy.dart';
+import '../reminders/reminder_scheduler.dart';
 import 'settings_controller.dart';
 
 /// Réglages, as `docs/design/01-design-system-gallery.html` draws it.
@@ -103,12 +107,7 @@ class SettingsScreen extends ConsumerWidget {
       ),
       SettingsTab.notifications => _Group(
         children: [
-          _ToggleRow(
-            label: t.settingsDailyReminders,
-            sublabel: t.settingsDailyRemindersSub,
-            value: settings.dailyReminders,
-            onChanged: controller.setDailyReminders,
-          ),
+          ..._reminderRows(context, ref, settings),
           _ToggleRow(
             label: t.settingsQuestNotifications,
             value: settings.questNotifications,
@@ -208,6 +207,96 @@ class SettingsScreen extends ConsumerWidget {
         );
       },
     );
+  }
+
+  /// "Rappels quotidiens" and its time (ADR 0053). Turning reminders on or
+  /// choosing their time needs the guardian PIN, and asks the OS while the
+  /// guardian holds the device; turning them off never does, because doing
+  /// less is always safe. Not offered on web or on a class tablet.
+  List<Widget> _reminderRows(
+    BuildContext context,
+    WidgetRef ref,
+    AppSettings settings,
+  ) {
+    final t = context.s;
+    final controller = ref.read(settingsControllerProvider.notifier);
+    final classTablet = ref.watch(
+      sessionControllerProvider.select((s) => s.isClassroom),
+    );
+    final support = ref.watch(reminderSupportProvider);
+    final unavailable = classTablet || support == ReminderSupport.none;
+    final note = classTablet
+        ? t.settingsRemindersClassNote
+        : switch (support) {
+            ReminderSupport.none => t.settingsRemindersWebNote,
+            ReminderSupport.whileRunning => t.settingsRemindersWhileRunning,
+            ReminderSupport.scheduled => null,
+          };
+
+    Future<bool> guardian() => requireGuardianPin(
+      context,
+      ref,
+      confirmLabel: t.pinGateContinue,
+      createSubtitle: t.remindersPinCreate,
+      enterSubtitle: t.remindersPinEnter,
+    );
+
+    Future<void> turnOn() async {
+      if (!await guardian() || !context.mounted) return;
+      final sink = await ref.read(reminderSinkProvider.future);
+      if (!await sink.requestPermission()) {
+        if (context.mounted) {
+          VillageToast.show(context, t.settingsRemindersBlocked);
+        }
+        return;
+      }
+      await controller.setDailyReminders(true);
+    }
+
+    Future<void> chooseTime() async {
+      if (!await guardian() || !context.mounted) return;
+      final chosen = await showDialog<int>(
+        context: context,
+        builder: (context) => SimpleDialog(
+          title: Text(t.settingsReminderTime),
+          children: [
+            for (final m in reminderSlots)
+              SimpleDialogOption(
+                key: ValueKey('reminder-slot-$m'),
+                onPressed: () => Navigator.of(context).pop(m),
+                child: Text(
+                  t.reminderTimeLabel(m),
+                  style: TextStyle(
+                    fontWeight: m == settings.reminderMinutes
+                        ? FontWeight.w800
+                        : FontWeight.w500,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+      if (chosen != null) await controller.setReminderMinutes(chosen);
+    }
+
+    return [
+      _ToggleRow(
+        key: const ValueKey('settings-reminders'),
+        label: t.settingsDailyReminders,
+        sublabel: note ?? t.settingsDailyRemindersSub,
+        value: settings.dailyReminders && !unavailable,
+        onChanged: unavailable
+            ? null
+            : (on) => on ? turnOn() : controller.setDailyReminders(false),
+      ),
+      if (settings.dailyReminders && !unavailable)
+        _ValueRow(
+          key: const ValueKey('settings-reminder-time'),
+          label: t.settingsReminderTime,
+          value: t.reminderTimeLabel(settings.reminderMinutes),
+          onTap: chooseTime,
+        ),
+    ];
   }
 
   static void _notBuilt(BuildContext context, String what) {
@@ -352,18 +441,63 @@ class _RowLabel extends StatelessWidget {
   }
 }
 
+/// A label and its current value; tapping changes it.
+class _ValueRow extends StatelessWidget {
+  const _ValueRow({
+    required this.label,
+    required this.value,
+    required this.onTap,
+    super.key,
+  });
+
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: VillageMetrics.mdAll,
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: Space.sm),
+        child: Row(
+          children: [
+            Expanded(child: _RowLabel(label: label)),
+            Text(
+              value,
+              style: TextStyle(
+                fontFamily: VillageType.display,
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+                color: p.quebecBlueBright,
+              ),
+            ),
+            const SizedBox(width: Space.xxs),
+            Icon(Icons.chevron_right_rounded, color: p.inkMuted),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ToggleRow extends StatelessWidget {
   const _ToggleRow({
     required this.label,
     required this.value,
     required this.onChanged,
     this.sublabel,
+    super.key,
   });
 
   final String label;
   final String? sublabel;
   final bool value;
-  final ValueChanged<bool> onChanged;
+
+  /// Null greys the switch out.
+  final ValueChanged<bool>? onChanged;
 
   @override
   Widget build(BuildContext context) {
