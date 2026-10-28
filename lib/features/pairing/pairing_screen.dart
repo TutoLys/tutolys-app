@@ -317,7 +317,7 @@ class _PairingForm extends StatelessWidget {
                             padding: const EdgeInsets.only(top: 1),
                             child: Icon(
                               Icons.error_outline,
-                              color: extras.danger,
+                              color: VillagePalette.of(context).retry,
                               size: 18,
                             ),
                           ),
@@ -328,7 +328,7 @@ class _PairingForm extends StatelessWidget {
                               maxLines: 2,
                               textAlign: TextAlign.center,
                               style: context.text.bodyMedium?.copyWith(
-                                color: extras.danger,
+                                color: VillagePalette.of(context).retry,
                               ),
                             ),
                           ),

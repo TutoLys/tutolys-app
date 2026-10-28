@@ -288,6 +288,16 @@ void main() {
       await tester.enterText(find.byType(EditableText).first, 'ABC234');
       await tester.pumpAndSettle();
       expect(find.text(fr.pairingNoSeat), findsOneWidget);
+
+      // Amber, never red: the design's "almost" state, for a child.
+      final amber = VillagePalette.light.retry;
+      expect(tester.widget<Text>(find.text(fr.pairingNoSeat)).style?.color, amber);
+      expect(
+        tester.widget<Icon>(find.byIcon(Icons.error_outline)).color,
+        amber,
+      );
+      final digit = tester.widget<Text>(find.text('A'));
+      expect(digit.style?.color, amber);
     });
   });
 }

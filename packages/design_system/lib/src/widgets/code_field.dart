@@ -168,8 +168,10 @@ class _CodeBox extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
 
+    // Amber, never red: the design's "almost" state. A child who mistypes
+    // a code is not in trouble.
     final borderColour = hasError
-        ? extras.danger
+        ? VillagePalette.of(context).retry
         : isActive
             ? colors.primary
             : colors.outlineVariant.withValues(alpha: 0.35);
@@ -208,7 +210,7 @@ class _CodeBox extends StatelessWidget {
           style: TextStyle(
             fontSize: width * 0.52,
             fontWeight: FontWeight.w800,
-            color: hasError ? extras.danger : colors.onSurface,
+            color: hasError ? VillagePalette.of(context).retry : colors.onSurface,
           ),
         ),
       ),

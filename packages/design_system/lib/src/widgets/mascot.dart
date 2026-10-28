@@ -90,7 +90,9 @@ class _TutolysMascotState extends State<TutolysMascot>
 
     final accent = switch (widget.mood) {
       MascotMood.correct || MascotMood.celebrating => extras.success,
-      MascotMood.incorrect => extras.danger,
+      // Amber, never red: a wrong answer is "almost" (the design's
+      // decision log), never a fault.
+      MascotMood.incorrect => VillagePalette.of(context).retry,
       MascotMood.thinking || MascotMood.hint => extras.gold,
       MascotMood.idle => context.colors.primary,
     };
