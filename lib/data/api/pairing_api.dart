@@ -46,6 +46,11 @@ class PairingOffline extends PairingResult {
   const PairingOffline();
 }
 
+/// A good code, but the kid holds no seat: "ask a parent", not "wrong code".
+class PairingNoSeat extends PairingResult {
+  const PairingNoSeat();
+}
+
 class PairingFailed extends PairingResult {
   const PairingFailed(this.detail);
   final String detail;
@@ -161,6 +166,14 @@ enum RejectionReason {
   }
 }
 
+/// The pairing is good, but this kid holds no seat right now (403
+/// `seat_required`): a family or school stopped covering them. The token is
+/// kept for when a seat comes back, and the kid is told to ask a parent
+/// (ADR 0037, revision 2026-10-28). Never about money in the kid's app.
+class RefreshNoSeat extends RefreshResult {
+  const RefreshNoSeat();
+}
+
 class RefreshOffline extends RefreshResult {
   const RefreshOffline();
 }
@@ -168,6 +181,15 @@ class RefreshOffline extends RefreshResult {
 class RefreshFailed extends RefreshResult {
   const RefreshFailed(this.detail);
   final String detail;
+}
+
+/// Whether [error] is the backend's 403 `seat_required` (backend
+/// `apps.billing.seats.SEAT_REQUIRED_CODE`), on any device endpoint.
+bool isSeatRequired(DioException error) {
+  final data = error.response?.data;
+  return error.response?.statusCode == 403 &&
+      data is Map &&
+      data['code'] == 'seat_required';
 }
 
 /// Talks to the backend's pairing endpoints.
@@ -273,6 +295,7 @@ class PairingApi {
       );
     } on DioException catch (error) {
       if (_isOffline(error)) return const RefreshOffline();
+      if (isSeatRequired(error)) return const RefreshNoSeat();
       if (error.response?.statusCode == 401) {
         // Revoked or archived. The caller must clear the stored token.
         final data = error.response?.data;
@@ -286,6 +309,7 @@ class PairingApi {
 
   PairingResult _mapPairingError(DioException error) {
     if (_isOffline(error)) return const PairingOffline();
+    if (isSeatRequired(error)) return const PairingNoSeat();
 
     final status = error.response?.statusCode;
     final data = error.response?.data;

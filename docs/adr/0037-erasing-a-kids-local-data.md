@@ -119,3 +119,38 @@ Backend is writing up options for Hafid and counsel:
 - on the app side, offering the removal dialog after N days of bare 401s.
 
 Nothing changes in the app until that's decided.
+
+## Revision — 2026-10-28: no seat is not a lost pairing
+
+The backend has a third answer besides "good" and "rejected": **403
+`seat_required`**. The pairing is fine, but the child holds no seat right
+now, because a family's plan or a school stopped covering them. It comes
+on refresh, on pairing exchange, and on every seated content or progress
+endpoint. The backend's own message is "Demande à un parent de t'ajouter."
+
+Until now the app treated it as a generic failure: it stayed paired with
+no token, retried every 60 s forever, showed stale data, and told the
+child nothing. That was found in the pro-role walk-through; the Manager
+said go on the plan.
+
+- **It's not a rejection, so nothing is erased and nothing is forgotten.**
+  `RefreshNoSeat` keeps the device token, as the backend asks, "for when a
+  seat comes back". This revision's erase rules apply only to
+  `RefreshRejected`.
+- **`SessionState.noSeat`** is a paired kid with no access token. The
+  shell shows `NoSeatScreen` in place of the village. On it:
+  - the fox and "Demande à un parent de t'ajouter.";
+  - "Réessayer", which runs a refresh;
+  - "Qui joue ?" when there are siblings, so one of them can play
+    meanwhile.
+  - **No money, plans or prices**, which a test pins.
+- **When it's checked again:** on "Réessayer", on every return to the app,
+  and every 5 minutes. A seat that comes back lets the child straight in.
+- **Mid-session:** a Dio check on the API client sees a `seat_required`
+  403 on a kid's own call (one carrying a token) and asks the session for
+  a refresh. A burst of 403s shares one refresh. Exchange and refresh carry
+  no token and never trigger it.
+- **Pairing a child with no seat** now says "Ce profil n'a pas encore de
+  place. Demande à un parent de t'ajouter." instead of a generic error.
+- **Also fixed:** the pairing screen's title now uses the design's display
+  face (Baloo 2). Before, it fell back to the platform font.

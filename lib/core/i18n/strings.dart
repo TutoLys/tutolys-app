@@ -489,6 +489,12 @@ abstract class Strings {
   String get pairingClassInvalid;
   String get pairingClassEmpty;
   String get pairingClassNotEntitled;
+
+  /// No seat (backend 403 `seat_required`). Never about money: a child is
+  /// told who can fix it, nothing more (ADR 0037, revision 2026-10-28).
+  String get pairingNoSeat;
+  String get noSeatTitle;
+  String get noSeatBody;
   String whoIsPlayingClass(String className);
   String passcodeWaitTitle(String name);
   String get passcodeWaitBody;
@@ -1645,6 +1651,18 @@ class _FrenchStrings extends Strings {
   @override
   String get pairingClassNotEntitled =>
       'Demande à ton enseignant·e : l\'école doit d\'abord activer TutoLys.';
+
+  @override
+  String get pairingNoSeat =>
+      'Ce profil n\'a pas encore de place. Demande à un parent de t\'ajouter.';
+
+  @override
+  String get noSeatTitle => 'Demande à un parent de t\'ajouter.';
+
+  @override
+  String get noSeatBody =>
+      'Pour l\'instant, ton profil ne peut pas jouer. Quand un adulte t\'aura '
+      'ajouté, touche « Réessayer ».';
 
   @override
   String whoIsPlayingClass(String className) =>
@@ -2812,6 +2830,18 @@ class _EnglishStrings extends Strings {
   @override
   String get pairingClassNotEntitled =>
       'Ask your teacher: the school has to turn TutoLys on first.';
+
+  @override
+  String get pairingNoSeat =>
+      'This profile doesn\'t have a place yet. Ask a grown-up to add you.';
+
+  @override
+  String get noSeatTitle => 'Ask a grown-up to add you.';
+
+  @override
+  String get noSeatBody =>
+      'Your profile can\'t play just now. Once a grown-up has added you, '
+      'tap “Try again”.';
 
   @override
   String whoIsPlayingClass(String className) =>

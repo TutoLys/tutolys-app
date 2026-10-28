@@ -66,6 +66,7 @@ class _PairingScreenState extends ConsumerState<PairingScreen> {
         _classMode ? s.pairingClassInvalid : s.pairingCodeInvalid,
       PairingError.emptyClass => s.pairingClassEmpty,
       PairingError.classNotEntitled => s.pairingClassNotEntitled,
+      PairingError.noSeat => s.pairingNoSeat,
       PairingError.offline => s.pairingOffline,
       // Shown in the kid's own terms: a child does not need to hear the words
       // "rate limit", only that waiting is the fix.
@@ -273,7 +274,11 @@ class _PairingForm extends StatelessWidget {
             Text(
               title ?? s.pairingTitle,
               textAlign: TextAlign.center,
-              style: context.text.displaySmall,
+              // The design's display face, like every other title.
+              style: context.text.displaySmall?.copyWith(
+                fontFamily: VillageType.display,
+                fontWeight: FontWeight.w800,
+              ),
             ),
             const SizedBox(height: Space.xs),
             Text(

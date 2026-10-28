@@ -49,6 +49,7 @@ class SessionState {
     this.stage = ProfileStage.none,
     this.classroom,
     this.confirmEveryone = false,
+    this.noSeat = false,
   });
 
   const SessionState.checking() : this._(SessionStatus.checking);
@@ -60,7 +61,8 @@ class SessionState {
         kids = const [],
         stage = ProfileStage.none,
         classroom = null,
-        confirmEveryone = false;
+        confirmEveryone = false,
+        noSeat = false;
 
   final SessionStatus status;
 
@@ -81,6 +83,12 @@ class SessionState {
   /// has said who they are yet.
   final bool confirmEveryone;
 
+  /// The playing kid is paired but holds no seat right now (403
+  /// `seat_required`): the app shows "Demande à un parent de t'ajouter"
+  /// instead of the village, keeps the pairing, and checks again on return
+  /// and on "Réessayer" (ADR 0037, revision 2026-10-28). No access token.
+  final bool noSeat;
+
   bool get hasSeveralKids => kids.length > 1;
   bool get isClassroom => classroom != null;
 
@@ -97,6 +105,7 @@ class SessionState {
     List<PairedKid>? kids,
     ProfileStage? stage,
     bool? confirmEveryone,
+    bool? noSeat,
   }) {
     return SessionState(
       status: status ?? this.status,
@@ -106,8 +115,20 @@ class SessionState {
       stage: stage ?? this.stage,
       classroom: classroom,
       confirmEveryone: confirmEveryone ?? this.confirmEveryone,
+      noSeat: noSeat ?? this.noSeat,
     );
   }
+
+  /// This state for a kid without a seat: still paired, no token.
+  SessionState withoutSeat() => SessionState(
+    status: SessionStatus.paired,
+    kid: kid,
+    kids: kids,
+    stage: stage,
+    classroom: classroom,
+    confirmEveryone: confirmEveryone,
+    noSeat: true,
+  );
 }
 
 /// What the pairing screen is currently doing.
@@ -140,6 +161,9 @@ enum PairingError {
 
   /// The school isn't entitled to class tablets.
   classNotEntitled,
+
+  /// A good code, but the kid holds no seat: "ask a parent".
+  noSeat,
 }
 
 /// Owns the session: pairing, refreshing, and forgetting a revoked device.
@@ -196,6 +220,18 @@ class SessionController extends Notifier<SessionState> {
     _refreshTimer = Timer(Duration(seconds: seconds), ensureFreshToken);
   }
 
+  /// How often a kid without a seat is checked again on their own, besides
+  /// on return to the app and on "Réessayer".
+  static const seatRecheckSeconds = 300;
+
+  /// A device endpoint answered 403 `seat_required` mid-session: the seat
+  /// went while the token was still good. The refresh says so for certain
+  /// and moves the state; concurrent calls share one refresh.
+  void onSeatRequired() {
+    if (state.status != SessionStatus.paired || state.noSeat) return;
+    ensureFreshToken().ignore();
+  }
+
   /// Refresh now, coalescing concurrent callers onto one request.
   Future<void> ensureFreshToken() {
     return _inFlightRefresh ??= _refreshOnce().whenComplete(() {
@@ -224,8 +260,12 @@ class SessionController extends Notifier<SessionState> {
         state = state.copyWith(
           status: SessionStatus.paired,
           accessToken: accessToken,
+          noSeat: false,
         );
         _scheduleRefresh(expiresIn);
+      case RefreshNoSeat():
+        state = state.withoutSeat();
+        _scheduleRefresh(seatRecheckSeconds);
       case RefreshRejected(:final reason):
         _refreshTimer?.cancel();
         await _forgetActiveKid(erase: reason != null);
@@ -279,6 +319,16 @@ class SessionController extends Notifier<SessionState> {
           classroom: classroom,
         );
         _scheduleRefresh(expiresIn);
+      case RefreshNoSeat():
+        state = SessionState(
+          status: SessionStatus.paired,
+          kid: await _store.pairedKid(),
+          kids: kids,
+          stage: stage,
+          classroom: classroom,
+          noSeat: true,
+        );
+        _scheduleRefresh(seatRecheckSeconds);
       case RefreshRejected(:final reason):
         // Revoked or archived: forget that kid's credential.
         await _forgetActiveKid(erase: reason != null);
@@ -381,6 +431,15 @@ class SessionController extends Notifier<SessionState> {
           classroom: await _store.classroom(),
         );
         _scheduleRefresh(expiresIn);
+      case RefreshNoSeat():
+        state = SessionState(
+          status: SessionStatus.paired,
+          kid: kid,
+          kids: all,
+          classroom: await _store.classroom(),
+          noSeat: true,
+        );
+        _scheduleRefresh(seatRecheckSeconds);
       case RefreshRejected(:final reason):
         await _forgetActiveKid(erase: reason != null);
         await _resumeWithRemaining();
@@ -415,6 +474,8 @@ class SessionController extends Notifier<SessionState> {
 
   /// The app is back at [at]: past the threshold, [lockForResume].
   void noteBack(DateTime at) {
+    // Maybe a parent added them while the app was away.
+    if (state.noSeat) ensureFreshToken().ignore();
     final since = _awaySince;
     _awaySince = null;
     if (since == null) return;
@@ -477,6 +538,8 @@ class SessionController extends Notifier<SessionState> {
         return null;
       case PairingCodeRejected():
         return PairingError.invalidCode;
+      case PairingNoSeat():
+        return PairingError.noSeat;
       case PairingOffline():
         return PairingError.offline;
       case PairingRateLimited():
@@ -521,6 +584,8 @@ class SessionController extends Notifier<SessionState> {
         return PairingError.emptyClass;
       case ClassNotEntitled():
         return PairingError.classNotEntitled;
+      case PairingNoSeat():
+        return PairingError.noSeat;
       case PairingOffline():
         return PairingError.offline;
       case PairingRateLimited():
@@ -627,7 +692,21 @@ final dioProvider = Provider<Dio>((ref) {
       // than fall through to the success path and crash parsing a body that
       // has no device_token in it.
     ),
-  )..interceptors.add(RequestIdInterceptor(service: 'api'));
+  )
+    ..interceptors.add(RequestIdInterceptor(service: 'api'))
+    // A seat that goes mid-session shows up on the next content or
+    // progress call; only a kid's own calls (they carry a token) count.
+    ..interceptors.add(
+      InterceptorsWrapper(
+        onError: (error, handler) {
+          if (isSeatRequired(error) &&
+              error.requestOptions.headers.containsKey('Authorization')) {
+            ref.read(sessionControllerProvider.notifier).onSeatRequired();
+          }
+          handler.next(error);
+        },
+      ),
+    );
 });
 
 /// The on-disk database, opened once at app startup (`main.dart`) and

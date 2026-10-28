@@ -19,6 +19,7 @@ import '../../features/settings/settings_controller.dart';
 import 'paired_router.dart';
 import '../../features/reminders/reminder_coordinator.dart';
 import '../../data/local_db/node_progress_local.dart';
+import '../../features/pairing/no_seat_screen.dart';
 
 /// Chooses the screen from the session state.
 ///
@@ -241,6 +242,11 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
                 onCancel: ref
                     .read(sessionControllerProvider.notifier)
                     .chooseProfile,
+              ),
+            // Paired, but no seat right now: ask a parent, keep the pairing
+            // (ADR 0037, revision 2026-10-28).
+            ProfileStage.none when session.noSeat => const NoSeatScreen(
+                key: ValueKey('no-seat'),
               ),
             // Keyed on the kid: switching kid builds a fresh router and
             // fresh pages, so no screen keeps the last kid's state.
