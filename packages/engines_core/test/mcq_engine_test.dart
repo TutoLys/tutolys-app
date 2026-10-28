@@ -86,21 +86,28 @@ void main() {
     // tap by label deterministically.
     final config = {..._sampleConfig, 'shuffle': false};
 
-    Future<EngineHarness> pumpMcq(WidgetTester tester, {Map<String, Object?>? overrides}) async {
+    Future<EngineHarness> pumpMcq(
+      WidgetTester tester, {
+      Map<String, Object?>? overrides,
+    }) async {
       final harness = await EngineHarness.start();
-      await tester.pumpWidget(MaterialApp(
-        home: Scaffold(
-          body: engine.build(
-            harness.context(settingsOverrides: overrides ?? const {}),
-            config,
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: engine.build(
+              harness.context(settingsOverrides: overrides ?? const {}),
+              config,
+            ),
           ),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
       return harness;
     }
 
-    testWidgets('a wrong pick gives gentle feedback and stays open', (tester) async {
+    testWidgets('a wrong pick gives gentle feedback and stays open', (
+      tester,
+    ) async {
       final harness = await pumpMcq(tester);
 
       await tester.tap(find.text('7')); // id a, wrong
@@ -114,7 +121,9 @@ void main() {
       expect(attempt['is_correct'], isFalse);
     });
 
-    testWidgets('a wrong pick then the right one completes the run', (tester) async {
+    testWidgets('a wrong pick then the right one completes the run', (
+      tester,
+    ) async {
       final harness = await pumpMcq(tester);
 
       await tester.tap(find.text('9')); // id c, wrong
@@ -130,7 +139,9 @@ void main() {
       expect(result.attempts, 2);
       expect(result.correct, 1);
 
-      final isCorrectFlags = harness.attempts.map((e) => e['is_correct']).toList();
+      final isCorrectFlags = harness.attempts
+          .map((e) => e['is_correct'])
+          .toList();
       expect(isCorrectFlags, [false, true]);
     });
 
@@ -143,19 +154,29 @@ void main() {
       expect(attempt['answer_payload'], {'selected': 'b'});
     });
 
-    testWidgets('a hint is revealed on request and logged once', (tester) async {
+    testWidgets('a hint is revealed on request and logged once', (
+      tester,
+    ) async {
       final harness = await pumpMcq(tester);
 
-      expect(find.text('Un nombre pair se termine par 0, 2, 4, 6 ou 8.'), findsNothing);
+      expect(
+        find.text('Un nombre pair se termine par 0, 2, 4, 6 ou 8.'),
+        findsNothing,
+      );
       await tester.tap(find.text('Indice'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Un nombre pair se termine par 0, 2, 4, 6 ou 8.'), findsOneWidget);
+      expect(
+        find.text('Un nombre pair se termine par 0, 2, 4, 6 ou 8.'),
+        findsOneWidget,
+      );
       expect(harness.feedback.calls, ['hint']);
       expect(harness.hints, hasLength(1));
     });
 
-    testWidgets('the hint control is hidden when the hints setting is off', (tester) async {
+    testWidgets('the hint control is hidden when the hints setting is off', (
+      tester,
+    ) async {
       await pumpMcq(tester, overrides: {'hints': false});
 
       expect(find.text('Indice'), findsNothing);

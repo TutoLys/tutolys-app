@@ -1,7 +1,10 @@
 import 'dart:async';
 
+import 'package:design_system/design_system.dart';
 import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
+
+import 'mcq_engine.dart' show retryButtonStyle;
 
 /// Tap the right option before the clock runs out.
 ///
@@ -268,9 +271,8 @@ class _OptionButton extends StatelessWidget {
       width: double.infinity,
       child: FilledButton(
         onPressed: onTap,
-        style: isWrong
-            ? FilledButton.styleFrom(backgroundColor: Colors.red.shade400)
-            : null,
+        // Amber, never red: the design's "almost" (retry) state.
+        style: isWrong ? retryButtonStyle(VillagePalette.of(context)) : null,
         child: Text(label),
       ),
     );

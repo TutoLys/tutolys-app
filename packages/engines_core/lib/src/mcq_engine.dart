@@ -1,3 +1,4 @@
+import 'package:design_system/design_system.dart';
 import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
 
@@ -90,8 +91,9 @@ class _McqViewState extends State<_McqView> {
   String? get _hint => widget.config['hint'] as String?;
 
   List<Map<String, Object?>> _buildOptions() {
-    final options =
-        (widget.config['options'] as List).cast<Map<String, Object?>>().toList();
+    final options = (widget.config['options'] as List)
+        .cast<Map<String, Object?>>()
+        .toList();
     final shuffle = widget.config['shuffle'] != false;
     if (shuffle) options.shuffle(widget.engine.random);
     return options;
@@ -120,8 +122,10 @@ class _McqViewState extends State<_McqView> {
           outcome: ExerciseOutcome.completed,
           attempts: _attempts,
           correct: 1,
-          elapsedMs:
-              widget.engine.clock().difference(_startedAt).inMilliseconds,
+          elapsedMs: widget.engine
+              .clock()
+              .difference(_startedAt)
+              .inMilliseconds,
         ),
       );
       return;
@@ -166,9 +170,7 @@ class _McqViewState extends State<_McqView> {
             else
               TextButton(
                 onPressed: _revealHint,
-                child: Text(
-                  widget.engine.t(fr: 'Indice', en: 'Hint'),
-                ),
+                child: Text(widget.engine.t(fr: 'Indice', en: 'Hint')),
               ),
           ],
         ],
@@ -194,11 +196,18 @@ class _OptionButton extends StatelessWidget {
       width: double.infinity,
       child: FilledButton(
         onPressed: onTap,
-        style: isWrong
-            ? FilledButton.styleFrom(backgroundColor: Colors.red.shade400)
-            : null,
+        // Amber, never red: the design's "almost" (retry) state.
+        style: isWrong ? retryButtonStyle(VillagePalette.of(context)) : null,
         child: Text(label),
       ),
     );
   }
 }
+
+/// The legacy engines' wrong-answer button: [AnswerTile]'s retry colours
+/// (pale amber, dark amber text). Shared by mcq and speed_tap.
+ButtonStyle retryButtonStyle(VillagePalette p) => FilledButton.styleFrom(
+  backgroundColor: p.retryPale,
+  foregroundColor: p.isDark ? p.retry : const Color(0xFF9A4A0C),
+  side: BorderSide(color: p.retry, width: 2),
+);

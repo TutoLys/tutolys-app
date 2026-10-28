@@ -1,3 +1,4 @@
+import 'package:design_system/design_system.dart';
 import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
 
@@ -37,11 +38,16 @@ class PairMatchEngine extends TutolysEngine {
       if (item is! Map) return false;
       final id = item['id'];
       final label = item['label'];
-      return id is String && id.isNotEmpty && label is String && label.isNotEmpty;
+      return id is String &&
+          id.isNotEmpty &&
+          label is String &&
+          label.isNotEmpty;
     }
 
     for (final pair in pairs) {
-      if (pair is! Map || !isValidItem(pair['left']) || !isValidItem(pair['right'])) {
+      if (pair is! Map ||
+          !isValidItem(pair['left']) ||
+          !isValidItem(pair['right'])) {
         return const EngineValidation.invalid(
           'Every pair needs a left and a right item with an id and a label.',
         );
@@ -88,7 +94,8 @@ class _PairMatchViewState extends State<_PairMatchView> {
       (widget.config['pairs'] as List).cast<Map<String, Object?>>();
   late final Map<String, String> _rightToLeft = {
     for (final pair in _pairs)
-      (pair['right'] as Map)['id'] as String: (pair['left'] as Map)['id'] as String,
+      (pair['right'] as Map)['id'] as String:
+          (pair['left'] as Map)['id'] as String,
   };
   late final List<Map<String, Object?>> _leftItems = _shuffledLefts();
   late final List<Map<String, Object?>> _rightItems = _shuffledRights();
@@ -101,13 +108,17 @@ class _PairMatchViewState extends State<_PairMatchView> {
   int _attempts = 0;
 
   List<Map<String, Object?>> _shuffledLefts() {
-    final items = _pairs.map((p) => (p['left'] as Map).cast<String, Object?>()).toList();
+    final items = _pairs
+        .map((p) => (p['left'] as Map).cast<String, Object?>())
+        .toList();
     items.shuffle(widget.engine.random);
     return items;
   }
 
   List<Map<String, Object?>> _shuffledRights() {
-    final rights = _pairs.map((p) => (p['right'] as Map).cast<String, Object?>());
+    final rights = _pairs.map(
+      (p) => (p['right'] as Map).cast<String, Object?>(),
+    );
     final distractors = ((widget.config['distractors'] as List?) ?? const [])
         .cast<Map>()
         .map((m) => m.cast<String, Object?>());
@@ -154,8 +165,10 @@ class _PairMatchViewState extends State<_PairMatchView> {
             outcome: ExerciseOutcome.completed,
             attempts: _attempts,
             correct: _pairs.length,
-            elapsedMs:
-                widget.engine.clock().difference(_startedAt).inMilliseconds,
+            elapsedMs: widget.engine
+                .clock()
+                .difference(_startedAt)
+                .inMilliseconds,
           ),
         );
       }
@@ -203,7 +216,8 @@ class _PairMatchViewState extends State<_PairMatchView> {
                   _PairTile(
                     label: item['label'] as String,
                     isSelected: false,
-                    isMatched: _rightToLeft[item['id']] != null &&
+                    isMatched:
+                        _rightToLeft[item['id']] != null &&
                         _matchedLeftIds.contains(_rightToLeft[item['id']]),
                     isWrong: _flashWrongRightId == item['id'],
                     onTap: () => _tapRight(item['id'] as String),
@@ -234,13 +248,15 @@ class _PairTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = VillagePalette.of(context);
+    // Amber, never red: the design's "almost" (retry) state.
     final color = isWrong
-        ? Colors.red.shade400
+        ? palette.retry
         : isMatched
-            ? Colors.green.shade400
-            : isSelected
-                ? Theme.of(context).colorScheme.primary
-                : null;
+        ? palette.success
+        : isSelected
+        ? Theme.of(context).colorScheme.primary
+        : null;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
