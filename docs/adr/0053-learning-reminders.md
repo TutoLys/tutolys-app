@@ -126,3 +126,34 @@ checks for this. The kid's own app language is used.
     - "Nouvelles quêtes" untouched.
 - The web and Linux builds both compile with the plugin. No reminder has
   been seen firing on a real desktop yet.
+
+## Revision — 2026-10-28: "Ma flamme"
+
+Hafid answered question 3: the "Nouvelles quêtes" switch becomes **"Ma
+flamme"** ("My flame"), the evening streak reminder.
+
+- **Its own switch,** `flameReminders`, under a new key
+  (`settings.flame_reminders`).
+  - It is off by default.
+  - It is turned on behind the guardian PIN and the OS permission, and
+    off without either, exactly like "Rappels quotidiens".
+  - The old `quest_notifications` flag defaulted to on while doing
+    nothing, so it is ignored, for the same reason as `daily_reminders`.
+- **At 18:30**, inside the window, late enough to leave the day for
+  playing.
+- **When it fires.** All of these must hold:
+  - the streak is 2 or more;
+  - no shield is ready;
+  - the day isn't played yet;
+  - the day is today, or tomorrow once today is played. If today isn't
+    played, the streak has already broken by tomorrow, so there is
+    nothing to save.
+- **At most one a day still holds:** when the flame is due, it replaces
+  that day's ordinary reminder.
+- **It backs off like the daily one.** Merged with another kid's reminder,
+  it becomes the unnamed "Qui veut jouer ?".
+- **The daily reminder always uses the plain wording now.** The flame
+  wording is only for "Ma flamme", which replaces the interim rule above
+  (the daily reminder borrowing the flame wording).
+- **Strings:** `settingsQuestNotifications` is gone, replaced by
+  `settingsFlameReminders` and its sub-line.

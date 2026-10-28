@@ -194,7 +194,7 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
     // played, so today's reminder goes).
     ref.listen(
       settingsControllerProvider.select(
-        (s) => (s.dailyReminders, s.reminderMinutes, s.english),
+        (s) => (s.dailyReminders, s.flameReminders, s.reminderMinutes, s.english),
       ),
       (_, _) => _rescheduleReminders(),
     );

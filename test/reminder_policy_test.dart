@@ -11,6 +11,7 @@ DateTime _d(int day) => DateTime(2026, 10, day);
 KidReminderInput _kid(
   String id, {
   bool enabled = true,
+  bool flame = false,
   int minutes = 17 * 60,
   bool english = false,
   Set<DateTime>? played,
@@ -20,6 +21,7 @@ KidReminderInput _kid(
 }) => KidReminderInput(
   kidId: id,
   enabled: enabled,
+  flameEnabled: flame,
   minutes: minutes,
   english: english,
   playedDays: played ?? {_d(27)},
@@ -114,36 +116,89 @@ void main() {
       });
     });
 
-    group('the flame', () {
-      test('today, when the streak is at risk and no shield is ready', () {
+    group('Ma flamme', () {
+      test('in the evening, instead of the daily one, when the streak is at '
+          'risk and no shield is ready', () {
+        final plan = planReminders(
+          kids: [_kid('lea', flame: true, streak: 4, shieldReady: false)],
+          now: _now,
+        );
+        expect(plan.first.kind, ReminderKind.flame);
+        expect(plan.first.at, DateTime(2026, 10, 28, 18, 30));
+        // Today unplayed: by tomorrow the streak has broken, so tomorrow is
+        // an ordinary reminder.
+        expect(plan.last.kind, ReminderKind.learn);
+        expect(plan, hasLength(2), reason: 'one a day at most');
+      });
+
+      test('tomorrow too, once today is played', () {
+        final plan = planReminders(
+          kids: [
+            _kid(
+              'lea',
+              flame: true,
+              played: {_d(27), _d(28)},
+              streak: 2,
+              shieldReady: false,
+            ),
+          ],
+          now: _now,
+        );
+        expect(plan.single.kind, ReminderKind.flame);
+        expect(plan.single.at, DateTime(2026, 10, 29, 18, 30));
+      });
+
+      test('on its own, with the daily reminders off', () {
+        final plan = planReminders(
+          kids: [
+            _kid('lea', enabled: false, flame: true, streak: 3, shieldReady: false),
+          ],
+          now: _now,
+        );
+        expect(plan.single.kind, ReminderKind.flame);
+      });
+
+      test('not when its switch is off: the daily wording stays plain', () {
         final plan = planReminders(
           kids: [_kid('lea', streak: 4, shieldReady: false)],
           now: _now,
         );
-        expect(plan.first.kind, ReminderKind.flame);
-        expect(plan.last.kind, ReminderKind.learn, reason: 'tomorrow is unknown');
+        expect(plan.every((r) => r.kind == ReminderKind.learn), isTrue);
       });
 
       test('a ready shield already protects it: no flame', () {
         final plan = planReminders(
-          kids: [_kid('lea', streak: 4, shieldReady: true)],
+          kids: [_kid('lea', flame: true, streak: 4, shieldReady: true)],
           now: _now,
         );
-        expect(plan.first.kind, ReminderKind.learn);
+        expect(plan.every((r) => r.kind == ReminderKind.learn), isTrue);
       });
 
       test('unknown shield, or a streak under 2: no flame', () {
         expect(
-          planReminders(kids: [_kid('a', streak: 4)], now: _now).first.kind,
-          ReminderKind.learn,
+          planReminders(
+            kids: [_kid('a', enabled: false, flame: true, streak: 4)],
+            now: _now,
+          ),
+          isEmpty,
         );
         expect(
           planReminders(
-            kids: [_kid('a', streak: 1, shieldReady: false)],
+            kids: [_kid('a', enabled: false, flame: true, streak: 1, shieldReady: false)],
             now: _now,
-          ).first.kind,
-          ReminderKind.learn,
+          ),
+          isEmpty,
         );
+      });
+
+      test('backs off like the daily one', () {
+        final plan = planReminders(
+          kids: [
+            _kid('lea', flame: true, played: {_d(24)}, streak: 5, shieldReady: false),
+          ],
+          now: _now,
+        );
+        expect(plan, isEmpty);
       });
     });
 

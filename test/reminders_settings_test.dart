@@ -126,18 +126,21 @@ void main() {
     setUp(() => db = LocalDatabase.memory());
     tearDown(() => db.close());
 
-    test('off by default; the old always-on flag is not a guardian\'s choice',
+    test('off by default; the old always-on flags are not a guardian\'s choice',
         () async {
-      await db.into(db.appStateTable).insert(
-            AppStateTableCompanion.insert(
-              kidId: 'lea',
-              key: 'settings.daily_reminders',
-              value: 'true',
-              updatedAt: DateTime(2026, 10, 1),
-            ),
-          );
+      for (final key in ['settings.daily_reminders', 'settings.quest_notifications']) {
+        await db.into(db.appStateTable).insert(
+              AppStateTableCompanion.insert(
+                kidId: 'lea',
+                key: key,
+                value: 'true',
+                updatedAt: DateTime(2026, 10, 1),
+              ),
+            );
+      }
       final s = await AppSettingsStore(db, kidId: 'lea').read();
       expect(s.dailyReminders, isFalse);
+      expect(s.flameReminders, isFalse);
       expect(s.reminderMinutes, defaultReminderMinutes);
     });
 
@@ -145,11 +148,13 @@ void main() {
       final store = AppSettingsStore(db, kidId: 'lea');
       await store.write(AppSettings(
         dailyReminders: true,
+        flameReminders: true,
         reminderMinutes: 9 * 60 + 30,
         remindersOnSince: DateTime(2026, 10, 28, 15, 4),
       ));
       final s = await store.read();
       expect(s.dailyReminders, isTrue);
+      expect(s.flameReminders, isTrue);
       expect(s.reminderMinutes, 9 * 60 + 30);
       expect(s.remindersOnSince, DateTime(2026, 10, 28));
     });
@@ -305,9 +310,44 @@ void main() {
       expect(find.text(Strings.fr.settingsRemindersClassNote), findsOneWidget);
     });
 
-    testWidgets('"Nouvelles quêtes" is left as it was', (tester) async {
-      await pump(tester);
-      expect(find.text(Strings.fr.settingsQuestNotifications), findsOneWidget);
+    testWidgets('"Ma flamme" replaces "Nouvelles quêtes", behind the PIN', (
+      tester,
+    ) async {
+      final (c, sink) = await pump(tester);
+      expect(find.text(Strings.fr.settingsFlameReminders), findsOneWidget);
+      VillageSwitch flame() => tester.widget(
+        find.descendant(
+          of: find.byKey(const ValueKey('settings-flame')),
+          matching: find.byType(VillageSwitch),
+        ),
+      );
+      expect(flame().value, isFalse);
+
+      flame().onChanged!(true);
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '123456');
+      await tester.tap(find.byKey(const ValueKey('pin-gate-primary')));
+      await tester.pumpAndSettle();
+      expect(sink.asked, 1);
+      expect(c.read(settingsControllerProvider).flameReminders, isTrue);
+
+      flame().onChanged!(false);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('pin-gate-primary')), findsNothing);
+      expect(c.read(settingsControllerProvider).flameReminders, isFalse);
+    });
+
+    testWidgets('"Ma flamme" is greyed where reminders can\'t work', (
+      tester,
+    ) async {
+      await pump(tester, support: ReminderSupport.none);
+      final flame = tester.widget<VillageSwitch>(
+        find.descendant(
+          of: find.byKey(const ValueKey('settings-flame')),
+          matching: find.byType(VillageSwitch),
+        ),
+      );
+      expect(flame.onChanged, isNull);
     });
   });
 }

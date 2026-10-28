@@ -82,6 +82,7 @@ class ReminderCoordinator {
     return KidReminderInput(
       kidId: kidId,
       enabled: s.dailyReminders,
+      flameEnabled: s.flameReminders,
       minutes: s.reminderMinutes,
       english: s.english,
       playedDays: await streak.playedDays(),

@@ -209,7 +209,9 @@ abstract class Strings {
   String get settingsNotifications;
   String get settingsDailyReminders;
   String get settingsDailyRemindersSub;
-  String get settingsQuestNotifications;
+  /// "Ma flamme": the evening reminder when the streak is at risk.
+  String get settingsFlameReminders;
+  String get settingsFlameRemindersSub;
   String get settingsParentZone;
   String get settingsParentZoneBody;
   String get settingsParentZoneCta;
@@ -935,7 +937,11 @@ class _FrenchStrings extends Strings {
   String get settingsDailyRemindersSub => 'Un petit coucou si tu n\'as pas joué';
 
   @override
-  String get settingsQuestNotifications => 'Nouvelles quêtes';
+  String get settingsFlameReminders => 'Ma flamme';
+
+  @override
+  String get settingsFlameRemindersSub =>
+      'Un petit mot le soir si ta flamme n\'a pas encore brillé aujourd\'hui';
 
   @override
   String get settingsParentZone => 'Zone parent';
@@ -2111,7 +2117,11 @@ class _EnglishStrings extends Strings {
   String get settingsDailyRemindersSub => 'A little hello if you haven\'t played';
 
   @override
-  String get settingsQuestNotifications => 'New quests';
+  String get settingsFlameReminders => 'My flame';
+
+  @override
+  String get settingsFlameRemindersSub =>
+      'A little note in the evening if your flame hasn\'t glowed yet today';
 
   @override
   String get settingsParentZone => 'Parent zone';

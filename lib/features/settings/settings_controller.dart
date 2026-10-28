@@ -97,8 +97,13 @@ class SettingsController extends Notifier<AppSettings> {
   Future<void> setReminderMinutes(int minutes) =>
       _apply(state.copyWith(reminderMinutes: minutes));
 
-  Future<void> setQuestNotifications(bool value) =>
-      _apply(state.copyWith(questNotifications: value));
+  /// "Ma flamme". Turning it on restarts the back-off too.
+  Future<void> setFlameReminders(bool value, {DateTime? today}) => _apply(
+    state.copyWith(
+      flameReminders: value,
+      remindersOnSince: value ? (today ?? DateTime.now()) : null,
+    ),
+  );
 }
 
 final settingsControllerProvider =

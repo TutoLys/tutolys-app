@@ -7,6 +7,8 @@ import 'package:flutter/foundation.dart';
 /// `docs/plan-2026-10-28-pill-tabs-and-reminders.md` part B):
 /// - local scheduled notifications only, nothing leaves the device;
 /// - at most one reminder per kid per day, only on a day not yet played;
+/// - "Ma flamme" (Hafid, 2026-10-28): an evening reminder when the streak
+///   is at risk and no shield is ready, which wins over the daily one;
 /// - only between 08:00 and 19:30;
 /// - after 3 days reminded without play, none until the kid plays again;
 /// - several kids due within 30 minutes share one reminder with no name;
@@ -24,6 +26,10 @@ final reminderSlots = List<int>.unmodifiable([
 /// A new reminder's time until the guardian picks one: after school.
 const defaultReminderMinutes = 17 * 60;
 
+/// "Ma flamme", the evening reminder when the streak is at risk: late
+/// enough to leave the day for playing, inside the window.
+const flameReminderMinutes = 18 * 60 + 30;
+
 /// Reminders stop after this many days in a row reminded without play.
 const reminderBackOffDays = 3;
 
@@ -40,6 +46,7 @@ class KidReminderInput {
   const KidReminderInput({
     required this.kidId,
     required this.enabled,
+    this.flameEnabled = false,
     required this.minutes,
     required this.english,
     required this.playedDays,
@@ -49,7 +56,12 @@ class KidReminderInput {
   });
 
   final String kidId;
+
+  /// "Rappels quotidiens".
   final bool enabled;
+
+  /// "Ma flamme": the evening reminder when the streak is at risk.
+  final bool flameEnabled;
 
   /// The chosen time, in minutes after midnight.
   final int minutes;
@@ -75,7 +87,7 @@ enum ReminderKind {
   /// "Le renard a préparé une nouvelle leçon. On joue ?"
   learn,
 
-  /// The streak is at risk today and no shield would save it.
+  /// "Ma flamme": the streak is at risk and no shield would save it.
   flame,
 
   /// Several kids at once, named nowhere: "Qui veut jouer ?"
@@ -126,9 +138,10 @@ List<PlannedReminder> planReminders({
   final single = <PlannedReminder>[];
 
   for (final kid in kids) {
-    if (!kid.enabled) continue;
+    if (!kid.enabled && !kid.flameEnabled) continue;
     final minutes = kid.minutes.clamp(reminderWindowStart, reminderWindowEnd);
     final last = _lastActivity(kid);
+    final playedToday = kid.playedDays.contains(today);
     for (var d = 0; d < days; d++) {
       final day = DateTime(today.year, today.month, today.day + d);
       // Only a day not played yet. Tomorrow is unknown, and rescheduling
@@ -137,19 +150,33 @@ List<PlannedReminder> planReminders({
       if (last != null && _daysBetween(last, day) > reminderBackOffDays) {
         continue;
       }
-      final at = DateTime(day.year, day.month, day.day, 0, minutes);
-      if (!at.isAfter(now)) continue;
-      // Today is the only day whose streak is known to be at risk.
+      // The streak is at risk on a day not played: today, or tomorrow when
+      // today is played (otherwise it has already broken by then). Only
+      // when no shield is ready: a ready one already protects it.
       final atRisk =
-          d == 0 && (kid.streak ?? 0) >= 2 && kid.shieldReady == false;
-      single.add(
-        PlannedReminder(
-          at: at,
-          kind: atRisk ? ReminderKind.flame : ReminderKind.learn,
+          (d == 0 || (d == 1 && playedToday)) &&
+          (kid.streak ?? 0) >= 2 &&
+          kid.shieldReady == false;
+      // At most one a day: the flame, when it's due, wins.
+      final PlannedReminder? reminder;
+      if (kid.flameEnabled && atRisk) {
+        reminder = PlannedReminder(
+          at: DateTime(day.year, day.month, day.day, 0, flameReminderMinutes),
+          kind: ReminderKind.flame,
           english: kid.english,
           kidIds: [kid.kidId],
-        ),
-      );
+        );
+      } else if (kid.enabled) {
+        reminder = PlannedReminder(
+          at: DateTime(day.year, day.month, day.day, 0, minutes),
+          kind: ReminderKind.learn,
+          english: kid.english,
+          kidIds: [kid.kidId],
+        );
+      } else {
+        reminder = null;
+      }
+      if (reminder != null && reminder.at.isAfter(now)) single.add(reminder);
     }
   }
   return _merge(single);

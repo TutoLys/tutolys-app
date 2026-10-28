@@ -20,7 +20,7 @@ class AppSettings {
     this.dailyReminders = false,
     this.reminderMinutes = 17 * 60,
     this.remindersOnSince,
-    this.questNotifications = true,
+    this.flameReminders = false,
   });
 
   final bool darkTheme;
@@ -53,7 +53,9 @@ class AppSettings {
   /// for a kid who hasn't played since.
   final DateTime? remindersOnSince;
 
-  final bool questNotifications;
+  /// "Ma flamme": the evening reminder when the streak is at risk
+  /// (ADR 0053). Like [dailyReminders], turned on behind the guardian PIN.
+  final bool flameReminders;
 
   AppSettings copyWith({
     bool? darkTheme,
@@ -66,7 +68,7 @@ class AppSettings {
     bool? dailyReminders,
     int? reminderMinutes,
     DateTime? remindersOnSince,
-    bool? questNotifications,
+    bool? flameReminders,
   }) {
     return AppSettings(
       darkTheme: darkTheme ?? this.darkTheme,
@@ -79,7 +81,7 @@ class AppSettings {
       dailyReminders: dailyReminders ?? this.dailyReminders,
       reminderMinutes: reminderMinutes ?? this.reminderMinutes,
       remindersOnSince: remindersOnSince ?? this.remindersOnSince,
-      questNotifications: questNotifications ?? this.questNotifications,
+      flameReminders: flameReminders ?? this.flameReminders,
     );
   }
 }
@@ -116,7 +118,9 @@ class AppSettingsStore {
   static const _dailyReminders = '${_prefix}reminders_on';
   static const _reminderMinutes = '${_prefix}reminder_minutes';
   static const _remindersOnSince = '${_prefix}reminders_on_since';
-  static const _questNotifications = '${_prefix}quest_notifications';
+  // Replaces `quest_notifications` ("Nouvelles quêtes"), which defaulted to
+  // on and did nothing; Hafid made it "Ma flamme" (2026-10-28).
+  static const _flameReminders = '${_prefix}flame_reminders';
 
   Future<AppSettings> read() async {
     final rows = await (db.select(db.appStateTable)
@@ -142,8 +146,7 @@ class AppSettingsStore {
           int.tryParse(byKey[_reminderMinutes] ?? '') ??
           defaults.reminderMinutes,
       remindersOnSince: DateTime.tryParse(byKey[_remindersOnSince] ?? ''),
-      questNotifications:
-          flag(_questNotifications, defaults.questNotifications),
+      flameReminders: flag(_flameReminders, defaults.flameReminders),
     );
   }
 
@@ -166,7 +169,7 @@ class AppSettingsStore {
       _reminderMinutes: '${settings.reminderMinutes}',
       if (settings.remindersOnSince case final since?)
         _remindersOnSince: since.toIso8601String().substring(0, 10),
-      _questNotifications: '${settings.questNotifications}',
+      _flameReminders: '${settings.flameReminders}',
     };
 
     await db.batch((batch) {

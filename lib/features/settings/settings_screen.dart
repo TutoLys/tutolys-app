@@ -106,14 +106,7 @@ class SettingsScreen extends ConsumerWidget {
         ],
       ),
       SettingsTab.notifications => _Group(
-        children: [
-          ..._reminderRows(context, ref, settings),
-          _ToggleRow(
-            label: t.settingsQuestNotifications,
-            value: settings.questNotifications,
-            onChanged: controller.setQuestNotifications,
-          ),
-        ],
+        children: _reminderRows(context, ref, settings),
       ),
       SettingsTab.parents => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -209,10 +202,11 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  /// "Rappels quotidiens" and its time (ADR 0053). Turning reminders on or
-  /// choosing their time needs the guardian PIN, and asks the OS while the
-  /// guardian holds the device; turning them off never does, because doing
-  /// less is always safe. Not offered on web or on a class tablet.
+  /// "Rappels quotidiens" with its time, and "Ma flamme" (ADR 0053).
+  /// Turning either on, or choosing the time, needs the guardian PIN and
+  /// asks the OS while the guardian holds the device; turning them off never
+  /// does, because doing less is always safe. Not offered on web or on a
+  /// class tablet.
   List<Widget> _reminderRows(
     BuildContext context,
     WidgetRef ref,
@@ -241,7 +235,7 @@ class SettingsScreen extends ConsumerWidget {
       enterSubtitle: t.remindersPinEnter,
     );
 
-    Future<void> turnOn() async {
+    Future<void> turnOn(Future<void> Function(bool) set) async {
       if (!await guardian() || !context.mounted) return;
       final sink = await ref.read(reminderSinkProvider.future);
       if (!await sink.requestPermission()) {
@@ -250,7 +244,7 @@ class SettingsScreen extends ConsumerWidget {
         }
         return;
       }
-      await controller.setDailyReminders(true);
+      await set(true);
     }
 
     Future<void> chooseTime() async {
@@ -287,7 +281,9 @@ class SettingsScreen extends ConsumerWidget {
         value: settings.dailyReminders && !unavailable,
         onChanged: unavailable
             ? null
-            : (on) => on ? turnOn() : controller.setDailyReminders(false),
+            : (on) => on
+                  ? turnOn(controller.setDailyReminders)
+                  : controller.setDailyReminders(false),
       ),
       if (settings.dailyReminders && !unavailable)
         _ValueRow(
@@ -296,6 +292,17 @@ class SettingsScreen extends ConsumerWidget {
           value: t.reminderTimeLabel(settings.reminderMinutes),
           onTap: chooseTime,
         ),
+      _ToggleRow(
+        key: const ValueKey('settings-flame'),
+        label: t.settingsFlameReminders,
+        sublabel: t.settingsFlameRemindersSub,
+        value: settings.flameReminders && !unavailable,
+        onChanged: unavailable
+            ? null
+            : (on) => on
+                  ? turnOn(controller.setFlameReminders)
+                  : controller.setFlameReminders(false),
+      ),
     ];
   }
 
