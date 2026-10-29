@@ -279,6 +279,7 @@ class _LearningActivityViewState extends State<LearningActivityView> {
         (state.questionIndex + 1).clamp(1, count),
         count,
       ),
+      progressCount: '${(state.questionIndex + 1).clamp(1, count)} / $count',
       // No "+0" chip: a replayed question pays nothing (backend ADR 0047).
       xp: switch (widget.xpEarned?.call()) {
         0 || null => null,

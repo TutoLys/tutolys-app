@@ -53,6 +53,7 @@ class ActivityShell extends StatelessWidget {
     required this.body,
     this.progress,
     this.progressLabel,
+    this.progressCount,
     this.xp,
     this.inARow = 0,
     this.promptText,
@@ -80,6 +81,10 @@ class ActivityShell extends StatelessWidget {
   /// 0..1; null hides the track (a legacy engine reports no progress).
   final double? progress;
   final String? progressLabel;
+
+  /// « 2 / 6 », drawn beside the track so a child sees what's left (UX
+  /// review N1).
+  final String? progressCount;
 
   /// XP earned so far this activity; null hides the pill.
   final int? xp;
@@ -238,6 +243,7 @@ class ActivityShell extends StatelessWidget {
                   onClose: onClose,
                   progress: progress,
                   progressLabel: progressLabel,
+                  progressCount: progressCount,
                   xp: xp,
                   inARow: inARow,
                   character: hasPrompt ? null : character,
@@ -310,6 +316,7 @@ class _TopBar extends StatelessWidget {
     required this.onClose,
     required this.progress,
     required this.progressLabel,
+    required this.progressCount,
     required this.xp,
     required this.inARow,
     required this.character,
@@ -322,6 +329,7 @@ class _TopBar extends StatelessWidget {
   final Widget? character;
   final double? progress;
   final String? progressLabel;
+  final String? progressCount;
   final int? xp;
   final int inARow;
 
@@ -385,27 +393,39 @@ class _TopBar extends StatelessWidget {
                   Semantics(
                     label: progressLabel,
                     value: '${(progress!.clamp(0, 1) * 100).round()} %',
-                    child: ClipRRect(
-                      borderRadius: Radii.pillAll,
-                      child: SizedBox(
-                        height: 10,
-                        child: Stack(
-                          children: [
-                            Positioned.fill(child: ColoredBox(color: p.track)),
-                            FractionallySizedBox(
-                              // Full height: a childless box in a Stack is otherwise
-                              // sized to zero, and the fill never shows.
-                              heightFactor: 1,
-                              widthFactor: progress!.clamp(0, 1).toDouble(),
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [p.goldLight, p.gold],
+                    // An outlined track (3:1) shows the whole way even
+                    // at 0 %, where only the gold fill drew before (N1).
+                    child: DecoratedBox(
+                      key: const ValueKey('progress-track'),
+                      position: DecorationPosition.foreground,
+                      decoration: BoxDecoration(
+                        borderRadius: Radii.pillAll,
+                        border: Border.all(color: p.inkMuted, width: 1.5),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: Radii.pillAll,
+                        child: SizedBox(
+                          height: 10,
+                          child: Stack(
+                            children: [
+                              Positioned.fill(
+                                child: ColoredBox(color: p.track),
+                              ),
+                              FractionallySizedBox(
+                                // Full height: a childless box in a Stack is otherwise
+                                // sized to zero, and the fill never shows.
+                                heightFactor: 1,
+                                widthFactor: progress!.clamp(0, 1).toDouble(),
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [p.goldLight, p.gold],
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -414,6 +434,22 @@ class _TopBar extends StatelessWidget {
               ],
             ),
           ),
+          if (progressCount != null) ...[
+            const SizedBox(width: Space.sm),
+            ExcludeSemantics(
+              // The track's own semantics already say « Question 2 sur 6 ».
+              child: Text(
+                progressCount!,
+                key: const ValueKey('progress-count'),
+                style: TextStyle(
+                  fontFamily: VillageType.display,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
+                  color: p.ink,
+                ),
+              ),
+            ),
+          ],
           if (xp != null) ...[
             const SizedBox(width: Space.md),
             Icon(Icons.star_rounded, color: p.gold, size: 18),

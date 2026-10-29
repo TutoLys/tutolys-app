@@ -481,6 +481,35 @@ void main() {
       );
     });
   });
+
+  group('N1 the progress track shows from question 1, with a count', () {
+    testWidgets('outlined track at 3:1, and « 1 / 2 »', (tester) async {
+      final c = ActivitySessionController(
+        envelope: QuestionEnvelope.parse(fakeEnvelope(questions: 2))
+            .valueOrNull!,
+        kidId: 'kid',
+        engines: LearningEngineRegistry([eraseEngine(FakeChoiceEngine())]),
+        evaluators: EvaluatorRegistry([FakeExactEvaluator()]),
+        store: InMemoryActivitySessionStore(InMemoryEventOutbox()),
+        appVersion: '0.2.0',
+        seed: 3,
+      );
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(
+        _app(LearningActivityView(controller: c, locale: fr, onDone: () {})),
+      );
+      expect(find.text('1 / 2'), findsOneWidget);
+      final track = tester.widget<DecoratedBox>(
+        find.byKey(const ValueKey('progress-track')),
+      );
+      final border = (track.decoration as BoxDecoration).border! as Border;
+      expect(
+        contrast(border.top.color, VillagePalette.light.surface),
+        greaterThanOrEqualTo(3),
+      );
+      c.dispose();
+    });
+  });
 }
 
 class _Silent implements ContentSpeaker {
