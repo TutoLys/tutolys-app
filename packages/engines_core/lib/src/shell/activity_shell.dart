@@ -452,10 +452,23 @@ class _PromptRow extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         if (character != null) ...[character!, const SizedBox(width: 14)],
+        // 56 dp, solid bright blue: the one control a non-reader needs to
+        // find (UX review G10, the design's `.exo-listen-btn`).
         if (onSpeak != null)
-          IconButton.filledTonal(
+          IconButton.filled(
+            key: const ValueKey('prompt-speak'),
             onPressed: onSpeak,
             tooltip: strings.listen,
+            iconSize: 28,
+            constraints: const BoxConstraints.tightFor(width: 56, height: 56),
+            style: IconButton.styleFrom(
+              backgroundColor: palette.quebecBlueBright,
+              // White reads on the light blue (4.6:1), dark ink on the
+              // dark theme's brighter blue (5.9:1).
+              foregroundColor: palette.isDark
+                  ? const Color(0xFF0D1526)
+                  : Colors.white,
+            ),
             icon: const Icon(Icons.volume_up_rounded),
           ),
         if (onSpeak != null && text != null) const SizedBox(width: 14),

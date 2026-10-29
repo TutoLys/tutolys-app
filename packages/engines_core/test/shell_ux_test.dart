@@ -225,4 +225,72 @@ void main() {
       c.dispose();
     });
   });
+
+  group('G10 the listen buttons are big enough to find and hit', () {
+    testWidgets('the prompt speaker is 56 dp, solid, and reads', (
+      tester,
+    ) async {
+      for (final dark in [false, true]) {
+        await tester.pumpWidget(
+          _app(
+            ActivityShell(
+              locale: fr,
+              onClose: () {},
+              body: const SizedBox(),
+              promptText: 'Écoute.',
+              onSpeak: () {},
+            ),
+            dark: dark,
+          ),
+        );
+        final speak = find.byKey(const ValueKey('prompt-speak'));
+        expect(tester.getSize(speak), const Size(56, 56));
+        final style = tester.widget<IconButton>(speak).style!;
+        expect(
+          contrast(
+            style.foregroundColor!.resolve({})!,
+            style.backgroundColor!.resolve({})!,
+          ),
+          greaterThanOrEqualTo(3),
+          reason: dark ? 'dark' : 'light',
+        );
+      }
+    });
+
+    testWidgets('the tile speaker is at least 48 dp, apart from the label', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _app(
+          ContentSpeakerScope(
+            speaker: _Silent(),
+            child: Center(
+              child: SizedBox(
+                width: 300,
+                child: AnswerTile(
+                  label: 'chat',
+                  audioRef: 'a1',
+                  state: AnswerTileState.idle,
+                  onTap: () {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      final speak = find.byKey(const ValueKey('tile-speak-a1'));
+      final size = tester.getSize(speak);
+      expect(size.width, greaterThanOrEqualTo(48));
+      expect(size.height, greaterThanOrEqualTo(48));
+      final gap =
+          tester.getTopLeft(find.text('chat')).dx -
+          tester.getTopRight(speak).dx;
+      expect(gap, greaterThanOrEqualTo(12));
+    });
+  });
+}
+
+class _Silent implements ContentSpeaker {
+  @override
+  void speak({required String audioRef, required String partId}) {}
 }

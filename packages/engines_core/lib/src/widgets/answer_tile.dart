@@ -156,20 +156,27 @@ class AnswerTile extends StatelessWidget {
                     padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                     child: Row(
                       children: [
+                        // Its own 48 dp pill with a gap after it, so a
+                        // child aiming for it doesn't pick the answer
+                        // instead (UX review G10).
                         if (speak != null)
                           Padding(
-                            padding: const EdgeInsets.only(right: 6),
-                            child: IconButton(
+                            padding: const EdgeInsets.only(right: 12),
+                            child: IconButton.filledTonal(
                               key: ValueKey('tile-speak-$ref'),
                               onPressed: speak,
                               tooltip: en ? 'Listen' : 'Écouter',
-                              iconSize: 20,
-                              visualDensity: VisualDensity.compact,
-                              constraints: const BoxConstraints(
-                                minWidth: 40,
-                                minHeight: 40,
+                              iconSize: 22,
+                              constraints: const BoxConstraints.tightFor(
+                                width: 48,
+                                height: 48,
                               ),
-                              color: p.quebecBlue,
+                              style: IconButton.styleFrom(
+                                backgroundColor: p.navHoverFill,
+                                foregroundColor: p.isDark
+                                    ? p.quebecBlueBright
+                                    : p.quebecBlue,
+                              ),
                               icon: const Icon(Icons.volume_up_rounded),
                             ),
                           ),
