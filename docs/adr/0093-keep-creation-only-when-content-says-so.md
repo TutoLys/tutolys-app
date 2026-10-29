@@ -28,14 +28,14 @@ keep that as a creation, which means nothing. Hafid keeps the feature.
 
 ## Consequences
 
-- Flagged at the time: `pfeq_grade1_english/10_build_a_sentence.json`
-  (all 5), `samples/fr_mail_studio.json` (all 4), and
+- Flagged: `samples/fr_mail_studio.json` (all 4) and
   `samples/math_geometry_lab.json` (the 5 builds, not the copy). No math
   lesson, no français word or syllable lesson, and no `pattern_machine`
   content: that engine has no invent mode yet, so every pattern has one
   answer.
-- The sentence lesson's sentences have a fixed target. They're flagged
-  because the request names built sentences as creations. Dropping the
-  flag there is a one-key edit.
+- Not flagged: `pfeq_grade1_english/10_build_a_sentence.json`. Each
+  sentence has one fixed target, so it has one right answer. It gets the
+  flag only once compose_build has a free-build mode where the child picks
+  their own words.
 - Tests: `offersKeep` (`test/support/fake_shelf.dart`) plays each engine
   in the shell with the flag on and off.
