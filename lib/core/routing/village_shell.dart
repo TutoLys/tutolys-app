@@ -228,6 +228,7 @@ class _VillageShellState extends ConsumerState<VillageShell> {
                 if (progress.level case final level?)
                   HeaderStat(
                     asset: 'asset-xpstar.webp',
+                    priority: 3,
                     label: t.progressLevel(level),
                     progress: progress.levelProgress,
                     tooltip: switch ((
@@ -245,10 +246,12 @@ class _VillageShellState extends ConsumerState<VillageShell> {
                 // up here (Hafid: "Why is the XP not showing?").
                 HeaderStat(
                   asset: 'asset-xpstar.webp',
+                  priority: 0,
                   label: t.headerXp(progress.totalXp),
                 ),
                 HeaderStat(
                   asset: 'asset-flame.webp',
+                  priority: 1,
                   label: progress.currentStreakDays == null
                       ? '–'
                       : '${progress.currentStreakDays}',
@@ -257,6 +260,7 @@ class _VillageShellState extends ConsumerState<VillageShell> {
                 if (board != null && board.quests.isNotEmpty)
                   HeaderStat(
                     asset: 'asset-target.webp',
+                    priority: 2,
                     label: '${board.doneCount}/${board.quests.length} '
                         '${t.headerQuestsLabel}',
                   ),

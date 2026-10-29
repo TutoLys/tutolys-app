@@ -10,9 +10,14 @@ class HeaderStat {
     required this.label,
     this.progress,
     this.tooltip,
+    this.priority = 99,
   });
   final String asset;
   final String label;
+
+  /// Lower stays longer when the header is narrow (K1): pills that don't
+  /// fit at full size are left out, never shrunk.
+  final int priority;
 
   /// 0..1: draws the design's small `.xp-track` after the label (the level
   /// pill). Hidden on compact headers, as the design hides it there.
@@ -157,21 +162,30 @@ class VillageHeader extends StatelessWidget {
               // phone, with the gear beside them, three pills and a name do not
               // fit at full size. The name gives way first (it ellipsizes),
               // then the pills scale down together.
-              ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: maxStatsWidth),
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerRight,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      for (final (i, stat) in stats.indexed) ...[
-                        if (i > 0) SizedBox(width: compact ? 6 : Space.xs),
-                        _StatPill(stat: stat, palette: p, compact: compact),
-                      ],
-                    ],
-                  ),
-                ),
+              // K1: never scaled. A pill shrunk to fit read at ~4 px on a
+              // phone. As many as fit at full size are shown, the most
+              // important first (XP, then the streak), at most two on a
+              // phone; level and quests stay a tap away in Progrès and
+              // Quêtes.
+              // Natural width: the name beside it is Expanded and gives way
+              // (it ellipsizes), so the pills keep their size.
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final (i, stat) in visibleStats(
+                    stats,
+                    maxWidth: maxStatsWidth,
+                    compact: compact,
+                    // Its own width, padding back in: a phone-sized header
+                    // whatever MediaQuery says.
+                    phone:
+                        box.maxWidth + (compact ? 32 : 56) <
+                        Breakpoints.compact,
+                  ).indexed) ...[
+                    if (i > 0) SizedBox(width: compact ? 6 : Space.xs),
+                    _StatPill(stat: stat, palette: p, compact: compact),
+                  ],
+                ],
               ),
               if (onNotifications != null) ...[
                 SizedBox(width: compact ? 4 : Space.xs),
@@ -202,6 +216,30 @@ class VillageHeader extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The pills a header [maxWidth] wide can show at full size, in their
+/// original order (K1). Each is budgeted generously; a phone shows two at
+/// most.
+List<HeaderStat> visibleStats(
+  List<HeaderStat> stats, {
+  required double maxWidth,
+  required bool compact,
+  required bool phone,
+}) {
+  final budget = compact ? 92.0 : 120.0;
+  // A phone always has room for two at full size (the name gives way);
+  // more would push it to nothing.
+  var fit = phone ? 2 : (maxWidth / budget).floor();
+  if (fit >= stats.length) return stats;
+  if (fit <= 0) return const [];
+  final keep = ([
+    ...stats,
+  ]..sort((a, b) => a.priority.compareTo(b.priority))).take(fit).toSet();
+  return [
+    for (final s in stats)
+      if (keep.contains(s)) s,
+  ];
 }
 
 class _StatPill extends StatelessWidget {
