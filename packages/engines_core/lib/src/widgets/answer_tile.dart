@@ -36,6 +36,7 @@ class AnswerTile extends StatelessWidget {
     this.badge,
     this.imageRef,
     this.dense = false,
+    this.large = false,
     this.audioRef,
     super.key,
   });
@@ -64,6 +65,12 @@ class AnswerTile extends StatelessWidget {
   /// the state icon under it rather than beside, almost no padding. Every
   /// state still reads without colour.
   final bool dense;
+
+  /// The design's big cards (`.match-card`, 96 px): for boards a child
+  /// taps by sight, pair_match and compose_build's tray (UX review G14).
+  /// 88 dp tall (72 at phone width, as the design's compact card), with
+  /// a bigger label.
+  final bool large;
 
   /// A recording of [label] (`audio_ref`), for a child who can't read it
   /// yet. Played only when asked: the small speaker on the tile, or a long
@@ -150,7 +157,13 @@ class AnswerTile extends StatelessWidget {
           borderRadius: Radii.cardMd,
           child: ConstrainedBox(
             // ≥48px: the frontend spec's tap-target floor.
-            constraints: const BoxConstraints(minHeight: 52),
+            constraints: BoxConstraints(
+              minHeight: !large
+                  ? 52
+                  : MediaQuery.sizeOf(context).width < Breakpoints.compact
+                  ? 72
+                  : 88,
+            ),
             child: dense
                 ? _dense(text, icon, border)
                 : Padding(
@@ -201,7 +214,7 @@ class AnswerTile extends StatelessWidget {
                             style: TextStyle(
                               fontFamily: VillageType.display,
                               fontWeight: FontWeight.w700,
-                              fontSize: 15,
+                              fontSize: large ? 20 : 15,
                               color: text,
                             ),
                           ),

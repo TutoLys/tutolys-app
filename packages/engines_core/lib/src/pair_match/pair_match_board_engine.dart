@@ -431,6 +431,7 @@ class PairMatchBoardEngine
                     show: handLeft == l,
                     child: AnswerTile(
                       key: ValueKey('pair-left-$l'),
+                      large: true,
                       label: view.content.left(l).label,
                       imageRef: view.content.left(l).imageRef,
                       audioRef: view.content.left(l).audioRef,
@@ -466,6 +467,7 @@ class PairMatchBoardEngine
                         show: handRight == r,
                         child: AnswerTile(
                           key: ValueKey('pair-right-$r'),
+                          large: true,
                           label: view.content.right(r).label,
                           imageRef: view.content.right(r).imageRef,
                           audioRef: view.content.right(r).audioRef,

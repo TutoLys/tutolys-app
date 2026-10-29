@@ -380,6 +380,107 @@ void main() {
       c.dispose();
     });
   });
+
+  group('P3 polish', () {
+    testWidgets('G14 large tiles: 88 dp on a tablet, 72 at phone width', (
+      tester,
+    ) async {
+      for (final (width, height) in [(1000.0, 88.0), (375.0, 72.0)]) {
+        tester.view.physicalSize = Size(width, 900);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await tester.pumpWidget(
+          _app(
+            Center(
+              child: SizedBox(
+                width: 200,
+                child: AnswerTile(
+                  label: 'chat',
+                  large: true,
+                  state: AnswerTileState.idle,
+                  onTap: () {},
+                ),
+              ),
+            ),
+          ),
+        );
+        expect(
+          tester.getSize(find.byType(AnswerTile)).height,
+          greaterThanOrEqualTo(height),
+        );
+      }
+    });
+
+    testWidgets('G16 « N de suite » is 12 px, deep green, with an icon', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _app(
+          ActivityShell(
+            locale: fr,
+            onClose: () {},
+            body: const SizedBox(),
+            inARow: 3,
+          ),
+        ),
+      );
+      final text = tester.widget<Text>(find.text('3 DE SUITE !'));
+      expect(text.style!.fontSize, greaterThanOrEqualTo(12));
+      expect(
+        contrast(text.style!.color!, VillagePalette.light.surface),
+        greaterThanOrEqualTo(4.5),
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('in-a-row')),
+          matching: find.byIcon(Icons.bolt_rounded),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('G17 the countdown turns gold, not amber, when time is short', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _app(
+          CountdownBar(
+            duration: const Duration(seconds: 8),
+            round: 0,
+            running: true,
+            onExpired: () {},
+            semanticsLabel: 'Temps',
+          ),
+        ),
+      );
+      await tester.pump(const Duration(seconds: 7));
+      final fills = tester
+          .widgetList<ColoredBox>(find.byType(ColoredBox))
+          .map((b) => b.color);
+      expect(fills, contains(VillagePalette.light.gold));
+      expect(fills, isNot(contains(VillagePalette.light.retry)));
+    });
+
+    testWidgets('G18 the hint icon is the sparkle, readable on gold', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _app(
+          ActivityShell(
+            locale: fr,
+            onClose: () {},
+            body: const SizedBox(),
+            revealedHint: 'Compte sur tes doigts.',
+          ),
+        ),
+      );
+      final icon = tester.widget<Icon>(find.byIcon(Icons.auto_awesome_rounded));
+      expect(
+        contrast(icon.color!, VillagePalette.light.goldPale),
+        greaterThanOrEqualTo(3),
+      );
+    });
+  });
 }
 
 class _Silent implements ContentSpeaker {

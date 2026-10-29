@@ -98,7 +98,9 @@ class _CountdownBarState extends State<CountdownBar>
                     heightFactor: 1,
                     widthFactor: left,
                     child: ColoredBox(
-                      color: left < .25 ? p.retry : p.quebecBlueBright,
+                      // Gold for « hurry », never amber: amber means
+                      // « wrong » everywhere else (UX review G17).
+                      color: left < .25 ? p.gold : p.quebecBlueBright,
                     ),
                   ),
                 ],

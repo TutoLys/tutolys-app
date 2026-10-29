@@ -404,6 +404,7 @@ class ComposeSlotsEngine
                           show: handOn == id,
                           child: AnswerTile(
                             key: ValueKey('compose-tile-$id'),
+                            large: true,
                             label: view.content.tile(id).label,
                             audioRef: view.content.tile(id).audioRef,
                             state: AnswerTileState.idle,

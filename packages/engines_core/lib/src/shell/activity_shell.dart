@@ -351,15 +351,33 @@ class _TopBar extends StatelessWidget {
               children: [
                 SizedBox(
                   height: 14,
+                  // 12 px, deep green and an icon (UX review G16): 10 px
+                  // success green was 2.8:1 on white.
                   child: inARow >= 2
-                      ? Text(
-                          strings.inARow(inARow).toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: .5,
-                            color: p.success,
-                          ),
+                      ? Row(
+                          key: const ValueKey('in-a-row'),
+                          children: [
+                            Icon(
+                              Icons.bolt_rounded,
+                              size: 14,
+                              color: p.isDark
+                                  ? p.success
+                                  : const Color(0xFF1C7A4C),
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              strings.inARow(inARow).toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 12,
+                                height: 1,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: .5,
+                                color: p.isDark
+                                    ? p.success
+                                    : const Color(0xFF1C7A4C),
+                              ),
+                            ),
+                          ],
                         )
                       : null,
                 ),
@@ -517,7 +535,13 @@ class _HintPanel extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.lightbulb_outline_rounded, color: palette.gold, size: 18),
+          // The design's sparkle, in a colour that reads on the gold
+          // ground (UX review G18): gold on gold-pale was 1.7:1.
+          Icon(
+            Icons.auto_awesome_rounded,
+            color: palette.isDark ? palette.gold : const Color(0xFF9A4A0C),
+            size: 18,
+          ),
           const SizedBox(width: Space.xs),
           Flexible(
             child: Text(text, style: TextStyle(color: palette.ink)),

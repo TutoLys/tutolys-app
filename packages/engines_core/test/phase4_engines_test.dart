@@ -113,6 +113,13 @@ Widget app(ActivitySessionController c, {VoidCallback? onDone}) => MaterialApp(
 /// Let the controller commit (real async), then rebuild. Twice, because
 /// work started from a ticker finishes inside the first pump and its
 /// rebuild lands on the next.
+/// Room for a board of large tiles (UX review G14), as on a tablet.
+void tallView(WidgetTester tester) {
+  tester.view.physicalSize = const Size(1000, 1400);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+}
+
 Future<void> settle(WidgetTester tester) async {
   await tester.runAsync(() => pumpEventQueue());
   await tester.pump();
@@ -496,6 +503,7 @@ void main() {
     testWidgets('one wrong pair → partial "Presque" → fix it → Bravo', (
       tester,
     ) async {
+      tallView(tester);
       final (c, outbox) = controllerFor('pair_match', pairConfig);
       await tester.runAsync(c.start);
       await tester.pumpWidget(app(c));
@@ -679,6 +687,7 @@ void main() {
     testWidgets('pair_match: the wrong pair shows amber, a tap fixes it', (
       tester,
     ) async {
+      tallView(tester);
       final (c, _) = controllerFor('pair_match', pairConfig);
       await tester.runAsync(c.start);
       await tester.pumpWidget(app(c));
