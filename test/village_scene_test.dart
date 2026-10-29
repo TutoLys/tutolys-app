@@ -6,6 +6,9 @@ import 'package:tutolys_app/features/home/village_scene.dart';
 
 final _buildings = villageBuildings(Strings.fr);
 
+/// The subjects only: the gallery building (ADR 0098) isn't one.
+final _subjects = _buildings.where((b) => b.measured).toList();
+
 void main() {
   Widget harness(List<VillageBuilding> buildings) => MaterialApp(
     home: Scaffold(
@@ -24,7 +27,8 @@ void main() {
   testWidgets('every subject gets a building, named', (tester) async {
     await tester.pumpWidget(harness(_buildings));
 
-    expect(_buildings, hasLength(6));
+    expect(_subjects, hasLength(6));
+    expect(_buildings, hasLength(7), reason: 'six subjects and the gallery');
     for (final b in _buildings) {
       expect(find.text(b.label), findsOneWidget);
     }
@@ -45,10 +49,10 @@ void main() {
     // reads as "nothing recorded yet" rather than as a missing feature.
     // A subject that isn't live wears "bientôt" instead.
     await tester.pumpWidget(harness(_buildings));
-    final live = _buildings.where((b) => b.live).length;
+    final live = _subjects.where((b) => b.live).length;
 
     expect(find.byType(VillageProgressBar), findsNWidgets(live));
-    expect(find.byType(ComingSoonTag), findsNWidgets(_buildings.length - live));
+    expect(find.byType(ComingSoonTag), findsNWidgets(_subjects.length - live));
   });
 
   testWidgets('an unmeasured subject reads 0/100, never an invented figure', (
@@ -58,7 +62,7 @@ void main() {
 
     expect(
       find.text('0/100'),
-      findsNWidgets(_buildings.where((b) => b.live).length),
+      findsNWidgets(_subjects.where((b) => b.live).length),
     );
   });
 
@@ -99,7 +103,7 @@ void main() {
 
   group('the full program, live or coming soon', () {
     test('six subjects, all live now that CCQ has curriculum', () {
-      expect(_buildings.map((b) => b.subject), [
+      expect(_subjects.map((b) => b.subject), [
         'MATH',
         'FR',
         'SOC',
@@ -146,7 +150,7 @@ void main() {
                   villageBuildings(
                     Strings.fr,
                     live: const ['MATH', 'FR', 'EN', 'SCI', 'SOC'],
-                  ).last,
+                  ).firstWhere((b) => b.subject == 'CCQ'),
                 ],
                 signTitle: 'x',
                 signSubtitle: 'y',

@@ -255,6 +255,16 @@ abstract class Strings {
   String get subjectScience;
   String get subjectUniversSocial;
   String get subjectCulture;
+
+  /// The Village's gallery building (ADR 0098).
+  String get galleryBuilding;
+  String get galleryPrompt;
+  String get galleryReasonProud;
+  String get galleryReasonPretty;
+  String get galleryReasonHard;
+  String get galleryReasonFunny;
+  String get galleryVisitorFoxy;
+  String get galleryVisitorLea;
   String get villageSignTitle;
   String get villageRecommendedLabel;
   String get villageContinuePath;
@@ -1083,6 +1093,31 @@ class _FrenchStrings extends Strings {
 
   @override
   String get subjectCulture => 'Culture québécoise';
+
+  @override
+  String get galleryBuilding => 'Ma galerie';
+
+  @override
+  String get galleryPrompt =>
+      'Choisis tes créations préférées et accroche-les dans ta galerie.';
+
+  @override
+  String get galleryReasonProud => 'Je suis fier ou fière';
+
+  @override
+  String get galleryReasonPretty => "C'est beau";
+
+  @override
+  String get galleryReasonHard => "J'ai travaillé fort";
+
+  @override
+  String get galleryReasonFunny => "C'est drôle";
+
+  @override
+  String get galleryVisitorFoxy => 'Wow ! Ta galerie est magnifique.';
+
+  @override
+  String get galleryVisitorLea => "J'adore ce que tu as accroché !";
 
   @override
   String get villageSignTitle => 'Village des Lys';
@@ -2336,6 +2371,31 @@ class _EnglishStrings extends Strings {
 
   @override
   String get subjectCulture => 'Quebec culture';
+
+  @override
+  String get galleryBuilding => 'My gallery';
+
+  @override
+  String get galleryPrompt =>
+      'Pick your favourite creations and hang them in your gallery.';
+
+  @override
+  String get galleryReasonProud => "I'm proud of it";
+
+  @override
+  String get galleryReasonPretty => "It's beautiful";
+
+  @override
+  String get galleryReasonHard => 'I worked hard';
+
+  @override
+  String get galleryReasonFunny => "It's funny";
+
+  @override
+  String get galleryVisitorFoxy => 'Wow! Your gallery is wonderful.';
+
+  @override
+  String get galleryVisitorLea => 'I love what you hung up!';
 
   @override
   String get villageSignTitle => 'Lys Village';

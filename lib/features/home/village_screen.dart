@@ -12,6 +12,7 @@ import '../audio/app_sounds.dart' show mascotSongFor;
 import '../audio/music_director.dart';
 import '../quests/quest_board.dart';
 import '../quests/quests_screen.dart' show questTitle;
+import '../gallery/village_gallery.dart';
 import '../path/play_node.dart';
 import '../path/subject_pills.dart' show subjectArt, subjectLabel;
 
@@ -56,6 +57,16 @@ class VillageScreen extends ConsumerWidget {
     // node — no extra endpoint, and it works offline.
     final t = context.s;
     final next = ref.watch(carteNextProvider);
+    // A subject opens on the Carte; the gallery opens on the kid's own
+    // shelf (ADR 0098).
+    void openBuilding(VillageBuilding b) {
+      if (b.subject == galleryBuildingCode) {
+        openVillageGallery(context, ref);
+      } else {
+        onOpenSubject?.call(b.subject);
+      }
+    }
+
     final bySubject =
         ref.watch(subjectProgressProvider).value ?? <String, double>{};
     // The fox sings in the app's language, not a subject's (ADR 0035).
@@ -99,7 +110,7 @@ class VillageScreen extends ConsumerWidget {
                       SubjectStrip(
                         buildings: buildings,
                         title: t.villageYourSubjects,
-                        onTapBuilding: (b) => onOpenSubject?.call(b.subject),
+                        onTapBuilding: (b) => openBuilding(b),
                       ),
                       const SizedBox(height: Space.md),
                       _QuestPanel(
@@ -121,7 +132,7 @@ class VillageScreen extends ConsumerWidget {
                           ? ''
                           : t.gradeLabel(kid!.gradeLevel),
                       greeting: _greetingFor(t, kid?.displayName, board),
-                      onTapBuilding: (b) => onOpenSubject?.call(b.subject),
+                      onTapBuilding: (b) => openBuilding(b),
                       onTapMascot: sing,
                     ),
                   ),

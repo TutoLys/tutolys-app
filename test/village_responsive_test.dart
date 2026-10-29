@@ -82,10 +82,30 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  // NOT TESTED: tapping a tile. The handler is wired the same way the
-  // village buildings' is, and works in the browser, but every offset the
-  // harness derives inside a 98px tile lands on a sibling render object and
-  // the tap never reaches it. Left out rather than faked with a finder that
-  // asserts nothing — the gap is real and worth fixing with the hit-test
-  // geometry noted in `f59975f`.
+  testWidgets('tapping a tile reports which building, by a real hit test', (
+    tester,
+  ) async {
+    // Fixed since the art has its own box and the tile takes taps across
+    // its whole area: an undecoded image used to leave nothing to hit.
+    final tapped = <String>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 390,
+            child: SubjectStrip(
+              buildings: villageBuildings(Strings.fr),
+              title: 'x',
+              onTapBuilding: (b) => tapped.add(b.subject),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final math = find.byKey(const ValueKey('strip-building-MATH'));
+    expect(math.hitTestable(), findsOneWidget);
+    await tester.tap(math);
+    expect(tapped, ['MATH']);
+  });
 }

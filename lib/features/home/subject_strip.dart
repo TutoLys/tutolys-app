@@ -76,6 +76,9 @@ class _Tile extends StatelessWidget {
     final value = building.progress ?? 0;
 
     final tile = GestureDetector(
+      // The whole tile takes the tap: deferring to the art missed whenever
+      // it hadn't decoded (`f59975f`).
+      behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: SizedBox(
         width: 98,
@@ -100,7 +103,9 @@ class _Tile extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            if (!building.live) ...[
+            if (!building.measured)
+              const SizedBox(height: 17)
+            else if (!building.live) ...[
               const ComingSoonTag(),
               const SizedBox(height: 4),
             ] else ...[
@@ -120,7 +125,12 @@ class _Tile extends StatelessWidget {
       ),
     );
     if (building.live) {
-      return Semantics(button: true, label: building.label, child: tile);
+      return Semantics(
+        key: ValueKey('strip-building-${building.subject}'),
+        button: true,
+        label: building.label,
+        child: tile,
+      );
     }
     final soon = context.s.villageSubjectSoon(building.label);
     return Tooltip(

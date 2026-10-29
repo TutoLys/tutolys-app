@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../core/i18n/strings.dart';
 import '../../core/widgets/breathing_mascot.dart';
 import '../../core/widgets/fleur_de_lys.dart';
+import '../gallery/village_gallery.dart' show galleryBuildingCode;
 import '../path/path_controller.dart' show pathSubjects;
 
 /// One subject's building in the village.
@@ -18,7 +19,12 @@ class VillageBuilding {
     this.accent = VillageColors.quebecBlueBright,
     this.small = false,
     this.progress,
+    this.measured = true,
   });
+
+  /// False for a building that isn't a subject (the gallery, ADR 0098):
+  /// its pill shows only its name, never a progress track.
+  final bool measured;
 
   final String label;
   final String asset;
@@ -62,6 +68,7 @@ class VillageBuilding {
     accent: accent,
     small: small,
     progress: value,
+    measured: measured,
   );
 }
 
@@ -132,6 +139,18 @@ List<VillageBuilding> villageBuildings(
     accent: VillageColors.gold,
     small: true,
   ),
+  // Not a subject: "Ma galerie au village" (ADR 0098), up in the free sky
+  // between Français and Univers social, clear of the fox and the sign.
+  VillageBuilding(
+    label: s.galleryBuilding,
+    asset: 'asset-bldg-gallery.webp',
+    subject: galleryBuildingCode,
+    left: 0.67,
+    top: 0.15,
+    accent: VillageColors.gold,
+    small: true,
+    measured: false,
+  ),
 ];
 
 /// Greyscale for buildings whose subject is not live yet (Rec. 709 luma).
@@ -142,6 +161,9 @@ const _greyscale = ColorFilter.matrix([
   0, 0, 0, 1, 0,
 ]);
 
+/// Height over width of the building art.
+const buildingAspect = 420 / 440;
+
 /// A building's art, greyed and faded when its subject is not live.
 class VillageBuildingArt extends StatelessWidget {
   const VillageBuildingArt({required this.building, this.width, super.key});
@@ -151,9 +173,14 @@ class VillageBuildingArt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // A fixed box from the art's own aspect (every building is ~440×420),
+    // so the layout, and with it the tap target, doesn't wait for the
+    // image to decode: undecoded, an image is 0 px tall, and a tap aimed at
+    // the building landed on nothing (`f59975f`).
     final art = Image.asset(
       'assets/images/${building.asset}',
       width: width,
+      height: width == null ? null : width! * buildingAspect,
       fit: BoxFit.contain,
     );
     if (building.live) return art;
@@ -403,6 +430,8 @@ class _BuildingState extends State<_Building> {
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
+        // The whole building takes the tap, gaps in the art included.
+        behavior: HitTestBehavior.opaque,
         onTap: onTap,
         onTapDown: (_) => setState(() => _pressed = true),
         onTapUp: (_) => setState(() => _pressed = false),
@@ -434,7 +463,12 @@ class _BuildingState extends State<_Building> {
       ),
     );
     if (building.live) {
-      return Semantics(button: true, label: building.label, child: tile);
+      return Semantics(
+        key: ValueKey('village-building-${building.subject}'),
+        button: true,
+        label: building.label,
+        child: tile,
+      );
     }
     final soon = context.s.villageSubjectSoon(building.label);
     return Tooltip(
@@ -476,10 +510,13 @@ class _Pill extends StatelessWidget {
               color: p.ink,
             ),
           ),
-          const SizedBox(width: 8),
-          if (!building.live)
-            const ComingSoonTag()
-          else ...[
+          if (!building.measured)
+            const SizedBox.shrink()
+          else if (!building.live) ...[
+            const SizedBox(width: 8),
+            const ComingSoonTag(),
+          ] else ...[
+            const SizedBox(width: 8),
             SizedBox(
               width: 56,
               height: 6,
