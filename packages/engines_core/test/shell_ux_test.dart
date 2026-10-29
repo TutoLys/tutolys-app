@@ -591,6 +591,97 @@ void main() {
       );
     });
   });
+
+  group('N4 the hand demo: first question, then only after misses', () {
+    testWidgets('shows on Q1, not on Q2, and again after two misses', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1000, 1400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      const q = <String, Object?>{
+        'tiles': [
+          {'id': 'a', 'label': '1'},
+          {'id': 'b', 'label': '2'},
+          {'id': 'c', 'label': '3'},
+        ],
+        'target': ['a', 'b'],
+      };
+      final c = ActivitySessionController(
+        envelope: QuestionEnvelope.parse({
+          'exercise_id': '6f1a4a18-7a3b-4c1e-9f51-6d2a1b2c3d4e',
+          'version': 1,
+          'content_hash': 'h',
+          'engine_key': 'compose_build',
+          'engine_min_version': 1,
+          'skill_node_id': 'ad24bcba-93d0-5b4e-ab56-ec76e3409a53',
+          'subject': 'MATH',
+          'grade': 1,
+          'rank': 0,
+          'config': {
+            'questions': [
+              {
+                'prompt': {'text': 'Un.'},
+                'config': q,
+              },
+              {
+                'prompt': {'text': 'Deux.'},
+                'config': q,
+              },
+            ],
+          },
+        }).valueOrNull!,
+        kidId: 'kid',
+        engines: LearningEngineRegistry([
+          eraseEngine(const ComposeSlotsEngine()),
+        ]),
+        evaluators: EvaluatorRegistry(const [ComposeBuildEvaluator()]),
+        store: InMemoryActivitySessionStore(InMemoryEventOutbox()),
+        appVersion: '0.2.0',
+        seed: 3,
+      );
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(
+        _app(LearningActivityView(controller: c, locale: fr, onDone: () {})),
+      );
+      Future<void> settle() async {
+        await tester.runAsync(() => pumpEventQueue());
+        await tester.pump();
+        await tester.pump();
+      }
+
+      final hand = find.byKey(const ValueKey('idle-hand'));
+      Future<void> idle() =>
+          tester.pump(IdleHandHint.wait + const Duration(seconds: 3));
+      Future<void> place(String ids) async {
+        for (final id in ids.split('')) {
+          await tester.tap(find.byKey(ValueKey('compose-tile-$id')));
+          await settle();
+        }
+        await tester.tap(find.text('VALIDER'));
+        await settle();
+      }
+
+      await idle();
+      expect(hand, findsOneWidget, reason: 'question 1');
+      await place('ab');
+      await tester.tap(find.text('CONTINUER'));
+      await settle();
+
+      await idle();
+      expect(hand, findsNothing, reason: 'question 2, untouched');
+      // Two misses with both slots wrong: nothing locks, the board is
+      // untouched again, and now the demo comes back.
+      for (var miss = 0; miss < 2; miss++) {
+        await place('ca');
+        await tester.tap(find.text('RÉESSAYER'));
+        await settle();
+      }
+      await idle();
+      expect(hand, findsOneWidget, reason: 'after two misses');
+      c.dispose();
+    });
+  });
 }
 
 class _Silent implements ContentSpeaker {

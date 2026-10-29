@@ -5,6 +5,7 @@ import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
 
 import '../widgets/creations.dart';
+import '../widgets/idle_hand_hint.dart';
 
 import 'activity_shell.dart';
 import 'shell_strings.dart';
@@ -311,18 +312,23 @@ class _LearningActivityViewState extends State<LearningActivityView> {
           // ids (ADR 0092).
           : CurrentExercise(
               exerciseId: c.envelope.exerciseId,
-              child: q.engine.buildView(
-                context,
-                content: q.content,
-                state: q.state,
-                dispatch: (a) {
-                  // The controller runs these in order: back to the
-                  // question, then the move.
-                  if (retrying) unawaited(c.proceed());
-                  unawaited(c.dispatch(a));
-                },
-                locale: widget.locale,
-                enabled: interactive || retrying,
+              child: HandDemoScope(
+                // The hand demo: the série's first question, or after two
+                // misses on this one (N4).
+                enabled: state.questionIndex == 0 || state.attempts >= 2,
+                child: q.engine.buildView(
+                  context,
+                  content: q.content,
+                  state: q.state,
+                  dispatch: (a) {
+                    // The controller runs these in order: back to the
+                    // question, then the move.
+                    if (retrying) unawaited(c.proceed());
+                    unawaited(c.dispatch(a));
+                  },
+                  locale: widget.locale,
+                  enabled: interactive || retrying,
+                ),
               ),
             ),
     );

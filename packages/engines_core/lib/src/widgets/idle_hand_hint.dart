@@ -11,6 +11,23 @@ import 'package:flutter/material.dart';
 ///
 /// Decoration only: it lets taps through and says nothing to a screen
 /// reader. The shell's instruction line says it in words.
+/// Whether the shell wants the demonstration now (UX review N4): on a
+/// série's first question, then again only after a couple of misses. It
+/// replayed on every question before. Without a scope (an engine on its
+/// own), the hand shows as the engine asks.
+class HandDemoScope extends InheritedWidget {
+  const HandDemoScope({required this.enabled, required super.child, super.key});
+
+  final bool enabled;
+
+  static bool of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<HandDemoScope>()?.enabled ??
+      true;
+
+  @override
+  bool updateShouldNotify(HandDemoScope old) => enabled != old.enabled;
+}
+
 class IdleHandHint extends StatefulWidget {
   const IdleHandHint({required this.show, required this.child, super.key});
 
@@ -46,8 +63,10 @@ class _IdleHandHintState extends State<IdleHandHint>
     if (old.show != widget.show) _sync();
   }
 
+  bool get _show => widget.show && HandDemoScope.of(context);
+
   void _sync() {
-    if (widget.show && !MediaQuery.disableAnimationsOf(context)) {
+    if (_show && !MediaQuery.disableAnimationsOf(context)) {
       if (!_c.isAnimating && _c.value == 0) _c.forward();
     } else {
       _c
@@ -66,7 +85,7 @@ class _IdleHandHintState extends State<IdleHandHint>
   Widget build(BuildContext context) {
     // Always a Stack with the child first, so showing or hiding the hand
     // never rebuilds the tile (and never drops its focus).
-    if (!widget.show) {
+    if (!_show) {
       return Stack(clipBehavior: Clip.none, children: [widget.child]);
     }
     final still = MediaQuery.disableAnimationsOf(context);
