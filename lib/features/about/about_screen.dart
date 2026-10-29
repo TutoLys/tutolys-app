@@ -1,5 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/widgets/page_column.dart';
 import '../../core/diagnostics/boot_log.dart';
@@ -7,6 +8,7 @@ import '../../core/diagnostics/diag_log.dart';
 import '../../core/i18n/strings.dart';
 import '../../core/widgets/fleur_de_lys.dart';
 import '../pairing/pairing_controller.dart';
+import '../path/path_controller.dart' show contentSyncProvider;
 
 /// À propos de TutoLys.
 ///
@@ -62,7 +64,7 @@ class AboutScreen extends StatelessWidget {
                   // helping with support (ADR 0038). Nothing in it
                   // leaves the device.
                   GestureDetector(
-                    onLongPress: () => showTechnicalLog(context),
+                    onLongPress: () => _openTechnicalLog(context),
                     child: _Row(label: t.aboutVersion, value: appVersion, p: p),
                   ),
                   Divider(height: Space.lg, color: p.line),
@@ -126,12 +128,30 @@ class _Row extends StatelessWidget {
   }
 }
 
+/// The technical log, with what the offline window holds and has evicted
+/// (ADR 0093). Sizes and counts only: no lesson text, no kid.
+Future<void> _openTechnicalLog(BuildContext context) async {
+  var offline = const <String>[];
+  try {
+    final stats = await ProviderScope.containerOf(
+      context,
+      listen: false,
+    ).read(contentSyncProvider).offlineStats();
+    offline = stats.describe();
+  } on Object {
+    // No database here (a test, a broken boot): the log still opens.
+  }
+  if (!context.mounted) return;
+  await showTechnicalLog(context, offline: offline);
+}
+
 /// The on-device technical log: boot steps, this run's errors and the
-/// previous run's (ADR 0038).
+/// previous run's (ADR 0038), then [offline]'s cache lines.
 Future<void> showTechnicalLog(
   BuildContext context, {
   BootLog? bootLog,
   DiagLog? diagLog,
+  List<String> offline = const [],
 }) {
   final boot = bootLog ?? BootLog.instance;
   final diag = diagLog ?? DiagLog.instance;
@@ -143,6 +163,7 @@ Future<void> showTechnicalLog(
       '— ${t.bootPreviousRun} —',
       for (final entry in diag.previousRun.reversed) '$entry',
     ],
+    ...offline,
   ];
   return showDialog<void>(
     context: context,
