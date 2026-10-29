@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
 import 'package:design_system/design_system.dart';
+import 'package:engine_sdk/engine_sdk.dart';
+import 'package:engine_sdk/testing.dart';
 import 'package:engines_core/engines_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -148,6 +150,79 @@ void main() {
       expect(find.byKey(const ValueKey('validate-nudge')), findsNothing);
       await tester.tap(find.text('VALIDER'));
       expect(validated, 1);
+    });
+  });
+
+  group('G5 the close button asks before throwing a série away', () {
+    ActivitySessionController controller() => ActivitySessionController(
+      envelope: QuestionEnvelope.parse(fakeEnvelope(questions: 2)).valueOrNull!,
+      kidId: 'kid',
+      engines: LearningEngineRegistry([eraseEngine(FakeChoiceEngine())]),
+      evaluators: EvaluatorRegistry([FakeExactEvaluator()]),
+      store: InMemoryActivitySessionStore(InMemoryEventOutbox()),
+      appVersion: '0.2.0',
+      seed: 3,
+    );
+
+    Future<void> settle(WidgetTester tester) async {
+      await tester.runAsync(() => pumpEventQueue());
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('nothing started: ✕ leaves at once', (tester) async {
+      final c = controller();
+      var done = false;
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(
+        _app(
+          LearningActivityView(
+            controller: c,
+            locale: fr,
+            onDone: () => done = true,
+          ),
+        ),
+      );
+      await tester.tap(find.byIcon(Icons.close_rounded));
+      await settle(tester);
+      expect(find.byKey(const ValueKey('stop-sheet')), findsNothing);
+      expect(done, isTrue);
+      c.dispose();
+    });
+
+    testWidgets('started: Continuer keeps playing, Arrêter leaves', (
+      tester,
+    ) async {
+      final c = controller();
+      var done = false;
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(
+        _app(
+          LearningActivityView(
+            controller: c,
+            locale: fr,
+            onDone: () => done = true,
+          ),
+        ),
+      );
+      await tester.tap(find.byKey(const ValueKey('option-a')));
+      await settle(tester);
+
+      await tester.tap(find.byIcon(Icons.close_rounded));
+      await settle(tester);
+      expect(find.text('Tu veux arrêter ?'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('stop-continue')));
+      await settle(tester);
+      expect(find.byKey(const ValueKey('stop-sheet')), findsNothing);
+      expect(done, isFalse);
+      expect(c.state.phase.isTerminal, isFalse);
+      expect(c.current!.answer, isNotNull, reason: 'the pick is still there');
+
+      await tester.tap(find.byIcon(Icons.close_rounded));
+      await settle(tester);
+      await tester.tap(find.byKey(const ValueKey('stop-quit')));
+      await settle(tester);
+      expect(done, isTrue);
+      c.dispose();
     });
   });
 }

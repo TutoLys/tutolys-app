@@ -14,6 +14,10 @@ class ShellStrings {
   String _t(String fr, String en) => _fr ? fr : en;
 
   String get close => _t("Quitter l'exercice", 'Leave the exercise');
+  String get stopTitle => _t('Tu veux arrêter ?', 'Do you want to stop?');
+  String get stopMessage =>
+      _t('Ta série n’est pas finie.', "Your set isn't finished.");
+  String get stopLabel => _t('Arrêter', 'Stop');
   String get validate => _t('Valider', 'Check');
   String get hint => _t('Indice', 'Hint');
   String get answerFirst =>
