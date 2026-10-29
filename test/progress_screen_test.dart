@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:design_system/design_system.dart';
+import 'package:tutolys_app/core/i18n/strings.dart';
 import 'package:tutolys_app/data/api/progress_api.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
 import 'package:tutolys_app/features/progress/progress_controller.dart';
@@ -136,8 +137,9 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    // A4: a real empty says what to do next.
     expect(
-      find.text("Rien à montrer pour cette matière pour l'instant."),
+      find.text(Strings.fr.progressPlayToSee('Mathématiques')),
       findsOneWidget,
       reason: 'math has nothing cached in this test',
     );

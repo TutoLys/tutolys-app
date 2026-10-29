@@ -48,7 +48,9 @@ class _QuestsScreenState extends ConsumerState<QuestsScreen> {
     final p = VillagePalette.of(context);
     final progress = ref.watch(progressControllerProvider);
     final played = ref.watch(playedDaysProvider).value;
-    final board = ref.watch(questBoardProvider).value;
+    final boardAsync = ref.watch(questBoardProvider);
+    final board = boardAsync.value;
+    final boardFailed = board == null && boardAsync.hasError;
     final compact = MediaQuery.sizeOf(context).width < Breakpoints.compact;
     final gap = compact ? Space.sm : 18.0;
 
@@ -152,6 +154,8 @@ class _QuestsScreenState extends ConsumerState<QuestsScreen> {
             builder: (context, constraints) {
               final list = QuestListCard(
                 quests: board?.quests,
+                failed: boardFailed,
+                onRetry: () => ref.invalidate(questBoardProvider),
                 onOpenPath: onOpenPath,
               );
               final badge = WeeklyBadgeCard(
@@ -563,13 +567,91 @@ class _WeekCell extends StatelessWidget {
   }
 }
 
+/// While the quest board isn't there (A3): grey rows while it loads, or,
+/// if it failed, the fox saying so with Réessayer. Never "Aucune quête
+/// aujourd'hui", which only a real empty board may say.
+class QuestListPending extends StatelessWidget {
+  const QuestListPending({super.key, required this.failed, this.onRetry});
+
+  final bool failed;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
+    final t = context.s;
+    if (!failed) {
+      Widget bar(double width) => Container(
+        width: width,
+        height: 12,
+        decoration: BoxDecoration(
+          color: p.track,
+          borderRadius: BorderRadius.circular(6),
+        ),
+      );
+      return Padding(
+        key: const ValueKey('quests-loading'),
+        padding: const EdgeInsets.symmetric(vertical: Space.sm),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            bar(160),
+            const SizedBox(height: Space.sm),
+            bar(120),
+            const SizedBox(height: Space.sm),
+            bar(140),
+          ],
+        ),
+      );
+    }
+    return Padding(
+      key: const ValueKey('quests-failed'),
+      padding: const EdgeInsets.symmetric(vertical: Space.xs),
+      child: Row(
+        children: [
+          Image.asset(
+            'assets/images/asset-mascot-welcome.webp',
+            width: 44,
+            height: 44,
+            fit: BoxFit.contain,
+          ),
+          const SizedBox(width: Space.sm),
+          Expanded(
+            child: Text(
+              t.questsLoadFailed,
+              style: TextStyle(fontSize: 13, color: p.ink),
+            ),
+          ),
+          if (onRetry != null)
+            TextButton(
+              key: const ValueKey('quests-retry'),
+              onPressed: onRetry,
+              child: Text(t.retry),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 /// "Quêtes du jour": the board's quests, one row each. Null while the board
 /// is still being read.
 class QuestListCard extends StatelessWidget {
-  const QuestListCard({super.key, required this.quests, this.onOpenPath});
+  const QuestListCard({
+    super.key,
+    required this.quests,
+    this.onOpenPath,
+    this.failed = false,
+    this.onRetry,
+  });
 
   final List<DailyQuestItem>? quests;
   final VoidCallback? onOpenPath;
+
+  /// The board couldn't be read (A3): say so, with Réessayer, rather than
+  /// "no quests today".
+  final bool failed;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -583,7 +665,9 @@ class QuestListCard extends StatelessWidget {
         children: [
           PanelTitle(asset: 'asset-target.webp', title: t.villageQuestsTitle),
           const SizedBox(height: Space.xs),
-          if (items == null || items.isEmpty)
+          if (items == null)
+            QuestListPending(failed: failed, onRetry: onRetry)
+          else if (items.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: Space.xs),
               child: Text(

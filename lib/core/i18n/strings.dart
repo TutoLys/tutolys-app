@@ -268,6 +268,14 @@ abstract class Strings {
   String get galleryEmptyTitle;
   String get galleryEmptyBody;
   String get galleryEmptyBack;
+
+  /// The quest board couldn't be read (A3).
+  String get questsLoadFailed;
+
+  /// Progrès (A4): a failed read, and a real empty with a next step.
+  String get progressLoadFailed;
+  String progressPlayToSee(String subject);
+  String get progressOpenCarte;
   String get villageSignTitle;
   String get villageRecommendedLabel;
   String get villageContinuePath;
@@ -1133,6 +1141,19 @@ class _FrenchStrings extends Strings {
 
   @override
   String get galleryEmptyBack => 'Retour au village';
+
+  @override
+  String get questsLoadFailed => "Je n'arrive pas à charger tes quêtes.";
+
+  @override
+  String get progressLoadFailed => "Je n'arrive pas à lire tes progrès.";
+
+  @override
+  String progressPlayToSee(String subject) =>
+      'Joue une leçon de $subject pour voir tes progrès ici.';
+
+  @override
+  String get progressOpenCarte => 'Aller jouer';
 
   @override
   String get villageSignTitle => 'Village des Lys';
@@ -2422,6 +2443,19 @@ class _EnglishStrings extends Strings {
 
   @override
   String get galleryEmptyBack => 'Back to the village';
+
+  @override
+  String get questsLoadFailed => "I can't load your quests.";
+
+  @override
+  String get progressLoadFailed => "I can't read your progress.";
+
+  @override
+  String progressPlayToSee(String subject) =>
+      'Play a $subject lesson to see your progress here.';
+
+  @override
+  String get progressOpenCarte => "Let's play";
 
   @override
   String get villageSignTitle => 'Lys Village';

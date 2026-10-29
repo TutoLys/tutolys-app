@@ -34,7 +34,11 @@ final progressLeavesProvider = FutureProvider.autoDispose
 /// server's, from its own curve; there are no coins, because no currency
 /// exists — the design's "340 pièces" becomes the XP the level is made of.
 class ProgressScreen extends ConsumerStatefulWidget {
-  const ProgressScreen({super.key});
+  const ProgressScreen({this.onOpenSubject, super.key});
+
+  /// A subject with nothing to show yet: its "play a lesson" button opens
+  /// the Carte on it (A4). Supplied by the shell, which owns the pages.
+  final ValueChanged<String>? onOpenSubject;
 
   @override
   ConsumerState<ProgressScreen> createState() => _ProgressScreenState();
@@ -109,7 +113,11 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                   compact: compact,
                   onSelect: (code) => setState(() => _subject = code),
                 ),
-                _ByArea(subject: _subject, palette: p),
+                _ByArea(
+                  subject: _subject,
+                  palette: p,
+                  onOpenSubject: widget.onOpenSubject,
+                ),
               ],
             ),
           );
@@ -187,10 +195,15 @@ class _StatCard extends StatelessWidget {
 /// `.quest-panel` titled "Mathématique — par compétence", one `.strand-row`
 /// per learning area.
 class _ByArea extends ConsumerWidget {
-  const _ByArea({required this.subject, required this.palette});
+  const _ByArea({
+    required this.subject,
+    required this.palette,
+    this.onOpenSubject,
+  });
 
   final String subject;
   final VillagePalette palette;
+  final ValueChanged<String>? onOpenSubject;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -221,12 +234,52 @@ class _ByArea extends ConsumerWidget {
           ],
         ],
       ),
-      AsyncData() || AsyncError() => Padding(
+      // A4: a failed read is not "nothing to show". Unknown is never zero.
+      AsyncError() => Padding(
+        key: const ValueKey('progress-failed'),
         padding: const EdgeInsets.symmetric(vertical: Space.lg),
-        child: Text(
-          t.progressNothingYet,
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 13, color: p.inkMuted),
+        child: Column(
+          children: [
+            Text(
+              t.progressLoadFailed,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: p.ink),
+            ),
+            const SizedBox(height: Space.xs),
+            TextButton.icon(
+              key: const ValueKey('progress-retry'),
+              onPressed: () => ref.invalidate(progressLeavesProvider(subject)),
+              icon: const Icon(Icons.refresh_rounded),
+              label: Text(t.retry),
+            ),
+          ],
+        ),
+      ),
+      // Truly empty: the next step, not a dead end.
+      AsyncData() => Padding(
+        key: const ValueKey('progress-empty'),
+        padding: const EdgeInsets.symmetric(vertical: Space.lg),
+        child: Column(
+          children: [
+            Text(
+              t.progressPlayToSee(subjectLabel(t, subject)),
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: p.inkMuted),
+            ),
+            if (onOpenSubject != null) ...[
+              const SizedBox(height: Space.sm),
+              FilledButton(
+                key: const ValueKey('progress-open-carte'),
+                onPressed: () => onOpenSubject!(subject),
+                style: FilledButton.styleFrom(
+                  backgroundColor: p.gold,
+                  foregroundColor: const Color(0xFF241A04),
+                  shape: const StadiumBorder(),
+                ),
+                child: Text(t.progressOpenCarte),
+              ),
+            ],
+          ],
         ),
       ),
       _ => const Padding(

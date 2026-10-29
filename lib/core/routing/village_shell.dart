@@ -104,7 +104,12 @@ class _VillageShellState extends ConsumerState<VillageShell> {
         ),
         const PathScreen(),
         QuestsScreen(onOpenPath: () => _open(1)),
-        const ProgressScreen(),
+        ProgressScreen(
+          onOpenSubject: (code) {
+            ref.read(pathControllerProvider.notifier).selectSubject(code);
+            _open(1);
+          },
+        ),
         ProfileScreen(
           onSwitchProfile:
               ref.read(sessionControllerProvider.notifier).chooseProfile,

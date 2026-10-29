@@ -11,7 +11,7 @@ import 'village_scene.dart';
 import '../audio/app_sounds.dart' show mascotSongFor;
 import '../audio/music_director.dart';
 import '../quests/quest_board.dart';
-import '../quests/quests_screen.dart' show questTitle;
+import '../quests/quests_screen.dart' show QuestListPending, questTitle;
 import '../gallery/village_gallery.dart';
 import '../path/play_node.dart';
 import '../path/subject_pills.dart' show subjectArt, subjectLabel;
@@ -51,7 +51,10 @@ class VillageScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final kid = ref.watch(sessionControllerProvider).kid;
-    final board = ref.watch(questBoardProvider).value;
+    final boardAsync = ref.watch(questBoardProvider);
+    final board = boardAsync.value;
+    final boardFailed = board == null && boardAsync.hasError;
+    void retryBoard() => ref.invalidate(questBoardProvider);
     // Per-subject mastery, joined locally from the per-skill figures the
     // backend already sends plus the cached curriculum's own subject per
     // node — no extra endpoint, and it works offline.
@@ -115,6 +118,8 @@ class VillageScreen extends ConsumerWidget {
                       const SizedBox(height: Space.md),
                       _QuestPanel(
                         quests: board?.quests,
+                        failed: boardFailed,
+                        onRetry: retryBoard,
                         onOpenPath: onOpenPath,
                         onOpenQuests: onOpenQuests,
                       ),
@@ -139,6 +144,8 @@ class VillageScreen extends ConsumerWidget {
                 );
                 final panel = _QuestPanel(
                   quests: board?.quests,
+                  failed: boardFailed,
+                  onRetry: retryBoard,
                   onOpenPath: onOpenPath,
                   onOpenQuests: onOpenQuests,
                 );
@@ -173,6 +180,8 @@ class VillageScreen extends ConsumerWidget {
                         child: _QuestPanel(
                           key: const ValueKey('village-quest-panel'),
                           quests: board?.quests,
+                          failed: boardFailed,
+                          onRetry: retryBoard,
                           onOpenPath: onOpenPath,
                           onOpenQuests: onOpenQuests,
                           fillHeight: true,
@@ -367,9 +376,15 @@ class _QuestPanel extends StatelessWidget {
     this.onOpenPath,
     this.onOpenQuests,
     this.fillHeight = false,
+    this.failed = false,
+    this.onRetry,
   });
 
   final List<DailyQuestItem>? quests;
+
+  /// The board couldn't be read (A3).
+  final bool failed;
+  final VoidCallback? onRetry;
   final VoidCallback? onOpenPath;
   final VoidCallback? onOpenQuests;
 
@@ -387,7 +402,9 @@ class _QuestPanel extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (items == null || items.isEmpty)
+        if (items == null)
+          QuestListPending(failed: failed, onRetry: onRetry)
+        else if (items.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: Space.sm),
             child: Text(
