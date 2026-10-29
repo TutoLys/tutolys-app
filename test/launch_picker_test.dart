@@ -376,6 +376,11 @@ void main() {
 
     await c.read(sessionControllerProvider.notifier).pair('ABC234');
     await tester.pumpAndSettle();
+    // A5: no parent PIN on this device yet, so it is offered first.
+    expect(find.text(fr.pinGateAfterPairing), findsOneWidget);
+    expect(find.byKey(const ValueKey('passcode-offer')), findsNothing);
+    await tester.tap(find.text(fr.later));
+    await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('passcode-offer')), findsOneWidget);
     expect(find.text(fr.passcodePromptTitle), findsOneWidget);
 

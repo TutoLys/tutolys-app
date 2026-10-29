@@ -9,6 +9,7 @@ import '../../data/sync/outbox_flusher.dart';
 import '../../data/sync/outbox_flusher_provider.dart';
 import '../../features/launch/launch_flow.dart';
 import '../../features/pairing/pairing_controller.dart';
+import '../../features/profile/pin_gate.dart' show offerGuardianPinAfterPairing;
 import '../../features/pairing/pairing_screen.dart';
 import '../../features/passcode/passcode_entry_screen.dart';
 import '../../features/passcode/passcode_service.dart';
@@ -187,8 +188,13 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
           !next.isClassroom &&
           next.kids.length >= 2 &&
           next.kids.length > previous!.kids.length) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => _offerPasscodes());
+        _queueAfterPairing(passcodes: true);
       }
+    });
+    // A kid was just paired: the adult holding the device is offered the
+    // parent PIN first (A5).
+    ref.listen(guardianPinOfferProvider, (_, offered) {
+      if (offered) _queueAfterPairing();
     });
 
     // A reminder setting changed, or a lesson was just finished (today is
@@ -284,6 +290,33 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
       );
     }
     if (mounted) setState(() => _launched = true);
+  }
+
+  bool _offering = false;
+  bool _pendingPasscodes = false;
+
+  /// What follows a pairing, one dialog at a time: the parent PIN if none
+  /// is set (A5), then picture codes for a second kid.
+  void _queueAfterPairing({bool passcodes = false}) {
+    if (passcodes) _pendingPasscodes = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _afterPairing());
+  }
+
+  Future<void> _afterPairing() async {
+    if (_offering || !mounted) return;
+    _offering = true;
+    try {
+      if (ref.read(guardianPinOfferProvider)) {
+        ref.read(guardianPinOfferProvider.notifier).taken();
+        await offerGuardianPinAfterPairing(context, ref);
+      }
+      if (_pendingPasscodes && mounted) {
+        _pendingPasscodes = false;
+        await _offerPasscodes();
+      }
+    } finally {
+      _offering = false;
+    }
   }
 
   /// After pairing another kid: "Plusieurs enfants sur cet appareil", when

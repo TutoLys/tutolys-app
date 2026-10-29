@@ -543,6 +543,9 @@ class SessionController extends Notifier<SessionState> {
           classroom: await _store.classroom(),
         );
         _scheduleRefresh(result.expiresIn);
+        // The adult who typed the code is here now: offer the parent PIN
+        // once the shell is up (A5).
+        ref.read(guardianPinOfferProvider.notifier).offer();
         return null;
       case PairingCodeRejected():
         return PairingError.invalidCode;
@@ -768,3 +771,18 @@ final pairingFormProvider =
     NotifierProvider<PairingFormController, PairingUiState>(
       PairingFormController.new,
     );
+
+/// Raised by a kid's pairing so the shell offers the parent PIN to the
+/// adult who just typed the code (A5). Cleared once offered.
+class GuardianPinOffer extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void offer() => state = true;
+
+  void taken() => state = false;
+}
+
+final guardianPinOfferProvider = NotifierProvider<GuardianPinOffer, bool>(
+  GuardianPinOffer.new,
+);

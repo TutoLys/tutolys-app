@@ -8,6 +8,7 @@ import 'package:tutolys_app/core/i18n/strings.dart';
 import 'package:tutolys_app/data/api/progress_api.dart';
 import 'package:tutolys_app/data/local_db/session_store.dart';
 import 'package:tutolys_app/features/pairing/pairing_controller.dart';
+import 'package:tutolys_app/features/profile/pin_gate.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
 import 'package:tutolys_app/features/profile/avatar_picker.dart';
 import 'package:tutolys_app/features/profile/profile_screen.dart';
@@ -54,6 +55,9 @@ class _FakeSessionStore extends SessionStore {
 
   @override
   Future<bool> verifyGuardianPin(String pin) async => _pin == pin;
+
+  @override
+  Future<DateTime?> guardianPinLockedUntil() async => null;
 
   @override
   Future<void> clearPairing() async {}
@@ -142,6 +146,8 @@ ProviderContainer _buildContainer({SessionStore? store}) {
   final container = ProviderContainer(
     overrides: [
       sessionStoreProvider.overrideWithValue(store ?? _FakeSessionStore()),
+      // The adult check before a first PIN (A5) asks 7 × 8.
+      adultCheckFactsProvider.overrideWithValue(() => (7, 8)),
       progressApiProvider.overrideWithValue(_FakeProgressApi()),
       sessionControllerProvider.overrideWith(
         () => _FixedSessionController(
@@ -542,6 +548,12 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text(Strings.fr.settingsSignOut));
       await tester.pumpAndSettle();
+      // No PIN yet: the adult check comes first (A5).
+      if (find.byKey(const ValueKey('adult-check')).evaluate().isNotEmpty) {
+        await tester.enterText(find.byType(TextField), '56');
+        await tester.tap(find.byKey(const ValueKey('pin-gate-primary')));
+        await tester.pumpAndSettle();
+      }
     }
 
     Future<void> tapPrimary(WidgetTester tester) async {

@@ -15,8 +15,11 @@ import '../api/passcode_api.dart';
 ///
 /// The kid never retypes the pairing code: this is what makes that true.
 class SessionStore {
-  SessionStore({FlutterSecureStorage? storage})
-    : _storage = storage ?? const FlutterSecureStorage();
+  SessionStore({FlutterSecureStorage? storage, DateTime Function()? clock})
+    : _storage = storage ?? const FlutterSecureStorage(),
+      _now = clock ?? DateTime.now;
+
+  final DateTime Function() _now;
 
   final FlutterSecureStorage _storage;
 
@@ -32,6 +35,11 @@ class SessionStore {
   static const _guardianPinSaltKey = 'guardian_pin_salt';
   static const _guardianPinHashKey = 'guardian_pin_hash';
   static const _guardianPinDigitsKey = 'guardian_pin_digits';
+  static const _guardianPinFailsKey = 'guardian_pin_fails';
+  static const _guardianPinLockedUntilKey = 'guardian_pin_locked_until';
+
+  /// Wrong PINs allowed before the gate waits (A5).
+  static const guardianPinFreeTries = 3;
   static const _passcodeKeyPrefix = 'passcode_';
   static const _classroomKey = 'classroom';
 
@@ -254,6 +262,8 @@ class SessionStore {
       _storage.delete(key: _guardianPinSaltKey),
       _storage.delete(key: _guardianPinHashKey),
       _storage.delete(key: _guardianPinDigitsKey),
+      _storage.delete(key: _guardianPinFailsKey),
+      _storage.delete(key: _guardianPinLockedUntilKey),
     ]);
   }
 
@@ -293,11 +303,52 @@ class SessionStore {
   /// Returns `false`, never throws, if no PIN has been set yet — the
   /// caller is expected to check [hasGuardianPin] first and offer to
   /// create one instead of asking for entry.
+  ///
+  /// After [guardianPinFreeTries] wrong PINs in a row the gate waits (A5):
+  /// 30 s, then twice as long after each further miss, at most 15 min. A
+  /// try while it waits is refused without being checked. Kept in the
+  /// secure store, so restarting the app doesn't reset it.
   Future<bool> verifyGuardianPin(String pin) async {
+    if (await guardianPinLockedUntil() != null) return false;
     final salt = await _storage.read(key: _guardianPinSaltKey);
     final storedHash = await _storage.read(key: _guardianPinHashKey);
     if (salt == null || storedHash == null) return false;
-    return _hashPin(pin, salt) == storedHash;
+    if (_hashPin(pin, salt) == storedHash) {
+      await Future.wait([
+        _storage.delete(key: _guardianPinFailsKey),
+        _storage.delete(key: _guardianPinLockedUntilKey),
+      ]);
+      return true;
+    }
+    final fails =
+        (int.tryParse(await _storage.read(key: _guardianPinFailsKey) ?? '') ??
+            0) +
+        1;
+    await _storage.write(key: _guardianPinFailsKey, value: '$fails');
+    if (fails >= guardianPinFreeTries) {
+      final wait = guardianPinBackoff(fails);
+      await _storage.write(
+        key: _guardianPinLockedUntilKey,
+        value: _now().add(wait).toUtc().toIso8601String(),
+      );
+    }
+    return false;
+  }
+
+  /// How long the gate waits after [fails] wrong PINs in a row.
+  static Duration guardianPinBackoff(int fails) {
+    if (fails < guardianPinFreeTries) return Duration.zero;
+    final seconds = 30 * (1 << (fails - guardianPinFreeTries).clamp(0, 5));
+    return Duration(seconds: seconds.clamp(30, 900));
+  }
+
+  /// When the PIN gate opens again, or null when it isn't waiting.
+  Future<DateTime?> guardianPinLockedUntil() async {
+    final until = DateTime.tryParse(
+      await _storage.read(key: _guardianPinLockedUntilKey) ?? '',
+    );
+    if (until == null || !until.isAfter(_now())) return null;
+    return until;
   }
 
   /// What this device last learned about [kidId]'s picture passcode, or

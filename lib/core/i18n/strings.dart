@@ -168,6 +168,19 @@ abstract class Strings {
   String get pinGateUpgradeSubtitle;
   String get pinGateWrong;
   String get pinGateCreate;
+
+  /// The adult check before a PIN can be created outside pairing (A5).
+  String get adultCheckTitle;
+  String adultCheckSubtitle(int a, int b);
+  String get adultCheckLabel;
+  String get adultCheckWrong;
+
+  /// Offered right after pairing, to the adult who typed the code (A5).
+  String get pinGateAfterPairing;
+
+  /// Too many wrong PINs: the gate waits [seconds] (A5).
+  String pinGateLocked(int seconds);
+  String get later;
   String get pinGateConfirmSignOut;
 
   // --- removing a kid from the device (ADR 0037) ----------------------------
@@ -799,7 +812,7 @@ class _FrenchStrings extends Strings {
 
   @override
   String get pinGateCreateSubtitle =>
-      'Crée un NIP à 6 chiffres pour que seul un adulte puisse déconnecter cet appareil.';
+      'Créez un NIP à 6 chiffres pour que seul un adulte puisse déconnecter cet appareil.';
 
   @override
   String get pinGateEnterTitle => 'NIP parent';
@@ -812,7 +825,7 @@ class _FrenchStrings extends Strings {
   String pinGatePinLabel(int digits) => 'NIP ($digits chiffres)';
 
   @override
-  String get pinGateConfirmPinLabel => 'Confirme le NIP';
+  String get pinGateConfirmPinLabel => 'Confirmez le NIP';
 
   @override
   String get pinGateMismatch => 'Les NIP ne correspondent pas.';
@@ -821,17 +834,44 @@ class _FrenchStrings extends Strings {
   String pinGateTooShort(int digits) => 'Le NIP doit avoir $digits chiffres.';
 
   @override
-  String get pinGateUpgradeTitle => 'Choisis un nouveau NIP';
+  String get pinGateUpgradeTitle => 'Choisissez un nouveau NIP';
 
   @override
   String get pinGateUpgradeSubtitle =>
-      'Le NIP parent a maintenant 6 chiffres. Choisis-en un nouveau pour continuer.';
+      'Le NIP parent a maintenant 6 chiffres. Choisissez-en un nouveau pour continuer.';
 
   @override
   String get pinGateWrong => 'NIP incorrect.';
 
   @override
   String get pinGateCreate => 'Créer';
+
+  @override
+  String get adultCheckTitle => 'Zone adulte';
+
+  @override
+  String adultCheckSubtitle(int a, int b) =>
+      'Cette partie est pour les adultes. Si tu es un enfant, demande à un '
+      'adulte. Pour continuer, combien font $a × $b ?';
+
+  @override
+  String get adultCheckLabel => 'Réponse';
+
+  @override
+  String get adultCheckWrong => 'Ce n\'est pas la bonne réponse.';
+
+  @override
+  String get pinGateAfterPairing =>
+      'Cet appareil est jumelé. Choisissez maintenant un NIP parent à '
+      '6 chiffres : il protège la zone parent (déconnexion, rappels, codes '
+      'images).';
+
+  @override
+  String pinGateLocked(int seconds) =>
+      'Trop d\'essais. Réessayez dans $seconds s.';
+
+  @override
+  String get later => 'Plus tard';
 
   @override
   String get pinGateConfirmSignOut => 'Déconnecter';
@@ -1317,7 +1357,7 @@ class _FrenchStrings extends Strings {
 
   @override
   String get remindersPinCreate =>
-      'Crée d\'abord un NIP parent à 6 chiffres : seul un adulte pourra '
+      'Créez d\'abord un NIP parent à 6 chiffres : seul un adulte pourra '
       'activer les rappels ou choisir leur heure.';
 
   @override
@@ -1644,7 +1684,7 @@ class _FrenchStrings extends Strings {
 
   @override
   String get passcodesPinCreate =>
-      'Crée d\'abord un NIP parent à 6 chiffres : seul un adulte pourra '
+      'Créez d\'abord un NIP parent à 6 chiffres : seul un adulte pourra '
       'changer les codes images.';
 
   @override
@@ -2042,6 +2082,32 @@ class _EnglishStrings extends Strings {
 
   @override
   String get pinGateCreate => 'Create';
+
+  @override
+  String get adultCheckTitle => 'Grown-ups only';
+
+  @override
+  String adultCheckSubtitle(int a, int b) =>
+      'This part is for grown-ups. If you are a child, ask a grown-up. '
+      'To continue, what is $a × $b?';
+
+  @override
+  String get adultCheckLabel => 'Answer';
+
+  @override
+  String get adultCheckWrong => "That's not the right answer.";
+
+  @override
+  String get pinGateAfterPairing =>
+      'This device is paired. Now choose a 6-digit parent PIN: it protects '
+      'the parent zone (sign-out, reminders, picture codes).';
+
+  @override
+  String pinGateLocked(int seconds) =>
+      'Too many tries. Try again in $seconds s.';
+
+  @override
+  String get later => 'Later';
 
   @override
   String get pinGateConfirmSignOut => 'Sign out';

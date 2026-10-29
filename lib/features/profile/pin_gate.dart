@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -36,6 +39,18 @@ Future<bool> requireGuardianPin(
   if (!context.mounted) return false;
 
   if (digits == null) {
+    // A5: whoever taps first must not become "the parent". An adult check
+    // stands in front of creating the PIN; at pairing, when an adult is
+    // certainly there, it is offered without one
+    // (offerGuardianPinAfterPairing).
+    final adult =
+        await showDialog<bool>(
+          context: context,
+          builder: (context) =>
+              _AdultCheckDialog(facts: ref.read(adultCheckFactsProvider)()),
+        ) ??
+        false;
+    if (!adult || !context.mounted) return false;
     return await showDialog<bool>(
           context: context,
           builder: (context) =>
@@ -64,15 +79,103 @@ Future<bool> requireGuardianPin(
       false;
 }
 
+/// Right after a kid's pairing, the adult who typed the portal's code is
+/// certainly there: they're offered the parent PIN, in "vous" (A5). "Plus
+/// tard" leaves it for later, behind the adult check.
+Future<void> offerGuardianPinAfterPairing(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final store = ref.read(sessionStoreProvider);
+  if (await store.hasGuardianPin() || !context.mounted) return;
+  await showDialog<bool>(
+    context: context,
+    builder: (context) => _CreatePinDialog(
+      store: store,
+      subtitle: context.s.pinGateAfterPairing,
+      cancelLabel: context.s.later,
+    ),
+  );
+}
+
+/// The two factors the adult check asks to multiply. Random, so it can't
+/// be learned; a test pins it.
+final adultCheckFactsProvider = Provider<(int, int) Function()>((ref) {
+  final random = math.Random();
+  return () => (6 + random.nextInt(4), 6 + random.nextInt(4));
+});
+
+/// "Zone adulte": a multiplication a grade-1 child can't do, before a PIN
+/// can be created anywhere but at pairing (A5). Friction, not security,
+/// like the PIN itself.
+class _AdultCheckDialog extends StatefulWidget {
+  const _AdultCheckDialog({required this.facts});
+
+  final (int, int) facts;
+
+  @override
+  State<_AdultCheckDialog> createState() => _AdultCheckDialogState();
+}
+
+class _AdultCheckDialogState extends State<_AdultCheckDialog> {
+  final _answer = TextEditingController();
+  String? _error;
+
+  @override
+  void dispose() {
+    _answer.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final (a, b) = widget.facts;
+    if (int.tryParse(_answer.text) == a * b) {
+      Navigator.of(context).pop(true);
+      return;
+    }
+    setState(() {
+      _error = context.s.adultCheckWrong;
+      _answer.clear();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.s;
+    final (a, b) = widget.facts;
+    return _PinDialogFrame(
+      key: const ValueKey('adult-check'),
+      title: s.adultCheckTitle,
+      subtitle: s.adultCheckSubtitle(a, b),
+      error: _error,
+      busy: false,
+      primaryLabel: s.pinGateContinue,
+      onPrimary: _submit,
+      fields: [
+        _PinField(
+          controller: _answer,
+          label: s.adultCheckLabel,
+          digits: 2,
+          autofocus: true,
+          obscure: false,
+          onSubmitted: _submit,
+        ),
+      ],
+    );
+  }
+}
+
 class _CreatePinDialog extends StatefulWidget {
   const _CreatePinDialog({
     required this.store,
     this.upgrade = false,
     this.subtitle,
+    this.cancelLabel,
   });
 
   final SessionStore store;
   final String? subtitle;
+  final String? cancelLabel;
 
   /// Replacing a 4-digit PIN rather than setting the first one.
   final bool upgrade;
@@ -128,6 +231,7 @@ class _CreatePinDialogState extends State<_CreatePinDialog> {
       busy: _submitting,
       primaryLabel: s.pinGateCreate,
       onPrimary: _submit,
+      cancelLabel: widget.cancelLabel,
       fields: [
         _PinField(
           controller: _pinController,
@@ -174,12 +278,14 @@ class _EnterPinDialogState extends State<_EnterPinDialog> {
 
   @override
   void dispose() {
+    _unlock?.cancel();
     _pinController.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
     final s = context.s;
+    if (_lockedUntil != null) return;
     setState(() {
       _submitting = true;
       _error = null;
@@ -192,10 +298,50 @@ class _EnterPinDialogState extends State<_EnterPinDialog> {
       Navigator.of(context).pop(true);
       return;
     }
+    final until = await widget.store.guardianPinLockedUntil();
+    if (!mounted) return;
     setState(() {
       _submitting = false;
-      _error = s.pinGateWrong;
+      _lockedUntil = until;
+      _error = until == null
+          ? s.pinGateWrong
+          : s.pinGateLocked(_secondsLeft(until));
       _pinController.clear();
+    });
+    _scheduleUnlock();
+  }
+
+  /// When the gate opens again after too many wrong PINs (A5).
+  DateTime? _lockedUntil;
+  Timer? _unlock;
+
+  int _secondsLeft(DateTime until) =>
+      until.difference(DateTime.now()).inSeconds.clamp(1, 900);
+
+  void _scheduleUnlock() {
+    _unlock?.cancel();
+    final until = _lockedUntil;
+    if (until == null) return;
+    _unlock = Timer(until.difference(DateTime.now()), () {
+      if (mounted) {
+        setState(() {
+          _lockedUntil = null;
+          _error = null;
+        });
+      }
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    widget.store.guardianPinLockedUntil().then((until) {
+      if (!mounted || until == null) return;
+      setState(() {
+        _lockedUntil = until;
+        _error = context.s.pinGateLocked(_secondsLeft(until));
+      });
+      _scheduleUnlock();
     });
   }
 
@@ -209,6 +355,7 @@ class _EnterPinDialogState extends State<_EnterPinDialog> {
       busy: _submitting,
       primaryLabel: widget.confirmLabel ?? s.pinGateConfirmSignOut,
       onPrimary: _submit,
+      locked: _lockedUntil != null,
       fields: [
         _PinField(
           controller: _pinController,
@@ -234,7 +381,14 @@ class _PinDialogFrame extends StatelessWidget {
     required this.onPrimary,
     required this.busy,
     this.error,
+    this.cancelLabel,
+    this.locked = false,
+    super.key,
   });
+
+  final String? cancelLabel;
+
+  /// Waiting after too many wrong PINs: the primary button is off.
 
   final String title;
   final String subtitle;
@@ -242,6 +396,7 @@ class _PinDialogFrame extends StatelessWidget {
   final String primaryLabel;
   final VoidCallback onPrimary;
   final bool busy;
+  final bool locked;
   final String? error;
 
   @override
@@ -349,12 +504,12 @@ class _PinDialogFrame extends StatelessWidget {
                     onPressed: busy
                         ? null
                         : () => Navigator.of(context).pop(false),
-                    child: Text(context.s.cancel),
+                    child: Text(cancelLabel ?? context.s.cancel),
                   ),
                   _GoldPillButton(
                     key: const ValueKey('pin-gate-primary'),
                     label: primaryLabel,
-                    onPressed: busy ? null : onPrimary,
+                    onPressed: busy || locked ? null : onPrimary,
                   ),
                 ],
               ),
@@ -375,8 +530,10 @@ class _PinField extends StatelessWidget {
     this.autofocus = false,
     this.textInputAction = TextInputAction.done,
     this.onSubmitted,
+    this.obscure = true,
   });
 
+  final bool obscure;
   final TextEditingController controller;
   final String label;
   final int digits;
@@ -394,7 +551,7 @@ class _PinField extends StatelessWidget {
     return TextField(
       controller: controller,
       autofocus: autofocus,
-      obscureText: true,
+      obscureText: obscure,
       keyboardType: TextInputType.number,
       textInputAction: textInputAction,
       autocorrect: false,
