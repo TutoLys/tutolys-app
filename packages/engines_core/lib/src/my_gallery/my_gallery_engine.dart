@@ -426,19 +426,24 @@ class _GalleryViewState extends State<_GalleryView> {
             ),
             if (hung) ...[
               const SizedBox(height: 6),
+              // Full card width, padded, wrapping: the dense tile's
+              // one-line label touched its edges (« Je suis fier ou
+              // fière »).
               for (final (id, label) in c.reasons)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: AnswerTile(
-                    key: ValueKey('gallery-reason-${x.id}-$id'),
-                    label: label,
-                    dense: true,
-                    state: reason == id
-                        ? AnswerTileState.picked
-                        : AnswerTileState.idle,
-                    onTap: view.enabled && !s.solved
-                        ? () => view.dispatch(SetHangReason(x.id, id))
-                        : null,
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: AnswerTile(
+                      key: ValueKey('gallery-reason-${x.id}-$id'),
+                      label: label,
+                      state: reason == id
+                          ? AnswerTileState.picked
+                          : AnswerTileState.idle,
+                      onTap: view.enabled && !s.solved
+                          ? () => view.dispatch(SetHangReason(x.id, id))
+                          : null,
+                    ),
                   ),
                 ),
             ],

@@ -56,12 +56,12 @@ ActivitySessionController controllerFor(
   seed: 3,
 );
 
-Widget app(ActivitySessionController c, FakeShelf? shelf) {
+Widget app(ActivitySessionController c, FakeShelf? shelf, {bool dark = false}) {
   final body = Scaffold(
     body: LearningActivityView(controller: c, locale: fr, onDone: () {}),
   );
   return MaterialApp(
-    theme: TutolysTheme.village(),
+    theme: dark ? TutolysTheme.villageDark() : TutolysTheme.village(),
     home: shelf == null ? body : CreationShelfScope(shelf: shelf, child: body),
   );
 }
@@ -278,6 +278,46 @@ void main() {
       );
       expect(offered, isFalse);
     });
+
+    for (final dark in [false, true]) {
+      testWidgets('reason tiles pad and wrap their words at 375 px '
+          '(${dark ? 'dark' : 'light'})', (tester) async {
+        tallView(tester, width: 375);
+        final shelf = FakeShelf();
+        await shelf.save(
+          engineKey: 'compose_build',
+          exerciseId: 'e',
+          payload: {
+            'labels': ['Le', 'chien', 'court', 'vite'],
+          },
+        );
+        final c = controllerFor('my_gallery', {
+          ...gallery,
+          'reasons': [
+            {'id': 'fier', 'label': 'Je suis fier ou fière'},
+            {'id': 'travail', 'label': 'J’ai travaillé fort'},
+          ],
+        });
+        await tester.runAsync(c.start);
+        await tester.pumpWidget(app(c, shelf, dark: dark));
+        await settle(tester);
+        final id = shelf.items.single.id;
+        await tester.tap(find.byKey(ValueKey('gallery-card-$id')));
+        await settle(tester);
+        for (final r in ['fier', 'travail']) {
+          final tile = find.byKey(ValueKey('gallery-reason-$id-$r'));
+          final box = tester.getRect(tile);
+          final text = tester.getRect(
+            find.descendant(of: tile, matching: find.byType(Text)).first,
+          );
+          expect(text.left - box.left, greaterThanOrEqualTo(12), reason: r);
+          expect(box.right - text.right, greaterThanOrEqualTo(12), reason: r);
+          expect(box.height, greaterThanOrEqualTo(48), reason: r);
+        }
+        expect(tester.takeException(), isNull);
+        c.dispose();
+      });
+    }
 
     testWidgets('an empty gallery says so and lets the child go on', (
       tester,
