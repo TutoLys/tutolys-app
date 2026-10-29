@@ -86,13 +86,20 @@ class _IdleHandHintState extends State<IdleHandHint>
     // Always a Stack with the child first, so showing or hiding the hand
     // never rebuilds the tile (and never drops its focus).
     if (!_show) {
-      return Stack(clipBehavior: Clip.none, children: [widget.child]);
+      return Stack(
+        fit: StackFit.passthrough,
+        clipBehavior: Clip.none,
+        children: [widget.child],
+      );
     }
     final still = MediaQuery.disableAnimationsOf(context);
     final p = VillagePalette.of(context);
     final waitShare =
         IdleHandHint.wait.inMilliseconds / _c.duration!.inMilliseconds;
     return Stack(
+      // Passthrough: the child keeps the size it's given (a tight 64 px
+      // box stays 64 px), or its tap target shrinks.
+      fit: StackFit.passthrough,
       clipBehavior: Clip.none,
       children: [
         widget.child,

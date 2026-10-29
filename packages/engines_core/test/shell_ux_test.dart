@@ -682,6 +682,57 @@ void main() {
       c.dispose();
     });
   });
+
+  group('N8 keyboard focus is a 2 px blue outline, never a fill', () {
+    testWidgets('shown on keyboard focus only, gone on unfocus', (
+      tester,
+    ) async {
+      addTearDown(
+        () => FocusManager.instance.highlightStrategy =
+            FocusHighlightStrategy.automatic,
+      );
+      await tester.pumpWidget(
+        _app(
+          Center(
+            child: SizedBox(
+              width: 200,
+              child: AnswerTile(
+                label: 'chat',
+                state: AnswerTileState.retry,
+                onTap: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+      final ink = tester.widget<InkWell>(find.byType(InkWell));
+      expect(ink.focusColor, Colors.transparent);
+      final ring = find.byKey(const ValueKey('focus-ring'));
+
+      FocusManager.instance.highlightStrategy =
+          FocusHighlightStrategy.alwaysTraditional;
+      final node = Focus.of(tester.element(find.text('chat')))..requestFocus();
+      await tester.pump();
+      expect(ring, findsOneWidget);
+      final border =
+          (tester.widget<DecoratedBox>(ring).decoration as BoxDecoration)
+                  .border!
+              as Border;
+      expect(border.top.width, 2);
+      expect(border.top.color, VillagePalette.light.quebecBlueBright);
+
+      node.unfocus();
+      await tester.pump();
+      expect(ring, findsNothing);
+
+      // Touch mode: focus draws nothing.
+      FocusManager.instance.highlightStrategy =
+          FocusHighlightStrategy.alwaysTouch;
+      node.requestFocus();
+      await tester.pump();
+      expect(ring, findsNothing);
+    });
+  });
 }
 
 class _Silent implements ContentSpeaker {

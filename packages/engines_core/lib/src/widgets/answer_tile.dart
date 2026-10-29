@@ -145,109 +145,167 @@ class AnswerTile extends StatelessWidget {
       customSemanticsActions: speak == null
           ? null
           : {CustomSemanticsAction(label: en ? 'Listen' : 'Écouter'): speak},
-      child: Material(
-        color: fill,
-        shape: RoundedRectangleBorder(
-          borderRadius: Radii.cardMd,
-          side: BorderSide(color: border, width: 2),
-        ),
-        child: InkWell(
-          onTap: onTap,
-          onLongPress: speak,
-          borderRadius: Radii.cardMd,
-          child: ConstrainedBox(
-            // ≥48px: the frontend spec's tap-target floor.
-            constraints: BoxConstraints(
-              minHeight: !large
-                  ? 52
-                  : MediaQuery.sizeOf(context).width < Breakpoints.compact
-                  ? 72
-                  : 88,
-            ),
-            child: dense
-                ? _dense(text, icon, border)
-                : Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                    child: Row(
-                      children: [
-                        // Its own 48 dp pill with a gap after it, so a
-                        // child aiming for it doesn't pick the answer
-                        // instead (UX review G10).
-                        if (speak != null)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 12),
-                            child: IconButton.filledTonal(
-                              key: ValueKey('tile-speak-$ref'),
-                              onPressed: speak,
-                              tooltip: en ? 'Listen' : 'Écouter',
-                              iconSize: 22,
-                              constraints: const BoxConstraints.tightFor(
-                                width: 48,
-                                height: 48,
-                              ),
-                              style: IconButton.styleFrom(
-                                backgroundColor: p.navHoverFill,
-                                foregroundColor: p.isDark
-                                    ? p.quebecBlueBright
-                                    : p.quebecBlue,
-                              ),
-                              icon: const Icon(Icons.volume_up_rounded),
-                            ),
-                          ),
-                        if (imageRef != null)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 12),
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(
-                                maxWidth: 56,
-                                maxHeight: 56,
-                              ),
-                              child: ContentImage(
-                                ref: imageRef!,
-                                fallback: const SizedBox.shrink(),
+      child: _FocusOutline(
+        child: Material(
+          color: fill,
+          shape: RoundedRectangleBorder(
+            borderRadius: Radii.cardMd,
+            side: BorderSide(color: border, width: 2),
+          ),
+          child: InkWell(
+            onTap: onTap,
+            onLongPress: speak,
+            borderRadius: Radii.cardMd,
+            // No grey focus fill: it lingered into the wrong-answer state
+            // and read as « selected ». _FocusOutline draws focus (N8).
+            focusColor: Colors.transparent,
+            child: ConstrainedBox(
+              // ≥48px: the frontend spec's tap-target floor.
+              constraints: BoxConstraints(
+                minHeight: !large
+                    ? 52
+                    : MediaQuery.sizeOf(context).width < Breakpoints.compact
+                    ? 72
+                    : 88,
+              ),
+              child: dense
+                  ? _dense(text, icon, border)
+                  : Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 14,
+                      ),
+                      child: Row(
+                        children: [
+                          // Its own 48 dp pill with a gap after it, so a
+                          // child aiming for it doesn't pick the answer
+                          // instead (UX review G10).
+                          if (speak != null)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: IconButton.filledTonal(
+                                key: ValueKey('tile-speak-$ref'),
+                                onPressed: speak,
+                                tooltip: en ? 'Listen' : 'Écouter',
+                                iconSize: 22,
+                                constraints: const BoxConstraints.tightFor(
+                                  width: 48,
+                                  height: 48,
+                                ),
+                                style: IconButton.styleFrom(
+                                  backgroundColor: p.navHoverFill,
+                                  foregroundColor: p.isDark
+                                      ? p.quebecBlueBright
+                                      : p.quebecBlue,
+                                ),
+                                icon: const Icon(Icons.volume_up_rounded),
                               ),
                             ),
-                          ),
-                        Expanded(
-                          child: Text(
-                            label,
-                            style: TextStyle(
-                              fontFamily: VillageType.display,
-                              fontWeight: FontWeight.w700,
-                              fontSize: large ? 20 : 15,
-                              color: text,
+                          if (imageRef != null)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxWidth: 56,
+                                  maxHeight: 56,
+                                ),
+                                child: ContentImage(
+                                  ref: imageRef!,
+                                  fallback: const SizedBox.shrink(),
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                        if (badge != null)
-                          Container(
-                            margin: const EdgeInsets.only(left: 8),
-                            width: 22,
-                            height: 22,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: border,
-                              shape: BoxShape.circle,
-                            ),
+                          Expanded(
                             child: Text(
-                              '$badge',
-                              style: const TextStyle(
+                              label,
+                              style: TextStyle(
                                 fontFamily: VillageType.display,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 12,
-                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: large ? 20 : 15,
+                                color: text,
                               ),
                             ),
                           ),
-                        if (icon != null) ...[
-                          const SizedBox(width: 8),
-                          Icon(icon, size: 18, color: border),
+                          if (badge != null)
+                            Container(
+                              margin: const EdgeInsets.only(left: 8),
+                              width: 22,
+                              height: 22,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: border,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Text(
+                                '$badge',
+                                style: const TextStyle(
+                                  fontFamily: VillageType.display,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 12,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          if (icon != null) ...[
+                            const SizedBox(width: 8),
+                            Icon(icon, size: 18, color: border),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
-                  ),
+            ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// A 2 px blue outline around a tile while it holds keyboard focus (UX
+/// review N8; WCAG 2.4.7 and 2.4.11), drawn just outside its border so the
+/// state colour still shows. Only in keyboard mode: a tap draws nothing.
+class _FocusOutline extends StatefulWidget {
+  const _FocusOutline({required this.child});
+  final Widget child;
+
+  @override
+  State<_FocusOutline> createState() => _FocusOutlineState();
+}
+
+class _FocusOutlineState extends State<_FocusOutline> {
+  var _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
+    final keyboard =
+        FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onFocusChange: (f) => setState(() => _focused = f),
+      child: Stack(
+        fit: StackFit.passthrough,
+        clipBehavior: Clip.none,
+        children: [
+          widget.child,
+          if (_focused && keyboard)
+            Positioned(
+              left: -4,
+              top: -4,
+              right: -4,
+              bottom: -4,
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  key: const ValueKey('focus-ring'),
+                  decoration: BoxDecoration(
+                    borderRadius: Radii.cardMd,
+                    border: Border.all(color: p.quebecBlueBright, width: 2),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
