@@ -11,25 +11,39 @@ import 'package:flutter_test/flutter_test.dart';
 /// drift unnoticed. Skipped when the backend checkout isn't beside this
 /// repo.
 const _samples = {
-  'math_pattern_machine.json': PatternMachineEngine(),
-  'math_measure_tool.json': MeasureToolEngine(),
-  'soc_path_planner.json': PathPlannerEngine(),
-  'math_fraction_slice.json': FractionSliceEngine(),
-  'math_geometry_lab.json': GeometryLabEngine(),
-  'sci_experiment_lab.json': ExperimentLabEngine(),
-  'math_counters_board.json': CountersBoardEngine(),
-  'sci_sky_model.json': SkyModelEngine(),
-  'fr_passage_discuss.json': PassageReaderEngine(),
-  'fr_mail_studio.json': MailStudioEngine(),
-  'fr_feedback_studio.json': FeedbackStudioEngine(),
-  'en_stage_presenter.json': StagePresenterEngine(),
-  'fr_my_gallery.json': MyGalleryEngine(),
+  'samples/math_pattern_machine.json': PatternMachineEngine(),
+  'samples/math_measure_tool.json': MeasureToolEngine(),
+  'samples/soc_path_planner.json': PathPlannerEngine(),
+  'samples/math_fraction_slice.json': FractionSliceEngine(),
+  'samples/math_geometry_lab.json': GeometryLabEngine(),
+  'samples/sci_experiment_lab.json': ExperimentLabEngine(),
+  'samples/math_counters_board.json': CountersBoardEngine(),
+  'samples/sci_sky_model.json': SkyModelEngine(),
+  'samples/fr_passage_discuss.json': PassageReaderEngine(),
+  'samples/fr_mail_studio.json': MailStudioEngine(),
+  'samples/fr_feedback_studio.json': FeedbackStudioEngine(),
+  'samples/en_stage_presenter.json': StagePresenterEngine(),
+  'samples/fr_my_gallery.json': MyGalleryEngine(),
 };
 
-final _dir = Directory('../../../tutolys-backend/content/samples');
+/// The creation lessons (app ADR 0094): real lessons where every question
+/// is open work, so each must parse with `creation` on.
+const _creations = {
+  'pfeq_grade1_francais/21_lecon_ecrire_a_quelqu_un.json': MailStudioEngine(),
+  'pfeq_grade1_francais/22_lecon_invente_ta_phrase.json': ComposeSlotsEngine(),
+  'pfeq_grade1_math/75_lecon_construis_tes_figures.json': GeometryLabEngine(),
+  'pfeq_grade1_math_en/75_lecon_construis_tes_figures_en.json':
+      GeometryLabEngine(),
+  'pfeq_grade1_english/86_make_your_own_sentence.json': ComposeSlotsEngine(),
+};
+
+final _dir = Directory('../../../tutolys-backend/content');
 
 void main() {
-  for (final MapEntry(key: file, value: engine) in _samples.entries) {
+  for (final MapEntry(key: file, value: engine) in {
+    ..._samples,
+    ..._creations,
+  }.entries) {
     test('$file parses in the app', () {
       final lesson = jsonDecode(
         File('${_dir.path}/$file').readAsStringSync(),
@@ -49,6 +63,9 @@ void main() {
           isA<ParseOk<Object?>>(),
           reason: 'question $i: ${parsed is ParseInvalid ? parsed.reason : ''}',
         );
+        if (_creations.containsKey(file)) {
+          expect(qc['creation'], isTrue, reason: 'question $i');
+        }
       }
     }, skip: _dir.existsSync() ? false : 'no tutolys-backend checkout');
   }
