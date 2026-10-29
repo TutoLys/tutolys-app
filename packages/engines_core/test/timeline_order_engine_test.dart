@@ -439,6 +439,25 @@ void main() {
       c.dispose();
     });
 
+    testWidgets('G3: a how-to line, and the hand until a card is placed', (
+      tester,
+    ) async {
+      tallView(tester);
+      final (c, _) = controllerFor(morningConfig);
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(app(c));
+      expect(find.text('Touche les cartes dans le bon ordre.'), findsOneWidget);
+      final hand = find.byKey(const ValueKey('idle-hand'));
+      expect(hand, findsNothing);
+      await tester.pump(IdleHandHint.wait + const Duration(seconds: 3));
+      expect(hand, findsOneWidget);
+      final first = (c.current!.state as TimelineState).tray.first;
+      await tester.tap(find.byKey(ValueKey('timeline-item-$first')));
+      await settle(tester);
+      expect(hand, findsNothing);
+      c.dispose();
+    });
+
     testWidgets('keyboard alone can order', (tester) async {
       tallView(tester);
       final (c, _) = controllerFor(morningConfig);

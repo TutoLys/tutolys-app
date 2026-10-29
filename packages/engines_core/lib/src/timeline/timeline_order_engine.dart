@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../widgets/answer_slot.dart';
 import '../widgets/answer_tile.dart';
+import '../widgets/idle_hand_hint.dart';
 
 class TimelineItem {
   const TimelineItem({
@@ -397,6 +398,14 @@ class TimelineOrderEngine
     final s = view.state;
     final p = VillagePalette.of(context);
     final content = view.content;
+    // The idle hand (G3) on the first card, until one is placed.
+    final untouched = [
+      for (var i = 0; i < s.slots.length; i++)
+        if (!content.given.contains(i)) s.slots[i],
+    ].every((x) => x == null);
+    final handOn = view.enabled && s.locked.isEmpty && untouched
+        ? s.tray.firstWhere((id) => !s.isPlaced(id), orElse: () => '')
+        : null;
 
     Widget slot(int i) => AnswerSlot(
       key: ValueKey('timeline-slot-$i'),
@@ -515,15 +524,18 @@ class TimelineOrderEngine
                     if (!s.isPlaced(id))
                       SizedBox(
                         width: _slotWidth,
-                        child: AnswerTile(
-                          key: ValueKey('timeline-item-$id'),
-                          label: content.item(id).label,
-                          imageRef: content.item(id).imageRef,
-                          audioRef: content.item(id).audioRef,
-                          state: AnswerTileState.idle,
-                          onTap: view.enabled && !s.full
-                              ? () => view.dispatch(PlaceInOrder(id))
-                              : null,
+                        child: IdleHandHint(
+                          show: handOn == id,
+                          child: AnswerTile(
+                            key: ValueKey('timeline-item-$id'),
+                            label: content.item(id).label,
+                            imageRef: content.item(id).imageRef,
+                            audioRef: content.item(id).audioRef,
+                            state: AnswerTileState.idle,
+                            onTap: view.enabled && !s.full
+                                ? () => view.dispatch(PlaceInOrder(id))
+                                : null,
+                          ),
                         ),
                       )
                     else
