@@ -129,10 +129,7 @@ edge, and the column floated in the middle of a 1950px window.
   - Wrapping onto a second line was considered and rejected: the panel
     would jump by a row whenever the window crossed the width where the
     pills stop fitting.
-- **Réglages sits on the left**, under the page title, as the design's
-  `.settings-col` does inside `.content`. Centred, a wide window left a
-  band of sky on its left. Profil, Aide and À propos still centre their
-  column; that's a separate call.
+- ~~**Réglages sits on the left**~~ — reversed the same day, see below.
 - **The Quêtes badge stays red.** The design draws it `#EF4444`, and its
   own note says "Badge rouge « 3 » sur Quêtes". Its no-red rule is for a
   wrong answer (the amber "presque" state), not for a count.
@@ -140,7 +137,40 @@ edge, and the column floated in the middle of a 1950px window.
 Tests in `test/pill_tabs_test.dart`:
 - four pills, with Notifications inside Expérience;
 - the old name opens Expérience, scrolled to the section;
-- the column sits left at 1950px;
 - at 375, 768, 1024 and 1950 (as the width the shell leaves the page),
   any pill past an edge has that edge fading;
 - on a phone the fade swaps sides once the row is dragged.
+
+## Revision — 2026-10-29 (later): every page column centred, one wrapper
+
+Hafid, on the left-aligned Réglages: "WHY PUSH IT TO THE LEFT THO!" He
+wants every page's column centred in the page area, the part of the
+window right of the sidebar and under the header.
+
+- **One wrapper, `PageColumn`** (`lib/core/widgets/page_column.dart`). It
+  centres with equal side padding computed from the page's own width,
+  never from the window's. Réglages, Profil, Aide, À propos and both of
+  Quêtes' views use it. Progrès keeps its `ListView` (pull to refresh)
+  and takes the same padding from `PageColumn.insets`.
+- **Wider on a wide page.** The column is `PageWidth.column` (680) and
+  becomes `PageWidth.columnWide` (880) once the page area is at least
+  `PageWidth.wideFrom` (1360) wide, about a 1600px window with the
+  sidebar. Then it isn't a thin strip. À propos stays narrow (560 → 680).
+  Quêtes and Progrès stay at `PageWidth.content` (1040).
+- **The old centring was already right inside the shell.** Measured in a
+  widget test of the shell (sidebar, header, `IndexedStack`), the old
+  `Center` + `ConstrainedBox` put the column's centre exactly on the page
+  area's centre at 1024 and 1950. The offset in Hafid's Profil screenshot
+  (column centre ≈1370 in a page area of 220–1950) matches a Flutter view
+  about 2,516px wide, so the window was likely wider than the captured
+  area. The :8080 build at a real 1950px viewport measures `flutter-view`
+  at exactly 1950. The wrapper doesn't depend on any of this: it reads
+  only the width it's given.
+
+Tests:
+- `test/page_column_test.dart`: the insets maths. Réglages, Aide and À
+  propos inside the shell at 1024 and 1950, where the scroll view spans
+  exactly the page area and the column's centre is the page area's
+  centre. The wide width applies at 1950.
+- `test/profile_screen_test.dart`: Profil, the same check at 1024 and
+  1950.

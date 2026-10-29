@@ -2,6 +2,7 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/widgets/page_column.dart';
 import '../../core/i18n/strings.dart';
 import '../../data/local_db/database.dart';
 import '../pairing/pairing_controller.dart';
@@ -54,13 +55,13 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
     return SafeArea(
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final compact = constraints.maxWidth < Breakpoints.compact;
-          final pad = compact ? Space.md : Space.lg;
+          final compact = PageColumn.isCompact(constraints.maxWidth);
           // Quêtes' column: the list still scrolls edge to edge, but its
-          // content centres at `PageWidth.content` on a wide window.
-          final side = ((constraints.maxWidth - PageWidth.content) / 2).clamp(
-            pad,
-            double.infinity,
+          // content centres in the page, as every page's does.
+          final insets = PageColumn.insets(
+            constraints.maxWidth,
+            maxWidth: PageWidth.content,
+            wideMaxWidth: PageWidth.content,
           );
           return RefreshIndicator(
             onRefresh: () async {
@@ -68,7 +69,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
               await ref.read(progressControllerProvider.notifier).refresh();
             },
             child: ListView(
-              padding: EdgeInsets.symmetric(horizontal: side, vertical: pad),
+              padding: insets,
               children: [
                 // `.progress-summary`: tiles that wrap rather than squeeze.
                 Wrap(
@@ -239,7 +240,11 @@ class _ByArea extends ConsumerWidget {
         color: p.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: p.shadow, blurRadius: 40, offset: const Offset(0, 20)),
+          BoxShadow(
+            color: p.shadow,
+            blurRadius: 40,
+            offset: const Offset(0, 20),
+          ),
         ],
       ),
       child: Padding(
@@ -305,11 +310,7 @@ class _AreaRow extends StatelessWidget {
         p.quebecBlueBright,
         t.progressStatusLearning,
       ),
-      AreaStatus.notStarted => (
-        p.track,
-        p.inkMuted,
-        t.progressStatusNew,
-      ),
+      AreaStatus.notStarted => (p.track, p.inkMuted, t.progressStatusNew),
     };
     final pct = (area.fraction * 100).round();
 

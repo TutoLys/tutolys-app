@@ -1,6 +1,7 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/widgets/page_column.dart';
 import '../../core/diagnostics/boot_log.dart';
 import '../../core/diagnostics/diag_log.dart';
 import '../../core/i18n/strings.dart';
@@ -20,81 +21,70 @@ class AboutScreen extends StatelessWidget {
     final p = VillagePalette.of(context);
     final t = context.s;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(Space.lg),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 560),
-          child: Column(
-            children: [
-              const SizedBox(height: Space.lg),
-              Image.asset(
-                'assets/images/asset-logo.webp',
-                height: 72,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(height: Space.md),
-              Text(
-                'TutoLys',
-                style: TextStyle(
-                  fontFamily: VillageType.display,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 26,
-                  color: p.quebecBlue,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                t.aboutTagline,
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13.5, color: p.inkMuted),
-              ),
-              const SizedBox(height: Space.lg),
-              Material(
-                color: p.surface,
-                borderRadius: VillageMetrics.mdAll,
-                elevation: VillageColors.elevationSmall,
-                shadowColor: p.shadowSmall,
-                child: Padding(
-                  padding: const EdgeInsets.all(Space.md),
-                  child: Column(
-                    children: [
-                      // A long-press opens the technical log, for an adult
-                      // helping with support (ADR 0038). Nothing in it
-                      // leaves the device.
-                      GestureDetector(
-                        onLongPress: () => showTechnicalLog(context),
-                        child: _Row(
-                          label: t.aboutVersion,
-                          value: appVersion,
-                          p: p,
-                        ),
-                      ),
-                      Divider(height: Space.lg, color: p.line),
-                      _Row(label: t.aboutCurriculum, value: 'PFEQ', p: p),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: Space.md),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+    return PageColumn(
+      maxWidth: 560,
+      wideMaxWidth: PageWidth.column,
+      child: Column(
+        children: [
+          const SizedBox(height: Space.lg),
+          Image.asset(
+            'assets/images/asset-logo.webp',
+            height: 72,
+            fit: BoxFit.contain,
+          ),
+          const SizedBox(height: Space.md),
+          Text(
+            'TutoLys',
+            style: TextStyle(
+              fontFamily: VillageType.display,
+              fontWeight: FontWeight.w800,
+              fontSize: 26,
+              color: p.quebecBlue,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            t.aboutTagline,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13.5, color: p.inkMuted),
+          ),
+          const SizedBox(height: Space.lg),
+          Material(
+            color: p.surface,
+            borderRadius: VillageMetrics.mdAll,
+            elevation: VillageColors.elevationSmall,
+            shadowColor: p.shadowSmall,
+            child: Padding(
+              padding: const EdgeInsets.all(Space.md),
+              child: Column(
                 children: [
-                  Text(
-                    t.aboutMadeIn,
-                    style: TextStyle(fontSize: 12, color: p.inkMuted),
+                  // A long-press opens the technical log, for an adult
+                  // helping with support (ADR 0038). Nothing in it
+                  // leaves the device.
+                  GestureDetector(
+                    onLongPress: () => showTechnicalLog(context),
+                    child: _Row(label: t.aboutVersion, value: appVersion, p: p),
                   ),
-                  const SizedBox(width: 5),
-                  const FleurDeLys(
-                    key: ValueKey('about-fleur-de-lys'),
-                    size: 14,
-                  ),
+                  Divider(height: Space.lg, color: p.line),
+                  _Row(label: t.aboutCurriculum, value: 'PFEQ', p: p),
                 ],
               ),
-              const SizedBox(height: Space.xl),
+            ),
+          ),
+          const SizedBox(height: Space.md),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                t.aboutMadeIn,
+                style: TextStyle(fontSize: 12, color: p.inkMuted),
+              ),
+              const SizedBox(width: 5),
+              const FleurDeLys(key: ValueKey('about-fleur-de-lys'), size: 14),
             ],
           ),
-        ),
+          const SizedBox(height: Space.xl),
+        ],
       ),
     );
   }

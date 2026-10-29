@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/i18n/strings.dart';
 import '../../core/routing/page_tab.dart';
+import '../../core/widgets/page_column.dart';
 import '../../core/widgets/pill_tabs.dart';
 import '../pairing/pairing_controller.dart';
 import '../passcode/passcode_setup_screen.dart';
@@ -137,81 +138,63 @@ class SettingsScreen extends ConsumerWidget {
       ),
     };
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxWidth < Breakpoints.compact;
-        return SingleChildScrollView(
-          padding: EdgeInsets.all(compact ? Space.md : Space.lg),
-          // Left, under the header's greeting, as the design's
-          // `.settings-col` sits in `.content`: centred, a wide window left
-          // a band of empty sky on its left (Hafid, 2026-10-29).
-          child: Align(
-            alignment: Alignment.topLeft,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: 680),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _PageTitle(
-                    eyebrow: t.settingsEyebrow,
-                    title: t.settingsTitle,
-                  ),
-                  const SizedBox(height: Space.md),
-                  PillTabs<SettingsTab>(
-                    keyPrefix: 'settings-tab',
-                    selected: tab,
-                    compact: compact,
-                    onSelect: (next) => ref
-                        .read(pageTabProvider(TabbedPage.settings).notifier)
-                        .select(next.name),
-                    tabs: [
-                      for (final s in SettingsTab.values)
-                        PillTab(
-                          value: s,
-                          label: s.label(t),
-                          leading: Icon(
-                            s.icon,
-                            size: compact ? 18 : 20,
-                            color: s == tab ? p.quebecBlueBright : p.inkMuted,
-                          ),
-                        ),
-                    ],
-                  ),
-                  // The raw name, so a link to the old Notifications tab
-                  // rebuilds the panel and scrolls even from Expérience.
-                  PillTabPanel(tabKey: stored ?? tab.name, child: panel),
-
-                  // Under every tab: never more than a tap away.
-                  const SizedBox(height: Space.sm),
-                  _LinkRow(
-                    icon: Icons.help_outline,
-                    label: t.navHelp,
-                    onTap: onOpenHelp ?? () => _notBuilt(context, t.navHelp),
-                  ),
-                  const SizedBox(height: Space.xs),
-                  _LinkRow(
-                    icon: Icons.info_outline,
-                    label: t.settingsAbout,
-                    onTap:
-                        onOpenAbout ??
-                        () => _notBuilt(context, t.settingsAbout),
-                  ),
-                  const SizedBox(height: Space.md),
-                  Text(
-                    'TutoLys · v$appVersion',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontFamily: VillageType.display,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                      color: p.inkMuted,
+    return PageColumn.builder(
+      builder: (context, compact) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _PageTitle(eyebrow: t.settingsEyebrow, title: t.settingsTitle),
+            const SizedBox(height: Space.md),
+            PillTabs<SettingsTab>(
+              keyPrefix: 'settings-tab',
+              selected: tab,
+              compact: compact,
+              onSelect: (next) => ref
+                  .read(pageTabProvider(TabbedPage.settings).notifier)
+                  .select(next.name),
+              tabs: [
+                for (final s in SettingsTab.values)
+                  PillTab(
+                    value: s,
+                    label: s.label(t),
+                    leading: Icon(
+                      s.icon,
+                      size: compact ? 18 : 20,
+                      color: s == tab ? p.quebecBlueBright : p.inkMuted,
                     ),
                   ),
-                  const SizedBox(height: Space.xl),
-                ],
+              ],
+            ),
+            // The raw name, so a link to the old Notifications tab
+            // rebuilds the panel and scrolls even from Expérience.
+            PillTabPanel(tabKey: stored ?? tab.name, child: panel),
+
+            // Under every tab: never more than a tap away.
+            const SizedBox(height: Space.sm),
+            _LinkRow(
+              icon: Icons.help_outline,
+              label: t.navHelp,
+              onTap: onOpenHelp ?? () => _notBuilt(context, t.navHelp),
+            ),
+            const SizedBox(height: Space.xs),
+            _LinkRow(
+              icon: Icons.info_outline,
+              label: t.settingsAbout,
+              onTap: onOpenAbout ?? () => _notBuilt(context, t.settingsAbout),
+            ),
+            const SizedBox(height: Space.md),
+            Text(
+              'TutoLys · v$appVersion',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: VillageType.display,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                color: p.inkMuted,
               ),
             ),
-          ),
+            const SizedBox(height: Space.xl),
+          ],
         );
       },
     );
@@ -379,10 +362,7 @@ class _Group extends StatelessWidget {
       elevation: VillageColors.elevationSmall,
       shadowColor: p.shadowSmall,
       child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: Space.md,
-          vertical: Space.sm,
-        ),
+        padding: EdgeInsets.symmetric(horizontal: Space.md, vertical: Space.sm),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -593,7 +573,9 @@ class _ToggleRow extends StatelessWidget {
       padding: EdgeInsets.symmetric(vertical: Space.xs),
       child: Row(
         children: [
-          Expanded(child: _RowLabel(label: label, sublabel: sublabel)),
+          Expanded(
+            child: _RowLabel(label: label, sublabel: sublabel),
+          ),
           VillageSwitch(
             value: value,
             onChanged: onChanged,
@@ -626,7 +608,9 @@ class _SegmentedRow extends StatelessWidget {
       padding: EdgeInsets.symmetric(vertical: Space.xs),
       child: Row(
         children: [
-          Expanded(child: _RowLabel(label: label, sublabel: sublabel)),
+          Expanded(
+            child: _RowLabel(label: label, sublabel: sublabel),
+          ),
           VillageSegmented(
             options: options,
             selected: selected,
@@ -798,11 +782,7 @@ class _LinkRow extends StatelessWidget {
               Icon(icon, size: 19, color: p.quebecBlue),
               const SizedBox(width: Space.sm),
               Expanded(child: _RowLabel(label: label)),
-              Icon(
-                Icons.chevron_right,
-                size: 20,
-                color: p.inkMuted,
-              ),
+              Icon(Icons.chevron_right, size: 20, color: p.inkMuted),
             ],
           ),
         ),
@@ -826,9 +806,7 @@ class _SignOutButton extends ConsumerWidget {
         foregroundColor: TutolysColors.danger,
         backgroundColor: Color(0xFFFFF1F1),
         minimumSize: Size(0, 52),
-        shape: RoundedRectangleBorder(
-          borderRadius: VillageMetrics.mdAll,
-        ),
+        shape: RoundedRectangleBorder(borderRadius: VillageMetrics.mdAll),
       ),
       icon: Icon(Icons.logout, size: 19),
       label: Text(

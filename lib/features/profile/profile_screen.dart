@@ -2,6 +2,7 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/widgets/page_column.dart';
 import '../../core/i18n/strings.dart';
 import '../../core/routing/page_tab.dart';
 import '../../core/widgets/kid_avatar.dart';
@@ -53,115 +54,108 @@ class ProfileScreen extends ConsumerWidget {
     final tab = ProfileTab.from(ref.watch(pageTabProvider(TabbedPage.profile)));
     final compact = MediaQuery.sizeOf(context).width < Breakpoints.compact;
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(compact ? Space.md : Space.lg),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 680),
-          // The column's own context, so the avatar dialog can line up
-          // with it.
-          child: Builder(
-            builder: (column) => Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _HeroCard(
-                  name: kid?.displayName ?? '',
-                  grade: kid?.gradeLevel,
-                  avatarKey: ref.watch(selectedAvatarKeyProvider),
-                  onEditAvatar: () =>
-                      showAvatarPicker(context, alignTo: column),
-                  onSwitchProfile: onSwitchProfile,
-                  title: (board?.has(Achievement.streak7) ?? false)
-                      ? t.flameKeeperTitle
-                      : null,
-                  stats: [
-                    _HeroStat(
-                      asset: 'asset-xpstar.webp',
-                      value: progress.level == null
-                          ? '${progress.totalXp}'
-                          : t.progressLevel(progress.level!),
-                      label: progress.level == null
-                          ? t.profileTotalXp
-                          : '${progress.totalXp} ${t.profileTotalXp}',
-                    ),
-                    _HeroStat(
-                      asset: 'asset-flame.webp',
-                      value: progress.currentStreakDays == null
-                          ? '–'
-                          : '${progress.currentStreakDays}',
-                      label: t.profileStreakLabel,
-                    ),
-                    _HeroStat(
-                      asset: 'asset-badge.webp',
-                      value:
-                          '${Achievement.values.where((a) => board?.has(a) ?? false).length}',
-                      label: t.profileBadgesEarned,
-                    ),
-                  ],
-                  palette: p,
+    return PageColumn(
+      maxWidth: PageWidth.column,
+      child: Builder(
+        builder: (column) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _HeroCard(
+              name: kid?.displayName ?? '',
+              grade: kid?.gradeLevel,
+              avatarKey: ref.watch(selectedAvatarKeyProvider),
+              onEditAvatar: () => showAvatarPicker(context, alignTo: column),
+              onSwitchProfile: onSwitchProfile,
+              title: (board?.has(Achievement.streak7) ?? false)
+                  ? t.flameKeeperTitle
+                  : null,
+              stats: [
+                _HeroStat(
+                  asset: 'asset-xpstar.webp',
+                  value: progress.level == null
+                      ? '${progress.totalXp}'
+                      : t.progressLevel(progress.level!),
+                  label: progress.level == null
+                      ? t.profileTotalXp
+                      : '${progress.totalXp} ${t.profileTotalXp}',
                 ),
-                const SizedBox(height: Space.md),
-                PillTabs<ProfileTab>(
-                  keyPrefix: 'profile-tab',
-                  selected: tab,
-                  compact: compact,
-                  onSelect: (next) => ref
-                      .read(pageTabProvider(TabbedPage.profile).notifier)
-                      .select(next.name),
-                  tabs: [
-                    for (final pt in ProfileTab.values)
-                      PillTab(
-                        value: pt,
-                        label: pt.label(t),
-                        leading: Icon(
-                          pt.icon,
-                          size: compact ? 18 : 20,
-                          color: pt == tab ? p.quebecBlueBright : p.inkMuted,
-                        ),
-                      ),
-                  ],
+                _HeroStat(
+                  asset: 'asset-flame.webp',
+                  value: progress.currentStreakDays == null
+                      ? '–'
+                      : '${progress.currentStreakDays}',
+                  label: t.profileStreakLabel,
                 ),
-                PillTabPanel(
-                  tabKey: tab,
-                  child: _Card(
-                    palette: p,
-                    child: switch (tab) {
-                      ProfileTab.subjects => bySubject.isEmpty
-                          ? Text(
-                              t.profileNoSubjects,
-                              style: TextStyle(fontSize: 13, color: p.inkMuted),
-                            )
-                          : Column(
-                              children: [
-                                for (final b in villageBuildings(t))
-                                  if (bySubject[b.subject] != null)
-                                    _SubjectRow(
-                                      label: b.label,
-                                      value: bySubject[b.subject]!,
-                                      accent: b.accent,
-                                      palette: p,
-                                    ),
-                              ],
-                            ),
-                      ProfileTab.badges => _BadgeGrid(
-                          earned: {
-                            for (final a in Achievement.values)
-                              if (board?.has(a) ?? false) a,
-                          },
-                          palette: p,
-                        ),
-                      ProfileTab.recent => _RecentActivity(
-                          items: board?.recent ?? const [],
-                          today: board?.today ?? DateTime.now(),
-                          palette: p,
-                        ),
-                    },
+                _HeroStat(
+                  asset: 'asset-badge.webp',
+                  value:
+                      '${Achievement.values.where((a) => board?.has(a) ?? false).length}',
+                  label: t.profileBadgesEarned,
+                ),
+              ],
+              palette: p,
+            ),
+            const SizedBox(height: Space.md),
+            PillTabs<ProfileTab>(
+              keyPrefix: 'profile-tab',
+              selected: tab,
+              compact: compact,
+              onSelect: (next) => ref
+                  .read(pageTabProvider(TabbedPage.profile).notifier)
+                  .select(next.name),
+              tabs: [
+                for (final pt in ProfileTab.values)
+                  PillTab(
+                    value: pt,
+                    label: pt.label(t),
+                    leading: Icon(
+                      pt.icon,
+                      size: compact ? 18 : 20,
+                      color: pt == tab ? p.quebecBlueBright : p.inkMuted,
+                    ),
                   ),
-                ),
-                const SizedBox(height: Space.xl),
               ],
             ),
-          ),
+            PillTabPanel(
+              tabKey: tab,
+              child: _Card(
+                palette: p,
+                child: switch (tab) {
+                  ProfileTab.subjects =>
+                    bySubject.isEmpty
+                        ? Text(
+                            t.profileNoSubjects,
+                            style: TextStyle(fontSize: 13, color: p.inkMuted),
+                          )
+                        : Column(
+                            children: [
+                              for (final b in villageBuildings(t))
+                                if (bySubject[b.subject] != null)
+                                  _SubjectRow(
+                                    label: b.label,
+                                    value: bySubject[b.subject]!,
+                                    accent: b.accent,
+                                    palette: p,
+                                  ),
+                            ],
+                          ),
+                  ProfileTab.badges => _BadgeGrid(
+                    earned: {
+                      for (final a in Achievement.values)
+                        if (board?.has(a) ?? false) a,
+                    },
+                    palette: p,
+                  ),
+                  ProfileTab.recent => _RecentActivity(
+                    items: board?.recent ?? const [],
+                    today: board?.today ?? DateTime.now(),
+                    palette: p,
+                  ),
+                },
+              ),
+            ),
+            const SizedBox(height: Space.xl),
+          ],
         ),
       ),
     );

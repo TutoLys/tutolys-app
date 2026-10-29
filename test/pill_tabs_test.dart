@@ -306,13 +306,6 @@ void main() {
       );
     });
 
-    testWidgets('a wide window: the column sits left, under the title', (
-      tester,
-    ) async {
-      await pump(tester, width: 1950);
-      final card = find.text(Strings.fr.settingsTitle);
-      expect(tester.getTopLeft(card).dx, Space.lg);
-    });
 
     // The window widths Hafid named, as the width the shell leaves the page
     // (84px rail from 600, 224px sidebar from 1024).

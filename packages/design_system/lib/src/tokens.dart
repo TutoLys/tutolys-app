@@ -202,6 +202,16 @@ abstract final class PageWidth {
   /// Quêtes and Progrès: cards, stats and bars stop growing here, so a skill
   /// bar never runs the width of a 2000px window.
   static const double content = 1040;
+
+  /// Réglages, Profil, Aide: one column of rows, readable at a glance.
+  static const double column = 680;
+
+  /// The same column once the page has room, so a 1950px window doesn't
+  /// show a thin strip in a field of sky.
+  static const double columnWide = 880;
+
+  /// The page width (not the window's) from which a column widens.
+  static const double wideFrom = 1360;
 }
 
 /// Breakpoints.

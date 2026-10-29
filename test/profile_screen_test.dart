@@ -193,6 +193,35 @@ Widget _widgetFor(ProviderContainer container) {
 }
 
 void main() {
+  // Hafid, 2026-10-29: the column sits in the middle of the page area (the
+  // window less the sidebar), not right of it, at every width.
+  for (final width in [1024.0, 1950.0]) {
+    testWidgets('Profil at $width: centred in the page area', (tester) async {
+      tester.view.physicalSize = Size(width, 1200);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      const sidebar = VillageMetrics.sidebarWidth;
+      await tester.pumpWidget(appUnder(sidebar: sidebar));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      final column = tester.getRect(
+        find
+            .descendant(
+              of: find.byType(SingleChildScrollView).first,
+              matching: find.byType(Column),
+            )
+            .first,
+      );
+      expect(column.center.dx, closeTo((sidebar + width) / 2, 0.5));
+      expect(
+        column.width,
+        width - sidebar >= PageWidth.wideFrom
+            ? PageWidth.columnWide
+            : PageWidth.column,
+      );
+    });
+  }
+
   testWidgets('the badge grid shows the eight, earned ones unlocked', (
     tester,
   ) async {
@@ -257,7 +286,8 @@ void main() {
           find
               .ancestor(
                 of: find.byKey(const ValueKey('profile-avatar-edit')),
-                matching: find.byType(ConstrainedBox),
+                // The outermost: the page column itself.
+                matching: find.byType(Column),
               )
               .last,
         );

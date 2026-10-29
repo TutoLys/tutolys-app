@@ -2,6 +2,7 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/widgets/page_column.dart';
 import '../../core/i18n/strings.dart';
 import '../../data/api/assignments_api.dart';
 import '../assignments/assignments_controller.dart';
@@ -50,7 +51,6 @@ class _QuestsScreenState extends ConsumerState<QuestsScreen> {
     final board = ref.watch(questBoardProvider).value;
     final compact = MediaQuery.sizeOf(context).width < Breakpoints.compact;
     final gap = compact ? Space.sm : 18.0;
-    final padding = EdgeInsets.all(compact ? Space.md : Space.lg);
 
     final serie = _serie && played != null;
 
@@ -100,101 +100,91 @@ class _QuestsScreenState extends ConsumerState<QuestsScreen> {
     );
 
     if (serie) {
-      return SingleChildScrollView(
-        // Its own key, so opening it starts at the top, not wherever the
-        // quest list was scrolled to.
-        key: const PageStorageKey('serie'),
-        padding: padding,
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: PageWidth.content),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                header,
-                StreakDetail(
-                  streakDays: progress.currentStreakDays,
-                  freezesAvailable: progress.freezesAvailable,
-                  streakFreeze: progress.streakFreeze,
-                  played: played,
-                  board: board,
-                  onClose: () => _showSerie(false),
-                  onOpenPath: onOpenPath == null
-                      ? null
-                      : () {
-                          _showSerie(false);
-                          onOpenPath();
-                        },
-                ),
-                const SizedBox(height: Space.xl),
-              ],
+      return PageColumn(
+        scrollKey: const PageStorageKey('serie'),
+        maxWidth: PageWidth.content,
+        wideMaxWidth: PageWidth.content,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            header,
+            StreakDetail(
+              streakDays: progress.currentStreakDays,
+              freezesAvailable: progress.freezesAvailable,
+              streakFreeze: progress.streakFreeze,
+              played: played,
+              board: board,
+              onClose: () => _showSerie(false),
+              onOpenPath: onOpenPath == null
+                  ? null
+                  : () {
+                      _showSerie(false);
+                      onOpenPath();
+                    },
             ),
-          ),
+            const SizedBox(height: Space.xl),
+          ],
         ),
       );
     }
 
-    return SingleChildScrollView(
-      key: const PageStorageKey('quests'),
-      padding: padding,
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: PageWidth.content),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              header,
-              StreakCard(
-                streakDays: progress.currentStreakDays,
-                played: played,
-                compact: compact,
-                onTap: played == null ? null : () => _showSerie(true),
-              ),
-              SizedBox(height: gap),
-              if (ref.watch(assignmentsControllerProvider) case final work
-                  when work.isNotEmpty) ...[
-                HomeworkCard(work: work, onOpenPath: onOpenPath),
-                SizedBox(height: gap),
-              ],
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final list = QuestListCard(
-                    quests: board?.quests,
-                    onOpenPath: onOpenPath,
-                  );
-                  final badge = WeeklyBadgeCard(
-                    done: board?.weekCompleted ?? 0,
-                    earned: board?.weeklyBadgeEarned ?? false,
-                    compact: compact,
-                  );
-                  // The design's `.quetes-grid`: 1fr + 300px side by side,
-                  // stacked once there is no room for both.
-                  if (constraints.maxWidth < 680) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        list,
-                        SizedBox(height: gap),
-                        badge,
-                      ],
-                    );
-                  }
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: list),
-                      const SizedBox(width: 18),
-                      SizedBox(width: 300, child: badge),
-                    ],
-                  );
-                },
-              ),
-              SizedBox(height: gap),
-              RecentAchievementsCard(earned: board?.recent ?? const []),
-              const SizedBox(height: Space.xl),
-            ],
+    return PageColumn(
+      scrollKey: const PageStorageKey('quests'),
+      maxWidth: PageWidth.content,
+      wideMaxWidth: PageWidth.content,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          header,
+          StreakCard(
+            streakDays: progress.currentStreakDays,
+            played: played,
+            compact: compact,
+            onTap: played == null ? null : () => _showSerie(true),
           ),
-        ),
+          SizedBox(height: gap),
+          if (ref.watch(assignmentsControllerProvider) case final work
+              when work.isNotEmpty) ...[
+            HomeworkCard(work: work, onOpenPath: onOpenPath),
+            SizedBox(height: gap),
+          ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final list = QuestListCard(
+                quests: board?.quests,
+                onOpenPath: onOpenPath,
+              );
+              final badge = WeeklyBadgeCard(
+                done: board?.weekCompleted ?? 0,
+                earned: board?.weeklyBadgeEarned ?? false,
+                compact: compact,
+              );
+              // The design's `.quetes-grid`: 1fr + 300px side by side,
+              // stacked once there is no room for both.
+              if (constraints.maxWidth < 680) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    list,
+                    SizedBox(height: gap),
+                    badge,
+                  ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: list),
+                  const SizedBox(width: 18),
+                  SizedBox(width: 300, child: badge),
+                ],
+              );
+            },
+          ),
+          SizedBox(height: gap),
+          RecentAchievementsCard(earned: board?.recent ?? const []),
+          const SizedBox(height: Space.xl),
+        ],
       ),
     );
   }
@@ -376,9 +366,7 @@ class StreakCard extends StatelessWidget {
     final p = VillagePalette.of(context);
     final streak = streakDays;
 
-    final number = streak == null
-        ? '–'
-        : t.questsStreakDays(streak);
+    final number = streak == null ? '–' : t.questsStreakDays(streak);
     final String line;
     if (streak == null) {
       line = t.questsStreakUnknown;

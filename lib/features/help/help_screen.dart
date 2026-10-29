@@ -1,6 +1,7 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/widgets/page_column.dart';
 import '../../core/i18n/strings.dart';
 import '../../core/widgets/breathing_mascot.dart';
 
@@ -31,84 +32,79 @@ class HelpScreen extends StatelessWidget {
     final p = VillagePalette.of(context);
     final t = context.s;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(Space.lg),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 680),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+    return PageColumn(
+      maxWidth: PageWidth.column,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
             children: [
-              Row(
+              const BreathingMascot(height: 86),
+              const SizedBox(width: Space.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      t.helpTitle,
+                      style: TextStyle(
+                        fontFamily: VillageType.display,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 22,
+                        color: p.ink,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      t.helpSubtitle,
+                      style: TextStyle(fontSize: 13, color: p.inkMuted),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Space.lg),
+          Material(
+            color: p.surface,
+            borderRadius: VillageMetrics.mdAll,
+            elevation: VillageColors.elevationSmall,
+            shadowColor: p.shadowSmall,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: Space.md,
+                vertical: Space.xs,
+              ),
+              child: Column(
                 children: [
-                  const BreathingMascot(height: 86),
-                  const SizedBox(width: Space.sm),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: Space.sm),
+                    child: Row(
                       children: [
+                        Icon(Icons.help_outline, size: 18, color: p.quebecBlue),
+                        const SizedBox(width: Space.xs),
                         Text(
-                          t.helpTitle,
+                          t.helpFaqTitle,
                           style: TextStyle(
                             fontFamily: VillageType.display,
                             fontWeight: FontWeight.w800,
-                            fontSize: 22,
+                            fontSize: 15,
                             color: p.ink,
                           ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          t.helpSubtitle,
-                          style: TextStyle(fontSize: 13, color: p.inkMuted),
                         ),
                       ],
                     ),
                   ),
+                  for (final entry in t.helpEntries)
+                    _FaqTile(entry: entry, palette: p),
                 ],
               ),
-              const SizedBox(height: Space.lg),
-              Material(
-                color: p.surface,
-                borderRadius: VillageMetrics.mdAll,
-                elevation: VillageColors.elevationSmall,
-                shadowColor: p.shadowSmall,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: Space.md,
-                    vertical: Space.xs,
-                  ),
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: Space.sm),
-                        child: Row(
-                          children: [
-                            Icon(Icons.help_outline, size: 18, color: p.quebecBlue),
-                            const SizedBox(width: Space.xs),
-                            Text(
-                              t.helpFaqTitle,
-                              style: TextStyle(
-                                fontFamily: VillageType.display,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 15,
-                                color: p.ink,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      for (final entry in t.helpEntries)
-                        _FaqTile(entry: entry, palette: p),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: Space.md),
-              _ParentContact(palette: p, strings: t),
-              const SizedBox(height: Space.xl),
-            ],
+            ),
           ),
-        ),
+          const SizedBox(height: Space.md),
+          _ParentContact(palette: p, strings: t),
+          const SizedBox(height: Space.xl),
+        ],
       ),
     );
   }
@@ -145,7 +141,11 @@ class _FaqTile extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: Text(
               entry.answer,
-              style: TextStyle(fontSize: 13, height: 1.45, color: palette.inkMuted),
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.45,
+                color: palette.inkMuted,
+              ),
             ),
           ),
         ],
@@ -193,7 +193,10 @@ class _ParentContact extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     strings.helpParentsBody,
-                    style: const TextStyle(fontSize: 12, color: Color(0xFFC9D8F5)),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFFC9D8F5),
+                    ),
                   ),
                 ],
               ),
