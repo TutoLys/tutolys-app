@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/i18n/strings.dart';
 import '../../data/api/notifications_api.dart';
+import '../quests/quest_board.dart'
+    show Achievement, exercisesQuestTarget, minutesQuestTarget;
+import '../quests/quests_screen.dart' show achievementName;
 import 'notifications_controller.dart';
 
 /// Opens the inbox from the header bell.
@@ -172,17 +175,52 @@ class _NotificationsPanelState extends ConsumerState<NotificationsPanel> {
 }
 
 /// The app's own wording for a known type, in the reader's language.
+///
+/// The app's own notifications (ADR 0097) are worded here, at display time,
+/// from their params, so they follow a language change.
 String notificationText(Strings t, NotificationDto n) => switch (n.type) {
   'daily_quest_completed' => t.notificationDailyQuest,
+  'quest_completed' => t.notificationQuestDone(
+    switch (n.params['quest']) {
+      'exercises' => t.questExercisesTitle(
+        n.params['target'] as int? ?? exercisesQuestTarget,
+      ),
+      'minutes' => t.questMinutesTitle(
+        n.params['target'] as int? ?? minutesQuestTarget,
+      ),
+      _ => t.navQuetes,
+    },
+  ),
+  'achievement_earned' => t.notificationAchievement(
+    achievementName(t, _achievement(n.params['achievement'] as String?)),
+  ),
+  'streak_milestone' => n.params['days'] == 7
+      ? t.notificationStreakGuardian
+      : t.notificationStreakChest,
+  'level_reached' => t.notificationLevel(n.params['level'] as int? ?? 1),
   'streak_freeze_spent' => t.notificationStreakFreeze,
   'streak_freeze_refunded' => t.notificationStreakFreezeRefunded,
   'tutoring_session_soon' => t.notificationTutoringSession(n.message),
   _ => n.message,
 };
 
+Achievement? _achievement(String? key) {
+  for (final a in Achievement.values) {
+    if (a.name == key) return a;
+  }
+  return null;
+}
+
 (String, Color) _iconFor(NotificationDto n, VillagePalette p) =>
     switch (n.type) {
-      'daily_quest_completed' => ('asset-target.webp', p.goldPale),
+      'daily_quest_completed' ||
+      'quest_completed' => ('asset-target.webp', p.goldPale),
+      'achievement_earned' => ('asset-badge.webp', p.goldPale),
+      'level_reached' => ('asset-xpstar.webp', p.goldPale),
+      'streak_milestone' => (
+        n.params['days'] == 7 ? 'asset-flame.webp' : 'asset-chest.webp',
+        p.navActiveFill,
+      ),
       'streak_freeze_spent' ||
       'streak_freeze_refunded' => ('asset-flame.webp', p.navActiveFill),
       'tutoring_session_soon' => ('asset-mascot-welcome.webp', p.goldPale),

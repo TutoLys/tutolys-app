@@ -8,6 +8,8 @@ class NotificationDto {
     required this.message,
     required this.createdAt,
     required this.isRead,
+    this.params = const {},
+    this.local = false,
   });
 
   factory NotificationDto.fromJson(Map<String, Object?> json) {
@@ -32,12 +34,20 @@ class NotificationDto {
   final DateTime createdAt;
   final bool isRead;
 
+  /// What the app's own wording needs, for one it wrote itself (ADR 0097).
+  final Map<String, Object?> params;
+
+  /// Written on this device rather than served.
+  final bool local;
+
   NotificationDto read() => NotificationDto(
     id: id,
     type: type,
     message: message,
     createdAt: createdAt,
     isRead: true,
+    params: params,
+    local: local,
   );
 }
 

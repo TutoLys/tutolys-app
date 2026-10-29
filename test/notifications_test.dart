@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tutolys_app/core/i18n/strings.dart';
 import 'package:tutolys_app/core/routing/village_header.dart';
 import 'package:tutolys_app/data/api/notifications_api.dart';
+import 'package:tutolys_app/data/local_db/database.dart';
 import 'package:tutolys_app/features/notifications/notifications_controller.dart';
 import 'package:tutolys_app/features/assignments/assignments_controller.dart';
 import 'package:tutolys_app/features/notifications/notifications_panel.dart';
@@ -51,6 +52,8 @@ class _Session extends SessionController {
 
 ProviderContainer _container(_FakeApi api) => ProviderContainer(
   overrides: [
+    // The bell merges in the local inbox (ADR 0097).
+    localDatabaseProvider.overrideWithValue(LocalDatabase.memory()),
     notificationsApiProvider.overrideWithValue(api),
     notificationsPollingProvider.overrideWithValue(false),
     assignmentsPollingProvider.overrideWithValue(false),
@@ -108,8 +111,9 @@ void main() {
       final c = _container(api);
       addTearDown(c.dispose);
       c.listen(notificationsControllerProvider, (_, _) {});
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      for (var i = 0; i < 10; i++) {
+        await Future<void>.delayed(Duration.zero);
+      }
       expect(c.read(notificationsControllerProvider).unreadCount, 2);
 
       await c.read(notificationsControllerProvider.notifier).markAllRead();
@@ -196,6 +200,8 @@ void main() {
     expect(c.read(notificationsControllerProvider).unreadCount, 1);
 
     await tester.pumpWidget(app(c, const NotificationsPanel()));
+    // Opening reads all: locally first, then the server (ADR 0097).
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
     await tester.pump();
 
     expect(find.text(Strings.fr.notificationDailyQuest), findsOneWidget);
@@ -215,6 +221,7 @@ void main() {
     );
     addTearDown(c.dispose);
     await tester.pumpWidget(app(c, const NotificationsPanel()));
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
     await tester.pump();
     expect(find.text(Strings.fr.notificationsEmpty), findsOneWidget);
   });

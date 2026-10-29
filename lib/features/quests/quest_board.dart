@@ -8,6 +8,8 @@ import '../home/subject_progress.dart';
 import '../pairing/pairing_controller.dart';
 import '../path/path_controller.dart' show pathSubjects;
 import '../progress/progress_controller.dart';
+import '../notifications/local_notifications.dart';
+import '../notifications/notifications_controller.dart';
 import 'quests_model.dart';
 
 /// The three daily quests, the weekly badge, the achievements and the
@@ -238,6 +240,8 @@ final questBoardProvider = FutureProvider<QuestBoard>((ref) async {
     msToday: stats.msPlayed,
     served: progress.questDefinitions,
   );
+  final doneBefore = (await log.completedByDay())[day] ?? const <String>{};
+  final unlockedBefore = (await log.unlocked()).keys.toSet();
   final history = await log.recordCompleted(
     day,
     [for (final q in quests) if (q.done) q.key],
@@ -266,6 +270,25 @@ final questBoardProvider = FutureProvider<QuestBoard>((ref) async {
       a.name,
     if (week >= weeklyBadgeTarget) weeklyBadgeKey(today),
   ]);
+
+  // Written the moment the board learns it, online or not (ADR 0097).
+  final added = await writeLocalNotifications(
+    ref.read(localInboxProvider),
+    day: day,
+    newQuests: history[day]!.difference(doneBefore),
+    questTargets: {for (final q in quests) q.key: q.target},
+    newUnlocks: unlocked.keys.toSet().difference(unlockedBefore),
+    level: progress.level,
+    grade: ref.read(sessionControllerProvider).kid?.gradeLevel,
+  );
+  // The bell shows it now, not at its next poll.
+  if (added > 0) {
+    Future.microtask(() {
+      if (ref.mounted) {
+        ref.read(notificationsControllerProvider.notifier).refresh();
+      }
+    });
+  }
 
   return QuestBoard(
     quests: quests,

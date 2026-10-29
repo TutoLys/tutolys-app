@@ -181,6 +181,13 @@ abstract class Strings {
   /// Too many wrong PINs: the gate waits [seconds] (A5).
   String pinGateLocked(int seconds);
   String get later;
+
+  /// The app's own notifications, written offline too (ADR 0097).
+  String notificationQuestDone(String quest);
+  String notificationAchievement(String name);
+  String get notificationStreakChest;
+  String get notificationStreakGuardian;
+  String notificationLevel(int level);
   String get pinGateConfirmSignOut;
 
   // --- removing a kid from the device (ADR 0037) ----------------------------
@@ -872,6 +879,27 @@ class _FrenchStrings extends Strings {
 
   @override
   String get later => 'Plus tard';
+
+  @override
+  String notificationQuestDone(String quest) => 'Quête réussie : $quest !';
+
+  @override
+  String notificationAchievement(String name) =>
+      'Nouvelle réussite : $name !';
+
+  @override
+  String get notificationStreakChest =>
+      '3 jours de suite ! Ton coffre de série est prêt.';
+
+  @override
+  String get notificationStreakGuardian =>
+      '7 jours de suite ! Te voilà Gardien de la flamme.';
+
+  // On this device's count: the server confirms it when it can, so the
+  // words celebrate the play, not a server number.
+  @override
+  String notificationLevel(int level) =>
+      'Bravo, tu montes au niveau $level de ton année !';
 
   @override
   String get pinGateConfirmSignOut => 'Déconnecter';
@@ -2108,6 +2136,24 @@ class _EnglishStrings extends Strings {
 
   @override
   String get later => 'Later';
+
+  @override
+  String notificationQuestDone(String quest) => 'Quest done: $quest!';
+
+  @override
+  String notificationAchievement(String name) => 'New achievement: $name!';
+
+  @override
+  String get notificationStreakChest =>
+      '3 days in a row! Your streak chest is ready.';
+
+  @override
+  String get notificationStreakGuardian =>
+      '7 days in a row! You are now Keeper of the flame.';
+
+  @override
+  String notificationLevel(int level) =>
+      'Well done, you are moving up to level $level of your year!';
 
   @override
   String get pinGateConfirmSignOut => 'Sign out';
