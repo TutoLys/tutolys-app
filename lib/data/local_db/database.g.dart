@@ -5106,6 +5106,420 @@ class ManifestEntryTableCompanion extends UpdateCompanion<ManifestEntryRow> {
   }
 }
 
+class $LocalNotificationTableTable extends LocalNotificationTable
+    with TableInfo<$LocalNotificationTableTable, LocalNotificationRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalNotificationTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _kidIdMeta = const VerificationMeta('kidId');
+  @override
+  late final GeneratedColumn<String> kidId = GeneratedColumn<String>(
+    'kid_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _factKeyMeta = const VerificationMeta(
+    'factKey',
+  );
+  @override
+  late final GeneratedColumn<String> factKey = GeneratedColumn<String>(
+    'fact_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+    'type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _paramsMeta = const VerificationMeta('params');
+  @override
+  late final GeneratedColumn<String> params = GeneratedColumn<String>(
+    'params',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('{}'),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _readAtMeta = const VerificationMeta('readAt');
+  @override
+  late final GeneratedColumn<DateTime> readAt = GeneratedColumn<DateTime>(
+    'read_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    kidId,
+    factKey,
+    type,
+    params,
+    createdAt,
+    readAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_notification';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalNotificationRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('kid_id')) {
+      context.handle(
+        _kidIdMeta,
+        kidId.isAcceptableOrUnknown(data['kid_id']!, _kidIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kidIdMeta);
+    }
+    if (data.containsKey('fact_key')) {
+      context.handle(
+        _factKeyMeta,
+        factKey.isAcceptableOrUnknown(data['fact_key']!, _factKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_factKeyMeta);
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_typeMeta);
+    }
+    if (data.containsKey('params')) {
+      context.handle(
+        _paramsMeta,
+        params.isAcceptableOrUnknown(data['params']!, _paramsMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('read_at')) {
+      context.handle(
+        _readAtMeta,
+        readAt.isAcceptableOrUnknown(data['read_at']!, _readAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {kidId, factKey};
+  @override
+  LocalNotificationRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalNotificationRow(
+      kidId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kid_id'],
+      )!,
+      factKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}fact_key'],
+      )!,
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}type'],
+      )!,
+      params: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}params'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      readAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}read_at'],
+      ),
+    );
+  }
+
+  @override
+  $LocalNotificationTableTable createAlias(String alias) {
+    return $LocalNotificationTableTable(attachedDatabase, alias);
+  }
+}
+
+class LocalNotificationRow extends DataClass
+    implements Insertable<LocalNotificationRow> {
+  final String kidId;
+  final String factKey;
+
+  /// `daily_quest_completed`, `quest_completed`, `achievement_earned`,
+  /// `streak_milestone`, `level_reached`. Worded by the app at display
+  /// time, in the reader's language, from [params].
+  final String type;
+
+  /// JSON: what the wording needs (a quest key, a day count, a level).
+  final String params;
+  final DateTime createdAt;
+  final DateTime? readAt;
+  const LocalNotificationRow({
+    required this.kidId,
+    required this.factKey,
+    required this.type,
+    required this.params,
+    required this.createdAt,
+    this.readAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['kid_id'] = Variable<String>(kidId);
+    map['fact_key'] = Variable<String>(factKey);
+    map['type'] = Variable<String>(type);
+    map['params'] = Variable<String>(params);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || readAt != null) {
+      map['read_at'] = Variable<DateTime>(readAt);
+    }
+    return map;
+  }
+
+  LocalNotificationTableCompanion toCompanion(bool nullToAbsent) {
+    return LocalNotificationTableCompanion(
+      kidId: Value(kidId),
+      factKey: Value(factKey),
+      type: Value(type),
+      params: Value(params),
+      createdAt: Value(createdAt),
+      readAt: readAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(readAt),
+    );
+  }
+
+  factory LocalNotificationRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalNotificationRow(
+      kidId: serializer.fromJson<String>(json['kidId']),
+      factKey: serializer.fromJson<String>(json['factKey']),
+      type: serializer.fromJson<String>(json['type']),
+      params: serializer.fromJson<String>(json['params']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      readAt: serializer.fromJson<DateTime?>(json['readAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'kidId': serializer.toJson<String>(kidId),
+      'factKey': serializer.toJson<String>(factKey),
+      'type': serializer.toJson<String>(type),
+      'params': serializer.toJson<String>(params),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'readAt': serializer.toJson<DateTime?>(readAt),
+    };
+  }
+
+  LocalNotificationRow copyWith({
+    String? kidId,
+    String? factKey,
+    String? type,
+    String? params,
+    DateTime? createdAt,
+    Value<DateTime?> readAt = const Value.absent(),
+  }) => LocalNotificationRow(
+    kidId: kidId ?? this.kidId,
+    factKey: factKey ?? this.factKey,
+    type: type ?? this.type,
+    params: params ?? this.params,
+    createdAt: createdAt ?? this.createdAt,
+    readAt: readAt.present ? readAt.value : this.readAt,
+  );
+  LocalNotificationRow copyWithCompanion(LocalNotificationTableCompanion data) {
+    return LocalNotificationRow(
+      kidId: data.kidId.present ? data.kidId.value : this.kidId,
+      factKey: data.factKey.present ? data.factKey.value : this.factKey,
+      type: data.type.present ? data.type.value : this.type,
+      params: data.params.present ? data.params.value : this.params,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      readAt: data.readAt.present ? data.readAt.value : this.readAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalNotificationRow(')
+          ..write('kidId: $kidId, ')
+          ..write('factKey: $factKey, ')
+          ..write('type: $type, ')
+          ..write('params: $params, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('readAt: $readAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(kidId, factKey, type, params, createdAt, readAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalNotificationRow &&
+          other.kidId == this.kidId &&
+          other.factKey == this.factKey &&
+          other.type == this.type &&
+          other.params == this.params &&
+          other.createdAt == this.createdAt &&
+          other.readAt == this.readAt);
+}
+
+class LocalNotificationTableCompanion
+    extends UpdateCompanion<LocalNotificationRow> {
+  final Value<String> kidId;
+  final Value<String> factKey;
+  final Value<String> type;
+  final Value<String> params;
+  final Value<DateTime> createdAt;
+  final Value<DateTime?> readAt;
+  final Value<int> rowid;
+  const LocalNotificationTableCompanion({
+    this.kidId = const Value.absent(),
+    this.factKey = const Value.absent(),
+    this.type = const Value.absent(),
+    this.params = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.readAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalNotificationTableCompanion.insert({
+    required String kidId,
+    required String factKey,
+    required String type,
+    this.params = const Value.absent(),
+    required DateTime createdAt,
+    this.readAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : kidId = Value(kidId),
+       factKey = Value(factKey),
+       type = Value(type),
+       createdAt = Value(createdAt);
+  static Insertable<LocalNotificationRow> custom({
+    Expression<String>? kidId,
+    Expression<String>? factKey,
+    Expression<String>? type,
+    Expression<String>? params,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? readAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (kidId != null) 'kid_id': kidId,
+      if (factKey != null) 'fact_key': factKey,
+      if (type != null) 'type': type,
+      if (params != null) 'params': params,
+      if (createdAt != null) 'created_at': createdAt,
+      if (readAt != null) 'read_at': readAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalNotificationTableCompanion copyWith({
+    Value<String>? kidId,
+    Value<String>? factKey,
+    Value<String>? type,
+    Value<String>? params,
+    Value<DateTime>? createdAt,
+    Value<DateTime?>? readAt,
+    Value<int>? rowid,
+  }) {
+    return LocalNotificationTableCompanion(
+      kidId: kidId ?? this.kidId,
+      factKey: factKey ?? this.factKey,
+      type: type ?? this.type,
+      params: params ?? this.params,
+      createdAt: createdAt ?? this.createdAt,
+      readAt: readAt ?? this.readAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (kidId.present) {
+      map['kid_id'] = Variable<String>(kidId.value);
+    }
+    if (factKey.present) {
+      map['fact_key'] = Variable<String>(factKey.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
+    if (params.present) {
+      map['params'] = Variable<String>(params.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (readAt.present) {
+      map['read_at'] = Variable<DateTime>(readAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalNotificationTableCompanion(')
+          ..write('kidId: $kidId, ')
+          ..write('factKey: $factKey, ')
+          ..write('type: $type, ')
+          ..write('params: $params, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('readAt: $readAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$LocalDatabase extends GeneratedDatabase {
   _$LocalDatabase(QueryExecutor e) : super(e);
   $LocalDatabaseManager get managers => $LocalDatabaseManager(this);
@@ -5132,6 +5546,8 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
   late final $CreationTableTable creationTable = $CreationTableTable(this);
   late final $ManifestEntryTableTable manifestEntryTable =
       $ManifestEntryTableTable(this);
+  late final $LocalNotificationTableTable localNotificationTable =
+      $LocalNotificationTableTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5148,6 +5564,7 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
     assetCacheTable,
     creationTable,
     manifestEntryTable,
+    localNotificationTable,
   ];
   @override
   DriftDatabaseOptions get options =>
@@ -7956,6 +8373,256 @@ typedef $$ManifestEntryTableTableProcessedTableManager =
       ManifestEntryRow,
       PrefetchHooks Function()
     >;
+typedef $$LocalNotificationTableTableCreateCompanionBuilder =
+    LocalNotificationTableCompanion Function({
+      required String kidId,
+      required String factKey,
+      required String type,
+      Value<String> params,
+      required DateTime createdAt,
+      Value<DateTime?> readAt,
+      Value<int> rowid,
+    });
+typedef $$LocalNotificationTableTableUpdateCompanionBuilder =
+    LocalNotificationTableCompanion Function({
+      Value<String> kidId,
+      Value<String> factKey,
+      Value<String> type,
+      Value<String> params,
+      Value<DateTime> createdAt,
+      Value<DateTime?> readAt,
+      Value<int> rowid,
+    });
+
+class $$LocalNotificationTableTableFilterComposer
+    extends Composer<_$LocalDatabase, $LocalNotificationTableTable> {
+  $$LocalNotificationTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get kidId => $composableBuilder(
+    column: $table.kidId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get factKey => $composableBuilder(
+    column: $table.factKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get params => $composableBuilder(
+    column: $table.params,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get readAt => $composableBuilder(
+    column: $table.readAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalNotificationTableTableOrderingComposer
+    extends Composer<_$LocalDatabase, $LocalNotificationTableTable> {
+  $$LocalNotificationTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get kidId => $composableBuilder(
+    column: $table.kidId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get factKey => $composableBuilder(
+    column: $table.factKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get params => $composableBuilder(
+    column: $table.params,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get readAt => $composableBuilder(
+    column: $table.readAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalNotificationTableTableAnnotationComposer
+    extends Composer<_$LocalDatabase, $LocalNotificationTableTable> {
+  $$LocalNotificationTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get kidId =>
+      $composableBuilder(column: $table.kidId, builder: (column) => column);
+
+  GeneratedColumn<String> get factKey =>
+      $composableBuilder(column: $table.factKey, builder: (column) => column);
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<String> get params =>
+      $composableBuilder(column: $table.params, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get readAt =>
+      $composableBuilder(column: $table.readAt, builder: (column) => column);
+}
+
+class $$LocalNotificationTableTableTableManager
+    extends
+        RootTableManager<
+          _$LocalDatabase,
+          $LocalNotificationTableTable,
+          LocalNotificationRow,
+          $$LocalNotificationTableTableFilterComposer,
+          $$LocalNotificationTableTableOrderingComposer,
+          $$LocalNotificationTableTableAnnotationComposer,
+          $$LocalNotificationTableTableCreateCompanionBuilder,
+          $$LocalNotificationTableTableUpdateCompanionBuilder,
+          (
+            LocalNotificationRow,
+            BaseReferences<
+              _$LocalDatabase,
+              $LocalNotificationTableTable,
+              LocalNotificationRow
+            >,
+          ),
+          LocalNotificationRow,
+          PrefetchHooks Function()
+        > {
+  $$LocalNotificationTableTableTableManager(
+    _$LocalDatabase db,
+    $LocalNotificationTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalNotificationTableTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$LocalNotificationTableTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$LocalNotificationTableTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> kidId = const Value.absent(),
+                Value<String> factKey = const Value.absent(),
+                Value<String> type = const Value.absent(),
+                Value<String> params = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime?> readAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalNotificationTableCompanion(
+                kidId: kidId,
+                factKey: factKey,
+                type: type,
+                params: params,
+                createdAt: createdAt,
+                readAt: readAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String kidId,
+                required String factKey,
+                required String type,
+                Value<String> params = const Value.absent(),
+                required DateTime createdAt,
+                Value<DateTime?> readAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalNotificationTableCompanion.insert(
+                kidId: kidId,
+                factKey: factKey,
+                type: type,
+                params: params,
+                createdAt: createdAt,
+                readAt: readAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<
+                    $LocalNotificationTableTable,
+                    LocalNotificationRow
+                  >(table),
+                  BaseReferences<
+                    _$LocalDatabase,
+                    $LocalNotificationTableTable,
+                    LocalNotificationRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalNotificationTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$LocalDatabase,
+      $LocalNotificationTableTable,
+      LocalNotificationRow,
+      $$LocalNotificationTableTableFilterComposer,
+      $$LocalNotificationTableTableOrderingComposer,
+      $$LocalNotificationTableTableAnnotationComposer,
+      $$LocalNotificationTableTableCreateCompanionBuilder,
+      $$LocalNotificationTableTableUpdateCompanionBuilder,
+      (
+        LocalNotificationRow,
+        BaseReferences<
+          _$LocalDatabase,
+          $LocalNotificationTableTable,
+          LocalNotificationRow
+        >,
+      ),
+      LocalNotificationRow,
+      PrefetchHooks Function()
+    >;
 
 class $LocalDatabaseManager {
   final _$LocalDatabase _db;
@@ -7982,4 +8649,9 @@ class $LocalDatabaseManager {
       $$CreationTableTableTableManager(_db, _db.creationTable);
   $$ManifestEntryTableTableTableManager get manifestEntryTable =>
       $$ManifestEntryTableTableTableManager(_db, _db.manifestEntryTable);
+  $$LocalNotificationTableTableTableManager get localNotificationTable =>
+      $$LocalNotificationTableTableTableManager(
+        _db,
+        _db.localNotificationTable,
+      );
 }

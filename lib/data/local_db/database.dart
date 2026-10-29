@@ -179,6 +179,35 @@ class ManifestEntryTable extends Table {
   Set<Column> get primaryKey => {askedLocale, exerciseId};
 }
 
+/// A notification the app wrote itself, the moment it learned something,
+/// online or not (ADR 0097): a quest done, an achievement, a streak reward,
+/// a level. Per kid, like everything a child produces (ADR 0014).
+///
+/// Keyed by the **fact**, in the backend's own format (`daily_quest:<day>`,
+/// `achievement:<key>`), so writing the same fact twice is a no-op and the
+/// bell can show a fact the server also sent exactly once.
+@DataClassName('LocalNotificationRow')
+class LocalNotificationTable extends Table {
+  @override
+  String get tableName => 'local_notification';
+
+  TextColumn get kidId => text().named('kid_id')();
+  TextColumn get factKey => text().named('fact_key')();
+
+  /// `daily_quest_completed`, `quest_completed`, `achievement_earned`,
+  /// `streak_milestone`, `level_reached`. Worded by the app at display
+  /// time, in the reader's language, from [params].
+  TextColumn get type => text()();
+
+  /// JSON: what the wording needs (a quest key, a day count, a level).
+  TextColumn get params => text().withDefault(const Constant('{}'))();
+  DateTimeColumn get createdAt => dateTime().named('created_at')();
+  DateTimeColumn get readAt => dateTime().named('read_at').nullable()();
+
+  @override
+  Set<Column> get primaryKey => {kidId, factKey};
+}
+
 /// Cached curriculum leaves for the path screen (A7).
 ///
 /// Flat, not a tree — no parent/child columns, matching the backend
@@ -366,6 +395,7 @@ const String deviceScope = '';
     AssetCacheTable,
     CreationTable,
     ManifestEntryTable,
+    LocalNotificationTable,
   ],
 )
 // Timestamp storage is configured in build.yaml
@@ -406,7 +436,7 @@ class LocalDatabase extends _$LocalDatabase {
   Future<String?> Function()? migrationKidIdLoader;
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -478,6 +508,9 @@ class LocalDatabase extends _$LocalDatabase {
       if (from < 9 && to >= 9) {
         await m.createTable(manifestEntryTable);
         await _createManifestIndex();
+      }
+      if (from < 10 && to >= 10) {
+        await m.createTable(localNotificationTable);
       }
     },
   );
