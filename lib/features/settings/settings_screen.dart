@@ -17,9 +17,10 @@ import 'settings_controller.dart';
 
 /// Réglages, as `docs/design/01-design-system-gallery.html` draws it.
 ///
-/// Five groups in the design's own order — Apparence, Son et musique,
-/// Expérience, Notifications, Zone parent — shown one at a time as pill tabs
-/// (Hafid, 2026-10-28; app ADR 0051), the last tab remembered per kid. Zone
+/// The design's groups as four pill tabs — Apparence, Son et musique,
+/// Expérience, Zone parent — shown one at a time (Hafid, 2026-10-28; app ADR
+/// 0051), the last tab remembered per kid. Notifications is a section inside
+/// Expérience (Hafid, 2026-10-29), so the row never needs a fifth pill. Zone
 /// parent holds the picture codes and sign-out too. Aide and À propos sit
 /// under every tab.
 ///
@@ -30,10 +31,8 @@ import 'settings_controller.dart';
 /// - **Zone parent** deep-links to the portal (Q24: account, subscription
 ///   and privacy never happen inside a kid's app, so it never holds guardian
 ///   credentials). The portal is Track F and unbuilt.
-/// - **Notifications** persist as real flags, but no push infrastructure
-///   exists on any platform. The old product shipped exactly this and the
-///   Flutter spec flagged it as a defect, so it is called out rather than
-///   repeated silently.
+/// - **Notifications** are local reminders only (ADR 0053): no push, none
+///   on web or a class tablet, and the screen says which applies.
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({this.onOpenHelp, this.onOpenAbout, super.key});
 
@@ -48,9 +47,8 @@ class SettingsScreen extends ConsumerWidget {
     final settings = ref.watch(settingsControllerProvider);
     final controller = ref.read(settingsControllerProvider.notifier);
     final t = context.s;
-    final tab = SettingsTab.from(
-      ref.watch(pageTabProvider(TabbedPage.settings)),
-    );
+    final stored = ref.watch(pageTabProvider(TabbedPage.settings));
+    final tab = SettingsTab.from(stored);
 
     final panel = switch (tab) {
       SettingsTab.appearance => _Group(
@@ -89,24 +87,35 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ],
       ),
-      SettingsTab.experience => _Group(
+      SettingsTab.experience => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _SegmentedRow(
-            label: t.settingsLanguage,
-            options: ['Français', 'English'],
-            selected: settings.english ? 1 : 0,
-            onSelect: (i) => controller.setEnglish(i == 1),
+          _Group(
+            children: [
+              _SegmentedRow(
+                label: t.settingsLanguage,
+                options: ['Français', 'English'],
+                selected: settings.english ? 1 : 0,
+                onSelect: (i) => controller.setEnglish(i == 1),
+              ),
+              _ToggleRow(
+                label: t.settingsReduceMotion,
+                sublabel: t.settingsReduceMotionSub,
+                value: settings.reduceMotion,
+                onChanged: controller.setReduceMotion,
+              ),
+            ],
           ),
-          _ToggleRow(
-            label: t.settingsReduceMotion,
-            sublabel: t.settingsReduceMotionSub,
-            value: settings.reduceMotion,
-            onChanged: controller.setReduceMotion,
+          // Was its own tab until 2026-10-29. A link to the old tab lands
+          // here, scrolled to this heading.
+          _SectionHeading(
+            key: const ValueKey('settings-section-notifications'),
+            label: t.settingsNotifications,
+            icon: Icons.notifications_none,
+            reveal: stored == SettingsTab.notificationsSection,
           ),
+          _Group(children: _reminderRows(context, ref, settings)),
         ],
-      ),
-      SettingsTab.notifications => _Group(
-        children: _reminderRows(context, ref, settings),
       ),
       SettingsTab.parents => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -133,7 +142,11 @@ class SettingsScreen extends ConsumerWidget {
         final compact = constraints.maxWidth < Breakpoints.compact;
         return SingleChildScrollView(
           padding: EdgeInsets.all(compact ? Space.md : Space.lg),
-          child: Center(
+          // Left, under the header's greeting, as the design's
+          // `.settings-col` sits in `.content`: centred, a wide window left
+          // a band of empty sky on its left (Hafid, 2026-10-29).
+          child: Align(
+            alignment: Alignment.topLeft,
             child: ConstrainedBox(
               constraints: BoxConstraints(maxWidth: 680),
               child: Column(
@@ -164,7 +177,9 @@ class SettingsScreen extends ConsumerWidget {
                         ),
                     ],
                   ),
-                  PillTabPanel(tabKey: tab, child: panel),
+                  // The raw name, so a link to the old Notifications tab
+                  // rebuilds the panel and scrolls even from Expérience.
+                  PillTabPanel(tabKey: stored ?? tab.name, child: panel),
 
                   // Under every tab: never more than a tap away.
                   const SizedBox(height: Space.sm),
@@ -382,30 +397,96 @@ class _Group extends StatelessWidget {
   }
 }
 
-/// Réglages' five tabs, in the design's group order. The stored name is
-/// [Enum.name]; anything else (none yet, or a tab since renamed) opens the
-/// first.
+/// Réglages' four tabs, in the design's group order. The stored name is
+/// [Enum.name]; [notificationsSection] opens Expérience at its
+/// Notifications section; anything else (none yet, or a tab since renamed)
+/// opens the first.
 enum SettingsTab {
   appearance(Icons.light_mode_outlined),
   sound(Icons.volume_up_outlined),
   experience(Icons.language_outlined),
-  notifications(Icons.notifications_none),
   parents(Icons.family_restroom_outlined);
 
   const SettingsTab(this.icon);
 
   final IconData icon;
 
-  static SettingsTab from(String? name) =>
-      values.firstWhere((v) => v.name == name, orElse: () => appearance);
+  /// The old fifth tab's stored name, now a section of [experience]. Still
+  /// valid to select: a remembered tab or a link to it lands there.
+  static const notificationsSection = 'notifications';
+
+  static SettingsTab from(String? name) => name == notificationsSection
+      ? experience
+      : values.firstWhere((v) => v.name == name, orElse: () => appearance);
 
   String label(Strings t) => switch (this) {
     appearance => t.settingsAppearance,
     sound => t.settingsSound,
     experience => t.settingsExperience,
-    notifications => t.settingsNotifications,
     parents => t.settingsParentZone,
   };
+}
+
+/// A section's title between two cards of one tab, as the design heads
+/// each `.quest-panel`. With [reveal], it scrolls itself into view once
+/// when first shown.
+class _SectionHeading extends StatefulWidget {
+  const _SectionHeading({
+    required this.label,
+    required this.icon,
+    this.reveal = false,
+    super.key,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool reveal;
+
+  @override
+  State<_SectionHeading> createState() => _SectionHeadingState();
+}
+
+class _SectionHeadingState extends State<_SectionHeading> {
+  @override
+  void initState() {
+    super.initState();
+    if (!widget.reveal) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Scrollable.ensureVisible(
+        context,
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : Motion.quick,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
+    return Semantics(
+      header: true,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(4, Space.lg, 4, Space.sm),
+        child: Row(
+          children: [
+            Icon(widget.icon, size: 20, color: p.quebecBlueBright),
+            const SizedBox(width: Space.xs),
+            Text(
+              widget.label,
+              style: TextStyle(
+                fontFamily: VillageType.display,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: p.ink,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _RowLabel extends StatelessWidget {

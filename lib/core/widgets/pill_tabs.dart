@@ -1,6 +1,7 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart' show SemanticsRole;
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/services.dart';
 
 import '../i18n/strings.dart';
@@ -26,8 +27,11 @@ class PillTab<T> {
 ///   and select it, Home/End jump to the ends; Enter and Space select.
 /// - **Screen reader:** a tab bar of tabs, each "selected" or not, with its
 ///   place ("onglet 2 sur 5").
-/// - **Phone:** the row scrolls, and the selected pill is brought into view
-///   when it changes, instantly when motion is reduced.
+/// - **Never a hard cut:** when the pills don't fit, the row scrolls (by
+///   touch, mouse drag, trackpad or keyboard) and the edge with more pills
+///   fades out, so a pill half out of view reads as "more this way" rather
+///   than as a clipped label (Hafid, 2026-10-29). The selected pill is
+///   brought into view when it changes, instantly when motion is reduced.
 class PillTabs<T> extends StatefulWidget {
   const PillTabs({
     required this.tabs,
@@ -56,6 +60,25 @@ class PillTabs<T> extends StatefulWidget {
 class _PillTabsState<T> extends State<PillTabs<T>> {
   final _nodes = <FocusNode>[];
   final _keys = <GlobalKey>[];
+
+  /// Whether pills are hidden past each edge: that edge fades.
+  bool _moreBefore = false;
+  bool _moreAfter = false;
+
+  /// Width of the fade, about half a short pill.
+  static const fadeWidth = 28.0;
+
+  bool _onMetrics(ScrollMetrics m) {
+    final before = m.pixels > m.minScrollExtent + 0.5;
+    final after = m.pixels < m.maxScrollExtent - 0.5;
+    if (before != _moreBefore || after != _moreAfter) {
+      setState(() {
+        _moreBefore = before;
+        _moreAfter = after;
+      });
+    }
+    return false;
+  }
 
   @override
   void initState() {
@@ -138,25 +161,62 @@ class _PillTabsState<T> extends State<PillTabs<T>> {
         height: compact ? 38 : 46,
         // The tab bar sits inside the scroll view: the scrollable's own
         // semantics node may not come between a tab bar and its tabs.
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Semantics(
-            role: SemanticsRole.tabBar,
-            container: true,
-            explicitChildNodes: true,
-            child: Row(
-              children: [
-                for (var i = 0; i < widget.tabs.length; i++) ...[
-                  if (i > 0) SizedBox(width: compact ? 8 : 10),
-                  _pill(context, i),
-                ],
-              ],
+        child: NotificationListener<ScrollMetricsNotification>(
+          onNotification: (n) => _onMetrics(n.metrics),
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (n) => _onMetrics(n.metrics),
+            child: ShaderMask(
+              key: const ValueKey('pill-tabs-fade'),
+              blendMode: BlendMode.dstIn,
+              shaderCallback: (bounds) => _fade(bounds.width),
+              child: ScrollConfiguration(
+                // Desktop: Flutter drags only touch by default, so a mouse
+                // could never reach a pill past the edge.
+                behavior: ScrollConfiguration.of(context).copyWith(
+                  dragDevices: PointerDeviceKind.values.toSet(),
+                ),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Semantics(
+                    role: SemanticsRole.tabBar,
+                    container: true,
+                    explicitChildNodes: true,
+                    child: Row(
+                      children: [
+                        for (var i = 0; i < widget.tabs.length; i++) ...[
+                          if (i > 0) SizedBox(width: compact ? 8 : 10),
+                          _pill(context, i),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
         ),
       ),
     );
   }
+
+  /// Opaque in the middle, transparent at an edge with pills past it.
+  Shader _fade(double width) {
+    final f = width <= 0 ? 0.0 : (fadeWidth / width).clamp(0.0, 0.5);
+    return LinearGradient(
+      colors: [
+        _moreBefore ? Colors.transparent : Colors.black,
+        Colors.black,
+        Colors.black,
+        _moreAfter ? Colors.transparent : Colors.black,
+      ],
+      stops: [0, f, 1 - f, 1],
+    ).createShader(Rect.fromLTWH(0, 0, width, 1));
+  }
+
+  /// For tests: which edges fade now.
+  @visibleForTesting
+  ({bool before, bool after}) get fading =>
+      (before: _moreBefore, after: _moreAfter);
 
   Widget _pill(BuildContext context, int i) {
     final p = VillagePalette.of(context);

@@ -105,3 +105,42 @@ de profil". Under it are three tabs: **Par matière · Badges · Récent**.
     360 px with no overflow.
 - `test/profile_screen_test.dart` covers Profil's tabs, the hero above
   every tab, and every tab at 360 px.
+
+## Revision — 2026-10-29: four tabs, no cut pill, Réglages on the left
+
+Hafid, from a screenshot of Réglages at desktop width: "Add notifs to
+experience". In the same screenshot the last pill was cut at the card
+edge, and the column floated in the middle of a 1950px window.
+
+- **Notifications is a section of Expérience**, under its own heading
+  below Langue and Réduire les animations. That leaves four pills:
+  Apparence, Son et musique, Expérience, Zone parent. ADR 0053's rules
+  are unchanged: off by default, the guardian PIN to turn on, none on
+  web or a class tablet.
+  - The old stored name `notifications` stays valid
+    (`SettingsTab.notificationsSection`). A kid who last left Réglages
+    there, or a link to it, opens Expérience scrolled to the heading.
+- **A pill is never cut without a sign.** When the pills don't fit, the
+  edge with more pills fades over 28px, and the fade follows the scroll.
+  The row also drags with a mouse or trackpad, which Flutter allows only
+  for touch by default, so a pill past the edge was unreachable on
+  desktop except by keyboard. This is in `PillTabs`, so the Carte's
+  subject pills and Profil get it too.
+  - Wrapping onto a second line was considered and rejected: the panel
+    would jump by a row whenever the window crossed the width where the
+    pills stop fitting.
+- **Réglages sits on the left**, under the page title, as the design's
+  `.settings-col` does inside `.content`. Centred, a wide window left a
+  band of sky on its left. Profil, Aide and À propos still centre their
+  column; that's a separate call.
+- **The Quêtes badge stays red.** The design draws it `#EF4444`, and its
+  own note says "Badge rouge « 3 » sur Quêtes". Its no-red rule is for a
+  wrong answer (the amber "presque" state), not for a count.
+
+Tests in `test/pill_tabs_test.dart`:
+- four pills, with Notifications inside Expérience;
+- the old name opens Expérience, scrolled to the section;
+- the column sits left at 1950px;
+- at 375, 768, 1024 and 1950 (as the width the shell leaves the page),
+  any pill past an edge has that edge fading;
+- on a phone the fade swaps sides once the row is dragged.

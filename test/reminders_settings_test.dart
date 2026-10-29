@@ -186,7 +186,7 @@ void main() {
       );
       addTearDown(c.dispose);
       await c.read(pageTabProvider(TabbedPage.settings).notifier)
-          .select(SettingsTab.notifications.name);
+          .select(SettingsTab.notificationsSection);
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: c,

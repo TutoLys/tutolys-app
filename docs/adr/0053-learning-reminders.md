@@ -157,3 +157,8 @@ flamme"** ("My flame"), the evening streak reminder.
   (the daily reminder borrowing the flame wording).
 - **Strings:** `settingsQuestNotifications` is gone, replaced by
   `settingsFlameReminders` and its sub-line.
+
+## Revision — 2026-10-29: where the switches live
+
+They moved from their own Notifications tab into a section of Réglages'
+Expérience tab (ADR 0051, revision 2026-10-29). Nothing else changed.

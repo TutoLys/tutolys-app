@@ -221,9 +221,10 @@ void main() {
     Future<ProviderContainer> pump(
       WidgetTester tester, {
       double width = 900,
+      double height = 1400,
       String? stored,
     }) async {
-      tester.view.physicalSize = Size(width, 1400);
+      tester.view.physicalSize = Size(width, height);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
       final db = LocalDatabase.memory();
@@ -267,8 +268,100 @@ void main() {
     });
 
     testWidgets('a deep link opens straight on its tab', (tester) async {
-      await pump(tester, stored: SettingsTab.notifications.name);
+      await pump(tester, stored: SettingsTab.parents.name);
+      expect(find.byKey(const ValueKey('settings-passcodes')), findsOneWidget);
+    });
+
+    testWidgets('four pills: Notifications is a section of Expérience', (
+      tester,
+    ) async {
+      await pump(tester, stored: SettingsTab.experience.name);
+      expect(SettingsTab.values.map((t) => t.name), [
+        'appearance',
+        'sound',
+        'experience',
+        'parents',
+      ]);
+      expect(find.byKey(const ValueKey('settings-tab-notifications')), findsNothing);
+      expect(find.text(Strings.fr.settingsLanguage), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('settings-section-notifications')),
+        findsOneWidget,
+      );
       expect(find.text(Strings.fr.settingsDailyReminders), findsOneWidget);
+      expect(find.text(Strings.fr.settingsFlameReminders), findsOneWidget);
+    });
+
+    testWidgets('a link to the old Notifications tab lands on Expérience, '
+        'scrolled to the section', (tester) async {
+      await pump(tester, stored: SettingsTab.notificationsSection, height: 500);
+      expect(SettingsTab.from('notifications'), SettingsTab.experience);
+      final heading = find.byKey(const ValueKey('settings-section-notifications'));
+      final top = tester.getTopLeft(heading).dy;
+      expect(top, lessThan(500), reason: 'scrolled into view');
+      expect(
+        tester.getTopLeft(find.byKey(const ValueKey('settings-tab-experience'))).dy,
+        lessThan(0),
+        reason: 'the page scrolled past the pills to get there',
+      );
+    });
+
+    testWidgets('a wide window: the column sits left, under the title', (
+      tester,
+    ) async {
+      await pump(tester, width: 1950);
+      final card = find.text(Strings.fr.settingsTitle);
+      expect(tester.getTopLeft(card).dx, Space.lg);
+    });
+
+    // The window widths Hafid named, as the width the shell leaves the page
+    // (84px rail from 600, 224px sidebar from 1024).
+    for (final (window, page) in [
+      (375.0, 375.0),
+      (768.0, 684.0),
+      (1024.0, 800.0),
+      (1950.0, 1726.0),
+    ]) {
+      testWidgets('pills at $window: none cut without a fade', (tester) async {
+        await pump(tester, width: page);
+        final row = find.byKey(const ValueKey('pill-tabs-fade'));
+        final rowBox = tester.getRect(row);
+        final dynamic state = tester.state(find.byType(PillTabs<SettingsTab>));
+        final fading = state.fading as ({bool before, bool after});
+        for (final tab in SettingsTab.values) {
+          final pill = tester.getRect(
+            find.byKey(ValueKey('settings-tab-${tab.name}')),
+          );
+          if (pill.right > rowBox.right + 0.5) {
+            expect(fading.after, isTrue, reason: '${tab.name} cut on the right');
+          }
+          if (pill.left < rowBox.left - 0.5) {
+            expect(fading.before, isTrue, reason: '${tab.name} cut on the left');
+          }
+        }
+        if (!fading.after && !fading.before) {
+          for (final tab in SettingsTab.values) {
+            final pill = tester.getRect(
+              find.byKey(ValueKey('settings-tab-${tab.name}')),
+            );
+            expect(pill.right, lessThanOrEqualTo(rowBox.right + 0.5));
+          }
+        }
+      });
+    }
+
+    testWidgets('a phone: the far edge fades, and swaps once scrolled', (
+      tester,
+    ) async {
+      await pump(tester, width: 320);
+      final dynamic state = tester.state(find.byType(PillTabs<SettingsTab>));
+      expect(state.fading, (before: false, after: true));
+      await tester.drag(
+        find.byKey(const ValueKey('settings-tab-sound')),
+        const Offset(-600, 0),
+      );
+      await tester.pumpAndSettle();
+      expect(state.fading, (before: true, after: false));
     });
 
     testWidgets('Zone parent holds sign-out', (tester) async {
