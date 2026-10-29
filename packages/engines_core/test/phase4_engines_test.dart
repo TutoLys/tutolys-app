@@ -619,6 +619,8 @@ void main() {
         find.byKey(const ValueKey('compose-tile-b5')),
       );
       expect((c.current!.state as ComposeState).full, isTrue);
+      // Enter acts on whatever has focus (UX review G6): Tab to VALIDER.
+      await tabTo(tester, find.byKey(const ValueKey('validate')));
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       await settle(tester);
       expect(c.state.lastOutcome, Outcome.correct);
