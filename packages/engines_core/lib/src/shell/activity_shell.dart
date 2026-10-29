@@ -53,6 +53,7 @@ class ActivityShell extends StatelessWidget {
     this.inARow = 0,
     this.promptText,
     this.promptImageRef,
+    this.instruction,
     this.onSpeak,
     this.character,
     this.revealedHint,
@@ -89,6 +90,11 @@ class ActivityShell extends StatelessWidget {
   /// without it, because content never puts the question only in a
   /// picture.
   final String? promptImageRef;
+
+  /// How to play this kind of board, for a game a child can't guess from
+  /// the screen (UX review G3). Drawn with a hand icon, never read aloud
+  /// unasked; the engines also show the move with an idle hand.
+  final String? instruction;
 
   /// Null hides the speaker: there's nothing that may be read aloud.
   final VoidCallback? onSpeak;
@@ -150,6 +156,29 @@ class ActivityShell extends StatelessWidget {
           text: promptText,
           onSpeak: onSpeak,
           character: character,
+        ),
+      if (instruction != null)
+        Padding(
+          padding: const EdgeInsets.only(bottom: Space.md),
+          child: Row(
+            key: const ValueKey('shell-instruction'),
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.touch_app_rounded, color: p.ink, size: 20),
+              const SizedBox(width: Space.xs),
+              Flexible(
+                child: Text(
+                  instruction!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: p.ink,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       if (revealedHint != null) _HintPanel(palette: p, text: revealedHint!),
       if (notice != null)

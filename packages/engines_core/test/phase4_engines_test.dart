@@ -672,6 +672,103 @@ void main() {
     });
   });
 
+  group('G3 how to play, without reading', () {
+    final hand = find.byKey(const ValueKey('idle-hand'));
+
+    testWidgets('pair_match: the line, then a hand that waits, taps, rests', (
+      tester,
+    ) async {
+      final (c, _) = controllerFor('pair_match', pairConfig);
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(app(c));
+      expect(find.text('Touche une carte, puis sa paire.'), findsOneWidget);
+      expect(hand, findsNothing, reason: 'not before the idle wait');
+      await tester.pump(IdleHandHint.wait + const Duration(milliseconds: 100));
+      expect(hand, findsOneWidget);
+      final first = (c.current!.state as PairMatchState).leftOrder.first;
+      expect(
+        find.descendant(
+          of: find.ancestor(
+            of: find.byKey(ValueKey('pair-left-$first')),
+            matching: find.byType(IdleHandHint),
+          ),
+          matching: hand,
+        ),
+        findsOneWidget,
+        reason: 'on the first left tile',
+      );
+      // Three taps, then it rests: the screen settles.
+      await tester.pump(const Duration(seconds: 3));
+      expect(tester.binding.hasScheduledFrame, isFalse);
+
+      // A left tile picked: the hand moves to the right column.
+      await tester.tap(find.byKey(ValueKey('pair-left-$first')));
+      await settle(tester);
+      await tester.pump(IdleHandHint.wait + const Duration(seconds: 3));
+      final right = (c.current!.state as PairMatchState).rightOrder.first;
+      expect(
+        find.descendant(
+          of: find.ancestor(
+            of: find.byKey(ValueKey('pair-right-$right')),
+            matching: find.byType(IdleHandHint),
+          ),
+          matching: hand,
+        ),
+        findsOneWidget,
+      );
+      // Once a pair exists, no more hand.
+      await tester.tap(find.byKey(ValueKey('pair-right-$right')));
+      await settle(tester);
+      await tester.pump(IdleHandHint.wait + const Duration(seconds: 3));
+      expect(hand, findsNothing);
+      c.dispose();
+    });
+
+    testWidgets(
+      'compose_build: the line, and the hand until a tile is placed',
+      (tester) async {
+        final (c, _) = controllerFor('compose_build', composeConfig);
+        await tester.runAsync(c.start);
+        await tester.pumpWidget(app(c));
+        expect(
+          find.text('Touche les tuiles pour remplir les cases.'),
+          findsOneWidget,
+        );
+        await tester.pump(IdleHandHint.wait + const Duration(seconds: 3));
+        expect(hand, findsOneWidget);
+        await tester.tap(find.byKey(const ValueKey('compose-tile-b2')));
+        await settle(tester);
+        expect(hand, findsNothing);
+        c.dispose();
+      },
+    );
+
+    testWidgets('reduced motion: the hand shows at once and never moves', (
+      tester,
+    ) async {
+      final (c, _) = controllerFor('compose_build', composeConfig);
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(disableAnimations: true),
+          child: app(c),
+        ),
+      );
+      await tester.pump();
+      expect(hand, findsOneWidget);
+      expect(tester.binding.hasScheduledFrame, isFalse);
+      c.dispose();
+    });
+
+    testWidgets('speed_tap needs no how-to line', (tester) async {
+      final (c, _) = controllerFor('speed_tap', speedConfig);
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(app(c));
+      expect(find.byKey(const ValueKey('shell-instruction')), findsNothing);
+      c.dispose();
+    });
+  });
+
   test(
     'all four launch engines resolve on the new contract with their evaluators',
     () {

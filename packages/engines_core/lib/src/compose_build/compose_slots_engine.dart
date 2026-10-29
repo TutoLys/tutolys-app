@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../widgets/creations.dart';
 import '../widgets/answer_slot.dart';
 import '../widgets/answer_tile.dart';
+import '../widgets/idle_hand_hint.dart';
 
 class ComposeTile {
   const ComposeTile({required this.id, required this.label, this.audioRef});
@@ -320,6 +321,11 @@ class ComposeSlotsEngine
   ) {
     final fr = view.locale.languageCode == 'fr';
     final s = view.state;
+    // The idle hand (G3) on the first tray tile, until a tile is placed.
+    final handOn =
+        view.enabled && s.locked.isEmpty && s.slots.every((t) => t == null)
+        ? s.tray.first
+        : null;
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 560),
@@ -371,14 +377,17 @@ class ComposeSlotsEngine
                     if (!s.isPlaced(id))
                       SizedBox(
                         width: 120,
-                        child: AnswerTile(
-                          key: ValueKey('compose-tile-$id'),
-                          label: view.content.tile(id).label,
-                          audioRef: view.content.tile(id).audioRef,
-                          state: AnswerTileState.idle,
-                          onTap: view.enabled && !s.full
-                              ? () => view.dispatch(PlaceTile(id))
-                              : null,
+                        child: IdleHandHint(
+                          show: handOn == id,
+                          child: AnswerTile(
+                            key: ValueKey('compose-tile-$id'),
+                            label: view.content.tile(id).label,
+                            audioRef: view.content.tile(id).audioRef,
+                            state: AnswerTileState.idle,
+                            onTap: view.enabled && !s.full
+                                ? () => view.dispatch(PlaceTile(id))
+                                : null,
+                          ),
                         ),
                       )
                     else

@@ -277,6 +277,7 @@ class _LearningActivityViewState extends State<LearningActivityView> {
       inARow: _inARow,
       promptText: q?.spec.prompt.text,
       promptImageRef: q?.spec.prompt.imageRef,
+      instruction: q == null ? null : s.howTo(q.engine.descriptor.key),
       onSpeak: q == null ? null : widget.speakPrompt?.call(q.spec),
       character: widget.character,
       revealedHint: _hintRevealed ? hint : null,

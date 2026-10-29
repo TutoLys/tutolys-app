@@ -16,6 +16,7 @@ export 'src/single_choice/single_choice_engine.dart';
 export 'src/widgets/answer_tile.dart';
 export 'src/widgets/answer_slot.dart';
 export 'src/widgets/countdown_bar.dart';
+export 'src/widgets/idle_hand_hint.dart';
 export 'src/compose_build/compose_slots_engine.dart';
 export 'src/pair_match/pair_match_board_engine.dart';
 export 'src/speed_tap/timed_choice_engine.dart';

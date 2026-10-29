@@ -20,6 +20,19 @@ class ShellStrings {
   String get stopLabel => _t('Arrêter', 'Stop');
   String get validate => _t('Valider', 'Check');
   String get hint => _t('Indice', 'Hint');
+
+  /// How to play, for the boards a child can't guess (UX review G3).
+  String? howTo(String engineKey) => switch (engineKey) {
+    'pair_match' => _t(
+      'Touche une carte, puis sa paire.',
+      'Tap a card, then its match.',
+    ),
+    'compose_build' => _t(
+      'Touche les tuiles pour remplir les cases.',
+      'Tap the tiles to fill the boxes.',
+    ),
+    _ => null,
+  };
   String get answerFirst =>
       _t('Choisis d’abord ta réponse !', 'Pick your answer first!');
   String get listen => _t('Écouter la question', 'Listen to the question');

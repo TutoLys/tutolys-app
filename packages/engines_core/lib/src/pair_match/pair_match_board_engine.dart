@@ -2,6 +2,7 @@ import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
 
 import '../widgets/answer_tile.dart';
+import '../widgets/idle_hand_hint.dart';
 
 class MatchItem {
   const MatchItem({
@@ -373,6 +374,17 @@ class PairMatchBoardEngine
       return null;
     }
 
+    // The idle hand (G3): on the first left tile while nothing is touched,
+    // then on the first right tile once a left one waits for its partner
+    // (or the other way round, when a right tile was picked first).
+    final untouched = view.enabled && s.links.isEmpty && s.locked.isEmpty;
+    final handLeft = untouched && s.selectedLeft == null
+        ? s.leftOrder.first
+        : null;
+    final handRight = untouched && s.selectedLeft != null
+        ? s.rightOrder.first
+        : null;
+
     AnswerTileState stateOf(bool locked, bool picked) => locked
         ? AnswerTileState.correct
         : picked
@@ -397,26 +409,29 @@ class PairMatchBoardEngine
             children: [
               column([
                 for (final l in s.leftOrder)
-                  AnswerTile(
-                    key: ValueKey('pair-left-$l'),
-                    label: view.content.left(l).label,
-                    imageRef: view.content.left(l).imageRef,
-                    audioRef: view.content.left(l).audioRef,
-                    state: stateOf(
-                      s.locked.contains(l),
-                      s.selectedLeft == l || s.links.containsKey(l),
+                  IdleHandHint(
+                    show: handLeft == l,
+                    child: AnswerTile(
+                      key: ValueKey('pair-left-$l'),
+                      label: view.content.left(l).label,
+                      imageRef: view.content.left(l).imageRef,
+                      audioRef: view.content.left(l).audioRef,
+                      state: stateOf(
+                        s.locked.contains(l),
+                        s.selectedLeft == l || s.links.containsKey(l),
+                      ),
+                      badge: s.locked.contains(l) ? null : badgeOf[l],
+                      semanticsState: s.locked.contains(l)
+                          ? (fr ? 'bien associé' : 'matched')
+                          : s.selectedLeft == l
+                          ? (fr
+                                ? 'choisi, choisis son partenaire'
+                                : 'chosen, now pick its partner')
+                          : null,
+                      onTap: view.enabled && !s.locked.contains(l)
+                          ? () => view.dispatch(TapLeft(l))
+                          : null,
                     ),
-                    badge: s.locked.contains(l) ? null : badgeOf[l],
-                    semanticsState: s.locked.contains(l)
-                        ? (fr ? 'bien associé' : 'matched')
-                        : s.selectedLeft == l
-                        ? (fr
-                              ? 'choisi, choisis son partenaire'
-                              : 'chosen, now pick its partner')
-                        : null,
-                    onTap: view.enabled && !s.locked.contains(l)
-                        ? () => view.dispatch(TapLeft(l))
-                        : null,
                   ),
               ]),
               const SizedBox(width: 16),
@@ -426,28 +441,31 @@ class PairMatchBoardEngine
                     builder: (context) {
                       final lockedRight = s.locked.any((l) => s.links[l] == r);
                       final badge = rightBadge(r);
-                      return AnswerTile(
-                        key: ValueKey('pair-right-$r'),
-                        label: view.content.right(r).label,
-                        imageRef: view.content.right(r).imageRef,
-                        audioRef: view.content.right(r).audioRef,
-                        state: stateOf(
-                          lockedRight,
-                          badge != null || s.selectedRight == r,
+                      return IdleHandHint(
+                        show: handRight == r,
+                        child: AnswerTile(
+                          key: ValueKey('pair-right-$r'),
+                          label: view.content.right(r).label,
+                          imageRef: view.content.right(r).imageRef,
+                          audioRef: view.content.right(r).audioRef,
+                          state: stateOf(
+                            lockedRight,
+                            badge != null || s.selectedRight == r,
+                          ),
+                          badge: lockedRight ? null : badge,
+                          semanticsState: lockedRight
+                              ? (fr ? 'bien associé' : 'matched')
+                              : s.selectedRight == r
+                              ? (fr
+                                    ? 'choisi, choisis son partenaire'
+                                    : 'chosen, now pick its partner')
+                              : null,
+                          // Live from the start: a right tile can be picked
+                          // first (G4).
+                          onTap: view.enabled && !lockedRight
+                              ? () => view.dispatch(TapRight(r))
+                              : null,
                         ),
-                        badge: lockedRight ? null : badge,
-                        semanticsState: lockedRight
-                            ? (fr ? 'bien associé' : 'matched')
-                            : s.selectedRight == r
-                            ? (fr
-                                  ? 'choisi, choisis son partenaire'
-                                  : 'chosen, now pick its partner')
-                            : null,
-                        // Live from the start: a right tile can be picked
-                        // first (G4).
-                        onTap: view.enabled && !lockedRight
-                            ? () => view.dispatch(TapRight(r))
-                            : null,
                       );
                     },
                   ),
