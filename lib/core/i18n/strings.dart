@@ -272,6 +272,13 @@ abstract class Strings {
   /// The quest board couldn't be read (A3).
   String get questsLoadFailed;
 
+  /// The local store won't open (K5): storage, never "Internet".
+  String get storageProblemTitle;
+  String get storageProblemBody;
+  String get storageRepair;
+  String get storageRepairTitle;
+  String get storageRepairBody;
+
   /// Progrès (A4): a failed read, and a real empty with a next step.
   String get progressLoadFailed;
   String progressPlayToSee(String subject);
@@ -1144,6 +1151,26 @@ class _FrenchStrings extends Strings {
 
   @override
   String get questsLoadFailed => "Je n'arrive pas à charger tes quêtes.";
+
+  @override
+  String get storageProblemTitle => "L'appareil n'ouvre pas tes données";
+
+  @override
+  String get storageProblemBody =>
+      "Ce n'est pas Internet : c'est l'espace de rangement de cet appareil "
+      'ou de ce navigateur. On peut réessayer.';
+
+  @override
+  String get storageRepair => 'Réparer';
+
+  @override
+  String get storageRepairTitle => 'Réparer le rangement ?';
+
+  @override
+  String get storageRepairBody =>
+      'Les progrès faits sur cet appareil et pas encore envoyés seront '
+      'perdus. Les profils et tout ce qui a déjà été envoyé reviennent '
+      'tout seuls.';
 
   @override
   String get progressLoadFailed => "Je n'arrive pas à lire tes progrès.";
@@ -2446,6 +2473,25 @@ class _EnglishStrings extends Strings {
 
   @override
   String get questsLoadFailed => "I can't load your quests.";
+
+  @override
+  String get storageProblemTitle => "This device can't open your data";
+
+  @override
+  String get storageProblemBody =>
+      "It's not the Internet: it's this device's or browser's storage. "
+      "Let's try again.";
+
+  @override
+  String get storageRepair => 'Repair';
+
+  @override
+  String get storageRepairTitle => 'Repair storage?';
+
+  @override
+  String get storageRepairBody =>
+      'Progress made on this device and not yet sent will be lost. '
+      'Profiles and everything already sent come back on their own.';
 
   @override
   String get progressLoadFailed => "I can't read your progress.";

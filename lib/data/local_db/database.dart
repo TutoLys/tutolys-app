@@ -625,14 +625,75 @@ class LocalDatabase extends _$LocalDatabase {
 /// Resolving to null when a kid *is* paired silently discards their local
 /// streak and queued events, so the callback must read `SessionStore`, not
 /// guess.
-LocalDatabase openLocalDatabase({Future<String?> Function()? migrationKidId}) {
+///
+/// [assetVersion] goes on the web worker's and wasm's URLs (K5, ADR 0099).
+/// drift's worker is a SharedWorker, keyed by its URL and kept alive by any
+/// open tab: without a version, an updated app attached to the old build's
+/// worker, and one whose wasm fetch had failed once kept failing every
+/// page that attached to it. A new version means a new worker.
+LocalDatabase openLocalDatabase({
+  Future<String?> Function()? migrationKidId,
+  String assetVersion = '',
+}) {
+  final v = assetVersion.isEmpty
+      ? ''
+      : '?v=${Uri.encodeQueryComponent(assetVersion)}';
   return LocalDatabase(
     driftDatabase(
-      name: 'tutolys',
+      name: localDatabaseName,
       web: DriftWebOptions(
-        sqlite3Wasm: Uri.parse('sqlite3.wasm'),
-        driftWorker: Uri.parse('drift_worker.js'),
+        sqlite3Wasm: Uri.parse('sqlite3.wasm$v'),
+        driftWorker: Uri.parse('drift_worker.js$v'),
       ),
     ),
   )..migrationKidIdLoader = migrationKidId;
+}
+
+/// The store's name on disk and in the browser.
+const localDatabaseName = 'tutolys';
+
+/// How an open went (K5): the database to use, and the error if it still
+/// wouldn't open after a retry.
+class OpenedDatabase {
+  const OpenedDatabase(this.db, {this.error, this.retried = false});
+
+  final LocalDatabase db;
+  final Object? error;
+
+  /// The first open failed and a fresh worker was tried.
+  final bool retried;
+
+  bool get ok => error == null;
+}
+
+/// Opens the database and proves it with a first query. If that fails,
+/// tries once more on a brand-new worker URL (a stale or poisoned
+/// SharedWorker is the usual cause, K5). [open] and [probe] are injectable
+/// for tests.
+Future<OpenedDatabase> openLocalDatabaseWithRetry({
+  required LocalDatabase Function(String assetVersion) open,
+  required String assetVersion,
+  Future<void> Function(LocalDatabase db)? probe,
+  Duration timeout = const Duration(seconds: 8),
+  DateTime Function()? clock,
+}) async {
+  Future<void> check(LocalDatabase db) =>
+      (probe ?? (db) => db.customSelect('SELECT 1').get()).call(db).timeout(
+        timeout,
+      );
+  final first = open(assetVersion);
+  try {
+    await check(first);
+    return OpenedDatabase(first);
+  } on Object catch (_) {
+    await first.close().catchError((Object _) {});
+  }
+  final stamp = (clock ?? DateTime.now)().microsecondsSinceEpoch;
+  final second = open('$assetVersion-retry$stamp');
+  try {
+    await check(second);
+    return OpenedDatabase(second, retried: true);
+  } on Object catch (e) {
+    return OpenedDatabase(second, error: e, retried: true);
+  }
 }

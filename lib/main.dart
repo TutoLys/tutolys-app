@@ -13,6 +13,7 @@ import 'core/diagnostics/crash_reporting.dart';
 import 'core/diagnostics/diag_log.dart';
 import 'core/diagnostics/diag_store.dart';
 import 'core/routing/app_shell.dart';
+import 'core/startup/storage_problem.dart';
 import 'core/routing/paired_router.dart' show rememberLaunchLocation;
 import 'core/startup/release_config_guard.dart';
 import 'features/launch/boot_handoff.dart';
@@ -80,29 +81,41 @@ void _main() {
     return;
   }
 
-  // Whose rows are already on disk. Needed only by the 3 -> 4 migration
-  // (ADR 0014), which has to give pre-v4 rows an owner.
-  //
-  // Passed as a callback, never awaited here: blocking `runApp` on the
-  // platform secure store would hold the app on its splash screen if that
-  // read were ever slow, with nothing on screen to say why. drift opens
-  // lazily and runs the migration on the first query, so the read happens
-  // there instead — and only on the one boot that actually upgrades.
-  final db = openLocalDatabase(
-    migrationKidId: () async => (await SessionStore().pairedKid())?.id,
-  );
+  unawaited(_openAndRun());
+}
 
-  // The first query opens the database and runs any migration, so it is
-  // its own boot step: a database that never opens is named as such
-  // rather than surfacing as whichever read happened to come first.
-  BootLog.instance
-      .run('db_open', () => db.customSelect('SELECT 1').get())
-      .then(
-        (_) => startDiagPersistence(db, DiagLog.instance).catchError(
-          (Object e, StackTrace s) => recordCaught('diag_store', e, s),
-        ),
-      )
-      .ignore();
+/// Opens the local store, then runs the app on it. A store that won't open
+/// even on a fresh worker gets its own screen, never the app pretending to
+/// be offline (K5, ADR 0099).
+Future<void> _openAndRun() async {
+  // Whose rows are already on disk. Needed only by the 3 -> 4 migration
+  // (ADR 0014), which has to give pre-v4 rows an owner. A callback, so the
+  // secure store is read only on the one boot that actually upgrades.
+  final opened = await BootLog.instance.run(
+    'db_open',
+    () => openLocalDatabaseWithRetry(
+      assetVersion: gitSha.isEmpty ? appVersion : '$appVersion+$gitSha',
+      open: (version) => openLocalDatabase(
+        migrationKidId: () async => (await SessionStore().pairedKid())?.id,
+        assetVersion: version,
+      ),
+    ),
+  );
+  if (opened.retried) {
+    recordCaught(
+      'db_open_retry',
+      opened.error ?? 'first open failed; a fresh worker opened it',
+    );
+  }
+  if (!opened.ok) {
+    FlutterNativeSplash.remove();
+    runApp(StorageProblemApp(onRetry: _openAndRun));
+    return;
+  }
+  final db = opened.db;
+  startDiagPersistence(db, DiagLog.instance).catchError(
+    (Object e, StackTrace s) => recordCaught('diag_store', e, s),
+  ).ignore();
 
   runApp(
     ProviderScope(

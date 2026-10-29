@@ -43,6 +43,9 @@ dependencies:
   flutter_native_splash: ^2.4.6
   drift_flutter: ^0.3.1
   sentry: ^10.2.0
+  # Browser APIs for repairing the local store on the web (ADR 0099).
+  # Already resolved transitively (drift), so this pins nothing new.
+  web: ^1.1.1
   flutter_local_notifications: ^22.3.3
   timezone: ^0.11.2
 
