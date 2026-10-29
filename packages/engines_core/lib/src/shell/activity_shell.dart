@@ -194,7 +194,7 @@ class ActivityShell extends StatelessWidget {
             ],
           ),
         ),
-      if (revealedHint != null) _HintPanel(palette: p, text: revealedHint!),
+
       if (notice != null)
         Padding(
           padding: const EdgeInsets.only(bottom: Space.sm),
@@ -288,8 +288,13 @@ class ActivityShell extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (feedback == null && (showValidate || onHint != null))
+                // The hint opens here, above the buttons, not above the
+                // board: inserting it there pushed the tiles down under
+                // the child's finger (UX review N3).
+                if (feedback == null &&
+                    (showValidate || onHint != null || revealedHint != null))
                   _BottomBar(
+                    revealedHint: revealedHint,
                     palette: p,
                     strings: s,
                     gutter: gutter,
@@ -613,11 +618,13 @@ class _BottomBar extends StatefulWidget {
     required this.compact,
     required this.onHint,
     required this.offerHint,
+    required this.revealedHint,
     required this.showValidate,
     required this.onValidate,
   });
 
   final bool offerHint;
+  final String? revealedHint;
   final VillagePalette palette;
   final ShellStrings strings;
   final double gutter;
@@ -685,6 +692,11 @@ class _BottomBarState extends State<_BottomBar> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
+          if (widget.revealedHint case final hint?)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: _HintPanel(palette: p, text: hint),
+            ),
           if (nudging)
             Padding(
               padding: const EdgeInsets.only(bottom: Space.sm),

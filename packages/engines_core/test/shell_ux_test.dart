@@ -558,6 +558,39 @@ void main() {
       expect(await validerAt(hint: true), await validerAt(hint: false));
     });
   });
+
+  group('N3 opening the hint never moves the board', () {
+    testWidgets('the board keeps its place; the hint shows by the buttons', (
+      tester,
+    ) async {
+      Future<Offset> boardAt({String? hint}) async {
+        await tester.pumpWidget(
+          _app(
+            ActivityShell(
+              locale: fr,
+              onClose: () {},
+              promptText: 'Compte.',
+              showValidate: true,
+              revealedHint: hint,
+              onHint: hint == null ? () {} : null,
+              body: const SizedBox(key: ValueKey('board'), height: 100),
+            ),
+          ),
+        );
+        return tester.getTopLeft(find.byKey(const ValueKey('board')));
+      }
+
+      final before = await boardAt();
+      final after = await boardAt(hint: 'Compte sur tes doigts.');
+      expect(after, before);
+      expect(
+        tester.getTopLeft(find.text('Compte sur tes doigts.')).dy,
+        greaterThan(
+          tester.getBottomLeft(find.byKey(const ValueKey('board'))).dy,
+        ),
+      );
+    });
+  });
 }
 
 class _Silent implements ContentSpeaker {
