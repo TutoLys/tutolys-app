@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/i18n/strings.dart';
 import '../../data/local_db/node_progress_local.dart';
+import '../../data/sync/content_sync.dart' show NodeDownload;
+import '../../data/sync/window_plan.dart';
 import '../../core/routing/paired_router.dart';
 import '../pairing/pairing_controller.dart';
 import '../assignments/assignments_controller.dart';
@@ -261,7 +263,7 @@ class _PathScreenState extends ConsumerState<PathScreen> {
     return buildCarteSections(
       subject: state.subject,
       leaves: state.leaves,
-      playable: state.lessonsByNodeId.keys.toSet(),
+      playable: state.carteLessons.keys.toSet(),
       masteries: ref.watch(progressControllerProvider).masteries,
       appLocale: Localizations.localeOf(context),
       completed: {
@@ -278,13 +280,19 @@ class _PathScreenState extends ConsumerState<PathScreen> {
           key: (value.doneCount, value.total),
       },
       assigned: ref.watch(assignedSkillIdsProvider),
+      notDownloaded: {
+        for (final MapEntry(:key, :value) in lessons.entries)
+          if (isNotDownloaded(value.next)) key,
+      },
+      offline: state.offline,
       describeLanguage: t.lessonLanguage,
       describeLessons: t.pathLessonsDone,
-      describeState: (state) => switch (state) {
+      describeState: (node) => switch (node) {
         PathNodeState.locked => t.pathLocked,
         PathNodeState.soon => t.pathSoon,
         _ => null,
       },
+      describeNotDownloaded: t.pathNotDownloaded,
     );
   }
 }
@@ -426,7 +434,18 @@ class _Sections extends ConsumerWidget {
     // The orb and card already have no handler past the frontier; this is
     // the last word, so no path into a game can skip the sequence.
     if (!isOpenState(node.state) || lessons == null) return;
-    final envelope = lessons.next;
+    var envelope = lessons.next;
+    // Outside the offline window (ADR 0093): fetch it first, or say kindly
+    // that it needs the Internet. Never a crash, never "locked".
+    if (isNotDownloaded(envelope)) {
+      final id = envelope['exercise_id'];
+      final ready = await _download(context, ref, node.id);
+      if (!ready || !context.mounted) return;
+      final fresh = ref.read(pathControllerProvider).lessonsByNodeId[node.id];
+      final found = fresh?.where((l) => l['exercise_id'] == id);
+      if (found == null || found.isEmpty) return;
+      envelope = found.first;
+    }
     final leaf = state.leaves.firstWhere(
       (l) => l.id == envelope['skill_node_id'],
     );
@@ -439,6 +458,54 @@ class _Sections extends ConsumerWidget {
     ref.read(progressControllerProvider.notifier).refresh();
     onReturned();
   }
+}
+
+/// Downloads a leaf, with a small wait on screen; offline or failed, a
+/// kind word instead. True once the lesson is on the device.
+Future<bool> _download(
+  BuildContext context,
+  WidgetRef ref,
+  String skillNodeId,
+) async {
+  final t = context.s;
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  final navigator = Navigator.of(context, rootNavigator: true);
+  showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => PopScope(
+      canPop: false,
+      child: AlertDialog(
+        key: const ValueKey('carte-downloading'),
+        content: Row(
+          children: [
+            const SizedBox.square(
+              dimension: 28,
+              child: CircularProgressIndicator(strokeWidth: 3),
+            ),
+            const SizedBox(width: Space.md),
+            Expanded(child: Text(t.pathDownloading)),
+          ],
+        ),
+      ),
+    ),
+  );
+  final result = await ref
+      .read(pathControllerProvider.notifier)
+      .download(skillNodeId);
+  navigator.pop();
+  if (result == NodeDownload.done) return true;
+  messenger?.showSnackBar(
+    SnackBar(
+      key: const ValueKey('carte-not-downloaded'),
+      content: Text(
+        result == NodeDownload.offline
+            ? t.pathNotDownloadedOffline
+            : t.pathDownloadFailed,
+      ),
+    ),
+  );
+  return false;
 }
 
 class _Empty extends StatelessWidget {

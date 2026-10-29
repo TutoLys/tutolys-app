@@ -130,6 +130,9 @@ List<AreaGroup> _groupByServerAreas(
 ///   done, so "if the game is not done, we don't go to the next" (Hafid,
 ///   2026-10-25). That holds for a node already completed or mastered too:
 ///   past the frontier, nothing opens.
+/// - **not downloaded** — not a state but a flag on an open node: its
+///   lesson is published but outside the offline window (ADR 0093). Drawn
+///   only while [offline], when a tap can't fetch it.
 /// - **soon** — no lesson published for it yet. Not locked and not a
 ///   step in the sequence: it is skipped, so a missing lesson never looks
 ///   like the reason the kid is stuck.
@@ -143,9 +146,12 @@ List<PathSection> buildCarteSections({
   Map<String, String> lessonLocales = const {},
   Map<String, (int done, int total)> lessonCounts = const {},
   Set<String> assigned = const {},
+  Set<String> notDownloaded = const {},
+  bool offline = false,
   String Function(String locale)? describeLanguage,
   String Function(int done, int total)? describeLessons,
   String? Function(PathNodeState state)? describeState,
+  String? describeNotDownloaded,
 }) {
   final asked = contentLocaleFor(subject, appLocale);
   final masteryOf = {for (final m in masteries) m.skillNodeId: m};
@@ -207,7 +213,12 @@ List<PathSection> buildCarteSections({
                 masteryPct: mastery == null ? null : mastery.masteryPct / 100,
                 // Only worth showing when there is more than one lesson.
                 lessons: counts,
-                stateLabel: describeState?.call(state),
+                stateLabel:
+                    offline &&
+                        isOpenState(state) &&
+                        notDownloaded.contains(leaf.id)
+                    ? describeNotDownloaded
+                    : describeState?.call(state),
                 lessonsLabel: switch (counts) {
                   (final done, final total) => describeLessons?.call(
                     done,
@@ -217,6 +228,12 @@ List<PathSection> buildCarteSections({
                 },
                 // Open teacher-assigned work on this skill (backend ADR 0123).
                 assigned: assigned.contains(leaf.id),
+                // Past the frontier a node is locked whether or not it's
+                // downloaded; the tag only marks one a kid could open.
+                notDownloaded:
+                    offline &&
+                    isOpenState(state) &&
+                    notDownloaded.contains(leaf.id),
                 otherLanguage: _otherLanguage(lessonLocales[leaf.id], asked),
                 otherLanguageLabel:
                     _otherLanguage(lessonLocales[leaf.id], asked) == null

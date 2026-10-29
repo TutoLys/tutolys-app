@@ -106,6 +106,12 @@ abstract class Strings {
   /// A Carte node with no lesson yet (ADR 0032): skipped, not locked.
   String get pathSoon;
 
+  /// A leaf whose lesson isn't on the device, offline (ADR 0093).
+  String get pathNotDownloaded;
+  String get pathNotDownloadedOffline;
+  String get pathDownloading;
+  String get pathDownloadFailed;
+
   /// The active node's card. French puts a space before "%", English does not.
   String pathInProgress(int pct);
 
@@ -698,6 +704,21 @@ class _FrenchStrings extends Strings {
 
   @override
   String get pathSoon => 'Bientôt';
+
+  @override
+  String get pathNotDownloaded => 'Pas encore sur ton appareil';
+
+  @override
+  String get pathNotDownloadedOffline =>
+      "Cette leçon n'est pas encore sur ton appareil. "
+      'Reviens quand tu auras Internet !';
+
+  @override
+  String get pathDownloading => 'Je prépare ta leçon…';
+
+  @override
+  String get pathDownloadFailed =>
+      "Oups, la leçon n'a pas pu venir. Réessaie dans un moment !";
 
   @override
   String pathInProgress(int pct) => 'En cours · $pct % maîtrisé';
@@ -1892,6 +1913,21 @@ class _EnglishStrings extends Strings {
 
   @override
   String get pathSoon => 'Soon';
+
+  @override
+  String get pathNotDownloaded => 'Not on your device yet';
+
+  @override
+  String get pathNotDownloadedOffline =>
+      "This lesson isn't on your device yet. "
+      'Come back when you have Internet!';
+
+  @override
+  String get pathDownloading => 'Getting your lesson ready…';
+
+  @override
+  String get pathDownloadFailed =>
+      "Oops, the lesson couldn't come. Try again in a moment!";
 
   @override
   String pathInProgress(int pct) => 'In progress · $pct% mastered';

@@ -58,11 +58,12 @@ NodeLessons nodeLessons(
   return NodeLessons(lessons: lessons, done: done);
 }
 
-/// [nodeLessons] for every playable node on the current Carte.
+/// [nodeLessons] for every node on the current Carte with a published
+/// lesson, downloaded or not (`PathState.carteLessons`).
 Map<String, NodeLessons> nodeLessonsOf(
   PathState state,
   Map<String, NodeProgress> progress,
 ) => {
-  for (final MapEntry(:key, :value) in state.lessonsByNodeId.entries)
+  for (final MapEntry(:key, :value) in state.carteLessons.entries)
     key: nodeLessons(value, progress[key]),
 };

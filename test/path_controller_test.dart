@@ -118,7 +118,7 @@ void main() {
   late _FakeCurriculumApi curriculumApi;
   late _FakeContentApi contentApi;
 
-  ProviderContainer build({SessionState? session}) {
+  ProviderContainer build({SessionState? session, bool prefetch = false}) {
     curriculumApi = _FakeCurriculumApi();
     contentApi = _FakeContentApi();
     return ProviderContainer(
@@ -126,6 +126,7 @@ void main() {
         localDatabaseProvider.overrideWithValue(LocalDatabase.memory()),
         curriculumApiProvider.overrideWithValue(curriculumApi),
         contentApiProvider.overrideWithValue(contentApi),
+        offlinePrefetchProvider.overrideWithValue(prefetch),
         sessionControllerProvider.overrideWith(
           () => _FixedSessionController(
             session ??
@@ -253,6 +254,22 @@ void main() {
     expect(state.leaves.map((l) => l.id), [
       'leaf-1',
     ], reason: 'offline must not clear the cache');
+  });
+
+  test('a first load online prefetches every other subject, once', () async {
+    container = build(prefetch: true);
+    await container.read(pathControllerProvider.notifier).refresh();
+    await pumpEventQueue(times: 200);
+
+    expect(
+      contentApi.asked.map((a) => a.$1).toSet(),
+      pathSubjects.toSet(),
+      reason: 'the whole village plays offline (ADR 0093)',
+    );
+    final count = contentApi.asked.length;
+    await container.read(pathControllerProvider.notifier).refresh();
+    await pumpEventQueue(times: 200);
+    expect(contentApi.asked.length, count + 1, reason: 'only MATH again');
   });
 
   group('lesson language', () {

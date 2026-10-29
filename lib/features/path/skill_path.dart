@@ -32,7 +32,12 @@ class PathNode {
     this.lessonsLabel,
     this.stateLabel,
     this.assigned = false,
+    this.notDownloaded = false,
   });
+
+  /// Open, but its lesson isn't on the device and the device is offline
+  /// (ADR 0093): the orb wears a cloud tag. Never drawn as locked.
+  final bool notDownloaded;
 
   /// A teacher gave this skill as homework and it isn't done yet: the orb
   /// wears a small tag (backend ADR 0123). Never says who else has it.
@@ -336,6 +341,17 @@ class _Node extends StatelessWidget {
                   right: -10,
                   child: ExcludeSemantics(
                     child: LanguageTag(tag: tag, palette: p),
+                  ),
+                ),
+              if (node.notDownloaded)
+                Positioned(
+                  bottom: -4,
+                  right: -8,
+                  child: ExcludeSemantics(
+                    child: NotDownloadedTag(
+                      key: ValueKey('not-downloaded-${node.id}'),
+                      palette: p,
+                    ),
                   ),
                 ),
               if (node.assigned && !locked)
@@ -918,6 +934,28 @@ class LessonCountTag extends StatelessWidget {
           height: 1.1,
         ),
       ),
+    );
+  }
+}
+
+/// A cloud on an open leaf whose lesson isn't on the device, offline.
+class NotDownloadedTag extends StatelessWidget {
+  const NotDownloadedTag({super.key, required this.palette});
+
+  final VillagePalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = palette;
+    return Container(
+      width: 24,
+      height: 24,
+      decoration: BoxDecoration(
+        color: p.surface,
+        shape: BoxShape.circle,
+        border: Border.all(color: p.line),
+      ),
+      child: Icon(Icons.cloud_download_rounded, size: 14, color: p.inkMuted),
     );
   }
 }

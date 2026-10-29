@@ -7,7 +7,11 @@ import '../../data/local_db/database.dart';
 import '../../data/sync/content_freshness.dart';
 import '../../data/sync/content_sync.dart';
 import '../../data/sync/curriculum_sync.dart';
+import '../../data/sync/content_in_use.dart';
 import '../../data/sync/lesson_key.dart';
+import '../../data/local_db/node_progress_local.dart';
+import '../progress/progress_controller.dart';
+import 'offline_window.dart';
 import '../pairing/pairing_controller.dart';
 import '../settings/settings_controller.dart';
 import 'subject_language.dart';
@@ -26,6 +30,7 @@ class PathState {
     this.subject = defaultPathSubject,
     this.leaves = const [],
     this.lessonsByNodeId = const {},
+    this.allLessonsByNodeId = const {},
     this.loading = true,
     this.offline = false,
     this.error,
@@ -44,6 +49,18 @@ class PathState {
   /// rather than locked; nothing gates on order.
   final Map<String, List<Map<String, Object?>>> lessonsByNodeId;
 
+  /// Every published lesson per node, downloaded or not (ADR 0093): the
+  /// cached envelope where it's on the device, a stub marked
+  /// [isNotDownloaded] where it isn't. What the Carte draws, so a leaf
+  /// outside the offline window keeps its real state instead of "soon".
+  /// Empty until a manifest has been stored; the Carte then falls back to
+  /// [lessonsByNodeId].
+  final Map<String, List<Map<String, Object?>>> allLessonsByNodeId;
+
+  /// [allLessonsByNodeId], or the cache when no manifest is stored yet.
+  Map<String, List<Map<String, Object?>>> get carteLessons =>
+      allLessonsByNodeId.isEmpty ? lessonsByNodeId : allLessonsByNodeId;
+
   /// Each node's first lesson.
   Map<String, Map<String, Object?>> get exerciseByNodeId => {
     for (final MapEntry(:key, :value) in lessonsByNodeId.entries)
@@ -51,6 +68,8 @@ class PathState {
   };
 
   final bool loading;
+
+  /// The last sync of this subject couldn't reach the server.
   final bool offline;
   final String? error;
 
@@ -118,6 +137,13 @@ class PathController extends Notifier<PathState> {
         refresh();
       }
     });
+    // A finished lesson moves the frontier: the window follows in the
+    // background (ADR 0093). The Carte keeps showing what it has.
+    ref.listen(nodeProgressProvider, (previous, next) {
+      if (previous?.hasValue == true && next.hasValue && !state.loading) {
+        _load();
+      }
+    });
     return const PathState();
   }
 
@@ -134,6 +160,14 @@ class PathController extends Notifier<PathState> {
 
     final curriculumSync = ref.read(curriculumSyncProvider);
     final contentSync = ref.read(contentSyncProvider);
+
+    // The cache first, so neither the Carte nor play waits on the network
+    // (ADR 0093); the sync's result replaces it when it lands.
+    if (state.loading && state.leaves.isEmpty) {
+      final cached = await _fromCache(subject, kid.gradeLevel);
+      if (state.subject != subject || !state.loading) return;
+      if (cached.leaves.isNotEmpty) state = cached;
+    }
 
     final curriculumReport = await curriculumSync.sync(
       subject: subject,
@@ -163,17 +197,7 @@ class PathController extends Notifier<PathState> {
         ? await freshness.markSynced(subject, kid.gradeLevel)
         : await freshness.lastSynced(subject, kid.gradeLevel);
 
-    final leaves = await curriculumSync.cachedLeaves(
-      subject: subject,
-      grade: kid.gradeLevel,
-    );
-    final lessonsByNodeId = pickLessons(
-      await contentSync.cachedExercises(
-        subject: subject,
-        grade: kid.gradeLevel,
-      ),
-      locale: locale,
-    );
+    final fresh = await _fromCache(subject, kid.gradeLevel);
 
     // A slow sync for one subject must not land on top of another the kid
     // has switched to in the meantime.
@@ -181,15 +205,122 @@ class PathController extends Notifier<PathState> {
 
     state = PathState(
       subject: subject,
-      leaves: leaves,
-      lessonsByNodeId: lessonsByNodeId,
+      leaves: fresh.leaves,
+      lessonsByNodeId: fresh.lessonsByNodeId,
+      allLessonsByNodeId: fresh.allLessonsByNodeId,
       loading: false,
-      offline: curriculumReport.offline,
+      offline: curriculumReport.offline || contentReport.offline,
       error: curriculumReport.error,
       contentLocale: locale,
       syncFailed: !synced,
       syncedAt: syncedAt,
     );
+    _prefetchOthers(subject);
+  }
+
+  /// This subject as the device has it, with no network.
+  Future<PathState> _fromCache(String subject, int grade) async {
+    final contentSync = ref.read(contentSyncProvider);
+    final locale = contentLocaleFor(
+      subject,
+      _localeOf(ref.read(settingsControllerProvider).english),
+    );
+    final cached = await contentSync.cachedExercises(
+      subject: subject,
+      grade: grade,
+    );
+    final cachedIds = {for (final e in cached) e['exercise_id']};
+    final manifest = await contentSync.storedManifest(
+      subject: subject,
+      grade: grade,
+      askedLocale: locale,
+    );
+    return PathState(
+      subject: subject,
+      leaves: await ref
+          .read(curriculumSyncProvider)
+          .cachedLeaves(subject: subject, grade: grade),
+      lessonsByNodeId: pickLessons(cached, locale: locale),
+      allLessonsByNodeId: manifest.isEmpty
+          ? const {}
+          : pickLessons([
+              ...cached,
+              for (final e in manifest)
+                if (!cachedIds.contains(e.exerciseId)) e.stub,
+            ], locale: locale),
+      loading: false,
+      contentLocale: locale,
+      syncedAt: state.syncedAt,
+      offline: state.offline,
+      syncFailed: state.syncFailed,
+    );
+  }
+
+  /// Downloads a leaf outside the offline window, then shows it as
+  /// playable (ADR 0093). Offline, says so rather than failing.
+  Future<NodeDownload> download(String skillNodeId) async {
+    final kid = ref.read(sessionControllerProvider).kid;
+    if (kid == null) return NodeDownload.failed;
+    final subject = state.subject;
+    final result = await ref
+        .read(contentSyncProvider)
+        .downloadNode(
+          skillNodeId: skillNodeId,
+          grade: kid.gradeLevel,
+          askedLocale: state.contentLocale,
+        );
+    if (result == NodeDownload.done && state.subject == subject) {
+      final fresh = await _fromCache(subject, kid.gradeLevel);
+      if (state.subject != subject) return result;
+      state = PathState(
+        subject: subject,
+        leaves: state.leaves,
+        lessonsByNodeId: fresh.lessonsByNodeId,
+        allLessonsByNodeId: fresh.allLessonsByNodeId,
+        loading: false,
+        offline: false,
+        error: state.error,
+        contentLocale: state.contentLocale,
+        syncFailed: state.syncFailed,
+        syncedAt: state.syncedAt,
+      );
+    }
+    return result;
+  }
+
+  /// Kids whose other subjects were already prefetched this run.
+  final _prefetched = <String>{};
+
+  /// Once per kid per run, after the first successful load: every other
+  /// subject's window, one at a time, in the background, so the whole
+  /// village plays offline (ADR 0093). Never awaited by anything.
+  void _prefetchOthers(String loaded) {
+    final kid = ref.read(sessionControllerProvider).kid;
+    if (kid == null ||
+        state.offline ||
+        !ref.read(offlinePrefetchProvider) ||
+        !_prefetched.add(kid.id)) {
+      return;
+    }
+    final english = ref.read(settingsControllerProvider).english;
+    final curriculumSync = ref.read(curriculumSyncProvider);
+    final contentSync = ref.read(contentSyncProvider);
+    Future(() async {
+      for (final subject in pathSubjects) {
+        if (subject == loaded) continue;
+        if (ref.read(sessionControllerProvider).kid?.id != kid.id) return;
+        final curriculum = await curriculumSync.sync(
+          subject: subject,
+          grade: kid.gradeLevel,
+        );
+        if (curriculum.offline) return;
+        final content = await contentSync.sync(
+          subject: subject,
+          locale: contentLocaleFor(subject, _localeOf(english)),
+        );
+        if (content.offline) return;
+      }
+    }).catchError((Object _) {});
   }
 
   DateTime? _lastLoad;
@@ -314,10 +445,33 @@ final contentApiProvider = Provider<ContentApi>(
   (ref) => ContentApi(dio: ref.watch(dioProvider)),
 );
 
+/// Whether a first successful Carte load prefetches every other subject's
+/// offline window in the background (ADR 0093). Off in tests that count
+/// sync calls.
+final offlinePrefetchProvider = Provider<bool>((ref) => true);
+
+/// Lessons on screen now: the offline window never evicts them.
+final contentInUseProvider = Provider<ContentInUse>((ref) => ContentInUse());
+
 final contentSyncProvider = Provider<ContentSync>((ref) {
+  final db = ref.watch(localDatabaseProvider);
   return ContentSync(
-    db: ref.watch(localDatabaseProvider),
+    db: db,
     api: ref.watch(contentApiProvider),
     accessToken: () => ref.read(sessionControllerProvider).accessToken,
+    inUse: ref.watch(contentInUseProvider),
+    planWindow: OfflineWindowPlanner(
+      db: db,
+      kids: () async => ref.read(sessionControllerProvider).kids,
+      activeKidId: () => ref.read(sessionControllerProvider).kid?.id,
+      // Only when progress is already loaded: reading it here must not
+      // start a network load of its own.
+      mastered: () => ref.exists(progressControllerProvider)
+          ? {
+              for (final m in ref.read(progressControllerProvider).masteries)
+                if (m.isMastered) m.skillNodeId,
+            }
+          : const {},
+    ).plan,
   );
 });
