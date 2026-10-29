@@ -19,8 +19,13 @@ class AnswerSlot extends StatelessWidget {
     this.semanticsState,
     this.imageRef,
     this.audioRef,
+    this.large = false,
     super.key,
   });
+
+  /// As [AnswerTile.large], so a slot matches the big tiles that fill it
+  /// (UX review G14).
+  final bool large;
 
   /// 1-based position; spoken (via [emptyLabel]), never drawn.
   final int index;
@@ -46,6 +51,7 @@ class AnswerSlot extends StatelessWidget {
     if (text != null) {
       return AnswerTile(
         label: text,
+        large: large,
         state: state,
         onTap: onTap,
         semanticsState: semanticsState,
@@ -63,7 +69,13 @@ class AnswerSlot extends StatelessWidget {
         key: const ValueKey('slot-dash'),
         painter: _DashedOutline(color: p.inkMuted),
         child: Container(
-          constraints: const BoxConstraints(minHeight: 52),
+          constraints: BoxConstraints(
+            minHeight: !large
+                ? 52
+                : MediaQuery.sizeOf(context).width < Breakpoints.compact
+                ? 72
+                : 88,
+          ),
           decoration: BoxDecoration(
             color: p.track.withValues(alpha: 0.35),
             borderRadius: Radii.cardMd,

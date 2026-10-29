@@ -360,6 +360,7 @@ class ComposeSlotsEngine
                       width: 120,
                       child: AnswerSlot(
                         key: ValueKey('compose-slot-$i'),
+                        large: true,
                         index: i + 1,
                         // A wrong tile's ghost shows until the next tap (G7).
                         label: (s.slots[i] ?? s.missed[i]) == null
