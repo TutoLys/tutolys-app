@@ -169,7 +169,10 @@ kid has nothing behind the frontier.
   leaves, so a fully authored grade at today's ~1.4 MB per leaf would be
   about 250 MB for math alone. The window stays near 47 MB.
 - **A leaf weighs 1–2 MB, not the interview's ~0.6 MB.** So 25 leaves is
-  31–53 MB per subject, not 15–18 MB. The bytes are almost all lesson
-  audio. To meet the interview's MB budget, either the audio gets
-  smaller (a backend encoding choice) or the window becomes "25 leaves
-  or N MB". The second needs sizes in the manifest (work order OW1).
+  31–53 MB per subject, not 15–18 MB. Measured on math: 58.4 MB of the
+  bytes are uncompressed `.wav` lesson audio, against 0.3 MB of lesson
+  JSON. Encoding the clips (AAC or Opus, as the app's own sounds already
+  are) would shrink a leaf about tenfold and bring the window under the
+  interview's budget, with no app change (work order OW4). The other
+  route is a window of "25 leaves or N MB", which needs sizes in the
+  manifest (OW1).
