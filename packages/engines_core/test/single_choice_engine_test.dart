@@ -416,7 +416,8 @@ void main() {
     );
 
     testWidgets(
-      'keyboard alone can answer: Tab to a tile, Space to pick, Enter to check',
+      'keyboard alone can answer: Tab to a tile, Enter to pick, Tab to '
+      'VALIDER, Enter to check (UX review G6)',
       (tester) async {
         final c = build();
         await tester.runAsync(c.start);
@@ -438,13 +439,31 @@ void main() {
             break;
           }
         }
-        await tester.sendKeyEvent(LogicalKeyboardKey.space);
+        // Enter on a focused tile picks it; it doesn't check (G6).
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
         await step(tester);
         expect(
           (c.current!.answer as SingleChoiceAnswer?)?.selectedOptionId,
           'b',
         );
+        expect(c.state.lastOutcome, isNull);
 
+        // Tab on to VALIDER, then Enter checks.
+        for (var i = 0; i < 12; i++) {
+          await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+          await tester.pump();
+          final focused = FocusManager.instance.primaryFocus?.context;
+          if (focused != null &&
+              find
+                  .descendant(
+                    of: find.byKey(const ValueKey('validate')),
+                    matching: find.byWidget(focused.widget),
+                  )
+                  .evaluate()
+                  .isNotEmpty) {
+            break;
+          }
+        }
         await tester.sendKeyEvent(LogicalKeyboardKey.enter);
         await step(tester);
         expect(c.state.lastOutcome, Outcome.correct);
