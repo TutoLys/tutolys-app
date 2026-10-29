@@ -139,9 +139,37 @@ what the interview decided. The work order
 
 ## Consequences
 
-- A grade-1 math device keeps about 28 leaves instead of every published
-  one. Measured sizes are in the commit that adds the measurement.
+- A device keeps at most about 28 leaves per subject per kid, however
+  much content gets published.
 - A kid who replays a leaf far behind the frontier needs the network the
   first time. That's the cost of a bounded cache, and the Carte says so.
 - The window is per kid, so a family tablet holds up to (kids × 28) leaves
   per subject when the siblings are far apart. That's still bounded.
+
+## Measured on the dev-stack (2026-10-29)
+
+A fresh grade-1 kid, paired through the QA helpers. Every lesson and
+asset was downloaded once to size it. The window rule is the same as the
+app's: 25 playable leaves from the frontier in `doc_order`, and a fresh
+kid has nothing behind the frontier.
+
+| subject | before: leaves / lessons | size | after: leaves / lessons | size |
+|---|---|---|---|---|
+| MATH | 41 / 75 | 58.7 MB | 25 / 59 | 46.8 MB |
+| FR | 16 / 22 | 15.2 MB | 16 / 22 | 15.2 MB |
+| EN | 43 / 86 | 81.3 MB | 25 / 53 | 53.1 MB |
+| SCI | 32 / 65 | 44.6 MB | 25 / 50 | 30.9 MB |
+| SOC | 29 / 63 | 40.2 MB | 25 / 56 | 36.2 MB |
+| CCQ | 8 / 16 | 10.9 MB | 8 / 16 | 10.9 MB |
+| **total** | | **250.9 MB** | | **193.1 MB** |
+
+- Français and CCQ have fewer than 25 published leaves today, so the
+  window holds all of them.
+- The saving grows with the catalogue. Grade-1 math has 178 taggable
+  leaves, so a fully authored grade at today's ~1.4 MB per leaf would be
+  about 250 MB for math alone. The window stays near 47 MB.
+- **A leaf weighs 1–2 MB, not the interview's ~0.6 MB.** So 25 leaves is
+  31–53 MB per subject, not 15–18 MB. The bytes are almost all lesson
+  audio. To meet the interview's MB budget, either the audio gets
+  smaller (a backend encoding choice) or the window becomes "25 leaves
+  or N MB". The second needs sizes in the manifest (work order OW1).
