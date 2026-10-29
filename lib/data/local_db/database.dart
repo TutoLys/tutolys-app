@@ -147,6 +147,38 @@ class AssetCacheTable extends Table {
   Set<Column> get primaryKey => {sha256};
 }
 
+/// The last content manifest per `(subject, grade, asked locale)`: what is
+/// published, whether or not it is on the device (ADR 0093).
+///
+/// The offline window downloads only ~25 leaves per subject, so "has a
+/// cached lesson" no longer means "has a lesson". This lets the Carte tell
+/// "not downloaded" from "no lesson yet", lets the window find the frontier
+/// over lessons that aren't here, and lets one node be fetched on demand.
+/// Replaced wholesale for its `(subject, grade, asked_locale)` on every
+/// manifest fetch. Shared across kids, like the caches it describes.
+@DataClassName('ManifestEntryRow')
+class ManifestEntryTable extends Table {
+  @override
+  String get tableName => 'manifest_entry';
+
+  /// The locale the manifest was asked for (`contentLocaleFor`), not the
+  /// entry's own: an English manifest lists French lessons that have no
+  /// translation, and a French sibling's manifest must not replace it.
+  TextColumn get askedLocale => text().named('asked_locale')();
+  TextColumn get exerciseId => text().named('exercise_id')();
+  TextColumn get skillNodeId => text().named('skill_node_id')();
+  TextColumn get subject => text()();
+  IntColumn get grade => integer()();
+  IntColumn get rank => integer()();
+  TextColumn get engineKey => text().named('engine_key')();
+  TextColumn get contentHash => text().named('content_hash')();
+  TextColumn get locale => text()();
+  TextColumn get lessonGroup => text().named('lesson_group').nullable()();
+
+  @override
+  Set<Column> get primaryKey => {askedLocale, exerciseId};
+}
+
 /// Cached curriculum leaves for the path screen (A7).
 ///
 /// Flat, not a tree — no parent/child columns, matching the backend
@@ -333,6 +365,7 @@ const String deviceScope = '';
     ActivitySessionTable,
     AssetCacheTable,
     CreationTable,
+    ManifestEntryTable,
   ],
 )
 // Timestamp storage is configured in build.yaml
@@ -373,7 +406,7 @@ class LocalDatabase extends _$LocalDatabase {
   Future<String?> Function()? migrationKidIdLoader;
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -404,6 +437,7 @@ class LocalDatabase extends _$LocalDatabase {
       );
       await _createActivitySessionIndex();
       await _createCreationIndex();
+      await _createManifestIndex();
     },
     onUpgrade: (m, from, to) async {
       if (from < 2) {
@@ -441,6 +475,10 @@ class LocalDatabase extends _$LocalDatabase {
         await m.createTable(creationTable);
         await _createCreationIndex();
       }
+      if (from < 9 && to >= 9) {
+        await m.createTable(manifestEntryTable);
+        await _createManifestIndex();
+      }
     },
   );
 
@@ -449,6 +487,13 @@ class LocalDatabase extends _$LocalDatabase {
   Future<void> _createActivitySessionIndex() => customStatement(
     'CREATE INDEX IF NOT EXISTS activity_session_lookup '
     'ON activity_session (kid_id, exercise_id)',
+  );
+
+  /// "This subject's manifest at this grade, in this language" — every
+  /// window plan and every Carte load.
+  Future<void> _createManifestIndex() => customStatement(
+    'CREATE INDEX IF NOT EXISTS manifest_entry_lookup '
+    'ON manifest_entry (subject, grade, asked_locale)',
   );
 
   /// "This kid's creations, newest first" — every gallery read.

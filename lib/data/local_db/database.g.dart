@@ -4472,6 +4472,640 @@ class CreationTableCompanion extends UpdateCompanion<CreationRow> {
   }
 }
 
+class $ManifestEntryTableTable extends ManifestEntryTable
+    with TableInfo<$ManifestEntryTableTable, ManifestEntryRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ManifestEntryTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _askedLocaleMeta = const VerificationMeta(
+    'askedLocale',
+  );
+  @override
+  late final GeneratedColumn<String> askedLocale = GeneratedColumn<String>(
+    'asked_locale',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _exerciseIdMeta = const VerificationMeta(
+    'exerciseId',
+  );
+  @override
+  late final GeneratedColumn<String> exerciseId = GeneratedColumn<String>(
+    'exercise_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _skillNodeIdMeta = const VerificationMeta(
+    'skillNodeId',
+  );
+  @override
+  late final GeneratedColumn<String> skillNodeId = GeneratedColumn<String>(
+    'skill_node_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _subjectMeta = const VerificationMeta(
+    'subject',
+  );
+  @override
+  late final GeneratedColumn<String> subject = GeneratedColumn<String>(
+    'subject',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _gradeMeta = const VerificationMeta('grade');
+  @override
+  late final GeneratedColumn<int> grade = GeneratedColumn<int>(
+    'grade',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _rankMeta = const VerificationMeta('rank');
+  @override
+  late final GeneratedColumn<int> rank = GeneratedColumn<int>(
+    'rank',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _engineKeyMeta = const VerificationMeta(
+    'engineKey',
+  );
+  @override
+  late final GeneratedColumn<String> engineKey = GeneratedColumn<String>(
+    'engine_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentHashMeta = const VerificationMeta(
+    'contentHash',
+  );
+  @override
+  late final GeneratedColumn<String> contentHash = GeneratedColumn<String>(
+    'content_hash',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _localeMeta = const VerificationMeta('locale');
+  @override
+  late final GeneratedColumn<String> locale = GeneratedColumn<String>(
+    'locale',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lessonGroupMeta = const VerificationMeta(
+    'lessonGroup',
+  );
+  @override
+  late final GeneratedColumn<String> lessonGroup = GeneratedColumn<String>(
+    'lesson_group',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    askedLocale,
+    exerciseId,
+    skillNodeId,
+    subject,
+    grade,
+    rank,
+    engineKey,
+    contentHash,
+    locale,
+    lessonGroup,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'manifest_entry';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ManifestEntryRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('asked_locale')) {
+      context.handle(
+        _askedLocaleMeta,
+        askedLocale.isAcceptableOrUnknown(
+          data['asked_locale']!,
+          _askedLocaleMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_askedLocaleMeta);
+    }
+    if (data.containsKey('exercise_id')) {
+      context.handle(
+        _exerciseIdMeta,
+        exerciseId.isAcceptableOrUnknown(data['exercise_id']!, _exerciseIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_exerciseIdMeta);
+    }
+    if (data.containsKey('skill_node_id')) {
+      context.handle(
+        _skillNodeIdMeta,
+        skillNodeId.isAcceptableOrUnknown(
+          data['skill_node_id']!,
+          _skillNodeIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_skillNodeIdMeta);
+    }
+    if (data.containsKey('subject')) {
+      context.handle(
+        _subjectMeta,
+        subject.isAcceptableOrUnknown(data['subject']!, _subjectMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_subjectMeta);
+    }
+    if (data.containsKey('grade')) {
+      context.handle(
+        _gradeMeta,
+        grade.isAcceptableOrUnknown(data['grade']!, _gradeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_gradeMeta);
+    }
+    if (data.containsKey('rank')) {
+      context.handle(
+        _rankMeta,
+        rank.isAcceptableOrUnknown(data['rank']!, _rankMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_rankMeta);
+    }
+    if (data.containsKey('engine_key')) {
+      context.handle(
+        _engineKeyMeta,
+        engineKey.isAcceptableOrUnknown(data['engine_key']!, _engineKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_engineKeyMeta);
+    }
+    if (data.containsKey('content_hash')) {
+      context.handle(
+        _contentHashMeta,
+        contentHash.isAcceptableOrUnknown(
+          data['content_hash']!,
+          _contentHashMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentHashMeta);
+    }
+    if (data.containsKey('locale')) {
+      context.handle(
+        _localeMeta,
+        locale.isAcceptableOrUnknown(data['locale']!, _localeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_localeMeta);
+    }
+    if (data.containsKey('lesson_group')) {
+      context.handle(
+        _lessonGroupMeta,
+        lessonGroup.isAcceptableOrUnknown(
+          data['lesson_group']!,
+          _lessonGroupMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {askedLocale, exerciseId};
+  @override
+  ManifestEntryRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ManifestEntryRow(
+      askedLocale: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}asked_locale'],
+      )!,
+      exerciseId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}exercise_id'],
+      )!,
+      skillNodeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}skill_node_id'],
+      )!,
+      subject: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}subject'],
+      )!,
+      grade: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}grade'],
+      )!,
+      rank: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}rank'],
+      )!,
+      engineKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}engine_key'],
+      )!,
+      contentHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_hash'],
+      )!,
+      locale: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}locale'],
+      )!,
+      lessonGroup: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}lesson_group'],
+      ),
+    );
+  }
+
+  @override
+  $ManifestEntryTableTable createAlias(String alias) {
+    return $ManifestEntryTableTable(attachedDatabase, alias);
+  }
+}
+
+class ManifestEntryRow extends DataClass
+    implements Insertable<ManifestEntryRow> {
+  /// The locale the manifest was asked for (`contentLocaleFor`), not the
+  /// entry's own: an English manifest lists French lessons that have no
+  /// translation, and a French sibling's manifest must not replace it.
+  final String askedLocale;
+  final String exerciseId;
+  final String skillNodeId;
+  final String subject;
+  final int grade;
+  final int rank;
+  final String engineKey;
+  final String contentHash;
+  final String locale;
+  final String? lessonGroup;
+  const ManifestEntryRow({
+    required this.askedLocale,
+    required this.exerciseId,
+    required this.skillNodeId,
+    required this.subject,
+    required this.grade,
+    required this.rank,
+    required this.engineKey,
+    required this.contentHash,
+    required this.locale,
+    this.lessonGroup,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['asked_locale'] = Variable<String>(askedLocale);
+    map['exercise_id'] = Variable<String>(exerciseId);
+    map['skill_node_id'] = Variable<String>(skillNodeId);
+    map['subject'] = Variable<String>(subject);
+    map['grade'] = Variable<int>(grade);
+    map['rank'] = Variable<int>(rank);
+    map['engine_key'] = Variable<String>(engineKey);
+    map['content_hash'] = Variable<String>(contentHash);
+    map['locale'] = Variable<String>(locale);
+    if (!nullToAbsent || lessonGroup != null) {
+      map['lesson_group'] = Variable<String>(lessonGroup);
+    }
+    return map;
+  }
+
+  ManifestEntryTableCompanion toCompanion(bool nullToAbsent) {
+    return ManifestEntryTableCompanion(
+      askedLocale: Value(askedLocale),
+      exerciseId: Value(exerciseId),
+      skillNodeId: Value(skillNodeId),
+      subject: Value(subject),
+      grade: Value(grade),
+      rank: Value(rank),
+      engineKey: Value(engineKey),
+      contentHash: Value(contentHash),
+      locale: Value(locale),
+      lessonGroup: lessonGroup == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lessonGroup),
+    );
+  }
+
+  factory ManifestEntryRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ManifestEntryRow(
+      askedLocale: serializer.fromJson<String>(json['askedLocale']),
+      exerciseId: serializer.fromJson<String>(json['exerciseId']),
+      skillNodeId: serializer.fromJson<String>(json['skillNodeId']),
+      subject: serializer.fromJson<String>(json['subject']),
+      grade: serializer.fromJson<int>(json['grade']),
+      rank: serializer.fromJson<int>(json['rank']),
+      engineKey: serializer.fromJson<String>(json['engineKey']),
+      contentHash: serializer.fromJson<String>(json['contentHash']),
+      locale: serializer.fromJson<String>(json['locale']),
+      lessonGroup: serializer.fromJson<String?>(json['lessonGroup']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'askedLocale': serializer.toJson<String>(askedLocale),
+      'exerciseId': serializer.toJson<String>(exerciseId),
+      'skillNodeId': serializer.toJson<String>(skillNodeId),
+      'subject': serializer.toJson<String>(subject),
+      'grade': serializer.toJson<int>(grade),
+      'rank': serializer.toJson<int>(rank),
+      'engineKey': serializer.toJson<String>(engineKey),
+      'contentHash': serializer.toJson<String>(contentHash),
+      'locale': serializer.toJson<String>(locale),
+      'lessonGroup': serializer.toJson<String?>(lessonGroup),
+    };
+  }
+
+  ManifestEntryRow copyWith({
+    String? askedLocale,
+    String? exerciseId,
+    String? skillNodeId,
+    String? subject,
+    int? grade,
+    int? rank,
+    String? engineKey,
+    String? contentHash,
+    String? locale,
+    Value<String?> lessonGroup = const Value.absent(),
+  }) => ManifestEntryRow(
+    askedLocale: askedLocale ?? this.askedLocale,
+    exerciseId: exerciseId ?? this.exerciseId,
+    skillNodeId: skillNodeId ?? this.skillNodeId,
+    subject: subject ?? this.subject,
+    grade: grade ?? this.grade,
+    rank: rank ?? this.rank,
+    engineKey: engineKey ?? this.engineKey,
+    contentHash: contentHash ?? this.contentHash,
+    locale: locale ?? this.locale,
+    lessonGroup: lessonGroup.present ? lessonGroup.value : this.lessonGroup,
+  );
+  ManifestEntryRow copyWithCompanion(ManifestEntryTableCompanion data) {
+    return ManifestEntryRow(
+      askedLocale: data.askedLocale.present
+          ? data.askedLocale.value
+          : this.askedLocale,
+      exerciseId: data.exerciseId.present
+          ? data.exerciseId.value
+          : this.exerciseId,
+      skillNodeId: data.skillNodeId.present
+          ? data.skillNodeId.value
+          : this.skillNodeId,
+      subject: data.subject.present ? data.subject.value : this.subject,
+      grade: data.grade.present ? data.grade.value : this.grade,
+      rank: data.rank.present ? data.rank.value : this.rank,
+      engineKey: data.engineKey.present ? data.engineKey.value : this.engineKey,
+      contentHash: data.contentHash.present
+          ? data.contentHash.value
+          : this.contentHash,
+      locale: data.locale.present ? data.locale.value : this.locale,
+      lessonGroup: data.lessonGroup.present
+          ? data.lessonGroup.value
+          : this.lessonGroup,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ManifestEntryRow(')
+          ..write('askedLocale: $askedLocale, ')
+          ..write('exerciseId: $exerciseId, ')
+          ..write('skillNodeId: $skillNodeId, ')
+          ..write('subject: $subject, ')
+          ..write('grade: $grade, ')
+          ..write('rank: $rank, ')
+          ..write('engineKey: $engineKey, ')
+          ..write('contentHash: $contentHash, ')
+          ..write('locale: $locale, ')
+          ..write('lessonGroup: $lessonGroup')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    askedLocale,
+    exerciseId,
+    skillNodeId,
+    subject,
+    grade,
+    rank,
+    engineKey,
+    contentHash,
+    locale,
+    lessonGroup,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ManifestEntryRow &&
+          other.askedLocale == this.askedLocale &&
+          other.exerciseId == this.exerciseId &&
+          other.skillNodeId == this.skillNodeId &&
+          other.subject == this.subject &&
+          other.grade == this.grade &&
+          other.rank == this.rank &&
+          other.engineKey == this.engineKey &&
+          other.contentHash == this.contentHash &&
+          other.locale == this.locale &&
+          other.lessonGroup == this.lessonGroup);
+}
+
+class ManifestEntryTableCompanion extends UpdateCompanion<ManifestEntryRow> {
+  final Value<String> askedLocale;
+  final Value<String> exerciseId;
+  final Value<String> skillNodeId;
+  final Value<String> subject;
+  final Value<int> grade;
+  final Value<int> rank;
+  final Value<String> engineKey;
+  final Value<String> contentHash;
+  final Value<String> locale;
+  final Value<String?> lessonGroup;
+  final Value<int> rowid;
+  const ManifestEntryTableCompanion({
+    this.askedLocale = const Value.absent(),
+    this.exerciseId = const Value.absent(),
+    this.skillNodeId = const Value.absent(),
+    this.subject = const Value.absent(),
+    this.grade = const Value.absent(),
+    this.rank = const Value.absent(),
+    this.engineKey = const Value.absent(),
+    this.contentHash = const Value.absent(),
+    this.locale = const Value.absent(),
+    this.lessonGroup = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ManifestEntryTableCompanion.insert({
+    required String askedLocale,
+    required String exerciseId,
+    required String skillNodeId,
+    required String subject,
+    required int grade,
+    required int rank,
+    required String engineKey,
+    required String contentHash,
+    required String locale,
+    this.lessonGroup = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : askedLocale = Value(askedLocale),
+       exerciseId = Value(exerciseId),
+       skillNodeId = Value(skillNodeId),
+       subject = Value(subject),
+       grade = Value(grade),
+       rank = Value(rank),
+       engineKey = Value(engineKey),
+       contentHash = Value(contentHash),
+       locale = Value(locale);
+  static Insertable<ManifestEntryRow> custom({
+    Expression<String>? askedLocale,
+    Expression<String>? exerciseId,
+    Expression<String>? skillNodeId,
+    Expression<String>? subject,
+    Expression<int>? grade,
+    Expression<int>? rank,
+    Expression<String>? engineKey,
+    Expression<String>? contentHash,
+    Expression<String>? locale,
+    Expression<String>? lessonGroup,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (askedLocale != null) 'asked_locale': askedLocale,
+      if (exerciseId != null) 'exercise_id': exerciseId,
+      if (skillNodeId != null) 'skill_node_id': skillNodeId,
+      if (subject != null) 'subject': subject,
+      if (grade != null) 'grade': grade,
+      if (rank != null) 'rank': rank,
+      if (engineKey != null) 'engine_key': engineKey,
+      if (contentHash != null) 'content_hash': contentHash,
+      if (locale != null) 'locale': locale,
+      if (lessonGroup != null) 'lesson_group': lessonGroup,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ManifestEntryTableCompanion copyWith({
+    Value<String>? askedLocale,
+    Value<String>? exerciseId,
+    Value<String>? skillNodeId,
+    Value<String>? subject,
+    Value<int>? grade,
+    Value<int>? rank,
+    Value<String>? engineKey,
+    Value<String>? contentHash,
+    Value<String>? locale,
+    Value<String?>? lessonGroup,
+    Value<int>? rowid,
+  }) {
+    return ManifestEntryTableCompanion(
+      askedLocale: askedLocale ?? this.askedLocale,
+      exerciseId: exerciseId ?? this.exerciseId,
+      skillNodeId: skillNodeId ?? this.skillNodeId,
+      subject: subject ?? this.subject,
+      grade: grade ?? this.grade,
+      rank: rank ?? this.rank,
+      engineKey: engineKey ?? this.engineKey,
+      contentHash: contentHash ?? this.contentHash,
+      locale: locale ?? this.locale,
+      lessonGroup: lessonGroup ?? this.lessonGroup,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (askedLocale.present) {
+      map['asked_locale'] = Variable<String>(askedLocale.value);
+    }
+    if (exerciseId.present) {
+      map['exercise_id'] = Variable<String>(exerciseId.value);
+    }
+    if (skillNodeId.present) {
+      map['skill_node_id'] = Variable<String>(skillNodeId.value);
+    }
+    if (subject.present) {
+      map['subject'] = Variable<String>(subject.value);
+    }
+    if (grade.present) {
+      map['grade'] = Variable<int>(grade.value);
+    }
+    if (rank.present) {
+      map['rank'] = Variable<int>(rank.value);
+    }
+    if (engineKey.present) {
+      map['engine_key'] = Variable<String>(engineKey.value);
+    }
+    if (contentHash.present) {
+      map['content_hash'] = Variable<String>(contentHash.value);
+    }
+    if (locale.present) {
+      map['locale'] = Variable<String>(locale.value);
+    }
+    if (lessonGroup.present) {
+      map['lesson_group'] = Variable<String>(lessonGroup.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ManifestEntryTableCompanion(')
+          ..write('askedLocale: $askedLocale, ')
+          ..write('exerciseId: $exerciseId, ')
+          ..write('skillNodeId: $skillNodeId, ')
+          ..write('subject: $subject, ')
+          ..write('grade: $grade, ')
+          ..write('rank: $rank, ')
+          ..write('engineKey: $engineKey, ')
+          ..write('contentHash: $contentHash, ')
+          ..write('locale: $locale, ')
+          ..write('lessonGroup: $lessonGroup, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$LocalDatabase extends GeneratedDatabase {
   _$LocalDatabase(QueryExecutor e) : super(e);
   $LocalDatabaseManager get managers => $LocalDatabaseManager(this);
@@ -4496,6 +5130,8 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
     this,
   );
   late final $CreationTableTable creationTable = $CreationTableTable(this);
+  late final $ManifestEntryTableTable manifestEntryTable =
+      $ManifestEntryTableTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4511,6 +5147,7 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
     activitySessionTable,
     assetCacheTable,
     creationTable,
+    manifestEntryTable,
   ];
   @override
   DriftDatabaseOptions get options =>
@@ -6990,6 +7627,335 @@ typedef $$CreationTableTableProcessedTableManager =
       CreationRow,
       PrefetchHooks Function()
     >;
+typedef $$ManifestEntryTableTableCreateCompanionBuilder =
+    ManifestEntryTableCompanion Function({
+      required String askedLocale,
+      required String exerciseId,
+      required String skillNodeId,
+      required String subject,
+      required int grade,
+      required int rank,
+      required String engineKey,
+      required String contentHash,
+      required String locale,
+      Value<String?> lessonGroup,
+      Value<int> rowid,
+    });
+typedef $$ManifestEntryTableTableUpdateCompanionBuilder =
+    ManifestEntryTableCompanion Function({
+      Value<String> askedLocale,
+      Value<String> exerciseId,
+      Value<String> skillNodeId,
+      Value<String> subject,
+      Value<int> grade,
+      Value<int> rank,
+      Value<String> engineKey,
+      Value<String> contentHash,
+      Value<String> locale,
+      Value<String?> lessonGroup,
+      Value<int> rowid,
+    });
+
+class $$ManifestEntryTableTableFilterComposer
+    extends Composer<_$LocalDatabase, $ManifestEntryTableTable> {
+  $$ManifestEntryTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get askedLocale => $composableBuilder(
+    column: $table.askedLocale,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get exerciseId => $composableBuilder(
+    column: $table.exerciseId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get skillNodeId => $composableBuilder(
+    column: $table.skillNodeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get subject => $composableBuilder(
+    column: $table.subject,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get grade => $composableBuilder(
+    column: $table.grade,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get rank => $composableBuilder(
+    column: $table.rank,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get engineKey => $composableBuilder(
+    column: $table.engineKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contentHash => $composableBuilder(
+    column: $table.contentHash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get locale => $composableBuilder(
+    column: $table.locale,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lessonGroup => $composableBuilder(
+    column: $table.lessonGroup,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ManifestEntryTableTableOrderingComposer
+    extends Composer<_$LocalDatabase, $ManifestEntryTableTable> {
+  $$ManifestEntryTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get askedLocale => $composableBuilder(
+    column: $table.askedLocale,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get exerciseId => $composableBuilder(
+    column: $table.exerciseId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get skillNodeId => $composableBuilder(
+    column: $table.skillNodeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get subject => $composableBuilder(
+    column: $table.subject,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get grade => $composableBuilder(
+    column: $table.grade,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get rank => $composableBuilder(
+    column: $table.rank,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get engineKey => $composableBuilder(
+    column: $table.engineKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contentHash => $composableBuilder(
+    column: $table.contentHash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get locale => $composableBuilder(
+    column: $table.locale,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lessonGroup => $composableBuilder(
+    column: $table.lessonGroup,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ManifestEntryTableTableAnnotationComposer
+    extends Composer<_$LocalDatabase, $ManifestEntryTableTable> {
+  $$ManifestEntryTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get askedLocale => $composableBuilder(
+    column: $table.askedLocale,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get exerciseId => $composableBuilder(
+    column: $table.exerciseId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get skillNodeId => $composableBuilder(
+    column: $table.skillNodeId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get subject =>
+      $composableBuilder(column: $table.subject, builder: (column) => column);
+
+  GeneratedColumn<int> get grade =>
+      $composableBuilder(column: $table.grade, builder: (column) => column);
+
+  GeneratedColumn<int> get rank =>
+      $composableBuilder(column: $table.rank, builder: (column) => column);
+
+  GeneratedColumn<String> get engineKey =>
+      $composableBuilder(column: $table.engineKey, builder: (column) => column);
+
+  GeneratedColumn<String> get contentHash => $composableBuilder(
+    column: $table.contentHash,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get locale =>
+      $composableBuilder(column: $table.locale, builder: (column) => column);
+
+  GeneratedColumn<String> get lessonGroup => $composableBuilder(
+    column: $table.lessonGroup,
+    builder: (column) => column,
+  );
+}
+
+class $$ManifestEntryTableTableTableManager
+    extends
+        RootTableManager<
+          _$LocalDatabase,
+          $ManifestEntryTableTable,
+          ManifestEntryRow,
+          $$ManifestEntryTableTableFilterComposer,
+          $$ManifestEntryTableTableOrderingComposer,
+          $$ManifestEntryTableTableAnnotationComposer,
+          $$ManifestEntryTableTableCreateCompanionBuilder,
+          $$ManifestEntryTableTableUpdateCompanionBuilder,
+          (
+            ManifestEntryRow,
+            BaseReferences<
+              _$LocalDatabase,
+              $ManifestEntryTableTable,
+              ManifestEntryRow
+            >,
+          ),
+          ManifestEntryRow,
+          PrefetchHooks Function()
+        > {
+  $$ManifestEntryTableTableTableManager(
+    _$LocalDatabase db,
+    $ManifestEntryTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ManifestEntryTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ManifestEntryTableTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ManifestEntryTableTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> askedLocale = const Value.absent(),
+                Value<String> exerciseId = const Value.absent(),
+                Value<String> skillNodeId = const Value.absent(),
+                Value<String> subject = const Value.absent(),
+                Value<int> grade = const Value.absent(),
+                Value<int> rank = const Value.absent(),
+                Value<String> engineKey = const Value.absent(),
+                Value<String> contentHash = const Value.absent(),
+                Value<String> locale = const Value.absent(),
+                Value<String?> lessonGroup = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ManifestEntryTableCompanion(
+                askedLocale: askedLocale,
+                exerciseId: exerciseId,
+                skillNodeId: skillNodeId,
+                subject: subject,
+                grade: grade,
+                rank: rank,
+                engineKey: engineKey,
+                contentHash: contentHash,
+                locale: locale,
+                lessonGroup: lessonGroup,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String askedLocale,
+                required String exerciseId,
+                required String skillNodeId,
+                required String subject,
+                required int grade,
+                required int rank,
+                required String engineKey,
+                required String contentHash,
+                required String locale,
+                Value<String?> lessonGroup = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ManifestEntryTableCompanion.insert(
+                askedLocale: askedLocale,
+                exerciseId: exerciseId,
+                skillNodeId: skillNodeId,
+                subject: subject,
+                grade: grade,
+                rank: rank,
+                engineKey: engineKey,
+                contentHash: contentHash,
+                locale: locale,
+                lessonGroup: lessonGroup,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ManifestEntryTableTable, ManifestEntryRow>(
+                    table,
+                  ),
+                  BaseReferences<
+                    _$LocalDatabase,
+                    $ManifestEntryTableTable,
+                    ManifestEntryRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ManifestEntryTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$LocalDatabase,
+      $ManifestEntryTableTable,
+      ManifestEntryRow,
+      $$ManifestEntryTableTableFilterComposer,
+      $$ManifestEntryTableTableOrderingComposer,
+      $$ManifestEntryTableTableAnnotationComposer,
+      $$ManifestEntryTableTableCreateCompanionBuilder,
+      $$ManifestEntryTableTableUpdateCompanionBuilder,
+      (
+        ManifestEntryRow,
+        BaseReferences<
+          _$LocalDatabase,
+          $ManifestEntryTableTable,
+          ManifestEntryRow
+        >,
+      ),
+      ManifestEntryRow,
+      PrefetchHooks Function()
+    >;
 
 class $LocalDatabaseManager {
   final _$LocalDatabase _db;
@@ -7014,4 +7980,6 @@ class $LocalDatabaseManager {
       $$AssetCacheTableTableTableManager(_db, _db.assetCacheTable);
   $$CreationTableTableTableManager get creationTable =>
       $$CreationTableTableTableManager(_db, _db.creationTable);
+  $$ManifestEntryTableTableTableManager get manifestEntryTable =>
+      $$ManifestEntryTableTableTableManager(_db, _db.manifestEntryTable);
 }
