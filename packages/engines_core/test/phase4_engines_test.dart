@@ -672,6 +672,91 @@ void main() {
     });
   });
 
+  group('G7 + G9 wrong ones stay marked; the board is the retry', () {
+    AnswerTileState tileState(WidgetTester tester, String key) =>
+        tester.widget<AnswerTile>(find.byKey(ValueKey(key))).state;
+
+    testWidgets('pair_match: the wrong pair shows amber, a tap fixes it', (
+      tester,
+    ) async {
+      final (c, _) = controllerFor('pair_match', pairConfig);
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(app(c));
+      for (final (l, r) in [('cinq', 'd5'), ('neuf', 'd9'), ('dix', 'd6')]) {
+        await tester.tap(find.byKey(ValueKey('pair-left-$l')));
+        await settle(tester);
+        await tester.tap(find.byKey(ValueKey('pair-right-$r')));
+        await settle(tester);
+      }
+      await tester.tap(find.text('VALIDER'));
+      await settle(tester);
+      expect(find.text('Presque !'), findsOneWidget);
+      // G7: under the banner, the two halves of the wrong pair are amber.
+      expect(tileState(tester, 'pair-left-dix'), AnswerTileState.retry);
+      expect(tileState(tester, 'pair-right-d6'), AnswerTileState.retry);
+      expect(tileState(tester, 'pair-left-cinq'), AnswerTileState.correct);
+
+      // G9: tap the board, no RÉESSAYER: the banner goes, the tap counts.
+      await tester.tap(find.byKey(const ValueKey('pair-left-dix')));
+      await settle(tester);
+      expect(find.text('Presque !'), findsNothing);
+      expect(tileState(tester, 'pair-left-dix'), AnswerTileState.picked);
+      expect(tileState(tester, 'pair-right-d6'), AnswerTileState.idle);
+      await tester.tap(find.byKey(const ValueKey('pair-right-d10')));
+      await settle(tester);
+      await tester.tap(find.text('VALIDER'));
+      await settle(tester);
+      expect(find.text('Bravo !'), findsOneWidget);
+      c.dispose();
+    });
+
+    testWidgets('compose_build: the wrong tile ghosts amber in its slot', (
+      tester,
+    ) async {
+      final (c, _) = controllerFor('compose_build', composeConfig);
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(app(c));
+      for (final id in ['b2', 'b1']) {
+        await tester.tap(find.byKey(ValueKey('compose-tile-$id')));
+        await settle(tester);
+      }
+      await tester.tap(find.text('VALIDER'));
+      await settle(tester);
+      expect(find.text('Presque !'), findsOneWidget);
+      final slot1 = tester.widget<AnswerSlot>(
+        find.byKey(const ValueKey('compose-slot-1')),
+      );
+      expect((slot1.label, slot1.state), ('1', AnswerTileState.retry));
+
+      await tester.tap(find.byKey(const ValueKey('compose-tile-b5')));
+      await settle(tester);
+      expect(find.text('Presque !'), findsNothing);
+      final after = tester.widget<AnswerSlot>(
+        find.byKey(const ValueKey('compose-slot-1')),
+      );
+      expect((after.label, after.state), ('5', AnswerTileState.picked));
+      c.dispose();
+    });
+
+    testWidgets('speed_tap keeps RÉESSAYER: its clock must not run under it', (
+      tester,
+    ) async {
+      final (c, _) = controllerFor('speed_tap', {
+        ...speedConfig,
+        'shuffle': false,
+      });
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(app(c));
+      await tester.tap(find.byKey(const ValueKey('speed-option-a')));
+      await settle(tester);
+      expect(find.text('Presque !'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('speed-option-b')));
+      await settle(tester);
+      expect(find.text('Presque !'), findsOneWidget);
+      c.dispose();
+    });
+  });
+
   group('G3 how to play, without reading', () {
     final hand = find.byKey(const ValueKey('idle-hand'));
 

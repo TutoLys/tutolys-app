@@ -243,9 +243,14 @@ class _LearningActivityViewState extends State<LearningActivityView> {
       }
     }
 
-    final interactive = c.isInteractive;
+        final interactive = c.isInteractive;
     final hint = q?.hintText;
     final explicit = q?.engine.descriptor.submitMode == SubmitMode.explicit;
+    // While « Presque » shows, the board stays live: a tap on it is the
+    // retry, so the child needn't press RÉESSAYER first (UX review G9).
+    // Not for an engine that answers on tap (speed_tap): its clock would
+    // run under the banner.
+    final retrying = explicit && feedback?.kind == ShellFeedbackKind.retry;
 
     return ActivityShell(
       locale: widget.locale,
@@ -302,9 +307,14 @@ class _LearningActivityViewState extends State<LearningActivityView> {
                 context,
                 content: q.content,
                 state: q.state,
-                dispatch: (a) => unawaited(c.dispatch(a)),
+                dispatch: (a) {
+                  // The controller runs these in order: back to the
+                  // question, then the move.
+                  if (retrying) unawaited(c.proceed());
+                  unawaited(c.dispatch(a));
+                },
                 locale: widget.locale,
-                enabled: interactive,
+                enabled: interactive || retrying,
               ),
             ),
     );

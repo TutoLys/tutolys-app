@@ -52,6 +52,7 @@ class ComposeState {
     required this.tray,
     required this.slots,
     this.locked = const {},
+    this.missed = const {},
   });
 
   /// Tile ids in display order. A placed tile stays in the list (so the
@@ -64,15 +65,24 @@ class ComposeState {
   /// Slot indexes checked right — fixed for the rest of the question.
   final Set<int> locked;
 
+  /// The tiles the last check found wrong, by slot. Their slots are empty
+  /// again, but show the tile in amber until the child's next tap, so the
+  /// child sees which ones to change (UX review G7).
+  final Map<int, String> missed;
+
   bool get full => slots.every((s) => s != null);
   bool isPlaced(String tileId) => slots.contains(tileId);
 
-  ComposeState copyWith({List<String?>? slots, Set<int>? locked}) =>
-      ComposeState(
-        tray: tray,
-        slots: slots ?? this.slots,
-        locked: locked ?? this.locked,
-      );
+  ComposeState copyWith({
+    List<String?>? slots,
+    Set<int>? locked,
+    Map<int, String>? missed,
+  }) => ComposeState(
+    tray: tray,
+    slots: slots ?? this.slots,
+    locked: locked ?? this.locked,
+    missed: missed ?? this.missed,
+  );
 }
 
 sealed class ComposeAction {
@@ -235,6 +245,8 @@ class ComposeSlotsEngine
 
   @override
   Transition<ComposeState> reduce(ComposeState s, ComposeAction action) {
+    // Any tap starts the fix, so the last check's marks go.
+    if (s.missed.isNotEmpty) s = s.copyWith(missed: const {});
     switch (action) {
       case PlaceTile(:final tileId):
         final free = s.slots.indexOf(null);
@@ -278,6 +290,10 @@ class ComposeSlotsEngine
         for (var i = 0; i < s.slots.length; i++)
           locked.contains(i) ? s.slots[i] : null,
       ],
+      missed: {
+        for (var i = 0; i < s.slots.length; i++)
+          if (!locked.contains(i) && s.slots[i] != null) i: s.slots[i]!,
+      },
     );
   }
 
@@ -345,20 +361,27 @@ class ComposeSlotsEngine
                       child: AnswerSlot(
                         key: ValueKey('compose-slot-$i'),
                         index: i + 1,
-                        label: s.slots[i] == null
+                        // A wrong tile's ghost shows until the next tap (G7).
+                        label: (s.slots[i] ?? s.missed[i]) == null
                             ? null
-                            : view.content.tile(s.slots[i]!).label,
+                            : view.content
+                                  .tile((s.slots[i] ?? s.missed[i])!)
+                                  .label,
                         audioRef: s.slots[i] == null
                             ? null
                             : view.content.tile(s.slots[i]!).audioRef,
                         state: s.locked.contains(i)
                             ? AnswerTileState.correct
+                            : s.slots[i] == null && s.missed.containsKey(i)
+                            ? AnswerTileState.retry
                             : AnswerTileState.picked,
                         emptyLabel: fr
                             ? 'case ${i + 1}, vide'
                             : 'slot ${i + 1}, empty',
                         semanticsState: s.locked.contains(i)
                             ? (fr ? 'bien placé' : 'right')
+                            : s.slots[i] == null && s.missed.containsKey(i)
+                            ? (fr ? 'à changer' : 'to change')
                             : (fr ? 'touche pour retirer' : 'tap to remove'),
                         onTap: view.enabled && !s.locked.contains(i)
                             ? () => view.dispatch(ClearSlot(i))

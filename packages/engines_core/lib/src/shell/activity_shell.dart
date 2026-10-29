@@ -14,6 +14,10 @@ enum ShellFeedbackKind { correct, retry, neutral }
 /// reached only 2.2–2.8:1 (UX review G1).
 const onAccentInk = Color(0xFF241A04);
 
+/// The feedback banner's height with a two-line message, kept free under
+/// the board while it shows.
+const bannerRoom = 112.0;
+
 /// The banner after VALIDER.
 class ShellFeedback {
   const ShellFeedback({
@@ -238,9 +242,14 @@ class ActivityShell extends StatelessWidget {
                     children: [
                       Positioned.fill(
                         child: Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: compact ? Space.md : Space.xxl,
-                            vertical: compact ? Space.lg : 36,
+                          // Room under the board for the banner, so it
+                          // never hides a tile (UX review G9).
+                          padding: EdgeInsets.fromLTRB(
+                            compact ? Space.md : Space.xxl,
+                            compact ? Space.lg : 36,
+                            compact ? Space.md : Space.xxl,
+                            (compact ? Space.lg : 36) +
+                                (feedback != null ? bannerRoom : 0),
                           ),
                           child: scrollBody
                               ? SingleChildScrollView(

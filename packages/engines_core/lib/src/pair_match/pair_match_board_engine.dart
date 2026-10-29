@@ -44,6 +44,7 @@ class PairMatchState {
     this.selectedRight,
     this.links = const {},
     this.locked = const {},
+    this.missed = const {},
   });
 
   final List<String> leftOrder;
@@ -64,6 +65,11 @@ class PairMatchState {
   /// question.
   final Set<String> locked;
 
+  /// The pairs the last check found wrong, left id → right id. They have
+  /// come apart, but stay marked amber until the child's next tap, so the
+  /// child can see which ones to fix (UX review G7).
+  final Map<String, String> missed;
+
   bool get complete => links.length == leftOrder.length;
 
   PairMatchState copyWith({
@@ -72,6 +78,7 @@ class PairMatchState {
     bool clearSelected = false,
     Map<String, String>? links,
     Set<String>? locked,
+    Map<String, String>? missed,
   }) => PairMatchState(
     leftOrder: leftOrder,
     rightOrder: rightOrder,
@@ -79,6 +86,7 @@ class PairMatchState {
     selectedRight: clearSelected ? null : (selectedRight ?? this.selectedRight),
     links: links ?? this.links,
     locked: locked ?? this.locked,
+    missed: missed ?? this.missed,
   );
 }
 
@@ -210,6 +218,8 @@ class PairMatchBoardEngine
 
   @override
   Transition<PairMatchState> reduce(PairMatchState s, PairMatchAction action) {
+    // Any tap starts the fix, so the last check's marks go.
+    if (s.missed.isNotEmpty) s = s.copyWith(missed: const {});
     switch (action) {
       case TapLeft(:final leftId):
         if (!s.leftOrder.contains(leftId) || s.locked.contains(leftId)) {
@@ -307,6 +317,10 @@ class PairMatchBoardEngine
         for (final e in s.links.entries)
           if (locked.contains(e.key)) e.key: e.value,
       },
+      missed: {
+        for (final e in s.links.entries)
+          if (!locked.contains(e.key)) e.key: e.value,
+      },
     );
   }
 
@@ -385,11 +399,15 @@ class PairMatchBoardEngine
         ? s.rightOrder.first
         : null;
 
-    AnswerTileState stateOf(bool locked, bool picked) => locked
+    AnswerTileState stateOf(bool locked, bool picked, {bool missed = false}) =>
+        locked
         ? AnswerTileState.correct
         : picked
         ? AnswerTileState.picked
+        : missed
+        ? AnswerTileState.retry
         : AnswerTileState.idle;
+    final toFix = fr ? 'à corriger' : 'to fix';
 
     Widget column(List<Widget> tiles) => Expanded(
       child: Column(
@@ -419,6 +437,7 @@ class PairMatchBoardEngine
                       state: stateOf(
                         s.locked.contains(l),
                         s.selectedLeft == l || s.links.containsKey(l),
+                        missed: s.missed.containsKey(l),
                       ),
                       badge: s.locked.contains(l) ? null : badgeOf[l],
                       semanticsState: s.locked.contains(l)
@@ -427,6 +446,8 @@ class PairMatchBoardEngine
                           ? (fr
                                 ? 'choisi, choisis son partenaire'
                                 : 'chosen, now pick its partner')
+                          : s.missed.containsKey(l)
+                          ? toFix
                           : null,
                       onTap: view.enabled && !s.locked.contains(l)
                           ? () => view.dispatch(TapLeft(l))
@@ -451,6 +472,7 @@ class PairMatchBoardEngine
                           state: stateOf(
                             lockedRight,
                             badge != null || s.selectedRight == r,
+                            missed: s.missed.containsValue(r),
                           ),
                           badge: lockedRight ? null : badge,
                           semanticsState: lockedRight
@@ -459,6 +481,8 @@ class PairMatchBoardEngine
                               ? (fr
                                     ? 'choisi, choisis son partenaire'
                                     : 'chosen, now pick its partner')
+                              : s.missed.containsValue(r)
+                              ? toFix
                               : null,
                           // Live from the start: a right tile can be picked
                           // first (G4).
