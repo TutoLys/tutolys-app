@@ -225,7 +225,7 @@ class ContentApi {
   Future<AudioResult> fetchAsset(String url) => fetchAudio(url);
 
   /// `url` is one exercise's `assets[].url` — server-relative (e.g.
-  /// `/media/exercise_audio/<id>/<ref>.wav`), resolved against [dio]'s own
+  /// `/media/exercise_audio/<sha256>.m4a`, older clips `.wav`), resolved against [dio]'s own
   /// `baseUrl` exactly like every other call here. No auth header: the
   /// backend serves this publicly (ADR 0021 in tutolys-backend), the same
   /// way a CDN-served asset would be.
