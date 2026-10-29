@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:design_system/design_system.dart';
 import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
@@ -469,7 +471,7 @@ class _HintPanel extends StatelessWidget {
   );
 }
 
-class _BottomBar extends StatelessWidget {
+class _BottomBar extends StatefulWidget {
   const _BottomBar({
     required this.palette,
     required this.strings,
@@ -492,89 +494,184 @@ class _BottomBar extends StatelessWidget {
   final VoidCallback? onValidate;
 
   @override
+  State<_BottomBar> createState() => _BottomBarState();
+}
+
+/// VALIDER before there's an answer still answers a tap: it says what's
+/// missing for a few seconds, instead of doing nothing (UX review G2).
+class _BottomBarState extends State<_BottomBar> {
+  Timer? _nudge;
+
+  @override
+  void didUpdateWidget(_BottomBar old) {
+    super.didUpdateWidget(old);
+    if (widget.onValidate != null) _clearNudge();
+  }
+
+  void _clearNudge() {
+    _nudge?.cancel();
+    _nudge = null;
+  }
+
+  void _showNudge() {
+    _nudge?.cancel();
+    setState(() {
+      _nudge = Timer(const Duration(seconds: 3), () {
+        if (mounted) setState(_clearNudge);
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _nudge?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final p = palette;
+    final p = widget.palette;
+    final strings = widget.strings;
+    final gutter = widget.gutter;
+    final compact = widget.compact;
+    final onHint = widget.onHint;
+    final showValidate = widget.showValidate;
+    final onValidate = widget.onValidate;
     final active = onValidate != null;
+    final nudging = _nudge != null && !active;
     return Container(
       padding: EdgeInsets.symmetric(horizontal: gutter, vertical: Space.md),
       decoration: BoxDecoration(
         border: Border(top: BorderSide(color: p.line)),
       ),
-      child: Row(
-        // INDICE left, VALIDER right (the design's `.exo-bottombar`),
-        // each allowed to shrink on a narrow screen.
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          if (onHint != null)
-            Flexible(
-              child: OutlinedButton.icon(
-                onPressed: onHint,
-                icon: const Icon(Icons.lightbulb_outline_rounded, size: 15),
-                label: Text(
-                  strings.hint.toUpperCase(),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: p.inkMuted,
-                  side: BorderSide(color: p.line, width: 2),
-                  shape: const StadiumBorder(),
-                  padding: EdgeInsets.symmetric(
-                    horizontal: compact ? 12 : 18,
-                    vertical: 11,
-                  ),
-                ),
-              ),
-            )
-          else
-            // Holds the left slot so a lone VALIDER still sits on the right.
-            const SizedBox.shrink(),
-          if (showValidate)
-            Flexible(
+          if (nudging)
+            Padding(
+              padding: const EdgeInsets.only(bottom: Space.sm),
               child: Semantics(
-                button: true,
-                enabled: active,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: Radii.cardMd,
-                    gradient: active
-                        ? LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [p.goldLight, p.gold],
-                          )
-                        : null,
-                    color: active ? null : p.track,
+                liveRegion: true,
+                child: Container(
+                  key: const ValueKey('validate-nudge'),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: Space.md,
+                    vertical: Space.sm,
                   ),
-                  child: TextButton(
-                    onPressed: onValidate,
-                    style: TextButton.styleFrom(
-                      foregroundColor: onAccentInk,
-                      disabledForegroundColor: p.inkMuted,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: compact ? 22 : 38,
-                        vertical: 14,
+                  decoration: BoxDecoration(
+                    color: p.goldPale,
+                    borderRadius: Radii.cardMd,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.touch_app_rounded, color: p.ink, size: 22),
+                      const SizedBox(width: Space.xs),
+                      Flexible(
+                        child: Text(
+                          strings.answerFirst,
+                          style: TextStyle(
+                            fontFamily: VillageType.display,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                            color: p.ink,
+                          ),
+                        ),
                       ),
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: Radii.cardMd,
-                      ),
-                    ),
-                    child: Text(
-                      strings.validate.toUpperCase(),
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontFamily: VillageType.display,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: .4,
-                      ),
-                    ),
+                    ],
                   ),
                 ),
               ),
             ),
+          _row(p, strings, compact, onHint, showValidate, onValidate, active),
         ],
       ),
     );
   }
+
+  Widget _row(
+    VillagePalette p,
+    ShellStrings strings,
+    bool compact,
+    VoidCallback? onHint,
+    bool showValidate,
+    VoidCallback? onValidate,
+    bool active,
+  ) => Row(
+    // INDICE left, VALIDER right (the design's `.exo-bottombar`),
+    // each allowed to shrink on a narrow screen.
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      if (onHint != null)
+        Flexible(
+          child: OutlinedButton.icon(
+            onPressed: onHint,
+            icon: const Icon(Icons.lightbulb_outline_rounded, size: 15),
+            label: Text(
+              strings.hint.toUpperCase(),
+              overflow: TextOverflow.ellipsis,
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: p.inkMuted,
+              side: BorderSide(color: p.line, width: 2),
+              shape: const StadiumBorder(),
+              padding: EdgeInsets.symmetric(
+                horizontal: compact ? 12 : 18,
+                vertical: 11,
+              ),
+            ),
+          ),
+        )
+      else
+        // Holds the left slot so a lone VALIDER still sits on the right.
+        const SizedBox.shrink(),
+      if (showValidate)
+        Flexible(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: Radii.cardMd,
+              gradient: active
+                  ? LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [p.goldLight, p.gold],
+                    )
+                  : null,
+              color: active ? null : p.track,
+            ),
+            child: TextButton(
+              key: const ValueKey('validate'),
+              onPressed: onValidate ?? _showNudge,
+              style: TextButton.styleFrom(
+                // Grey ground, but text that still reads (it was
+                // inkMuted on track, 2.9:1).
+                foregroundColor: active ? onAccentInk : p.ink,
+                padding: EdgeInsets.symmetric(
+                  horizontal: compact ? 22 : 38,
+                  vertical: 14,
+                ),
+                shape: const RoundedRectangleBorder(borderRadius: Radii.cardMd),
+              ),
+              // Inside the button, so it merges into the button's own
+              // node: a screen reader hears what's missing.
+              child: Semantics(
+                hint: active ? null : strings.answerFirst,
+                child: Text(
+                  strings.validate.toUpperCase(),
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontFamily: VillageType.display,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: .4,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+    ],
+  );
 }
 
 class _FeedbackBanner extends StatelessWidget {

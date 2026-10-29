@@ -116,4 +116,38 @@ void main() {
       expect((picked, validated), (1, 1));
     });
   });
+
+  group('G2 VALIDER before an answer says what is missing', () {
+    testWidgets('a tap shows the nudge for a moment, and validates nothing', (
+      tester,
+    ) async {
+      var validated = 0;
+      Widget shell({bool ready = false}) => _app(
+        ActivityShell(
+          locale: fr,
+          onClose: () {},
+          body: const SizedBox(),
+          showValidate: true,
+          onValidate: ready ? () => validated++ : null,
+        ),
+      );
+      await tester.pumpWidget(shell());
+      expect(find.byKey(const ValueKey('validate-nudge')), findsNothing);
+      await tester.tap(find.text('VALIDER'));
+      await tester.pump();
+      expect(find.text('Choisis d’abord ta réponse !'), findsOneWidget);
+      expect(find.byIcon(Icons.touch_app_rounded), findsOneWidget);
+      expect(validated, 0);
+      await tester.pump(const Duration(seconds: 3));
+      expect(find.byKey(const ValueKey('validate-nudge')), findsNothing);
+
+      // Once there is an answer, the nudge goes and VALIDER validates.
+      await tester.tap(find.text('VALIDER'));
+      await tester.pump();
+      await tester.pumpWidget(shell(ready: true));
+      expect(find.byKey(const ValueKey('validate-nudge')), findsNothing);
+      await tester.tap(find.text('VALIDER'));
+      expect(validated, 1);
+    });
+  });
 }

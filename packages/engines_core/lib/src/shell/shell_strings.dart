@@ -16,6 +16,8 @@ class ShellStrings {
   String get close => _t("Quitter l'exercice", 'Leave the exercise');
   String get validate => _t('Valider', 'Check');
   String get hint => _t('Indice', 'Hint');
+  String get answerFirst =>
+      _t('Choisis d’abord ta réponse !', 'Pick your answer first!');
   String get listen => _t('Écouter la question', 'Listen to the question');
   String get audioUnavailable => _t('Audio indisponible', 'Audio unavailable');
   String inARow(int n) => _t('$n en série', '$n in a row');

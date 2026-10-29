@@ -31,7 +31,12 @@ void main() {
       );
       final validate = find.widgetWithText(TextButton, 'VALIDER');
       expect(validate, findsOneWidget);
-      expect(tester.widget<TextButton>(validate).onPressed, isNull);
+      // Still tappable, to say what's missing (UX review G2), with the
+      // reason as a hint for a screen reader.
+      expect(
+        tester.getSemantics(find.byKey(const ValueKey('validate'))).hint,
+        'Choisis d’abord ta réponse !',
+      );
       handle.dispose();
     });
 
@@ -163,12 +168,11 @@ void main() {
           findsOneWidget,
           reason: 'the shell renders the prompt',
         );
-        expect(
-          tester
-              .widget<TextButton>(find.widgetWithText(TextButton, 'VALIDER'))
-              .onPressed,
-          isNull,
-        );
+        // Before an answer, VALIDER only says what's missing (G2).
+        await tester.tap(find.text('VALIDER'));
+        await tester.pump();
+        expect(find.byKey(const ValueKey('validate-nudge')), findsOneWidget);
+        expect(find.text('Presque !'), findsNothing);
 
         await tester.tap(find.byKey(const ValueKey('option-a')));
         await tester.runAsync(() => pumpEventQueue());
