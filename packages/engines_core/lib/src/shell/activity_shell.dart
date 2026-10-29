@@ -7,6 +7,11 @@ import 'shell_strings.dart';
 
 enum ShellFeedbackKind { correct, retry, neutral }
 
+/// Text and icons on a bright accent (VALIDER's gold, the banner's
+/// amber/green), in both themes: at least 6.2:1 on each, where white
+/// reached only 2.2–2.8:1 (UX review G1).
+const onAccentInk = Color(0xFF241A04);
+
 /// The banner after VALIDER.
 class ShellFeedback {
   const ShellFeedback({
@@ -537,7 +542,7 @@ class _BottomBar extends StatelessWidget {
                   child: TextButton(
                     onPressed: onValidate,
                     style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFF241A04),
+                      foregroundColor: onAccentInk,
                       disabledForegroundColor: p.inkMuted,
                       padding: EdgeInsets.symmetric(
                         horizontal: compact ? 22 : 38,
@@ -611,7 +616,7 @@ class _FeedbackBanner extends StatelessWidget {
             CircleAvatar(
               radius: 21,
               backgroundColor: accent,
-              child: Icon(icon, color: Colors.white, size: 22),
+              child: Icon(icon, color: onAccentInk, size: 22),
             ),
             const SizedBox(width: Space.md),
             Expanded(
@@ -631,7 +636,7 @@ class _FeedbackBanner extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     feedback.message,
-                    style: TextStyle(fontSize: 12, color: p.inkMuted),
+                    style: TextStyle(fontSize: 14, color: p.ink),
                   ),
                 ],
               ),
@@ -641,7 +646,7 @@ class _FeedbackBanner extends StatelessWidget {
               onPressed: feedback.onAction,
               style: FilledButton.styleFrom(
                 backgroundColor: accent,
-                foregroundColor: Colors.white,
+                foregroundColor: onAccentInk,
                 shape: const StadiumBorder(),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,
