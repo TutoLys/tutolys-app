@@ -506,46 +506,63 @@ class _PromptRow extends StatelessWidget {
   final Widget? character;
 
   @override
+  // A fixed column, left-aligned: the fox and the speaker stay at the
+  // same place from one question to the next, whatever the prompt's
+  // length (UX review N2). It was centred on the text, so they moved.
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 20),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        if (character != null) ...[character!, const SizedBox(width: 14)],
-        // 56 dp, solid bright blue: the one control a non-reader needs to
-        // find (UX review G10, the design's `.exo-listen-btn`).
-        if (onSpeak != null)
-          IconButton.filled(
-            key: const ValueKey('prompt-speak'),
-            onPressed: onSpeak,
-            tooltip: strings.listen,
-            iconSize: 28,
-            constraints: const BoxConstraints.tightFor(width: 56, height: 56),
-            style: IconButton.styleFrom(
-              backgroundColor: palette.quebecBlueBright,
-              // White reads on the light blue (4.6:1), dark ink on the
-              // dark theme's brighter blue (5.9:1).
-              foregroundColor: palette.isDark
-                  ? const Color(0xFF0D1526)
-                  : Colors.white,
-            ),
-            icon: const Icon(Icons.volume_up_rounded),
-          ),
-        if (onSpeak != null && text != null) const SizedBox(width: 14),
-        if (text != null)
-          Flexible(
-            child: Text(
-              text!,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: VillageType.display,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: palette.ink,
+    child: Center(
+      child: ConstrainedBox(
+        key: const ValueKey('prompt-row'),
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: Row(
+          // Top-aligned: a prompt wrapping to two lines doesn't move them
+          // down either.
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (character != null) ...[character!, const SizedBox(width: 14)],
+            // 56 dp, solid bright blue: the one control a non-reader needs to
+            // find (UX review G10, the design's `.exo-listen-btn`).
+            if (onSpeak != null)
+              IconButton.filled(
+                key: const ValueKey('prompt-speak'),
+                onPressed: onSpeak,
+                tooltip: strings.listen,
+                iconSize: 28,
+                constraints: const BoxConstraints.tightFor(
+                  width: 56,
+                  height: 56,
+                ),
+                style: IconButton.styleFrom(
+                  backgroundColor: palette.quebecBlueBright,
+                  // White reads on the light blue (4.6:1), dark ink on the
+                  // dark theme's brighter blue (5.9:1).
+                  foregroundColor: palette.isDark
+                      ? const Color(0xFF0D1526)
+                      : Colors.white,
+                ),
+                icon: const Icon(Icons.volume_up_rounded),
               ),
-            ),
-          ),
-      ],
+            if (onSpeak != null && text != null) const SizedBox(width: 14),
+            if (text != null)
+              Expanded(
+                // Lines a one-line prompt up with the 56 dp speaker's middle.
+                child: Padding(
+                  padding: EdgeInsets.only(top: onSpeak != null ? 12 : 0),
+                  child: Text(
+                    text!,
+                    style: TextStyle(
+                      fontFamily: VillageType.display,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: palette.ink,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     ),
   );
 }
@@ -728,86 +745,92 @@ class _BottomBarState extends State<_BottomBar> {
     bool showValidate,
     VoidCallback? onValidate,
     bool active,
-  ) => Row(
-    // INDICE left, VALIDER right (the design's `.exo-bottombar`),
-    // each allowed to shrink on a narrow screen.
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-      if (onHint != null)
-        Flexible(
-          child: OutlinedButton.icon(
-            key: const ValueKey('hint'),
-            onPressed: onHint,
-            icon: const Icon(Icons.lightbulb_outline_rounded, size: 15),
-            // Inside the button, so it lands on the button's own node.
-            label: Semantics(
-              hint: offerHint ? strings.hintOffered : null,
-              child: Text(
-                strings.hint.toUpperCase(),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            style: OutlinedButton.styleFrom(
-              // Offered after misses: gold, so it catches the eye.
-              backgroundColor: offerHint ? p.goldPale : null,
-              foregroundColor: offerHint ? p.ink : p.inkMuted,
-              side: BorderSide(color: offerHint ? p.gold : p.line, width: 2),
-              shape: const StadiumBorder(),
-              padding: EdgeInsets.symmetric(
-                horizontal: compact ? 12 : 18,
-                vertical: 11,
-              ),
-            ),
-          ),
-        )
-      else
-        // Holds the left slot so a lone VALIDER still sits on the right.
-        const SizedBox.shrink(),
-      if (showValidate)
-        Flexible(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: Radii.cardMd,
-              gradient: active
-                  ? LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [p.goldLight, p.gold],
-                    )
-                  : null,
-              color: active ? null : p.track,
-            ),
-            child: TextButton(
-              key: const ValueKey('validate'),
-              onPressed: onValidate ?? _showNudge,
-              style: TextButton.styleFrom(
-                // Grey ground, but text that still reads (it was
-                // inkMuted on track, 2.9:1).
-                foregroundColor: active ? onAccentInk : p.ink,
-                padding: EdgeInsets.symmetric(
-                  horizontal: compact ? 22 : 38,
-                  vertical: 14,
-                ),
-                shape: const RoundedRectangleBorder(borderRadius: Radii.cardMd),
-              ),
-              // Inside the button, so it merges into the button's own
-              // node: a screen reader hears what's missing.
-              child: Semantics(
-                hint: active ? null : strings.answerFirst,
+  ) => ConstrainedBox(
+    // One height with or without INDICE, so VALIDER never moves (N2).
+    constraints: const BoxConstraints(minHeight: 52),
+    child: Row(
+      // INDICE left, VALIDER right (the design's `.exo-bottombar`),
+      // each allowed to shrink on a narrow screen.
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        if (onHint != null)
+          Flexible(
+            child: OutlinedButton.icon(
+              key: const ValueKey('hint'),
+              onPressed: onHint,
+              icon: const Icon(Icons.lightbulb_outline_rounded, size: 15),
+              // Inside the button, so it lands on the button's own node.
+              label: Semantics(
+                hint: offerHint ? strings.hintOffered : null,
                 child: Text(
-                  strings.validate.toUpperCase(),
+                  strings.hint.toUpperCase(),
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontFamily: VillageType.display,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: .4,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                // Offered after misses: gold, so it catches the eye.
+                backgroundColor: offerHint ? p.goldPale : null,
+                foregroundColor: offerHint ? p.ink : p.inkMuted,
+                side: BorderSide(color: offerHint ? p.gold : p.line, width: 2),
+                shape: const StadiumBorder(),
+                padding: EdgeInsets.symmetric(
+                  horizontal: compact ? 12 : 18,
+                  vertical: 11,
+                ),
+              ),
+            ),
+          )
+        else
+          // Holds the left slot so a lone VALIDER still sits on the right.
+          const SizedBox.shrink(),
+        if (showValidate)
+          Flexible(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: Radii.cardMd,
+                gradient: active
+                    ? LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [p.goldLight, p.gold],
+                      )
+                    : null,
+                color: active ? null : p.track,
+              ),
+              child: TextButton(
+                key: const ValueKey('validate'),
+                onPressed: onValidate ?? _showNudge,
+                style: TextButton.styleFrom(
+                  // Grey ground, but text that still reads (it was
+                  // inkMuted on track, 2.9:1).
+                  foregroundColor: active ? onAccentInk : p.ink,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: compact ? 22 : 38,
+                    vertical: 14,
+                  ),
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: Radii.cardMd,
+                  ),
+                ),
+                // Inside the button, so it merges into the button's own
+                // node: a screen reader hears what's missing.
+                child: Semantics(
+                  hint: active ? null : strings.answerFirst,
+                  child: Text(
+                    strings.validate.toUpperCase(),
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontFamily: VillageType.display,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: .4,
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-    ],
+      ],
+    ),
   );
 }
 

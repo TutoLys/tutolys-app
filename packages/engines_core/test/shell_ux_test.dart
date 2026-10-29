@@ -510,6 +510,54 @@ void main() {
       c.dispose();
     });
   });
+
+  group('N2 nothing moves between questions', () {
+    testWidgets('the speaker keeps its place whatever the prompt length', (
+      tester,
+    ) async {
+      Future<Offset> speakerAt(String prompt) async {
+        await tester.pumpWidget(
+          _app(
+            ActivityShell(
+              locale: fr,
+              onClose: () {},
+              body: const SizedBox(),
+              promptText: prompt,
+              onSpeak: () {},
+            ),
+          ),
+        );
+        return tester.getTopLeft(find.byKey(const ValueKey('prompt-speak')));
+      }
+
+      final short = await speakerAt('Compte.');
+      final long = await speakerAt(
+        'Laquelle de ces façons de dire la phrase est la bonne ?',
+      );
+      expect(long, short);
+    });
+
+    testWidgets('VALIDER keeps its place with or without INDICE', (
+      tester,
+    ) async {
+      Future<Offset> validerAt({required bool hint}) async {
+        await tester.pumpWidget(
+          _app(
+            ActivityShell(
+              locale: fr,
+              onClose: () {},
+              body: const SizedBox(),
+              showValidate: true,
+              onHint: hint ? () {} : null,
+            ),
+          ),
+        );
+        return tester.getTopLeft(find.text('VALIDER'));
+      }
+
+      expect(await validerAt(hint: true), await validerAt(hint: false));
+    });
+  });
 }
 
 class _Silent implements ContentSpeaker {
