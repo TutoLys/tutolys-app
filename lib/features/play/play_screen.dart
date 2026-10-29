@@ -49,10 +49,20 @@ import 'xp_estimate.dart';
 const double legacyMaxWidth = 720;
 
 class PlayScreen extends ConsumerStatefulWidget {
-  const PlayScreen({required this.node, required this.envelope, super.key});
+  const PlayScreen({
+    required this.node,
+    required this.envelope,
+    this.practice = false,
+    super.key,
+  });
 
   final CachedSkillNode node;
   final Map<String, Object?> envelope;
+
+  /// Practice with no leaf (the Village gallery, ADR 0098): nothing is
+  /// sent to telemetry and nothing counts toward XP, the streak, quests or
+  /// the Carte.
+  final bool practice;
 
   @override
   ConsumerState<PlayScreen> createState() => _PlayScreenState();
@@ -116,6 +126,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
         store: DriftActivitySessionStore(
           ref.read(localDatabaseProvider),
           kidId: _kidId,
+          uploads: !widget.practice,
         ),
         appVersion: appVersion,
         currentAppVersion: AppVersion.tryParse(appVersion),
@@ -374,13 +385,18 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       firstTry: perQuestion.where((q) => q.isFirstTryPerfect).length,
       // A client-side estimate — `manage.py award_xp` hasn't run yet. The
       // authoritative total still comes from `ProgressState.totalXp`.
-      xp: estimateXp(result, replay: _replay),
+      xp: widget.practice ? 0 : estimateXp(result, replay: _replay),
     );
 
     // Home's stat tiles, the offline streak, and the map's "done" mark all
-    // learn about this now, not when the backend next catches up.
+    // learn about this now, not when the backend next catches up. Practice
+    // with no leaf counts toward none of them.
     final db = ref.read(localDatabaseProvider);
     final lessonId = widget.envelope['exercise_id'] as String?;
+    if (widget.practice) {
+      _celebrate(summary);
+      return;
+    }
     HomeStats(db, kidId: _kidId).recordExerciseCompleted(
       elapsedMs: result.elapsedMs,
       exerciseId: lessonId,
@@ -410,6 +426,11 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       );
     }
 
+    _celebrate(summary);
+  }
+
+  /// The fox's victory and the celebration screen.
+  void _celebrate(ActivitySummary summary) {
     _director.cue(
       const ReactionCue(
         role: ActorRole.guide,

@@ -17,6 +17,7 @@ class DriftActivitySessionStore implements ActivitySessionStore {
   DriftActivitySessionStore(
     this.db, {
     required this.kidId,
+    this.uploads = true,
     DateTime Function()? clock,
   }) : _outbox = DriftEventOutbox(db, kidId: kidId, clock: clock),
        _now = clock ?? DateTime.now;
@@ -30,6 +31,11 @@ class DriftActivitySessionStore implements ActivitySessionStore {
   final DriftEventOutbox _outbox;
   final DateTime Function() _now;
 
+  /// False for practice with no leaf (the Village gallery, ADR 0098): the
+  /// snapshot is kept for resuming, but no event is queued for telemetry,
+  /// so nothing can turn into mastery or XP.
+  final bool uploads;
+
   @override
   Future<void> commit({
     required List<Map<String, Object?>> events,
@@ -41,8 +47,10 @@ class DriftActivitySessionStore implements ActivitySessionStore {
       );
     }
     await db.transaction(() async {
-      for (final e in events) {
-        await _outbox.add(e);
+      if (uploads) {
+        for (final e in events) {
+          await _outbox.add(e);
+        }
       }
       if (snapshot.state.phase.isTerminal) {
         await (db.delete(db.activitySessionTable)..where(

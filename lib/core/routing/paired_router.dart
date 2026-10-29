@@ -10,10 +10,18 @@ import 'village_shell.dart';
 /// (it already has exercise-cache access to decide locked/available) rather
 /// than `PlayScreen` re-querying for itself.
 class PlayRequest {
-  const PlayRequest({required this.node, required this.envelope});
+  const PlayRequest({
+    required this.node,
+    required this.envelope,
+    this.practice = false,
+  });
 
   final CachedSkillNode node;
   final Map<String, Object?> envelope;
+
+  /// Practice with no leaf, like the Village gallery (ADR 0098): no
+  /// telemetry, no XP, no streak and no node progress.
+  final bool practice;
 }
 
 /// The routes inside the paired shell: one URL per page of the learner's
@@ -63,7 +71,11 @@ GoRouter buildPairedRouter({String? initialLocation}) {
         // encode it into the URL and parse it back out.
         builder: (context, state) {
           final request = state.extra! as PlayRequest;
-          return PlayScreen(node: request.node, envelope: request.envelope);
+          return PlayScreen(
+            node: request.node,
+            envelope: request.envelope,
+            practice: request.practice,
+          );
         },
       ),
       GoRoute(
