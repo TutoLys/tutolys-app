@@ -422,6 +422,7 @@ class ComposeSlotsEngine
               ),
               if (view.content.creation && s.locked.length == s.slots.length)
                 KeepCreationButton(
+                  locale: view.locale,
                   engineKey: ComposeSlotsEngine.key,
                   payload: {
                     'labels': [

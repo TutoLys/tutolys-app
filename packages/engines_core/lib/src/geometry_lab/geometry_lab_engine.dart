@@ -549,6 +549,7 @@ class GeometryLabEngine
               ),
               if (c.creation && s.solved)
                 KeepCreationButton(
+                  locale: view.locale,
                   engineKey: GeometryLabEngine.key,
                   payload: {
                     'pegs': c.pegs,

@@ -207,7 +207,11 @@ class _LearningActivityViewState extends State<LearningActivityView> {
         feedback = ShellFeedback(
           kind: ShellFeedbackKind.correct,
           title: s.correctTitle,
-          message: s.correctMessage,
+          // Open work has no « right answer »: praise the making (ADR
+          // 0093).
+          message: c.current?.spec.config['creation'] == true
+              ? s.creationMessage
+              : s.correctMessage,
           actionLabel: s.continueLabel,
           onAction: c.proceed,
         );

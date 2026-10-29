@@ -628,6 +628,7 @@ class _MailView extends StatelessWidget {
               ),
               if (c.creation && s.solved)
                 KeepCreationButton(
+                  locale: view.locale,
                   engineKey: MailStudioEngine.key,
                   payload: {
                     'recipient': c.recipient.key,

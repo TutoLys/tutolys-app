@@ -157,6 +157,11 @@ void main() {
     await tester.tap(find.text('VALIDER'));
     await settle();
     expect(find.text('Bravo !'), findsOneWidget);
+    // Praise for the making, not « Bonne réponse », and the keep button in
+    // the lesson's language even where the app's Localizations is English.
+    expect(find.text('Quelle belle création !'), findsOneWidget);
+    expect(find.text('Bonne réponse'), findsNothing);
+    expect(find.text('Garder dans mes créations'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('creation-keep')));
     await settle();
     expect(shelf.items.single.payload, {

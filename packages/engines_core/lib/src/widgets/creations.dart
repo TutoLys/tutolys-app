@@ -35,8 +35,14 @@ class KeepCreationButton extends StatefulWidget {
   const KeepCreationButton({
     required this.engineKey,
     required this.payload,
+    this.locale,
     super.key,
   });
+
+  /// The exercise's language. The engines pass their view's locale, which
+  /// can differ from the app's `Localizations` (a language lesson keeps its
+  /// own language); without it, the app's.
+  final Locale? locale;
 
   final String engineKey;
   final Map<String, Object?> payload;
@@ -54,7 +60,9 @@ class _KeepCreationButtonState extends State<KeepCreationButton> {
     final shelf = CreationShelfScope.maybeOf(context);
     final exercise = CurrentExercise.maybeOf(context);
     if (shelf == null || exercise == null) return const SizedBox.shrink();
-    final fr = Localizations.maybeLocaleOf(context)?.languageCode != 'en';
+    final fr =
+        (widget.locale ?? Localizations.maybeLocaleOf(context))?.languageCode !=
+        'en';
     final p = VillagePalette.of(context);
     if (_kept) {
       return Center(

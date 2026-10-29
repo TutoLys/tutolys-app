@@ -685,6 +685,7 @@ class PatternMachineEngine
               ),
               if (c.creation && s.locked.length == s.gaps.length)
                 KeepCreationButton(
+                  locale: view.locale,
                   engineKey: PatternMachineEngine.key,
                   payload: {
                     'pieces': [for (final piece in c.sequence) piece.toJson()],

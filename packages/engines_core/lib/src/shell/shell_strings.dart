@@ -47,6 +47,8 @@ class ShellStrings {
 
   String get correctTitle => _t('Bravo !', 'Well done!');
   String get correctMessage => _t('Bonne réponse', 'Right answer');
+  String get creationMessage =>
+      _t('Quelle belle création !', 'What a lovely creation!');
   String get continueLabel => _t('Continuer', 'Continue');
   String get retryTitle => _t('Presque !', 'Almost!');
   // Short, concrete and positive for a grade-1 reader (UX review G13).
