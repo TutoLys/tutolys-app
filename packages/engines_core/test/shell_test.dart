@@ -537,7 +537,12 @@ void main() {
         ),
       );
       expect(find.text('Exercise complete!'), findsOneWidget);
+      // G15: first try out of all, and the one fixed by the child, not an
+      // always-full « 2/2 right answers ».
       expect(find.text('first try'), findsOneWidget);
+      expect(find.text('1/2'), findsOneWidget);
+      expect(find.text('fixed by you'), findsOneWidget);
+      expect(find.text('2/2'), findsNothing);
       expect(find.text('CONTINUE'), findsOneWidget);
     });
 

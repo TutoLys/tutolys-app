@@ -107,7 +107,7 @@ class ShellStrings {
   String get doneTitle => _t('Exercice terminé !', 'Exercise complete!');
   String get perfectTitle => _t('Parfait !', 'Perfect!');
   String get xpEarnedLabel => _t('XP gagnés', 'XP earned');
-  String get rightAnswersLabel => _t('bonnes réponses', 'right answers');
+  String get fixedLabel => _t('corrigées par toi', 'fixed by you');
   String get firstTryLabel => _t('du premier coup', 'first try');
   String wellDone(String name) => _t('Bravo, $name !', 'Well done, $name!');
 }

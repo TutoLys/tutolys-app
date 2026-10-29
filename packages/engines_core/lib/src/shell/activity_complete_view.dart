@@ -26,6 +26,9 @@ class ActivitySummary {
   final int xp;
 
   bool get perfect => questions > 0 && firstTry == questions;
+
+  /// Questions the child got right after a retry: fixed by themself.
+  int get fixed => (solved - firstTry).clamp(0, questions);
 }
 
 /// The moment after the last question — the design's end-of-series panel
@@ -130,26 +133,32 @@ class ActivityCompleteView extends StatelessWidget {
                               label: s.xpEarnedLabel,
                             ),
                             const SizedBox(height: Space.lg),
+                            // Not « N/N bonnes réponses »: retries are
+                            // unlimited, so that was always full (UX review
+                            // G15). First try out of all, and the ones the
+                            // child fixed by themself, which deserve praise.
                             Row(
                               children: [
                                 Expanded(
                                   child: _StatCard(
-                                    icon: Icons.check_rounded,
-                                    color: p.success,
-                                    value:
-                                        '${summary.solved}/${summary.questions}',
-                                    label: s.rightAnswersLabel,
-                                  ),
-                                ),
-                                const SizedBox(width: Space.sm),
-                                Expanded(
-                                  child: _StatCard(
                                     icon: Icons.bolt_rounded,
                                     color: p.gold,
-                                    value: '${summary.firstTry}',
+                                    value:
+                                        '${summary.firstTry}/${summary.questions}',
                                     label: s.firstTryLabel,
                                   ),
                                 ),
+                                if (summary.fixed > 0) ...[
+                                  const SizedBox(width: Space.sm),
+                                  Expanded(
+                                    child: _StatCard(
+                                      icon: Icons.auto_fix_high_rounded,
+                                      color: p.success,
+                                      value: '${summary.fixed}',
+                                      label: s.fixedLabel,
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                             if (extraRows.isNotEmpty) ...[
