@@ -530,7 +530,8 @@ class _SlowLoaderState extends State<_SlowLoader> {
             label: Text(t.retry),
             style: FilledButton.styleFrom(
               backgroundColor: p.gold,
-              foregroundColor: p.ink,
+              // The gold pills' own dark ink, in both themes.
+              foregroundColor: const Color(0xFF241A04),
               shape: const StadiumBorder(),
               padding: const EdgeInsets.symmetric(
                 horizontal: Space.xl,
