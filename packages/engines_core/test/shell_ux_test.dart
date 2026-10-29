@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:design_system/design_system.dart';
 import 'package:engines_core/engines_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// The fixes from the UX review of the games
@@ -79,5 +80,40 @@ void main() {
         });
       }
     }
+  });
+
+  group('G6 Enter on a focused tile picks it, never submits', () {
+    testWidgets('a focused tile takes Enter; the shell takes it otherwise', (
+      tester,
+    ) async {
+      var picked = 0;
+      var validated = 0;
+      await tester.pumpWidget(
+        _app(
+          ActivityShell(
+            locale: fr,
+            onClose: () {},
+            showValidate: true,
+            onValidate: () => validated++,
+            body: AnswerTile(
+              label: 'chat',
+              state: AnswerTileState.idle,
+              onTap: () => picked++,
+            ),
+          ),
+        ),
+      );
+      // The tile's own focus node, as Tab would reach it.
+      final tile = Focus.of(tester.element(find.text('chat')))..requestFocus();
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      expect((picked, validated), (1, 0));
+
+      tile.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      expect((picked, validated), (1, 1));
+    });
   });
 }

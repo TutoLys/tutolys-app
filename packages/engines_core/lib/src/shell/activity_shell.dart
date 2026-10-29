@@ -166,82 +166,88 @@ class ActivityShell extends StatelessWidget {
     // While an activity is on screen the audio output stays awake, so the
     // first read-aloud after a quiet moment isn't clipped (ADR 0043).
     return AudioOutputKeepAliveScope(
-      child: CallbackShortcuts(
-        bindings: {
-          const SingleActivator(LogicalKeyboardKey.enter): () {
-            final f = feedback;
-            if (f != null) {
-              f.onAction();
-            } else {
-              onValidate?.call();
-            }
-          },
+      // Enter validates (or acts on the banner) only when nothing inside
+      // has focus. A focused tile or button keeps Enter for itself, so a
+      // keyboard user can pick an option with it (UX review G6).
+      child: Focus(
+        autofocus: true,
+        onKeyEvent: (node, event) {
+          if (event is! KeyDownEvent ||
+              (event.logicalKey != LogicalKeyboardKey.enter &&
+                  event.logicalKey != LogicalKeyboardKey.numpadEnter) ||
+              !node.hasPrimaryFocus) {
+            return KeyEventResult.ignored;
+          }
+          final f = feedback;
+          if (f != null) {
+            f.onAction();
+          } else {
+            onValidate?.call();
+          }
+          return KeyEventResult.handled;
         },
-        child: Focus(
-          autofocus: true,
-          child: Material(
-            color: p.surface,
-            child: SafeArea(
-              child: Column(
-                children: [
-                  _TopBar(
+        child: Material(
+          color: p.surface,
+          child: SafeArea(
+            child: Column(
+              children: [
+                _TopBar(
+                  palette: p,
+                  strings: s,
+                  gutter: gutter,
+                  onClose: onClose,
+                  progress: progress,
+                  progressLabel: progressLabel,
+                  xp: xp,
+                  inARow: inARow,
+                  character: hasPrompt ? null : character,
+                ),
+                Expanded(
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: compact ? Space.md : Space.xxl,
+                            vertical: compact ? Space.lg : 36,
+                          ),
+                          child: scrollBody
+                              ? SingleChildScrollView(
+                                  child: Column(children: [...header, body]),
+                                )
+                              : Column(
+                                  children: [
+                                    ...header,
+                                    Expanded(child: body),
+                                  ],
+                                ),
+                        ),
+                      ),
+                      if (feedback != null)
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: _FeedbackBanner(
+                            palette: p,
+                            gutter: gutter,
+                            feedback: feedback!,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                if (feedback == null && (showValidate || onHint != null))
+                  _BottomBar(
                     palette: p,
                     strings: s,
                     gutter: gutter,
-                    onClose: onClose,
-                    progress: progress,
-                    progressLabel: progressLabel,
-                    xp: xp,
-                    inARow: inARow,
-                    character: hasPrompt ? null : character,
+                    compact: compact,
+                    onHint: onHint,
+                    showValidate: showValidate,
+                    onValidate: onValidate,
                   ),
-                  Expanded(
-                    child: Stack(
-                      children: [
-                        Positioned.fill(
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: compact ? Space.md : Space.xxl,
-                              vertical: compact ? Space.lg : 36,
-                            ),
-                            child: scrollBody
-                                ? SingleChildScrollView(
-                                    child: Column(children: [...header, body]),
-                                  )
-                                : Column(
-                                    children: [
-                                      ...header,
-                                      Expanded(child: body),
-                                    ],
-                                  ),
-                          ),
-                        ),
-                        if (feedback != null)
-                          Positioned(
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            child: _FeedbackBanner(
-                              palette: p,
-                              gutter: gutter,
-                              feedback: feedback!,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  if (feedback == null && (showValidate || onHint != null))
-                    _BottomBar(
-                      palette: p,
-                      strings: s,
-                      gutter: gutter,
-                      compact: compact,
-                      onHint: onHint,
-                      showValidate: showValidate,
-                      onValidate: onValidate,
-                    ),
-                ],
-              ),
+              ],
             ),
           ),
         ),
