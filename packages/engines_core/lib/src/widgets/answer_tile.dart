@@ -105,7 +105,8 @@ class AnswerTile extends StatelessWidget {
         : () => speaker.speak(audioRef: ref, partId: ref);
     final en = Localizations.maybeLocaleOf(context)?.languageCode == 'en';
     final (border, fill, text, icon) = switch (state) {
-      AnswerTileState.idle => (p.line, p.surface, p.ink, null),
+      // A 3:1 edge (UX review G11): `line` was 1.2:1 on white.
+      AnswerTileState.idle => (p.inkMuted, p.surface, p.ink, null),
       AnswerTileState.picked => (
         p.quebecBlueBright,
         p.navHoverFill,

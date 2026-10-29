@@ -57,17 +57,46 @@ class AnswerSlot extends StatelessWidget {
     return Semantics(
       label: emptyLabel,
       excludeSemantics: true,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 52),
-        decoration: BoxDecoration(
-          color: p.track.withValues(alpha: 0.35),
-          borderRadius: Radii.cardMd,
-          border: Border.all(color: p.line, width: 2),
+      // A dashed 3:1 outline (UX review G11): it reads as a gap to fill,
+      // where the old faint fill and `line` border were 1.2:1.
+      child: CustomPaint(
+        key: const ValueKey('slot-dash'),
+        painter: _DashedOutline(color: p.inkMuted),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 52),
+          decoration: BoxDecoration(
+            color: p.track.withValues(alpha: 0.35),
+            borderRadius: Radii.cardMd,
+          ),
+          // Deliberately blank: a number here reads as a tile's value in a
+          // math exercise ("1", "2"). The position is in the semantics
+          // label.
+          alignment: Alignment.center,
         ),
-        // Deliberately blank: a number here reads as a tile's value in a
-        // math exercise ("1", "2"). The position is in the semantics label.
-        alignment: Alignment.center,
       ),
     );
   }
+}
+
+class _DashedOutline extends CustomPainter {
+  const _DashedOutline({required this.color});
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    final outline = Path()
+      ..addRRect(Radii.cardMd.toRRect(Offset.zero & size).deflate(1));
+    for (final metric in outline.computeMetrics()) {
+      for (var d = 0.0; d < metric.length; d += 10) {
+        canvas.drawPath(metric.extractPath(d, d + 6), paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedOutline old) => old.color != color;
 }

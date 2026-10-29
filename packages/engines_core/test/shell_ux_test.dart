@@ -288,6 +288,45 @@ void main() {
       expect(gap, greaterThanOrEqualTo(12));
     });
   });
+
+  group('G11 idle tiles and empty slots have a 3:1 edge', () {
+    for (final dark in [false, true]) {
+      testWidgets(dark ? 'dark' : 'light', (tester) async {
+        await tester.pumpWidget(
+          _app(
+            Column(
+              children: [
+                AnswerTile(
+                  label: 'chat',
+                  state: AnswerTileState.idle,
+                  onTap: () {},
+                ),
+                AnswerSlot(
+                  index: 1,
+                  label: null,
+                  state: AnswerTileState.idle,
+                  onTap: null,
+                  emptyLabel: 'case 1, vide',
+                ),
+              ],
+            ),
+            dark: dark,
+          ),
+        );
+        final material = tester.widget<Material>(
+          find
+              .descendant(
+                of: find.byType(AnswerTile),
+                matching: find.byType(Material),
+              )
+              .first,
+        );
+        final side = (material.shape! as RoundedRectangleBorder).side.color;
+        expect(contrast(side, material.color!), greaterThanOrEqualTo(3));
+        expect(find.byKey(const ValueKey('slot-dash')), findsOneWidget);
+      });
+    }
+  });
 }
 
 class _Silent implements ContentSpeaker {
