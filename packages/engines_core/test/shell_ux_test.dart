@@ -327,6 +327,59 @@ void main() {
       });
     }
   });
+
+  group('G8 the hint is offered after two misses', () {
+    testWidgets('INDICE turns gold after the second miss, not before', (
+      tester,
+    ) async {
+      final c = ActivitySessionController(
+        envelope: QuestionEnvelope.parse(fakeEnvelope(questions: 1))
+            .valueOrNull!,
+        kidId: 'kid',
+        engines: LearningEngineRegistry([eraseEngine(FakeChoiceEngine())]),
+        evaluators: EvaluatorRegistry([FakeExactEvaluator()]),
+        store: InMemoryActivitySessionStore(InMemoryEventOutbox()),
+        appVersion: '0.2.0',
+        seed: 3,
+      );
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(
+        _app(LearningActivityView(controller: c, locale: fr, onDone: () {})),
+      );
+      Future<void> settle() async {
+        await tester.runAsync(() => pumpEventQueue());
+        await tester.pump();
+        await tester.pump();
+      }
+
+      bool offered() {
+        final style = tester
+            .widget<OutlinedButton>(find.byKey(const ValueKey('hint')))
+            .style!;
+        return style.backgroundColor?.resolve({}) != null;
+      }
+
+      for (final (miss, option) in [(1, 'a'), (2, 'c')]) {
+        expect(offered(), isFalse, reason: 'before miss $miss');
+        await tester.tap(find.byKey(ValueKey('option-$option')));
+        await settle();
+        await tester.tap(find.text('VALIDER'));
+        await settle();
+        await tester.tap(find.text('RÉESSAYER'));
+        await settle();
+      }
+      expect(offered(), isTrue);
+      expect(
+        tester.getSemantics(find.byKey(const ValueKey('hint'))).hint,
+        'Un indice peut t’aider.',
+      );
+      // Once revealed, INDICE goes.
+      await tester.tap(find.byKey(const ValueKey('hint')));
+      await settle();
+      expect(find.byKey(const ValueKey('hint')), findsNothing);
+      c.dispose();
+    });
+  });
 }
 
 class _Silent implements ContentSpeaker {

@@ -243,7 +243,7 @@ class _LearningActivityViewState extends State<LearningActivityView> {
       }
     }
 
-        final interactive = c.isInteractive;
+    final interactive = c.isInteractive;
     final hint = q?.hintText;
     final explicit = q?.engine.descriptor.submitMode == SubmitMode.explicit;
     // While « Presque » shows, the board stays live: a tap on it is the
@@ -293,6 +293,8 @@ class _LearningActivityViewState extends State<LearningActivityView> {
               setState(() => _hintRevealed = true);
               unawaited(c.requestHint());
             },
+      // Two misses on this question: offer the hint (G8).
+      offerHint: !_hintRevealed && state.attempts >= 2,
       showValidate: explicit && feedback == null,
       onValidate: interactive && q?.answer != null ? c.submit : null,
       feedback: feedback,

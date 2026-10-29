@@ -62,6 +62,7 @@ class ActivityShell extends StatelessWidget {
     this.character,
     this.revealedHint,
     this.onHint,
+    this.offerHint = false,
     this.onValidate,
     this.showValidate = false,
     this.feedback,
@@ -110,6 +111,10 @@ class ActivityShell extends StatelessWidget {
 
   /// Null hides INDICE (no hint, hints off, or already revealed).
   final VoidCallback? onHint;
+
+  /// After a couple of misses, INDICE is offered: drawn in gold, with a
+  /// hint for a screen reader (UX review G8).
+  final bool offerHint;
 
   /// Null with [showValidate] true = VALIDER shown but disabled.
   final VoidCallback? onValidate;
@@ -284,6 +289,7 @@ class ActivityShell extends StatelessWidget {
                     gutter: gutter,
                     compact: compact,
                     onHint: onHint,
+                    offerHint: offerHint,
                     showValidate: showValidate,
                     onValidate: onValidate,
                   ),
@@ -529,10 +535,12 @@ class _BottomBar extends StatefulWidget {
     required this.gutter,
     required this.compact,
     required this.onHint,
+    required this.offerHint,
     required this.showValidate,
     required this.onValidate,
   });
 
+  final bool offerHint;
   final VillagePalette palette;
   final ShellStrings strings;
   final double gutter;
@@ -586,6 +594,7 @@ class _BottomBarState extends State<_BottomBar> {
     final gutter = widget.gutter;
     final compact = widget.compact;
     final onHint = widget.onHint;
+    final offerHint = widget.offerHint;
     final showValidate = widget.showValidate;
     final onValidate = widget.onValidate;
     final active = onValidate != null;
@@ -635,7 +644,16 @@ class _BottomBarState extends State<_BottomBar> {
                 ),
               ),
             ),
-          _row(p, strings, compact, onHint, showValidate, onValidate, active),
+          _row(
+            p,
+            strings,
+            compact,
+            onHint,
+            offerHint,
+            showValidate,
+            onValidate,
+            active,
+          ),
         ],
       ),
     );
@@ -646,6 +664,7 @@ class _BottomBarState extends State<_BottomBar> {
     ShellStrings strings,
     bool compact,
     VoidCallback? onHint,
+    bool offerHint,
     bool showValidate,
     VoidCallback? onValidate,
     bool active,
@@ -657,15 +676,22 @@ class _BottomBarState extends State<_BottomBar> {
       if (onHint != null)
         Flexible(
           child: OutlinedButton.icon(
+            key: const ValueKey('hint'),
             onPressed: onHint,
             icon: const Icon(Icons.lightbulb_outline_rounded, size: 15),
-            label: Text(
-              strings.hint.toUpperCase(),
-              overflow: TextOverflow.ellipsis,
+            // Inside the button, so it lands on the button's own node.
+            label: Semantics(
+              hint: offerHint ? strings.hintOffered : null,
+              child: Text(
+                strings.hint.toUpperCase(),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
             style: OutlinedButton.styleFrom(
-              foregroundColor: p.inkMuted,
-              side: BorderSide(color: p.line, width: 2),
+              // Offered after misses: gold, so it catches the eye.
+              backgroundColor: offerHint ? p.goldPale : null,
+              foregroundColor: offerHint ? p.ink : p.inkMuted,
+              side: BorderSide(color: offerHint ? p.gold : p.line, width: 2),
               shape: const StadiumBorder(),
               padding: EdgeInsets.symmetric(
                 horizontal: compact ? 12 : 18,

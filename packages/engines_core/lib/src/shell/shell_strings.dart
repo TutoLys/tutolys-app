@@ -20,6 +20,8 @@ class ShellStrings {
   String get stopLabel => _t('Arrêter', 'Stop');
   String get validate => _t('Valider', 'Check');
   String get hint => _t('Indice', 'Hint');
+  String get hintOffered =>
+      _t('Un indice peut t’aider.', 'A hint can help you.');
 
   /// How to play, for the boards a child can't guess (UX review G3).
   String? howTo(String engineKey) => switch (engineKey) {
