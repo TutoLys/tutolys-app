@@ -35,6 +35,9 @@ const _creations = {
   'pfeq_grade1_math_en/75_lecon_construis_tes_figures_en.json':
       GeometryLabEngine(),
   'pfeq_grade1_english/86_make_your_own_sentence.json': ComposeSlotsEngine(),
+  'pfeq_grade1_math/76_lecon_invente_ta_suite.json': PatternMachineEngine(),
+  'pfeq_grade1_math_en/76_lecon_invente_ta_suite_en.json':
+      PatternMachineEngine(),
 };
 
 final _dir = Directory('../../../tutolys-backend/content');
