@@ -65,9 +65,9 @@ class ComposeState {
   /// Slot indexes checked right — fixed for the rest of the question.
   final Set<int> locked;
 
-  /// The tiles the last check found wrong, by slot. Their slots are empty
-  /// again, but show the tile in amber until the child's next tap, so the
-  /// child sees which ones to change (UX review G7).
+  /// The tiles the last check found wrong, by slot. They are back in the
+  /// tray and show there in amber until the child's next tap, so the child
+  /// sees which ones to change (UX review G7), each shown once (N5).
   final Map<int, String> missed;
 
   bool get full => slots.every((s) => s != null);
@@ -362,27 +362,20 @@ class ComposeSlotsEngine
                         key: ValueKey('compose-slot-$i'),
                         large: true,
                         index: i + 1,
-                        // A wrong tile's ghost shows until the next tap (G7).
-                        label: (s.slots[i] ?? s.missed[i]) == null
+                        label: s.slots[i] == null
                             ? null
-                            : view.content
-                                  .tile((s.slots[i] ?? s.missed[i])!)
-                                  .label,
+                            : view.content.tile(s.slots[i]!).label,
                         audioRef: s.slots[i] == null
                             ? null
                             : view.content.tile(s.slots[i]!).audioRef,
                         state: s.locked.contains(i)
                             ? AnswerTileState.correct
-                            : s.slots[i] == null && s.missed.containsKey(i)
-                            ? AnswerTileState.retry
                             : AnswerTileState.picked,
                         emptyLabel: fr
                             ? 'case ${i + 1}, vide'
                             : 'slot ${i + 1}, empty',
                         semanticsState: s.locked.contains(i)
                             ? (fr ? 'bien placé' : 'right')
-                            : s.slots[i] == null && s.missed.containsKey(i)
-                            ? (fr ? 'à changer' : 'to change')
                             : (fr ? 'touche pour retirer' : 'tap to remove'),
                         onTap: view.enabled && !s.locked.contains(i)
                             ? () => view.dispatch(ClearSlot(i))
@@ -408,7 +401,15 @@ class ComposeSlotsEngine
                             large: true,
                             label: view.content.tile(id).label,
                             audioRef: view.content.tile(id).audioRef,
-                            state: AnswerTileState.idle,
+                            // A tile the last check found wrong is back in
+                            // the tray, amber until the next tap (G7). Shown
+                            // once: not also as a ghost in its slot (N5).
+                            state: s.missed.containsValue(id)
+                                ? AnswerTileState.retry
+                                : AnswerTileState.idle,
+                            semanticsState: s.missed.containsValue(id)
+                                ? (fr ? 'à changer' : 'to change')
+                                : null,
                             onTap: view.enabled && !s.full
                                 ? () => view.dispatch(PlaceTile(id))
                                 : null,

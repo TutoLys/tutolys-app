@@ -719,33 +719,39 @@ void main() {
       c.dispose();
     });
 
-    testWidgets('compose_build: the wrong tile ghosts amber in its slot', (
-      tester,
-    ) async {
-      final (c, _) = controllerFor('compose_build', composeConfig);
-      await tester.runAsync(c.start);
-      await tester.pumpWidget(app(c));
-      for (final id in ['b2', 'b1']) {
-        await tester.tap(find.byKey(ValueKey('compose-tile-$id')));
+    testWidgets(
+      'compose_build: the wrong tile is back in the tray, amber, once',
+      (tester) async {
+        final (c, _) = controllerFor('compose_build', composeConfig);
+        await tester.runAsync(c.start);
+        await tester.pumpWidget(app(c));
+        for (final id in ['b2', 'b1']) {
+          await tester.tap(find.byKey(ValueKey('compose-tile-$id')));
+          await settle(tester);
+        }
+        await tester.tap(find.text('VALIDER'));
         await settle(tester);
-      }
-      await tester.tap(find.text('VALIDER'));
-      await settle(tester);
-      expect(find.text('Presque !'), findsOneWidget);
-      final slot1 = tester.widget<AnswerSlot>(
-        find.byKey(const ValueKey('compose-slot-1')),
-      );
-      expect((slot1.label, slot1.state), ('1', AnswerTileState.retry));
+        expect(find.text('Presque !'), findsOneWidget);
+        // G7: the wrong tile is marked amber; N5: only in the tray, its slot
+        // empty again, never both.
+        final slot1 = tester.widget<AnswerSlot>(
+          find.byKey(const ValueKey('compose-slot-1')),
+        );
+        expect(slot1.label, isNull);
+        expect(tileState(tester, 'compose-tile-b1'), AnswerTileState.retry);
+        expect(find.text('1'), findsOneWidget);
 
-      await tester.tap(find.byKey(const ValueKey('compose-tile-b5')));
-      await settle(tester);
-      expect(find.text('Presque !'), findsNothing);
-      final after = tester.widget<AnswerSlot>(
-        find.byKey(const ValueKey('compose-slot-1')),
-      );
-      expect((after.label, after.state), ('5', AnswerTileState.picked));
-      c.dispose();
-    });
+        await tester.tap(find.byKey(const ValueKey('compose-tile-b5')));
+        await settle(tester);
+        expect(find.text('Presque !'), findsNothing);
+        final after = tester.widget<AnswerSlot>(
+          find.byKey(const ValueKey('compose-slot-1')),
+        );
+        expect((after.label, after.state), ('5', AnswerTileState.picked));
+        expect(tileState(tester, 'compose-tile-b1'), AnswerTileState.idle);
+        c.dispose();
+      },
+    );
 
     testWidgets('speed_tap keeps RÉESSAYER: its clock must not run under it', (
       tester,
