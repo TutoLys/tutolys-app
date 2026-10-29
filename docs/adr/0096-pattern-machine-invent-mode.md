@@ -1,4 +1,4 @@
-# ADR 0095 — `pattern_machine` invent mode: the child makes the pattern
+# ADR 0096 — `pattern_machine` invent mode: the child makes the pattern
 
 Date: 2026-10-29
 Status: accepted (Hafid: "yes, build the pattern invent mode")

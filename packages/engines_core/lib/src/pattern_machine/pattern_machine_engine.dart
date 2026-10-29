@@ -197,7 +197,7 @@ class PatternContent {
     this.vary = const {},
   });
 
-  /// Invent mode (`task: "invent"`, ADR 0095): an empty strip of [slots]
+  /// Invent mode (`task: "invent"`, ADR 0096): an empty strip of [slots]
   /// cells the child fills from the [choices] palette with a pattern of
   /// their own. There is no [sequence]; every cell is a gap.
   final bool invent;
@@ -1109,7 +1109,7 @@ class PatternMachineEvaluator
     return keys.length;
   }
 
-  /// Invent (ADR 0095): any strip whose smallest core is 2 or more pieces
+  /// Invent (ADR 0096): any strip whose smallest core is 2 or more pieces
   /// and fits at least twice is a pattern — whichever piece it starts on,
   /// and a partial last repeat is fine (ABABA). A core of 1 (AAAA) isn't a
   /// pattern to see. Content can ask for an exact [PatternContent.core]

@@ -9,7 +9,7 @@ import 'support/fake_shelf.dart';
 const fr = Locale('fr');
 const ctx = EvaluationContext(attemptNumber: 1, skillNodeIds: ['s']);
 
-/// Invent mode (ADR 0095): the child makes the pattern.
+/// Invent mode (ADR 0096): the child makes the pattern.
 const invent = <String, Object?>{
   'task': 'invent',
   'palette': [
