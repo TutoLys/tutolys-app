@@ -15,6 +15,7 @@ import 'offline_window.dart';
 import '../pairing/pairing_controller.dart';
 import '../settings/settings_controller.dart';
 import 'subject_language.dart';
+import '../../core/diagnostics/diag_log.dart';
 import '../../core/net/recovery.dart';
 
 /// Where the Carte opens. Math was A7's whole thin slice and is still the
@@ -37,7 +38,41 @@ class PathState {
     this.contentLocale = 'fr-CA',
     this.syncFailed = false,
     this.syncedAt,
+    this.syncing = false,
   });
+
+  /// Lessons are still downloading behind a map that is already drawn
+  /// (A1). The Carte shows a small loader rather than "no lessons yet".
+  final bool syncing;
+
+  /// This state, drawn, with its lessons still syncing.
+  PathState syncingCopy({bool? offline, String? error}) => PathState(
+    subject: subject,
+    leaves: leaves,
+    lessonsByNodeId: lessonsByNodeId,
+    allLessonsByNodeId: allLessonsByNodeId,
+    loading: false,
+    offline: offline ?? this.offline,
+    error: error ?? this.error,
+    contentLocale: contentLocale,
+    syncFailed: syncFailed,
+    syncedAt: syncedAt,
+    syncing: true,
+  );
+
+  /// This state with nothing in flight any more.
+  PathState copyDone() => PathState(
+    subject: subject,
+    leaves: leaves,
+    lessonsByNodeId: lessonsByNodeId,
+    allLessonsByNodeId: allLessonsByNodeId,
+    loading: false,
+    offline: offline,
+    error: error,
+    contentLocale: contentLocale,
+    syncFailed: syncFailed,
+    syncedAt: syncedAt,
+  );
 
   /// Backend subject code (`MATH`, `FR`, …) this state describes.
   final String subject;
@@ -105,6 +140,8 @@ enum CarteGap {
 /// Null while loading, and whenever at least one lesson is playable.
 CarteGap? carteGapOf(PathState state) {
   if (state.loading || state.lessonsByNodeId.isNotEmpty) return null;
+  // Still downloading, or published but outside the window: not a gap.
+  if (state.syncing || state.allLessonsByNodeId.isNotEmpty) return null;
   final unreachable = state.offline || state.error != null;
   // Unreachable with nothing cached says nothing about the content itself.
   if (unreachable) return CarteGap.offline;
@@ -150,8 +187,60 @@ class PathController extends Notifier<PathState> {
   static Locale _localeOf(bool english) =>
       english ? const Locale('en', 'CA') : const Locale('fr', 'CA');
 
-  Future<void> _load() async {
+  /// Loads in flight, by subject: the recovery scheduler, a finished
+  /// lesson and the Carte reappearing all call [refresh], and they share one
+  /// load rather than stacking (A1: twelve tree fetches for one visit).
+  final _loads = <String, Future<void>>{};
+
+  Future<void> _load() {
     final subject = state.subject;
+    return _loads[subject] ??= _loadGuarded(subject).whenComplete(() {
+      _loads.remove(subject);
+    });
+  }
+
+  /// How long the curriculum may take before the Carte gives up waiting
+  /// on it and shows its cache (A1).
+  static const curriculumTimeout = Duration(seconds: 15);
+
+  /// [_loadOnce], but it always ends with `loading: false` (A1). A throw
+  /// anywhere in a sync, a parse or a cast used to leave the Carte on its
+  /// loader for good.
+  Future<void> _loadGuarded(String subject) async {
+    try {
+      await _loadOnce(subject);
+    } catch (e, st) {
+      recordCaught('carte_load', e, st);
+      ref.read(recoveryProvider).reportFailure();
+      if (state.subject != subject) return;
+      final kid = ref.read(sessionControllerProvider).kid;
+      PathState? cached;
+      try {
+        if (kid != null) cached = await _fromCache(subject, kid.gradeLevel);
+      } catch (e2, st2) {
+        recordCaught('carte_cache', e2, st2);
+      }
+      if (state.subject != subject) return;
+      state = PathState(
+        subject: subject,
+        leaves: cached?.leaves ?? state.leaves,
+        lessonsByNodeId: cached?.lessonsByNodeId ?? state.lessonsByNodeId,
+        allLessonsByNodeId:
+            cached?.allLessonsByNodeId ?? state.allLessonsByNodeId,
+        loading: false,
+        error: '$e',
+        contentLocale: state.contentLocale,
+        syncFailed: true,
+        syncedAt: state.syncedAt,
+      );
+    } finally {
+      if (state.subject == subject && (state.loading || state.syncing)) {
+        state = state.copyDone();
+      }
+    }
+  }
+
+  Future<void> _loadOnce(String subject) async {
     final kid = ref.read(sessionControllerProvider).kid;
     if (kid == null) {
       state = PathState(subject: subject, loading: false);
@@ -166,16 +255,25 @@ class PathController extends Notifier<PathState> {
     if (state.loading && state.leaves.isEmpty) {
       final cached = await _fromCache(subject, kid.gradeLevel);
       if (state.subject != subject || !state.loading) return;
-      if (cached.leaves.isNotEmpty) state = cached;
+      if (cached.leaves.isNotEmpty) state = cached.syncingCopy();
     }
 
-    final curriculumReport = await curriculumSync.sync(
-      subject: subject,
-      grade: kid.gradeLevel,
+    final curriculumReport = await curriculumSync
+        .sync(subject: subject, grade: kid.gradeLevel)
+        .timeout(
+          curriculumTimeout,
+          onTimeout: () =>
+              const CurriculumSyncReport(count: 0, error: 'timeout'),
+        );
+    // The map is drawn from here on (A1): the lessons download in the
+    // background and land on it as they come. Before, the Carte waited for
+    // the whole download — tens of MB of audio on a first visit.
+    if (state.subject != subject) return;
+    state = (await _fromCache(subject, kid.gradeLevel)).syncingCopy(
+      offline: curriculumReport.offline,
+      error: curriculumReport.error,
     );
-    // Exercise content for the same slice, so a tapped node actually has
-    // something to play — ContentSync already existed (B8) but nothing in
-    // the app ever called it before this.
+
     final locale = contentLocaleFor(
       subject,
       _localeOf(ref.read(settingsControllerProvider).english),
@@ -183,6 +281,17 @@ class PathController extends Notifier<PathState> {
     final contentReport = await contentSync.sync(
       subject: subject,
       locale: locale,
+      // The manifest says what exists before anything downloads: redraw
+      // so a first visit shows the path, not "soon" everywhere.
+      onManifest: () async {
+        if (state.subject != subject) return;
+        final known = await _fromCache(subject, kid.gradeLevel);
+        if (state.subject != subject) return;
+        state = known.syncingCopy(
+          offline: curriculumReport.offline,
+          error: curriculumReport.error,
+        );
+      },
     );
     _lastLoad = DateTime.now();
     final freshness = ContentFreshness(ref.read(localDatabaseProvider));

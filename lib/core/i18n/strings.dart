@@ -112,6 +112,9 @@ abstract class Strings {
   String get pathDownloading;
   String get pathDownloadFailed;
 
+  /// The Carte has been loading a while (A1).
+  String get pathSlow;
+
   /// The active node's card. French puts a space before "%", English does not.
   String pathInProgress(int pct);
 
@@ -719,6 +722,9 @@ class _FrenchStrings extends Strings {
   @override
   String get pathDownloadFailed =>
       "Oups, la leçon n'a pas pu venir. Réessaie dans un moment !";
+
+  @override
+  String get pathSlow => 'Ça prend du temps… On réessaie ?';
 
   @override
   String pathInProgress(int pct) => 'En cours · $pct % maîtrisé';
@@ -1928,6 +1934,9 @@ class _EnglishStrings extends Strings {
   @override
   String get pathDownloadFailed =>
       "Oops, the lesson couldn't come. Try again in a moment!";
+
+  @override
+  String get pathSlow => 'This is taking a while… Try again?';
 
   @override
   String pathInProgress(int pct) => 'In progress · $pct% mastered';

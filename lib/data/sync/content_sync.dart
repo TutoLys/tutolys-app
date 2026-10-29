@@ -137,17 +137,32 @@ class ContentSync {
 
   /// [locale] is the language to ask for; see `subject_language.dart` for
   /// which one a subject wants.
-  Future<SyncReport> sync({String? subject, String? locale}) {
+  ///
+  /// [onManifest] runs once the manifest is stored, before any download,
+  /// so a screen can draw what exists without waiting for the bytes.
+  Future<SyncReport> sync({
+    String? subject,
+    String? locale,
+    Future<void> Function()? onManifest,
+  }) {
     final key = '$subject|$locale';
-    return _inflight[key] ??= _sync(subject: subject, locale: locale)
-        .whenComplete(() {
+    return _inflight[key] ??=
+        _sync(
+          subject: subject,
+          locale: locale,
+          onManifest: onManifest,
+        ).whenComplete(() {
           // A block, not an arrow: returning the removed future would make
           // whenComplete wait on itself.
           _inflight.remove(key);
         });
   }
 
-  Future<SyncReport> _sync({String? subject, String? locale}) async {
+  Future<SyncReport> _sync({
+    String? subject,
+    String? locale,
+    Future<void> Function()? onManifest,
+  }) async {
     final token = accessToken();
     if (token == null || token.isEmpty) {
       return const SyncReport.unauthorized();
@@ -165,6 +180,7 @@ class ContentSync {
         token,
         subject: subject,
         askedLocale: locale ?? manifest.locale,
+        onManifest: onManifest,
       ),
       // Offline is not an error: cached content stays playable, which is the
       // entire point of caching it.
@@ -179,8 +195,10 @@ class ContentSync {
     String token, {
     String? subject,
     required String askedLocale,
+    Future<void> Function()? onManifest,
   }) async {
     await _storeManifest(manifest, subject: subject, askedLocale: askedLocale);
+    await onManifest?.call();
     final plan = await planWindow?.call(
       grade: manifest.grade,
       locale: askedLocale,

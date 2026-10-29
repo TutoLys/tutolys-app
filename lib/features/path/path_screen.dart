@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -199,9 +201,10 @@ class _PathScreenState extends ConsumerState<PathScreen> {
                       padding: EdgeInsets.fromLTRB(pad, 4, pad, pad),
                       children: [
                         if (state.loading)
-                          const Padding(
-                            padding: EdgeInsets.all(Space.xl),
-                            child: Center(child: VillageLoader()),
+                          _SlowLoader(
+                            onRetry: () => ref
+                                .read(pathControllerProvider.notifier)
+                                .refresh(),
                           )
                         else ...[
                           // Cached lessons after a failed sync: a lesson
@@ -213,6 +216,14 @@ class _PathScreenState extends ConsumerState<PathScreen> {
                               onRetry: () => ref
                                   .read(pathControllerProvider.notifier)
                                   .refresh(),
+                            ),
+                          // Drawn, lessons still arriving (A1).
+                          if (state.syncing &&
+                              state.carteLessons.isEmpty)
+                            const Padding(
+                              key: ValueKey('carte-syncing'),
+                              padding: EdgeInsets.all(Space.lg),
+                              child: Center(child: VillageLoader()),
                             ),
                           if (carteGapOf(state) case final gap?)
                             _Empty(
@@ -506,6 +517,97 @@ Future<bool> _download(
     ),
   );
   return false;
+}
+
+/// The Carte's loader. Past [patience] it says so, with the fox and a big
+/// "Réessayer" (A1): a wait with no word reads as broken to a child.
+class _SlowLoader extends StatefulWidget {
+  const _SlowLoader({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  static const patience = Duration(seconds: 8);
+
+  @override
+  State<_SlowLoader> createState() => _SlowLoaderState();
+}
+
+class _SlowLoaderState extends State<_SlowLoader> {
+  Timer? _timer;
+  bool _slow = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer(_SlowLoader.patience, () {
+      if (mounted) setState(() => _slow = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_slow) {
+      return const Padding(
+        padding: EdgeInsets.all(Space.xl),
+        child: Center(child: VillageLoader()),
+      );
+    }
+    final p = VillagePalette.of(context);
+    final t = context.s;
+    return Padding(
+      key: const ValueKey('carte-slow'),
+      padding: const EdgeInsets.symmetric(vertical: Space.xl),
+      child: Column(
+        children: [
+          Image.asset(
+            'assets/images/asset-mascot-welcome.webp',
+            height: 110,
+            fit: BoxFit.contain,
+          ),
+          const SizedBox(height: Space.md),
+          Text(
+            t.pathSlow,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: VillageType.display,
+              fontWeight: FontWeight.w700,
+              fontSize: 16,
+              color: p.ink,
+            ),
+          ),
+          const SizedBox(height: Space.md),
+          FilledButton.icon(
+            key: const ValueKey('carte-slow-retry'),
+            onPressed: () {
+              setState(() => _slow = false);
+              _timer?.cancel();
+              _timer = Timer(_SlowLoader.patience, () {
+                if (mounted) setState(() => _slow = true);
+              });
+              widget.onRetry();
+            },
+            icon: const Icon(Icons.refresh_rounded),
+            label: Text(t.retry),
+            style: FilledButton.styleFrom(
+              backgroundColor: p.gold,
+              foregroundColor: p.ink,
+              shape: const StadiumBorder(),
+              padding: const EdgeInsets.symmetric(
+                horizontal: Space.xl,
+                vertical: Space.sm,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _Empty extends StatelessWidget {
