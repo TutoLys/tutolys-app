@@ -333,7 +333,9 @@ void main() {
         findsOneWidget,
         reason: 'second try: 1 + 2 for the lesson, no perfect bonus',
       );
-      expect(find.text('1/1'), findsOneWidget);
+      // G15: first tries out of all, and the ones fixed by the child.
+      expect(find.text('0/1'), findsOneWidget);
+      expect(find.text('corrigées par toi'), findsOneWidget);
       expect(find.byType(SnackBar), findsNothing);
       final done = await tester.runAsync(
         () => NodeProgressLocal(db, kidId: 'kid-lea').all(),
