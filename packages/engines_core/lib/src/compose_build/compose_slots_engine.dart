@@ -19,13 +19,21 @@ class ComposeContent {
     required this.tiles,
     required this.target,
     required this.ordered,
+    this.frame,
     this.creation = false,
   });
 
   final List<ComposeTile> tiles;
 
-  /// Tile ids that make the answer, one per slot.
+  /// Tile ids that make the answer, one per slot. Empty with a [frame].
   final List<String> target;
+
+  /// Free mode (ADR 0094): per slot, the tiles any of which is right
+  /// there, so every pick across the slots makes a sentence. Replaces
+  /// [target]; slots are always ordered.
+  final List<Set<String>>? frame;
+
+  int get slotCount => frame?.length ?? target.length;
 
   /// Whether the slots' order matters (`7 = 5 + 2` vs `{5, 2}`).
   final bool ordered;
@@ -136,6 +144,54 @@ class ComposeSlotsEngine
         ),
       );
     }
+    final creation = config['creation'];
+    if (creation != null && creation is! bool) {
+      return const ParseResult.invalid('creation must be true or false.');
+    }
+    final rawFrame = config['frame'];
+    if (rawFrame != null) {
+      if (config.containsKey('target') || config.containsKey('ordered')) {
+        return const ParseResult.invalid('frame replaces target and ordered.');
+      }
+      if (rawFrame is! List || rawFrame.isEmpty || rawFrame.length > 8) {
+        return const ParseResult.invalid('frame is 1 to 8 slots.');
+      }
+      final frame = <Set<String>>[];
+      final used = <String>{};
+      for (final slot in rawFrame) {
+        if (slot is! List || slot.isEmpty) {
+          return const ParseResult.invalid(
+            'Every frame slot lists the tiles that fit there.',
+          );
+        }
+        final accepted = <String>{};
+        for (final id in slot) {
+          if (id is! String || !ids.contains(id)) {
+            return const ParseResult.invalid(
+              'Every id in frame must exist in tiles.',
+            );
+          }
+          // Disjoint slots: any pick fills every slot, since each tile
+          // places once.
+          if (!used.add(id)) {
+            return const ParseResult.invalid(
+              'A tile fits one frame slot only.',
+            );
+          }
+          accepted.add(id);
+        }
+        frame.add(Set.unmodifiable(accepted));
+      }
+      return ParseResult.ok(
+        ComposeContent(
+          tiles: List.unmodifiable(tiles),
+          target: const [],
+          ordered: true,
+          frame: List.unmodifiable(frame),
+          creation: creation == true,
+        ),
+      );
+    }
     final target = config['target'];
     if (target is! List || target.isEmpty) {
       return const ParseResult.invalid('target cannot be empty.');
@@ -157,10 +213,6 @@ class ComposeSlotsEngine
     if (ordered != null && ordered is! bool) {
       return const ParseResult.invalid('ordered must be true or false.');
     }
-    final creation = config['creation'];
-    if (creation != null && creation is! bool) {
-      return const ParseResult.invalid('creation must be true or false.');
-    }
     return ParseResult.ok(
       ComposeContent(
         tiles: List.unmodifiable(tiles),
@@ -177,7 +229,7 @@ class ComposeSlotsEngine
         tray: List.unmodifiable(
           [for (final t in content.tiles) t.id]..shuffle(seed.random()),
         ),
-        slots: List.filled(content.target.length, null),
+        slots: List.filled(content.slotCount, null),
       );
 
   @override
@@ -244,7 +296,7 @@ class ComposeSlotsEngine
         return null;
       }
       final slots = (snap['slots'] as List).cast<String?>();
-      if (slots.length != content.target.length ||
+      if (slots.length != content.slotCount ||
           !slots.every((t) => t == null || known.contains(t))) {
         return null;
       }
@@ -358,7 +410,8 @@ class ComposeSlotsEngine
 /// sees. Ordered: a slot is right when its label is the target's label for
 /// that position. Unordered: when its label is still owed by the answer (a
 /// multiset, so two "3"s need two "3"s). Score is the share of slots
-/// right; [EvaluationResult.itemResults] is keyed by slot index.
+/// right; [EvaluationResult.itemResults] is keyed by slot index. With a
+/// frame, a slot is right when its label is one the frame accepts there.
 class ComposeBuildEvaluator
     implements Evaluator<ComposeContent, OrderingAnswer> {
   const ComposeBuildEvaluator();
@@ -379,10 +432,20 @@ class ComposeBuildEvaluator
     EvaluationContext ctx,
   ) {
     final placed = answer.orderedItemIds;
-    if (placed.length != content.target.length) {
+    if (placed.length != content.slotCount) {
       throw ArgumentError('An answer must fill every slot.');
     }
     String label(String id) => content.tile(id).label;
+    final frame = content.frame;
+    if (frame != null) {
+      final fits = [
+        for (final slot in frame) {for (final id in slot) label(id)},
+      ];
+      return _result(ctx, {
+        for (var i = 0; i < placed.length; i++)
+          '$i': fits[i].contains(label(placed[i])),
+      });
+    }
     final want = [for (final id in content.target) label(id)];
     final owed = <String, int>{};
     for (final l in want) {
@@ -399,6 +462,10 @@ class ComposeBuildEvaluator
         if (left > 0) owed[got] = left - 1;
       }
     }
+    return _result(ctx, items);
+  }
+
+  EvaluationResult _result(EvaluationContext ctx, Map<String, bool> items) {
     final right = items.values.where((v) => v).length;
     return EvaluationResult(
       outcome: right == items.length
