@@ -14,6 +14,7 @@ import '../../data/local_db/drift_activity_session_store.dart';
 import '../../data/local_db/home_stats.dart';
 import '../../data/local_db/node_progress_local.dart';
 import '../../data/local_db/streak_local.dart';
+import '../../data/sync/content_in_use.dart';
 import '../../data/sync/drift_audio_resolver.dart';
 import '../../data/sync/drift_image_resolver.dart';
 import '../../data/sync/lesson_key.dart';
@@ -21,6 +22,7 @@ import '../../data/sync/outbox_flusher_provider.dart';
 import '../audio/app_sounds.dart';
 import '../audio/music_director.dart';
 import '../pairing/pairing_controller.dart';
+import '../path/path_controller.dart' show contentInUseProvider;
 import '../profile/avatars.dart';
 import '../profile/rare_avatar_found.dart';
 import '../settings/settings_controller.dart';
@@ -90,9 +92,14 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
   String get _kidId => ref.read(activeKidIdProvider) ?? unpairedKidId;
 
+  /// Holds this lesson against offline-window eviction while it's on
+  /// screen (ADR 0093): its audio and pictures must not vanish mid-game.
+  late final ContentInUse _inUse;
+
   @override
   void initState() {
     super.initState();
+    _inUse = ref.read(contentInUseProvider)..hold(_exerciseId);
     unawaited(_readReplay());
     // No music under a question being read (ADR 0035).
     _music.activityEntered();
@@ -166,6 +173,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
   @override
   void dispose() {
+    _inUse.release(_exerciseId);
     _music.activityLeft();
     _lifecycle.dispose();
     unawaited(_autoRead?.cancel());
