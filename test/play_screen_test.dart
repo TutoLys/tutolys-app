@@ -468,6 +468,10 @@ void main() {
       await tester.tap(find.byTooltip("Quitter l'exercice"));
       await settle(tester);
       await tester.pumpAndSettle();
+      // G5: a started série asks « Tu veux arrêter ? » first.
+      await tester.tap(find.byKey(const ValueKey('stop-quit')));
+      await settle(tester);
+      await tester.pumpAndSettle();
 
       expect(find.text('open'), findsOneWidget);
       final done = await tester.runAsync(
