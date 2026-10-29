@@ -40,6 +40,7 @@ class PairMatchState {
     required this.leftOrder,
     required this.rightOrder,
     this.selectedLeft,
+    this.selectedRight,
     this.links = const {},
     this.locked = const {},
   });
@@ -49,6 +50,11 @@ class PairMatchState {
 
   /// The left item waiting for its partner.
   final String? selectedLeft;
+
+  /// A right item picked first, waiting for its left partner. Many children
+  /// start on the picture side (UX review G4). At most one of the two is
+  /// set.
+  final String? selectedRight;
 
   /// left id → right id, as the child has paired them so far.
   final Map<String, String> links;
@@ -61,6 +67,7 @@ class PairMatchState {
 
   PairMatchState copyWith({
     String? selectedLeft,
+    String? selectedRight,
     bool clearSelected = false,
     Map<String, String>? links,
     Set<String>? locked,
@@ -68,6 +75,7 @@ class PairMatchState {
     leftOrder: leftOrder,
     rightOrder: rightOrder,
     selectedLeft: clearSelected ? null : (selectedLeft ?? this.selectedLeft),
+    selectedRight: clearSelected ? null : (selectedRight ?? this.selectedRight),
     links: links ?? this.links,
     locked: locked ?? this.locked,
   );
@@ -90,8 +98,8 @@ class TapRight extends PairMatchAction {
 /// Pair every left item with its right partner, then VALIDER — the
 /// `pair_match` engine on the `LearningEngine` contract (Phase 4).
 ///
-/// Tap a left item, then a right one, to pair them. Tap a paired left item
-/// again to undo its pair. The whole board is checked at once, with
+/// Tap a left item, then a right one, to pair them, or the other way
+/// round. Tap a paired item again to undo its pair. The whole board is checked at once, with
 /// **partial credit**: pairs checked right lock in place, wrong ones come
 /// apart for the retry. The design's "wrong pairs flash and clear, right
 /// pairs lock in", but as one answer — the brief's point that three right
@@ -206,6 +214,8 @@ class PairMatchBoardEngine
         if (!s.leftOrder.contains(leftId) || s.locked.contains(leftId)) {
           return Transition(s);
         }
+        final waiting = s.selectedRight;
+        if (waiting != null) return _link(s, leftId, waiting);
         final linked = s.links[leftId];
         if (linked != null) {
           // Undo this pair and pick the left item up again.
@@ -228,22 +238,49 @@ class PairMatchBoardEngine
         return Transition(s.copyWith(selectedLeft: leftId));
 
       case TapRight(:final rightId):
-        final left = s.selectedLeft;
-        if (left == null || !s.rightOrder.contains(rightId)) {
-          return Transition(s);
-        }
+        if (!s.rightOrder.contains(rightId)) return Transition(s);
         final lockedRight = s.locked.any((l) => s.links[l] == rightId);
         if (lockedRight) return Transition(s);
-        // A right item belongs to one pair at a time: taking it moves it.
-        final links = Map.of(s.links)..removeWhere((_, r) => r == rightId);
-        links[left] = rightId;
-        return Transition(s.copyWith(clearSelected: true, links: links), [
-          InteractionEvent('pair_connected', {
-            'left_id': left,
-            'right_id': rightId,
-          }),
-        ]);
+        final left = s.selectedLeft;
+        if (left != null) return _link(s, left, rightId);
+        // Right first: pick it up (undoing its pair), or put it down again.
+        final pairedWith = s.links.entries
+            .where((e) => e.value == rightId)
+            .map((e) => e.key)
+            .firstOrNull;
+        if (pairedWith != null) {
+          return Transition(
+            s.copyWith(
+              selectedRight: rightId,
+              links: Map.of(s.links)..remove(pairedWith),
+            ),
+            [
+              InteractionEvent('pair_disconnected', {
+                'left_id': pairedWith,
+                'right_id': rightId,
+              }),
+            ],
+          );
+        }
+        if (s.selectedRight == rightId) {
+          return Transition(s.copyWith(clearSelected: true));
+        }
+        return Transition(s.copyWith(selectedRight: rightId));
     }
+  }
+
+  /// Pair [left] with [right]. A right item belongs to one pair at a time,
+  /// so taking it moves it; a left item's old pair is replaced.
+  Transition<PairMatchState> _link(
+    PairMatchState s,
+    String left,
+    String right,
+  ) {
+    final links = Map.of(s.links)..removeWhere((_, r) => r == right);
+    links[left] = right;
+    return Transition(s.copyWith(clearSelected: true, links: links), [
+      InteractionEvent('pair_connected', {'left_id': left, 'right_id': right}),
+    ]);
   }
 
   @override
@@ -277,6 +314,7 @@ class PairMatchBoardEngine
     'left_order': s.leftOrder,
     'right_order': s.rightOrder,
     'selected_left': s.selectedLeft,
+    'selected_right': s.selectedRight,
     'links': s.links,
     'locked': s.locked.toList(),
   };
@@ -306,6 +344,7 @@ class PairMatchBoardEngine
         leftOrder: List.unmodifiable(lefts),
         rightOrder: List.unmodifiable(rights),
         selectedLeft: snap['selected_left'] as String?,
+        selectedRight: snap['selected_right'] as String?,
         links: links,
         locked: locked,
       );
@@ -392,15 +431,21 @@ class PairMatchBoardEngine
                         label: view.content.right(r).label,
                         imageRef: view.content.right(r).imageRef,
                         audioRef: view.content.right(r).audioRef,
-                        state: stateOf(lockedRight, badge != null),
+                        state: stateOf(
+                          lockedRight,
+                          badge != null || s.selectedRight == r,
+                        ),
                         badge: lockedRight ? null : badge,
                         semanticsState: lockedRight
                             ? (fr ? 'bien associé' : 'matched')
+                            : s.selectedRight == r
+                            ? (fr
+                                  ? 'choisi, choisis son partenaire'
+                                  : 'chosen, now pick its partner')
                             : null,
-                        onTap:
-                            view.enabled &&
-                                s.selectedLeft != null &&
-                                !lockedRight
+                        // Live from the start: a right tile can be picked
+                        // first (G4).
+                        onTap: view.enabled && !lockedRight
                             ? () => view.dispatch(TapRight(r))
                             : null,
                       );

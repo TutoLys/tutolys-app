@@ -449,6 +449,50 @@ void main() {
       expect(back.locked, s.locked);
     });
 
+    test('G4: a right tile picked first waits for its left partner', () {
+      var st = engine.initialize(content, const EngineSeed(1));
+      st = engine.reduce(st, const TapRight('d9')).state;
+      expect(st.selectedRight, 'd9');
+      // Tapping it again puts it down.
+      expect(
+        engine.reduce(st, const TapRight('d9')).state.selectedRight,
+        isNull,
+      );
+      final linked = engine.reduce(st, const TapLeft('neuf'));
+      expect(linked.state.links, {'neuf': 'd9'});
+      expect(linked.state.selectedRight, isNull);
+      expect(linked.events.single.type, 'pair_connected');
+      // Tapping a paired right tile picks it up again, undoing the pair.
+      final undone = engine.reduce(linked.state, const TapRight('d9'));
+      expect(undone.state.links, isEmpty);
+      expect(undone.state.selectedRight, 'd9');
+      expect(undone.events.single.type, 'pair_disconnected');
+      // Left-first still works, and a snapshot keeps a waiting right tile.
+      final back = engine.restore(content, engine.snapshot(undone.state))!;
+      expect(back.selectedRight, 'd9');
+    });
+
+    testWidgets(
+      'G4: right-first pairs on screen too, and the tile looks picked',
+      (tester) async {
+        final (c, _) = controllerFor('pair_match', pairConfig);
+        await tester.runAsync(c.start);
+        await tester.pumpWidget(app(c));
+        await tester.tap(find.byKey(const ValueKey('pair-right-d5')));
+        await settle(tester);
+        expect(
+          tester
+              .widget<AnswerTile>(find.byKey(const ValueKey('pair-right-d5')))
+              .state,
+          AnswerTileState.picked,
+        );
+        await tester.tap(find.byKey(const ValueKey('pair-left-cinq')));
+        await settle(tester);
+        expect((c.current!.state as PairMatchState).links, {'cinq': 'd5'});
+        c.dispose();
+      },
+    );
+
     testWidgets('one wrong pair → partial "Presque" → fix it → Bravo', (
       tester,
     ) async {
