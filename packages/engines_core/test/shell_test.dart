@@ -126,7 +126,7 @@ void main() {
         ),
       );
       expect(tester.takeException(), isNull);
-      expect(find.text('3 EN SÉRIE'), findsOneWidget);
+      expect(find.text('3 DE SUITE !'), findsOneWidget);
     });
   });
 

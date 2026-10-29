@@ -376,7 +376,7 @@ void main() {
       await tester.tap(find.text('VALIDER'));
       await settle(tester);
       expect(find.text('Presque !'), findsOneWidget);
-      expect(find.textContaining('Certaines sont justes'), findsOneWidget);
+      expect(find.text('Bien ! Change les autres.'), findsOneWidget);
 
       await tester.tap(find.text('RÉESSAYER'));
       await settle(tester);

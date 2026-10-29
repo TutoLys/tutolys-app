@@ -37,7 +37,8 @@ class ShellStrings {
       _t('Choisis d’abord ta réponse !', 'Pick your answer first!');
   String get listen => _t('Écouter la question', 'Listen to the question');
   String get audioUnavailable => _t('Audio indisponible', 'Audio unavailable');
-  String inARow(int n) => _t('$n en série', '$n in a row');
+  // Not « en série »: that's the streak's name (UX review G13).
+  String inARow(int n) => _t('$n de suite !', '$n in a row!');
   String xp(int n) => '+$n';
   String questionOf(int i, int n) =>
       _t('Question $i sur $n', 'Question $i of $n');
@@ -46,27 +47,21 @@ class ShellStrings {
   String get correctMessage => _t('Bonne réponse', 'Right answer');
   String get continueLabel => _t('Continuer', 'Continue');
   String get retryTitle => _t('Presque !', 'Almost!');
-  String get retryMessage =>
-      _t('Pas tout à fait — essaie encore.', 'Not quite — try again.');
+  // Short, concrete and positive for a grade-1 reader (UX review G13).
+  String get retryMessage => _t('Essaie encore.', 'Try again.');
   String get retryLabel => _t('Réessayer', 'Try again');
-  String get partialMessage => _t(
-    'Certaines sont justes — elles restent en place. Corrige les autres.',
-    "Some are right — they stay put. Fix the others.",
-  );
+  String get partialMessage =>
+      _t('Bien ! Change les autres.', 'Good! Change the others.');
   String get timeUpTitle => _t('Temps écoulé !', "Time's up!");
-  String get timeUpMessage => _t(
-    'Essaie encore : un nouveau compte à rebours commence.',
-    'Try again — a fresh countdown starts.',
-  );
+  String get timeUpMessage =>
+      _t('Le temps est fini. On recommence !', "Time's up. Let's go again!");
   String get movingOnTitle => _t('On continue', "Let's keep going");
   String get movingOnMessage => _t(
     'On regardera celle-ci une autre fois.',
     "We'll come back to this one another time.",
   );
-  String get ungradedMessage => _t(
-    'On passe à la suite — ce n\'est pas ta faute.',
-    "Let's move on — that wasn't you.",
-  );
+  String get ungradedMessage =>
+      _t('On passe à la suite !', "On to the next one!");
 
   String get needsUpdate => _t(
     "Cette activité a besoin d'une mise à jour de l'application.",
