@@ -18,10 +18,11 @@ import 'package:tutolys_app/features/pairing/who_is_playing_screen.dart';
 /// credential each call used.
 class _TokenPairingApi extends PairingApi {
   _TokenPairingApi({
-    this.rejected = const {},
+    Set<String>? rejected,
     this.offline = false,
     this.reason,
-  }) : super(dio: Dio());
+  }) : rejected = rejected ?? {},
+       super(dio: Dio());
 
   final Set<String> rejected;
 
@@ -240,6 +241,43 @@ void main() {
       expect(s.status, SessionStatus.paired);
       expect(s.kid!.id, 'k1');
       expect([for (final k in s.kids) k.id], ['k1']);
+    });
+
+    test('revoked mid-session: the next kid takes over, no deadlock', () async {
+      // Found live on 2026-10-28 retiring a class tablet: the refresh that
+      // hears "revoked" hands over to the next kid, whose switch used to
+      // wait on that same in-flight refresh, so it waited forever.
+      final store = await _storeWith([('k1', 'Yelhan'), ('k2', 'Lina')]);
+      final api = _TokenPairingApi();
+      final c = _container(store, api);
+      addTearDown(c.dispose);
+      final n = c.read(sessionControllerProvider.notifier);
+      await n.restore();
+      expect(c.read(sessionControllerProvider).kid!.id, 'k2');
+
+      api.rejected.add('tok-k2');
+      await n.ensureFreshToken().timeout(const Duration(seconds: 5));
+
+      final s = c.read(sessionControllerProvider);
+      expect(s.kid!.id, 'k1');
+      expect([for (final k in s.kids) k.id], ['k1']);
+      expect(s.accessToken, 'access-tok-k1');
+    });
+
+    test('every kid revoked mid-session (a retired class tablet): back to '
+        'pairing', () async {
+      final store = await _storeWith([('k1', 'Yelhan'), ('k2', 'Lina'), ('k3', 'Noé')]);
+      final api = _TokenPairingApi();
+      final c = _container(store, api);
+      addTearDown(c.dispose);
+      final n = c.read(sessionControllerProvider.notifier);
+      await n.restore();
+
+      api.rejected.addAll({'tok-k1', 'tok-k2', 'tok-k3'});
+      await n.ensureFreshToken().timeout(const Duration(seconds: 5));
+
+      expect(c.read(sessionControllerProvider).status, SessionStatus.unpaired);
+      expect(await store.pairedKids(), isEmpty);
     });
 
     test('adding a profile pairs a second kid without dropping the first',

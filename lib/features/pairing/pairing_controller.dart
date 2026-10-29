@@ -269,7 +269,9 @@ class SessionController extends Notifier<SessionState> {
       case RefreshRejected(:final reason):
         _refreshTimer?.cancel();
         await _forgetActiveKid(erase: reason != null);
-        await _resumeWithRemaining();
+        // This *is* the in-flight refresh: the next kid's switch must not
+        // wait on it, or it waits on itself forever.
+        await _resumeWithRemaining(fromRefresh: true);
       case RefreshOffline() || RefreshFailed():
         // Stay paired and try again later. Offline play continues from the
         // cache; dropping the credential here would be the wrong trade.
@@ -370,14 +372,18 @@ class SessionController extends Notifier<SessionState> {
   /// With several kids left, or on a class tablet, it opens "Qui joue ?"
   /// asking everyone, because the next kid was picked by the app, not by
   /// whoever is holding the device.
-  Future<void> _resumeWithRemaining() async {
+  ///
+  /// [fromRefresh] when called by the in-flight refresh itself, which the
+  /// switch would otherwise wait on (a deadlock found live, 2026-10-28,
+  /// retiring a class tablet mid-session).
+  Future<void> _resumeWithRemaining({bool fromRefresh = false}) async {
     final kids = await _store.pairedKids();
     final next = kids.isEmpty ? null : await _store.pairedKid();
     if (next == null) {
       state = const SessionState.unpaired();
       return;
     }
-    await switchTo(next.id, kids: kids);
+    await switchTo(next.id, kids: kids, waitForRefresh: !fromRefresh);
     if (state.status == SessionStatus.paired && state.choosesWhoPlays) {
       state = state.copyWith(
         stage: ProfileStage.choosing,
@@ -401,6 +407,7 @@ class SessionController extends Notifier<SessionState> {
     List<PairedKid>? kids,
     String? accessToken,
     int? expiresIn,
+    bool waitForRefresh = true,
   }) async {
     final token = await _store.deviceTokenFor(kidId);
     if (token == null) {
@@ -415,8 +422,8 @@ class SessionController extends Notifier<SessionState> {
     final all = kids ?? await _store.pairedKids();
     final kid = all.firstWhere((k) => k.id == kidId);
     // A refresh for the previous kid may still be in flight; it must not
-    // land on this one.
-    await _inFlightRefresh;
+    // land on this one. Unless that refresh is the caller.
+    if (waitForRefresh) await _inFlightRefresh;
 
     final result = accessToken != null
         ? RefreshSucceeded(accessToken: accessToken, expiresIn: expiresIn ?? 900)
@@ -442,7 +449,8 @@ class SessionController extends Notifier<SessionState> {
         _scheduleRefresh(seatRecheckSeconds);
       case RefreshRejected(:final reason):
         await _forgetActiveKid(erase: reason != null);
-        await _resumeWithRemaining();
+        // Still inside the caller's refresh when that is what sent us here.
+        await _resumeWithRemaining(fromRefresh: !waitForRefresh);
       case RefreshOffline() || RefreshFailed():
         state = SessionState(
           status: SessionStatus.paired,

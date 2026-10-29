@@ -140,3 +140,30 @@ now fixed:
 - **The class-code screen showed the family's hint**, "Demande ton code à
   la personne responsable de ton compte". Now it shows none; its
   subtitle already says the teacher shows the code.
+
+## Revision — 2026-10-28: a mid-session revocation no longer freezes the app
+
+The live end-to-end check retired a class tablet while the app was
+running, and the app never moved on. It was a deadlock:
+- The scheduled refresh (`ensureFreshToken`) heard "revoked", forgot that
+  kid and handed over to the next one through `switchTo`.
+- `switchTo` first waits for any refresh still in flight, so a late answer
+  can't land on the new kid. Here the refresh in flight was the caller, so
+  `switchTo` waited on itself forever.
+
+The stored pairing was already gone, but the screen stayed on the revoked
+kid until the app was restarted. Launch (`restore()`) never hit it,
+because nothing is in flight then, which is why tests stayed green. It
+reaches any device with two or more kids:
+- a class tablet retired, or a learner removed, mid-session;
+- a sibling revoked in the portal while the app is open.
+
+The fix: `_resumeWithRemaining(fromRefresh: true)` and
+`switchTo(waitForRefresh: false)` when the refresh itself is handing
+over, passed down the chain. So a fully retired tablet walks through
+every kid in one go and ends back at pairing.
+
+Two tests in `test/multi_kid_test.dart` pin it: one kid revoked
+mid-session, and every kid revoked mid-session. Both time out without
+the fix. Live after the fix: a 42-learner class tablet retired by the
+teacher went to `unpaired`, with every kid's local data erased.
