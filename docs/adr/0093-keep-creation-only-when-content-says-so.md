@@ -28,7 +28,7 @@ keep that as a creation, which means nothing. Hafid keeps the feature.
 
 ## Consequences
 
-- Flagged: `samples/fr_mail_studio.json` (all 4) and
+- Flagged: `samples/fr_mail_studio.json` (questions 1–2: backend ADR 0090 found that 3–4 allow one message) and
   `samples/math_geometry_lab.json` (the 5 builds, not the copy). No math
   lesson, no français word or syllable lesson, and no `pattern_machine`
   content: that engine has no invent mode yet, so every pattern has one
