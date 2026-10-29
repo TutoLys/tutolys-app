@@ -36,7 +36,7 @@ class PathNode {
   });
 
   /// Open, but its lesson isn't on the device and the device is offline
-  /// (ADR 0093): the orb wears a cloud tag. Never drawn as locked.
+  /// (ADR 0095): the orb wears a cloud tag. Never drawn as locked.
   final bool notDownloaded;
 
   /// A teacher gave this skill as homework and it isn't done yet: the orb

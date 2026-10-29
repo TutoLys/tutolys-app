@@ -1,7 +1,10 @@
-# ADR 0093 — The offline window: 25 leaves per subject, not the whole grade
+# ADR 0095 — The offline window: 25 leaves per subject, not the whole grade
 
 Date: 2026-10-29
 Status: accepted
+
+Renumbered from 0093 on 2026-10-29: Engines took 0093 the same day.
+Commits before the renumber (a522c5c…557f4da) say "ADR 0093".
 
 ## Context
 

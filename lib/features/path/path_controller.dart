@@ -49,7 +49,7 @@ class PathState {
   /// rather than locked; nothing gates on order.
   final Map<String, List<Map<String, Object?>>> lessonsByNodeId;
 
-  /// Every published lesson per node, downloaded or not (ADR 0093): the
+  /// Every published lesson per node, downloaded or not (ADR 0095): the
   /// cached envelope where it's on the device, a stub marked
   /// [isNotDownloaded] where it isn't. What the Carte draws, so a leaf
   /// outside the offline window keeps its real state instead of "soon".
@@ -138,7 +138,7 @@ class PathController extends Notifier<PathState> {
       }
     });
     // A finished lesson moves the frontier: the window follows in the
-    // background (ADR 0093). The Carte keeps showing what it has.
+    // background (ADR 0095). The Carte keeps showing what it has.
     ref.listen(nodeProgressProvider, (previous, next) {
       if (previous?.hasValue == true && next.hasValue && !state.loading) {
         _load();
@@ -162,7 +162,7 @@ class PathController extends Notifier<PathState> {
     final contentSync = ref.read(contentSyncProvider);
 
     // The cache first, so neither the Carte nor play waits on the network
-    // (ADR 0093); the sync's result replaces it when it lands.
+    // (ADR 0095); the sync's result replaces it when it lands.
     if (state.loading && state.leaves.isEmpty) {
       final cached = await _fromCache(subject, kid.gradeLevel);
       if (state.subject != subject || !state.loading) return;
@@ -257,7 +257,7 @@ class PathController extends Notifier<PathState> {
   }
 
   /// Downloads a leaf outside the offline window, then shows it as
-  /// playable (ADR 0093). Offline, says so rather than failing.
+  /// playable (ADR 0095). Offline, says so rather than failing.
   Future<NodeDownload> download(String skillNodeId) async {
     final kid = ref.read(sessionControllerProvider).kid;
     if (kid == null) return NodeDownload.failed;
@@ -293,7 +293,7 @@ class PathController extends Notifier<PathState> {
 
   /// Once per kid per run, after the first successful load: every other
   /// subject's window, one at a time, in the background, so the whole
-  /// village plays offline (ADR 0093). Never awaited by anything.
+  /// village plays offline (ADR 0095). Never awaited by anything.
   void _prefetchOthers(String loaded) {
     final kid = ref.read(sessionControllerProvider).kid;
     if (kid == null ||
@@ -446,7 +446,7 @@ final contentApiProvider = Provider<ContentApi>(
 );
 
 /// Whether a first successful Carte load prefetches every other subject's
-/// offline window in the background (ADR 0093). Off in tests that count
+/// offline window in the background (ADR 0095). Off in tests that count
 /// sync calls.
 final offlinePrefetchProvider = Provider<bool>((ref) => true);
 

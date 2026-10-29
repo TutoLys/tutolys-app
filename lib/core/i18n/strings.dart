@@ -106,7 +106,7 @@ abstract class Strings {
   /// A Carte node with no lesson yet (ADR 0032): skipped, not locked.
   String get pathSoon;
 
-  /// A leaf whose lesson isn't on the device, offline (ADR 0093).
+  /// A leaf whose lesson isn't on the device, offline (ADR 0095).
   String get pathNotDownloaded;
   String get pathNotDownloadedOffline;
   String get pathDownloading;

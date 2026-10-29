@@ -1,4 +1,4 @@
-/// Exercises a game has on screen right now (ADR 0093).
+/// Exercises a game has on screen right now (ADR 0095).
 ///
 /// The offline window never evicts one of these: a lesson must not lose its
 /// audio or pictures under a child who is playing it. The play screen

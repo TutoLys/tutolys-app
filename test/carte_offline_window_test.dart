@@ -54,7 +54,7 @@ const _two = CurriculumLeaf(
   stableKey: 'mathematique/sens-et-ecriture-des-nombres/b:A/o:2',
 );
 
-/// The Carte with the offline window (ADR 0093): a leaf whose lesson is
+/// The Carte with the offline window (ADR 0095): a leaf whose lesson is
 /// published but not on the device keeps its real state, wears a cloud
 /// offline, and says kindly that it needs the Internet; online, a tap
 /// downloads it and plays.

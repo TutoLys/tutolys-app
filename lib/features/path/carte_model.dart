@@ -131,7 +131,7 @@ List<AreaGroup> _groupByServerAreas(
 ///   2026-10-25). That holds for a node already completed or mastered too:
 ///   past the frontier, nothing opens.
 /// - **not downloaded** — not a state but a flag on an open node: its
-///   lesson is published but outside the offline window (ADR 0093). Drawn
+///   lesson is published but outside the offline window (ADR 0095). Drawn
 ///   only while [offline], when a tap can't fetch it.
 /// - **soon** — no lesson published for it yet. Not locked and not a
 ///   step in the sequence: it is skipped, so a missing lesson never looks

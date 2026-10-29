@@ -264,7 +264,7 @@ void main() {
     expect(
       contentApi.asked.map((a) => a.$1).toSet(),
       pathSubjects.toSet(),
-      reason: 'the whole village plays offline (ADR 0093)',
+      reason: 'the whole village plays offline (ADR 0095)',
     );
     final count = contentApi.asked.length;
     await container.read(pathControllerProvider.notifier).refresh();

@@ -93,7 +93,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   String get _kidId => ref.read(activeKidIdProvider) ?? unpairedKidId;
 
   /// Holds this lesson against offline-window eviction while it's on
-  /// screen (ADR 0093): its audio and pictures must not vanish mid-game.
+  /// screen (ADR 0095): its audio and pictures must not vanish mid-game.
   late final ContentInUse _inUse;
 
   @override

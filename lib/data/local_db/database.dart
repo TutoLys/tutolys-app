@@ -148,7 +148,7 @@ class AssetCacheTable extends Table {
 }
 
 /// The last content manifest per `(subject, grade, asked locale)`: what is
-/// published, whether or not it is on the device (ADR 0093).
+/// published, whether or not it is on the device (ADR 0095).
 ///
 /// The offline window downloads only ~25 leaves per subject, so "has a
 /// cached lesson" no longer means "has a lesson". This lets the Carte tell

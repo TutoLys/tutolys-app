@@ -7,7 +7,7 @@ import 'generated_migrations/schema.dart';
 import 'generated_migrations/schema_v8.dart' as v8;
 
 /// The 8 → 9 upgrade adds `manifest_entry`, the offline window's record of
-/// what is published (ADR 0093). It only adds a table: a device that cached
+/// what is published (ADR 0095). It only adds a table: a device that cached
 /// the whole grade keeps every row until its first complete sync.
 void main() {
   test('upgrades to exactly the v9 schema, keeping the cache', () async {

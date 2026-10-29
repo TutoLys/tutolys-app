@@ -159,7 +159,7 @@ Widget appUnder({
       contentApiProvider.overrideWithValue(
         contentApi ?? FakeContentApi(content),
       ),
-      // The background prefetch of other subjects (ADR 0093) would skew
+      // The background prefetch of other subjects (ADR 0095) would skew
       // the per-subject sync counts these tests assert.
       offlinePrefetchProvider.overrideWithValue(false),
       sessionControllerProvider.overrideWith(

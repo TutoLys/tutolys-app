@@ -9,7 +9,7 @@ import 'package:tutolys_app/features/path/offline_window.dart';
 
 import 'content_sync_test.dart' show FakeContentServer;
 
-/// The offline window (ADR 0093): which leaves a kid needs, the union a
+/// The offline window (ADR 0095): which leaves a kid needs, the union a
 /// family device keeps, prefetch as the frontier moves, and eviction that
 /// is counted and never takes what a kid is in the middle of.
 void main() {

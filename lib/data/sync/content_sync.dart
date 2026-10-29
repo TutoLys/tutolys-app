@@ -71,7 +71,7 @@ class SyncReport {
   final List<String> unavailable;
 
   /// Dropped because their leaf left every paired kid's offline window
-  /// (ADR 0093). Still published: a later window brings them back.
+  /// (ADR 0095). Still published: a later window brings them back.
   final int evicted;
 
   final bool offline;
@@ -96,7 +96,7 @@ class SyncReport {
 ///    dies halfway leaves the previous content intact and playable rather than
 ///    a half-written mixture.
 ///
-/// With a [planWindow] it keeps only the offline window (ADR 0093): the
+/// With a [planWindow] it keeps only the offline window (ADR 0095): the
 /// playing kid's ~25 leaves per subject are downloaded, every paired kid's
 /// are kept, and the rest is evicted once a sync completes.
 class ContentSync {
@@ -360,7 +360,7 @@ class ContentSync {
   );
 
   /// Replaces the stored manifest for this `(subject, grade, asked locale)`
-  /// in one transaction (ADR 0093).
+  /// in one transaction (ADR 0095).
   Future<void> _storeManifest(
     ContentManifest manifest, {
     String? subject,
@@ -419,7 +419,7 @@ class ContentSync {
   };
 
   /// Downloads one node's lessons now: a tap on a leaf outside the window
-  /// (ADR 0093). Verified like any sync, then committed with its assets.
+  /// (ADR 0095). Verified like any sync, then committed with its assets.
   Future<NodeDownload> downloadNode({
     required String skillNodeId,
     required int grade,
@@ -509,7 +509,7 @@ class ContentSync {
       int.tryParse(await _deviceValue(key) ?? '') ?? 0;
 
   /// What the offline window holds and has evicted: for the technical log
-  /// and for tests (ADR 0093). Nothing here leaves the device.
+  /// and for tests (ADR 0095). Nothing here leaves the device.
   Future<OfflineStats> offlineStats() async {
     final subjects = <String, SubjectCacheSize>{};
     for (final row
@@ -741,7 +741,7 @@ class ContentSync {
   /// sync would then re-download forever.
   ///
   /// [evictIds] leave in the same transaction, and are counted and
-  /// timestamped there (ADR 0093): never silently.
+  /// timestamped there (ADR 0095): never silently.
   Future<void> _commit(
     List<Map<String, Object?>> verified,
     List<String> removeIds, {

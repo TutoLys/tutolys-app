@@ -129,7 +129,7 @@ class _Row extends StatelessWidget {
 }
 
 /// The technical log, with what the offline window holds and has evicted
-/// (ADR 0093). Sizes and counts only: no lesson text, no kid.
+/// (ADR 0095). Sizes and counts only: no lesson text, no kid.
 Future<void> _openTechnicalLog(BuildContext context) async {
   var offline = const <String>[];
   try {

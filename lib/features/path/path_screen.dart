@@ -435,7 +435,7 @@ class _Sections extends ConsumerWidget {
     // the last word, so no path into a game can skip the sequence.
     if (!isOpenState(node.state) || lessons == null) return;
     var envelope = lessons.next;
-    // Outside the offline window (ADR 0093): fetch it first, or say kindly
+    // Outside the offline window (ADR 0095): fetch it first, or say kindly
     // that it needs the Internet. Never a crash, never "locked".
     if (isNotDownloaded(envelope)) {
       final id = envelope['exercise_id'];

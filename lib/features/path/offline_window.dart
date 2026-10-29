@@ -12,7 +12,7 @@ import '../../data/sync/window_plan.dart';
 import 'path_controller.dart' show pickLessons;
 
 /// Leaves kept per subject from the frontier forward, the frontier
-/// included (ADR 0093). The interview's 20–30 leaves, about 15–18 MB.
+/// included (ADR 0095). The interview's 20–30 leaves, about 15–18 MB.
 const offlineWindowLeaves = 25;
 
 /// Finished leaves kept just behind the frontier, for an offline replay.
