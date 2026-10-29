@@ -41,6 +41,20 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  Future<LocalDatabase> seeded(WidgetTester tester) async {
+    final db = LocalDatabase.memory();
+    await tester.runAsync(
+      () => CreationStore(db, kidId: 'k1').save(
+        engineKey: 'compose_build',
+        exerciseId: 'ex-a',
+        payload: {
+          'labels': ['Le', 'chat', 'dort'],
+        },
+      ),
+    );
+    return db;
+  }
+
   Future<LocalDatabase> open(WidgetTester tester, {LocalDatabase? db}) async {
     final database = db ?? LocalDatabase.memory();
     await tester.pumpWidget(
@@ -83,7 +97,7 @@ void main() {
     tester,
   ) async {
     size(tester, 2000);
-    await open(tester);
+    await open(tester, db: await seeded(tester));
     // A real hit test on the building, not a finder shortcut: the art has
     // a fixed box now, so its centre is the building (`f59975f`).
     final building = find.byKey(const ValueKey('village-building-GALLERY'));
@@ -99,7 +113,7 @@ void main() {
 
   testWidgets('on a phone, the strip tile opens it too', (tester) async {
     size(tester, 375, 900);
-    await open(tester);
+    await open(tester, db: await seeded(tester));
     final tile = find.byKey(const ValueKey('strip-building-GALLERY'));
     await scrollStrip(tester);
     await tester.ensureVisible(tile);
@@ -110,15 +124,23 @@ void main() {
     expect(find.byType(PlayScreen), findsOneWidget);
   });
 
-  testWidgets('no creation yet: Foxy explains how to fill it, never red', (
-    tester,
-  ) async {
+  testWidgets('no creation yet: a friendly page says how to fill it, and '
+      'leads back to the Village', (tester) async {
     size(tester, 2000);
     await open(tester);
     await tester.tap(find.byKey(const ValueKey('village-building-GALLERY')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('gallery-empty')), findsOneWidget);
+    expect(find.byKey(const ValueKey('gallery-home-empty')), findsOneWidget);
+    expect(find.byType(PlayScreen), findsNothing);
     expect(find.textContaining('Garder dans mes créations'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('gallery-empty-back')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('gallery-home-empty')), findsNothing);
+    expect(
+      find.byKey(const ValueKey('village-building-GALLERY')).hitTestable(),
+      findsOneWidget,
+    );
   });
 
   testWidgets('hang two creations with reasons; only this kid\'s are shown, '

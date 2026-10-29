@@ -1,9 +1,11 @@
-import 'package:flutter/widgets.dart';
+import 'package:design_system/design_system.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/i18n/strings.dart';
 import '../../core/routing/paired_router.dart';
+import '../../data/local_db/creation_store.dart';
 import '../../data/local_db/database.dart';
 import '../pairing/pairing_controller.dart';
 
@@ -61,12 +63,23 @@ Map<String, Object?> galleryEnvelope(Strings t, {required bool english}) => {
 };
 
 /// Opens the gallery as practice: no mastery, no XP, nothing uploaded
-/// (ADR 0098). Returns once the kid is back in the Village.
-Future<void> openVillageGallery(BuildContext context, WidgetRef ref) {
+/// (ADR 0098). With nothing kept yet, a friendly page explains how to fill
+/// it instead of an empty game. Returns once the kid is back in the
+/// Village.
+Future<void> openVillageGallery(BuildContext context, WidgetRef ref) async {
+  final shelf = ref.read(creationShelfProvider);
+  final empty = shelf == null || (await shelf.list()).isEmpty;
+  if (!context.mounted) return;
+  if (empty) {
+    await Navigator.of(context, rootNavigator: true).push<void>(
+      MaterialPageRoute(builder: (_) => const GalleryEmptyScreen()),
+    );
+    return;
+  }
   final t = context.s;
   final english = Localizations.localeOf(context).languageCode == 'en';
   final grade = ref.read(sessionControllerProvider).kid?.gradeLevel ?? 1;
-  return GoRouter.of(context).push(
+  await GoRouter.of(context).push(
     '/play',
     extra: PlayRequest(
       node: galleryNode(t, grade: grade),
@@ -74,4 +87,88 @@ Future<void> openVillageGallery(BuildContext context, WidgetRef ref) {
       practice: true,
     ),
   );
+}
+
+/// The gallery with nothing in it yet (ADR 0098): the fox, how to fill it
+/// in kid words, and the way back. No red, nothing read aloud on its own.
+class GalleryEmptyScreen extends StatelessWidget {
+  const GalleryEmptyScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
+    final t = context.s;
+    return Scaffold(
+      key: const ValueKey('gallery-home-empty'),
+      backgroundColor: p.skyBottom,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(Space.lg),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 460),
+              child: Column(
+                children: [
+                  Image.asset(
+                    'assets/images/asset-bldg-gallery.webp',
+                    height: 150,
+                    fit: BoxFit.contain,
+                  ),
+                  const SizedBox(height: Space.sm),
+                  Image.asset(
+                    'assets/images/asset-mascot-welcome.webp',
+                    height: 110,
+                    fit: BoxFit.contain,
+                  ),
+                  const SizedBox(height: Space.md),
+                  Text(
+                    t.galleryEmptyTitle,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: VillageType.display,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 24,
+                      color: p.ink,
+                    ),
+                  ),
+                  const SizedBox(height: Space.xs),
+                  Text(
+                    t.galleryEmptyBody,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: VillageType.display,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      height: 1.4,
+                      color: p.inkMuted,
+                    ),
+                  ),
+                  const SizedBox(height: Space.xl),
+                  FilledButton(
+                    key: const ValueKey('gallery-empty-back'),
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: p.gold,
+                      foregroundColor: const Color(0xFF241A04),
+                      shape: const StadiumBorder(),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: Space.xl,
+                        vertical: Space.sm,
+                      ),
+                      textStyle: const TextStyle(
+                        fontFamily: VillageType.display,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
+                    ),
+                    child: Text(t.galleryEmptyBack),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

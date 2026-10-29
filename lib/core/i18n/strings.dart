@@ -265,6 +265,9 @@ abstract class Strings {
   String get galleryReasonFunny;
   String get galleryVisitorFoxy;
   String get galleryVisitorLea;
+  String get galleryEmptyTitle;
+  String get galleryEmptyBody;
+  String get galleryEmptyBack;
   String get villageSignTitle;
   String get villageRecommendedLabel;
   String get villageContinuePath;
@@ -1118,6 +1121,18 @@ class _FrenchStrings extends Strings {
 
   @override
   String get galleryVisitorLea => "J'adore ce que tu as accroché !";
+
+  @override
+  String get galleryEmptyTitle => 'Ta galerie t\'attend !';
+
+  @override
+  String get galleryEmptyBody =>
+      'Quand tu crées quelque chose dans un jeu, appuie sur « Garder dans '
+      'mes créations ». Tes créations viendront ici, et tu pourras les '
+      'accrocher.';
+
+  @override
+  String get galleryEmptyBack => 'Retour au village';
 
   @override
   String get villageSignTitle => 'Village des Lys';
@@ -2396,6 +2411,17 @@ class _EnglishStrings extends Strings {
 
   @override
   String get galleryVisitorLea => 'I love what you hung up!';
+
+  @override
+  String get galleryEmptyTitle => 'Your gallery is waiting!';
+
+  @override
+  String get galleryEmptyBody =>
+      'When you make something in a game, press “Keep in my creations”. '
+      'Your creations will come here, and you can hang them up.';
+
+  @override
+  String get galleryEmptyBack => 'Back to the village';
 
   @override
   String get villageSignTitle => 'Lys Village';

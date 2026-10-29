@@ -56,11 +56,15 @@ art brief was written.
   practice event would be rejected by telemetry today: the envelope needs a
   skill node, and `evaluation.evidence` waits on LE-T3. Sending nothing is
   the only honest choice until telemetry accepts one.
-- **Empty state**: the engine's own. Foxy says, in kid words, to press
-  « Garder dans mes créations », and VALIDER lets the child carry on. It
-  has no red. Nothing is read aloud by default. The speaker needs a
-  recorded clip, and the app has no live speech (D2). A clip for the
-  gallery's lines is a follow-up.
+- **Empty state**: with nothing kept yet, the gallery doesn't open an
+  empty game. `GalleryEmptyScreen` shows the gallery building and the fox,
+  « Ta galerie t'attend ! », and how to fill it in kid words (« Quand tu
+  crées quelque chose dans un jeu, appuie sur « Garder dans mes
+  créations ». »), with a gold « Retour au village ». It has no red.
+  Nothing is read aloud on its own. A speaker needs a recorded clip, and
+  the app has no live speech (D2), so a clip for these lines is a
+  follow-up. The engine's own empty state stays as the fallback inside the
+  game.
 
 ### Tapping a building, fixed
 
