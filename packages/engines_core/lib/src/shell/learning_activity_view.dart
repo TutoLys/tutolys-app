@@ -230,9 +230,10 @@ class _LearningActivityViewState extends State<LearningActivityView> {
           title: timedOut ? s.timeUpTitle : s.retryTitle,
           message: timedOut
               ? s.timeUpMessage
-              : outcome == Outcome.partial
-              ? s.partialMessage
-              : s.retryMessage,
+              : s.missFor(c.lastResult?.feedbackCode) ??
+                    (outcome == Outcome.partial
+                        ? s.partialMessage
+                        : s.retryMessage),
           actionLabel: s.retryLabel,
           onAction: c.proceed,
         );

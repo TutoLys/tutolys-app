@@ -33,6 +33,10 @@ class ShellStrings {
       'Touche les tuiles pour remplir les cases.',
       'Tap the tiles to fill the boxes.',
     ),
+    'pattern_machine' => _t(
+      'Touche une forme pour remplir la case.',
+      'Tap a shape to fill the box.',
+    ),
     _ => null,
   };
   String get answerFirst =>
@@ -56,6 +60,24 @@ class ShellStrings {
   String get retryLabel => _t('Réessayer', 'Try again');
   String get partialMessage =>
       _t('Bien ! Change les autres.', 'Good! Change the others.');
+
+  /// An evaluator's reason a try isn't there yet, for the « Presque »
+  /// banner; null keeps the generic message.
+  String? missFor(String? code) => switch (code) {
+    'no_repeat' => _t(
+      'Ta suite ne se répète pas encore.',
+      "Your pattern doesn't repeat yet.",
+    ),
+    'core_size' => _t(
+      'Ça se répète ! Compte combien de formes il faut dans ton motif.',
+      'It repeats! Count how many shapes your pattern needs.',
+    ),
+    'vary' => _t(
+      'Change aussi les formes ou les couleurs dans ton motif.',
+      'Change the shapes or colours inside your pattern too.',
+    ),
+    _ => null,
+  };
   String get timeUpTitle => _t('Temps écoulé !', "Time's up!");
   String get timeUpMessage =>
       _t('Le temps est fini. On recommence !', "Time's up. Let's go again!");

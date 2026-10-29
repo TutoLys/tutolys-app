@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../widgets/creations.dart';
 import '../widgets/answer_tile.dart';
+import '../widgets/idle_hand_hint.dart';
 
 enum PatternShape {
   circle,
@@ -190,7 +191,27 @@ class PatternContent {
     this.continues = true,
     this.shuffle = true,
     this.creation = false,
+    this.invent = false,
+    this.slots = 0,
+    this.core,
+    this.vary = const {},
   });
+
+  /// Invent mode (`task: "invent"`, ADR 0095): an empty strip of [slots]
+  /// cells the child fills from the [choices] palette with a pattern of
+  /// their own. There is no [sequence]; every cell is a gap.
+  final bool invent;
+  final int slots;
+
+  /// Invent: the core size the pattern must have, or null for any core of
+  /// 2 or more.
+  final int? core;
+
+  /// Invent: what must change inside the core — `shape`, `color`.
+  final Set<String> vary;
+
+  /// Cells in the row: the sequence, or the invent strip.
+  int get length => invent ? slots : sequence.length;
 
   /// Every term, the hidden ones included.
   final List<PatternPiece> sequence;
@@ -326,6 +347,11 @@ class PatternMachineEngine
 
   @override
   ParseResult<PatternContent> parse(Map<String, Object?> config) {
+    final task = config['task'] ?? 'continue';
+    if (task == 'invent') return _parseInvent(config);
+    if (task != 'continue') {
+      return const ParseResult.invalid('task is continue or invent.');
+    }
     final rawSequence = config['sequence'];
     if (rawSequence is! List ||
         rawSequence.length < 4 ||
@@ -421,6 +447,90 @@ class PatternMachineEngine
     );
   }
 
+  /// The palette: 2 to 6 distinct pieces, each with an id.
+  static (List<PatternChoice>?, String?) _choices(Object? raw) {
+    if (raw is! List || raw.length < 2 || raw.length > 6) {
+      return (null, 'There are 2 to 6 choices.');
+    }
+    final choices = <PatternChoice>[];
+    for (final r in raw) {
+      final id = r is Map ? r['id'] : null;
+      final piece = r is Map
+          ? PatternPiece.fromJson({
+              for (final e in r.entries)
+                if (e.key != 'id') e.key: e.value,
+            })
+          : null;
+      if (id is! String || id.isEmpty || piece == null) {
+        return (null, 'Every choice needs an id and is a piece.');
+      }
+      if (choices.any((c) => c.id == id)) {
+        return (null, 'Choice ids must be unique.');
+      }
+      if (choices.any((c) => c.piece.key == piece.key)) {
+        return (null, 'Two choices are the same piece.');
+      }
+      choices.add(PatternChoice(id: id, piece: piece));
+    }
+    return (choices, null);
+  }
+
+  ParseResult<PatternContent> _parseInvent(Map<String, Object?> config) {
+    for (final key in const ['sequence', 'hidden']) {
+      if (config.containsKey(key)) {
+        return ParseResult.invalid('$key is for task continue.');
+      }
+    }
+    final (choices, why) = _choices(config['palette']);
+    if (choices == null) return ParseResult.invalid('palette: $why');
+    final slots = config['slots'] ?? 6;
+    if (slots is! int || slots < 4 || slots > 12) {
+      return const ParseResult.invalid('slots is 4 to 12.');
+    }
+    final core = config['core'];
+    if (core != null && (core is! int || core < 2 || core * 2 > slots)) {
+      return const ParseResult.invalid(
+        'core is 2 or more, and fits twice in the slots.',
+      );
+    }
+
+    final rawVary = config['vary'] ?? const <Object>[];
+    if (rawVary is! List ||
+        !rawVary.every((v) => v == 'shape' || v == 'color')) {
+      return const ParseResult.invalid('vary lists shape and/or color.');
+    }
+    final vary = rawVary.cast<String>().toSet();
+    for (final v in vary) {
+      final kinds = {
+        for (final c in choices)
+          if (c.piece.text == null)
+            v == 'shape' ? c.piece.shape : c.piece.color,
+      };
+      if (kinds.length < 2) {
+        return ParseResult.invalid('vary $v needs two ${v}s in the palette.');
+      }
+    }
+    final creation = config['creation'];
+    if (creation != null && creation is! bool) {
+      return const ParseResult.invalid('creation must be true or false.');
+    }
+    final continues = config['continues'];
+    return ParseResult.ok(
+      PatternContent(
+        sequence: const [],
+        hidden: List.unmodifiable([for (var i = 0; i < slots; i++) i]),
+        choices: List.unmodifiable(choices),
+        continues: continues is bool ? continues : true,
+        shuffle: false,
+        creation: creation == true,
+        invent: true,
+        slots: slots,
+        core: core as int?,
+        vary: Set.unmodifiable(vary),
+      ),
+    );
+  }
+
   @override
   PatternState initialize(PatternContent content, EngineSeed seed) {
     final order = [for (final c in content.choices) c.id];
@@ -481,6 +591,13 @@ class PatternMachineEngine
   @override
   PatternState applyFeedback(PatternState s, EvaluationResult result) {
     if (result.outcome == Outcome.ungraded) return s;
+    if (result.itemResults.isEmpty) {
+      // Invent: the strip is the child's, so a miss keeps every piece for
+      // them to change; a pattern that repeats locks whole.
+      return result.outcome == Outcome.correct
+          ? s.copyWith(clearActive: true, locked: s.gaps.toSet())
+          : s.copyWith(clearActive: true);
+    }
     final locked = {...s.locked};
     final tried = {...s.tried};
     final filled = <String, String>{};
@@ -530,8 +647,9 @@ class PatternMachineEngine
           !locked.every(
             (g) =>
                 filled[g] != null &&
-                content.choice(filled[g]!).piece.key ==
-                    content.expected(g)?.key,
+                (content.invent ||
+                    content.choice(filled[g]!).piece.key ==
+                        content.expected(g)?.key),
           ) ||
           (active != null && !gaps.contains(active))) {
         return null;
@@ -559,11 +677,11 @@ class PatternMachineEngine
     final c = view.content;
     final p = VillagePalette.of(context);
     final target = view.enabled ? (s.active ?? s.firstOpen) : null;
-    final cell = c.sequence.length > 8 ? 56.0 : 68.0;
+    final cell = c.length > 8 ? 56.0 : 68.0;
 
     final row = <Widget>[];
     var gapNumber = 0;
-    for (var i = 0; i < c.sequence.length; i++) {
+    for (var i = 0; i < c.length; i++) {
       if (!c.hidden.contains(i)) {
         final piece = c.sequence[i];
         row.add(
@@ -655,6 +773,13 @@ class PatternMachineEngine
                   for (final id in s.choiceOrder)
                     Builder(
                       builder: (context) {
+                        // Invent starts on an empty strip: the idle hand
+                        // shows the first stamp to press (G3).
+                        final hand =
+                            c.invent &&
+                            view.enabled &&
+                            s.filled.isEmpty &&
+                            id == s.choiceOrder.first;
                         final piece = c.choice(id).piece;
                         final tried =
                             target != null &&
@@ -667,16 +792,19 @@ class PatternMachineEngine
                               ? (fr ? 'déjà essayé ici' : 'already tried here')
                               : null,
                           excludeSemantics: true,
-                          child: _Cell(
-                            key: ValueKey('pattern-choice-$id'),
-                            size: 72,
-                            piece: piece,
-                            state: tried
-                                ? AnswerTileState.retry
-                                : AnswerTileState.idle,
-                            onTap: target != null && !tried
-                                ? () => view.dispatch(TapPatternChoice(id))
-                                : null,
+                          child: IdleHandHint(
+                            show: hand,
+                            child: _Cell(
+                              key: ValueKey('pattern-choice-$id'),
+                              size: 72,
+                              piece: piece,
+                              state: tried
+                                  ? AnswerTileState.retry
+                                  : AnswerTileState.idle,
+                              onTap: target != null && !tried
+                                  ? () => view.dispatch(TapPatternChoice(id))
+                                  : null,
+                            ),
                           ),
                         );
                       },
@@ -688,7 +816,13 @@ class PatternMachineEngine
                   locale: view.locale,
                   engineKey: PatternMachineEngine.key,
                   payload: {
-                    'pieces': [for (final piece in c.sequence) piece.toJson()],
+                    'pieces': [
+                      if (c.invent)
+                        for (final g in s.gaps)
+                          c.choice(s.filled[g]!).piece.toJson()
+                      else
+                        for (final piece in c.sequence) piece.toJson(),
+                    ],
                   },
                 ),
             ],
@@ -936,6 +1070,7 @@ class PatternMachineEvaluator
   ) {
     final gaps = answer.blanks;
     if (gaps.isEmpty) throw ArgumentError('An answer must fill something.');
+    if (content.invent) return _invent(content, gaps, ctx);
     final ids = {for (final c in content.choices) c.id};
     final items = {
       for (final e in gaps.entries)
@@ -958,6 +1093,65 @@ class PatternMachineEvaluator
       skillNodeIds: ctx.skillNodeIds,
       itemResults: items,
       errors: all ? const [] : const [ErrorClassification.unclassified()],
+    );
+  }
+
+  /// The smallest core the strip repeats: p with every cell equal to the
+  /// cell p before it. A strip that never repeats returns its length.
+  static int periodOf(List<String> keys) {
+    for (var p = 1; p < keys.length; p++) {
+      var ok = true;
+      for (var i = p; i < keys.length && ok; i++) {
+        ok = keys[i] == keys[i - p];
+      }
+      if (ok) return p;
+    }
+    return keys.length;
+  }
+
+  /// Invent (ADR 0095): any strip whose smallest core is 2 or more pieces
+  /// and fits at least twice is a pattern — whichever piece it starts on,
+  /// and a partial last repeat is fine (ABABA). A core of 1 (AAAA) isn't a
+  /// pattern to see. Content can ask for an exact [PatternContent.core]
+  /// size and for the core to [PatternContent.vary] in shape or colour.
+  /// A miss is amber, with a code saying what's still missing.
+  EvaluationResult _invent(
+    PatternContent content,
+    Map<String, String> gaps,
+    EvaluationContext ctx,
+  ) {
+    final pieces = [
+      for (final g in content.gaps)
+        if (gaps[g] case final id?) content.choice(id).piece,
+    ];
+    if (pieces.length != content.slots) {
+      throw ArgumentError('An invented strip must fill every cell.');
+    }
+    final p = periodOf([for (final x in pieces) x.key]);
+    final coreOf = pieces.take(p);
+    final String? why;
+    if (p < 2 || p * 2 > pieces.length) {
+      why = 'no_repeat';
+    } else if (content.core != null && p != content.core) {
+      why = 'core_size';
+    } else if (content.vary.any(
+      (v) =>
+          {for (final x in coreOf) v == 'shape' ? x.shape : x.color}.length < 2,
+    )) {
+      why = 'vary';
+    } else {
+      why = null;
+    }
+    return EvaluationResult(
+      outcome: why == null ? Outcome.correct : Outcome.incorrect,
+      score: why == null ? 1 : 0,
+      attemptNumber: ctx.attemptNumber,
+      evaluator: '$engineKey.$policy@$version',
+      skillNodeIds: ctx.skillNodeIds,
+      feedbackCode: why,
+      errors: why == null
+          ? const []
+          : const [ErrorClassification.unclassified()],
     );
   }
 }
