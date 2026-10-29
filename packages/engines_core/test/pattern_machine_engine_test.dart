@@ -4,6 +4,8 @@ import 'package:engines_core/engines_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/fake_shelf.dart';
+
 const fr = Locale('fr');
 const ctx = EvaluationContext(attemptNumber: 1, skillNodeIds: ['s']);
 
@@ -358,6 +360,22 @@ void main() {
       expect(attempts, [false, true]);
       c.dispose();
     });
+
+    for (final creation in [true, false]) {
+      testWidgets('offers to keep it only with creation: $creation', (
+        tester,
+      ) async {
+        tallView(tester);
+        final (c, _) = controllerFor({...next, 'creation': creation});
+        final offered = await offersKeep(
+          tester,
+          c: c,
+          app: app,
+          solve: const [TapPatternChoice('s')],
+        );
+        expect(offered, creation);
+      });
+    }
 
     testWidgets('twelve terms fit a phone', (tester) async {
       tallView(tester, width: 375);

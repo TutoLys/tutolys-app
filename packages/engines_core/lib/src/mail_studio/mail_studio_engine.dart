@@ -62,6 +62,7 @@ class MailContent {
     required this.slots,
     required this.tiles,
     this.delighted,
+    this.creation = false,
   });
 
   /// What the child wants to tell ("Mon chien Max a appris à rouler !").
@@ -73,6 +74,11 @@ class MailContent {
 
   /// What the recipient says when the message suits them.
   final String? delighted;
+
+  /// The content marks this as the child's own work, so the shell offers
+  /// to keep it. Off by default: a question with one right answer is not
+  /// a creation (ADR 0093).
+  final bool creation;
 
   MailTile tile(String id) => tiles.firstWhere((t) => t.id == id);
 
@@ -277,6 +283,10 @@ class MailStudioEngine
       );
     }
 
+    final creation = config['creation'];
+    if (creation != null && creation is! bool) {
+      return const ParseResult.invalid('creation must be true or false.');
+    }
     final content = MailContent(
       news: news,
       recipient: character,
@@ -284,6 +294,7 @@ class MailStudioEngine
       slots: List.unmodifiable(slots),
       tiles: List.unmodifiable(tiles),
       delighted: _text(config['delighted']),
+      creation: creation == true,
     );
     for (final slot in slots) {
       final options = content.tilesFor(slot.id);
@@ -615,7 +626,7 @@ class _MailView extends StatelessWidget {
                 ],
                 fr: fr,
               ),
-              if (s.solved)
+              if (c.creation && s.solved)
                 KeepCreationButton(
                   engineKey: MailStudioEngine.key,
                   payload: {

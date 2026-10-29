@@ -145,6 +145,7 @@ class GeoContent {
     this.target = GeoTarget.triangle,
     this.sides = 0,
     this.model = const [],
+    this.creation = false,
   });
 
   /// The board is pegs × pegs.
@@ -157,6 +158,11 @@ class GeoContent {
 
   /// copy: the figure to reproduce, as its corners in order.
   final List<Peg> model;
+
+  /// The content marks this as the child's own work, so the shell offers
+  /// to keep it. Off by default: a question with one right answer is not
+  /// a creation (ADR 0093).
+  final bool creation;
 }
 
 class GeoState {
@@ -251,6 +257,10 @@ class GeometryLabEngine
     if (task == null) {
       return const ParseResult.invalid('task is build or copy.');
     }
+    final creation = config['creation'];
+    if (creation != null && creation is! bool) {
+      return const ParseResult.invalid('creation must be true or false.');
+    }
 
     if (task == GeoTask.copy) {
       final raw = config['model'];
@@ -284,7 +294,12 @@ class GeometryLabEngine
         return const ParseResult.invalid('target is for build.');
       }
       return ParseResult.ok(
-        GeoContent(pegs: pegs, task: task, model: List.unmodifiable(model)),
+        GeoContent(
+          pegs: pegs,
+          task: task,
+          model: List.unmodifiable(model),
+          creation: creation == true,
+        ),
       );
     }
 
@@ -311,6 +326,7 @@ class GeometryLabEngine
         task: task,
         target: target,
         sides: sides is int ? sides : 0,
+        creation: creation == true,
       ),
     );
   }
@@ -531,7 +547,7 @@ class GeometryLabEngine
                   label: Text(fr ? 'Recommencer' : 'Start over'),
                 ),
               ),
-              if (s.solved)
+              if (c.creation && s.solved)
                 KeepCreationButton(
                   engineKey: GeometryLabEngine.key,
                   payload: {

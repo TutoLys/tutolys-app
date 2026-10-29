@@ -4,6 +4,8 @@ import 'package:engines_core/engines_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/fake_shelf.dart';
+
 const fr = Locale('fr');
 const ctx = EvaluationContext(attemptNumber: 1, skillNodeIds: ['s']);
 
@@ -302,6 +304,28 @@ void main() {
       );
       c.dispose();
     });
+
+    for (final creation in [true, false]) {
+      testWidgets('offers to keep it only with creation: $creation', (
+        tester,
+      ) async {
+        tallView(tester);
+        final (c, _) = controllerFor({...square, 'creation': creation});
+        final offered = await offersKeep(
+          tester,
+          c: c,
+          app: app,
+          solve: const [
+            TapPeg((0, 0)),
+            TapPeg((0, 2)),
+            TapPeg((2, 2)),
+            TapPeg((2, 0)),
+            TapPeg((0, 0)),
+          ],
+        );
+        expect(offered, creation);
+      });
+    }
 
     testWidgets('copy: model and board stack on a phone', (tester) async {
       tallView(tester, width: 375);

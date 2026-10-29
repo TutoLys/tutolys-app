@@ -4,69 +4,10 @@ import 'package:engines_core/engines_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/fake_shelf.dart';
+
 const fr = Locale('fr');
 const ctx = EvaluationContext(attemptNumber: 1, skillNodeIds: ['s']);
-
-/// An in-memory [CreationShelf], as the Flutter app's real store behaves:
-/// newest first, at most [CreationShelf.maxHung] hung.
-class FakeShelf implements CreationShelf {
-  final items = <Creation>[];
-  var _next = 0;
-
-  @override
-  Future<Creation> save({
-    required String engineKey,
-    required String exerciseId,
-    required Map<String, Object?> payload,
-    int payloadVersion = 1,
-  }) async {
-    final c = Creation(
-      id: 'c${_next++}',
-      engineKey: engineKey,
-      exerciseId: exerciseId,
-      payloadVersion: payloadVersion,
-      payload: payload,
-      hung: false,
-      createdAt: DateTime(2026, 10, 26, 9, _next),
-    );
-    items.insert(0, c);
-    return c;
-  }
-
-  @override
-  Future<List<Creation>> list({
-    Set<String>? engineKeys,
-    bool? hung,
-    int? limit,
-  }) async => [
-    for (final c in items)
-      if ((engineKeys == null || engineKeys.contains(c.engineKey)) &&
-          (hung == null || c.hung == hung))
-        c,
-  ].take(limit ?? 999).toList();
-
-  @override
-  Future<void> setHung(String id, bool hung) async {
-    final i = items.indexWhere((c) => c.id == id);
-    if (i < 0) return;
-    if (hung && items.where((c) => c.hung).length >= CreationShelf.maxHung) {
-      throw StateError('full');
-    }
-    final c = items[i];
-    items[i] = Creation(
-      id: c.id,
-      engineKey: c.engineKey,
-      exerciseId: c.exerciseId,
-      payloadVersion: c.payloadVersion,
-      payload: c.payload,
-      hung: hung,
-      createdAt: c.createdAt,
-    );
-  }
-
-  @override
-  Future<void> remove(String id) async => items.removeWhere((c) => c.id == id);
-}
 
 const gallery = <String, Object?>{
   'reasons': [
@@ -273,6 +214,7 @@ void main() {
         ],
         'target': ['le', 'chat', 'dort'],
         'shuffle': false,
+        'creation': true,
       });
       await tester.runAsync(compose.start);
       await tester.pumpWidget(app(compose, shelf));
@@ -314,6 +256,27 @@ void main() {
       );
       expect(shelf.items.single.hung, isTrue);
       c.dispose();
+    });
+
+    testWidgets('a compose_build answer with no creation flag is not kept', (
+      tester,
+    ) async {
+      tallView(tester);
+      final offered = await offersKeep(
+        tester,
+        c: controllerFor('compose_build', {
+          'tiles': [
+            {'id': 'six', 'label': '6'},
+            {'id': 'huit', 'label': '8'},
+            {'id': 'sept', 'label': '7'},
+          ],
+          'target': ['six', 'huit'],
+          'shuffle': false,
+        }),
+        app: (c) => app(c, null),
+        solve: const [PlaceTile('six'), PlaceTile('huit')],
+      );
+      expect(offered, isFalse);
     });
 
     testWidgets('an empty gallery says so and lets the child go on', (

@@ -189,6 +189,7 @@ class PatternContent {
     required this.choices,
     this.continues = true,
     this.shuffle = true,
+    this.creation = false,
   });
 
   /// Every term, the hidden ones included.
@@ -201,6 +202,11 @@ class PatternContent {
   /// Draw "…" after the last term: the pattern goes on.
   final bool continues;
   final bool shuffle;
+
+  /// The content marks this as the child's own work, so the shell offers
+  /// to keep it. Off by default: a question with one right answer is not
+  /// a creation (ADR 0093).
+  final bool creation;
 
   static String gapId(int index) => 'g$index';
 
@@ -399,6 +405,10 @@ class PatternMachineEngine
     }
     final continues = config['continues'];
     final shuffle = config['shuffle'];
+    final creation = config['creation'];
+    if (creation != null && creation is! bool) {
+      return const ParseResult.invalid('creation must be true or false.');
+    }
     return ParseResult.ok(
       PatternContent(
         sequence: List.unmodifiable(sequence),
@@ -406,6 +416,7 @@ class PatternMachineEngine
         choices: List.unmodifiable(choices),
         continues: continues is bool ? continues : true,
         shuffle: shuffle is bool ? shuffle : true,
+        creation: creation == true,
       ),
     );
   }
@@ -672,7 +683,7 @@ class PatternMachineEngine
                     ),
                 ],
               ),
-              if (s.locked.length == s.gaps.length)
+              if (c.creation && s.locked.length == s.gaps.length)
                 KeepCreationButton(
                   engineKey: PatternMachineEngine.key,
                   payload: {

@@ -19,6 +19,7 @@ class ComposeContent {
     required this.tiles,
     required this.target,
     required this.ordered,
+    this.creation = false,
   });
 
   final List<ComposeTile> tiles;
@@ -28,6 +29,11 @@ class ComposeContent {
 
   /// Whether the slots' order matters (`7 = 5 + 2` vs `{5, 2}`).
   final bool ordered;
+
+  /// The content marks this as the child's own work, so the shell offers
+  /// to keep it. Off by default: a question with one right answer is not
+  /// a creation (ADR 0093).
+  final bool creation;
 
   ComposeTile tile(String id) => tiles.firstWhere((t) => t.id == id);
 }
@@ -151,11 +157,16 @@ class ComposeSlotsEngine
     if (ordered != null && ordered is! bool) {
       return const ParseResult.invalid('ordered must be true or false.');
     }
+    final creation = config['creation'];
+    if (creation != null && creation is! bool) {
+      return const ParseResult.invalid('creation must be true or false.');
+    }
     return ParseResult.ok(
       ComposeContent(
         tiles: List.unmodifiable(tiles),
         target: List.unmodifiable(targetIds),
         ordered: ordered != false,
+        creation: creation == true,
       ),
     );
   }
@@ -323,7 +334,7 @@ class ComposeSlotsEngine
                       const SizedBox(width: 120, height: 52),
                 ],
               ),
-              if (s.locked.length == s.slots.length)
+              if (view.content.creation && s.locked.length == s.slots.length)
                 KeepCreationButton(
                   engineKey: ComposeSlotsEngine.key,
                   payload: {
