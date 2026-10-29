@@ -4,19 +4,17 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../core/i18n/strings.dart';
 import '../../data/local_db/node_progress_local.dart';
-import '../../data/sync/content_sync.dart' show NodeDownload;
 import '../../data/sync/window_plan.dart';
-import '../../core/routing/paired_router.dart';
 import '../pairing/pairing_controller.dart';
 import '../assignments/assignments_controller.dart';
 import '../progress/progress_controller.dart';
 import 'carte_model.dart';
 import 'node_lessons.dart';
 import 'path_controller.dart';
+import 'play_node.dart';
 import 'skill_path.dart';
 import 'subject_pills.dart';
 
@@ -445,78 +443,14 @@ class _Sections extends ConsumerWidget {
     // The orb and card already have no handler past the frontier; this is
     // the last word, so no path into a game can skip the sequence.
     if (!isOpenState(node.state) || lessons == null) return;
-    var envelope = lessons.next;
-    // Outside the offline window (ADR 0095): fetch it first, or say kindly
-    // that it needs the Internet. Never a crash, never "locked".
-    if (isNotDownloaded(envelope)) {
-      final id = envelope['exercise_id'];
-      final ready = await _download(context, ref, node.id);
-      if (!ready || !context.mounted) return;
-      final fresh = ref.read(pathControllerProvider).lessonsByNodeId[node.id];
-      final found = fresh?.where((l) => l['exercise_id'] == id);
-      if (found == null || found.isEmpty) return;
-      envelope = found.first;
-    }
-    final leaf = state.leaves.firstWhere(
-      (l) => l.id == envelope['skill_node_id'],
+    await playNode(
+      context,
+      ref,
+      leaf: state.leaves.firstWhere((l) => l.id == node.id),
+      lessons: lessons,
     );
-    await GoRouter.of(context).push(
-      '/play',
-      extra: PlayRequest(node: leaf, envelope: envelope),
-    );
-    // The header's XP and streak, and this map's mastery, all moved. The
-    // shell keeps tabs alive, so nothing re-reads on its own.
-    ref.read(progressControllerProvider.notifier).refresh();
     onReturned();
   }
-}
-
-/// Downloads a leaf, with a small wait on screen; offline or failed, a
-/// kind word instead. True once the lesson is on the device.
-Future<bool> _download(
-  BuildContext context,
-  WidgetRef ref,
-  String skillNodeId,
-) async {
-  final t = context.s;
-  final messenger = ScaffoldMessenger.maybeOf(context);
-  final navigator = Navigator.of(context, rootNavigator: true);
-  showDialog<void>(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) => PopScope(
-      canPop: false,
-      child: AlertDialog(
-        key: const ValueKey('carte-downloading'),
-        content: Row(
-          children: [
-            const SizedBox.square(
-              dimension: 28,
-              child: CircularProgressIndicator(strokeWidth: 3),
-            ),
-            const SizedBox(width: Space.md),
-            Expanded(child: Text(t.pathDownloading)),
-          ],
-        ),
-      ),
-    ),
-  );
-  final result = await ref
-      .read(pathControllerProvider.notifier)
-      .download(skillNodeId);
-  navigator.pop();
-  if (result == NodeDownload.done) return true;
-  messenger?.showSnackBar(
-    SnackBar(
-      key: const ValueKey('carte-not-downloaded'),
-      content: Text(
-        result == NodeDownload.offline
-            ? t.pathNotDownloadedOffline
-            : t.pathDownloadFailed,
-      ),
-    ),
-  );
-  return false;
 }
 
 /// The Carte's loader. Past [patience] it says so, with the fox and a big

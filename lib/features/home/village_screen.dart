@@ -12,6 +12,8 @@ import '../audio/app_sounds.dart' show mascotSongFor;
 import '../audio/music_director.dart';
 import '../quests/quest_board.dart';
 import '../quests/quests_screen.dart' show questTitle;
+import '../path/play_node.dart';
+import '../path/subject_pills.dart' show subjectArt, subjectLabel;
 
 /// Village — the learner's home.
 ///
@@ -53,6 +55,7 @@ class VillageScreen extends ConsumerWidget {
     // backend already sends plus the cached curriculum's own subject per
     // node — no extra endpoint, and it works offline.
     final t = context.s;
+    final next = ref.watch(carteNextProvider);
     final bySubject =
         ref.watch(subjectProgressProvider).value ?? <String, double>{};
     // The fox sings in the app's language, not a subject's (ADR 0035).
@@ -170,7 +173,20 @@ class VillageScreen extends ConsumerWidget {
               },
             ),
             const SizedBox(height: Space.lg),
-            _RecommendBar(onContinue: onOpenPath),
+            _RecommendBar(
+              next: next,
+              // A2: the gold button starts the frontier's activity, as the
+              // design's `js-start-exercise` does. With nothing open yet it
+              // still leads to the Carte.
+              onContinue: next == null
+                  ? onOpenPath
+                  : () => playNode(
+                      context,
+                      ref,
+                      leaf: next.leaf,
+                      lessons: next.lessons,
+                    ),
+            ),
           ],
         ),
       ),
@@ -199,12 +215,13 @@ String _greetingFor(Strings t, String? name, QuestBoard? board) {
   return '$hello $line';
 }
 
-/// The navy band. Its content is a real recommendation only once something
-/// computes one — today the Carte knows what is next, this does not, so it
-/// points there rather than naming a node it has not chosen.
+/// The navy band: the Carte's frontier node, named with its subject's
+/// building, area and skill (A2). With nothing open yet it says "Continue
+/// ton parcours" and leads to the Carte.
 class _RecommendBar extends StatelessWidget {
-  const _RecommendBar({this.onContinue});
+  const _RecommendBar({this.next, this.onContinue});
 
+  final CarteNext? next;
   final VoidCallback? onContinue;
 
   @override
@@ -225,6 +242,16 @@ class _RecommendBar extends StatelessWidget {
       ),
       child: Row(
         children: [
+          if (next case final next?) ...[
+            Image.asset(
+              'assets/images/${subjectArt[next.subject]}',
+              key: const ValueKey('recommend-building'),
+              width: 52,
+              height: 52,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(width: 14),
+          ],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -240,7 +267,16 @@ class _RecommendBar extends StatelessWidget {
                 ),
                 SizedBox(height: 3),
                 Text(
-                  context.s.villageContinuePath,
+                  switch (next) {
+                    final next? => [
+                      subjectLabel(context.s, next.subject),
+                      ?next.areaTitle,
+                    ].join(' · '),
+                    null => context.s.villageContinuePath,
+                  },
+                  key: const ValueKey('recommend-title'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontFamily: VillageType.display,
                     fontWeight: FontWeight.w700,
@@ -248,6 +284,18 @@ class _RecommendBar extends StatelessWidget {
                     color: Colors.white,
                   ),
                 ),
+                if (next case final next?)
+                  Text(
+                    next.label,
+                    key: const ValueKey('recommend-skill'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFFBFD3FF),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -255,6 +303,7 @@ class _RecommendBar extends StatelessWidget {
             color: Colors.transparent,
             borderRadius: BorderRadius.circular(999),
             child: InkWell(
+              key: const ValueKey('recommend-continue'),
               onTap: onContinue,
               borderRadius: BorderRadius.circular(999),
               child: DecoratedBox(

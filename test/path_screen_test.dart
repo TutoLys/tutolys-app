@@ -420,7 +420,9 @@ void main() {
       expect(play.envelope['exercise_id'], 'a-1');
     });
 
-    testWidgets('the Village only ever leads to the Carte, never a game', (
+    // A2 (UX review): the Village's gold Continuer now starts an activity,
+    // but only ever the frontier's, never one past it.
+    testWidgets('the Village plays the frontier, never past it', (
       tester,
     ) async {
       final db = await tester.runAsync(seeded);
@@ -434,14 +436,14 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // The Village's own "Continuer" opens the Carte.
-      final cta = find.text('Continuer →').first;
+      final cta = find.byKey(const ValueKey('recommend-continue'));
       await tester.ensureVisible(cta);
       await tester.pumpAndSettle();
       await tester.tap(cta);
       await tester.pumpAndSettle();
-      expect(find.byType(PlayScreen), findsNothing);
-      expect(find.byKey(const ValueKey('path-orb-a')), findsOneWidget);
+      final play = tester.widget<PlayScreen>(find.byType(PlayScreen));
+      expect(play.node.id, 'a');
+      expect(play.envelope['exercise_id'], 'a-1');
     });
   });
 
