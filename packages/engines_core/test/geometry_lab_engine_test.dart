@@ -265,6 +265,33 @@ void main() {
   });
 
   group('in the shell', () {
+    testWidgets('N10: a how-to line, a hand on a peg, a readable Recommencer', (
+      tester,
+    ) async {
+      tallView(tester);
+      final (c, _) = controllerFor(square);
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(app(c));
+      expect(
+        find.text('Touche les clous pour tendre l’élastique.'),
+        findsOneWidget,
+      );
+      final hand = find.byKey(const ValueKey('idle-hand'));
+      await tester.pump(IdleHandHint.wait + const Duration(seconds: 3));
+      expect(hand, findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('geo-peg-0-0')));
+      await settle(tester);
+      expect(hand, findsNothing);
+      final clear = tester.widget<TextButton>(
+        find.byKey(const ValueKey('geo-clear')),
+      );
+      expect(
+        clear.style!.foregroundColor!.resolve({}),
+        VillagePalette.light.ink,
+      );
+      c.dispose();
+    });
+
     testWidgets('build a square by tapping pegs: wrong, then right', (
       tester,
     ) async {

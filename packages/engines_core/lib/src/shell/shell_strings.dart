@@ -33,6 +33,10 @@ class ShellStrings {
       'Touche les tuiles pour remplir les cases.',
       'Tap the tiles to fill the boxes.',
     ),
+    'geometry_lab' => _t(
+      'Touche les clous pour tendre l’élastique.',
+      'Tap the pegs to stretch the band.',
+    ),
     'timeline_calendar' => _t(
       'Touche les cartes dans le bon ordre.',
       'Tap the cards in the right order.',

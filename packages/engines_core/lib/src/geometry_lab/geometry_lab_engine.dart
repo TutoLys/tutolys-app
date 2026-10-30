@@ -5,6 +5,7 @@ import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
 
 import '../widgets/creations.dart';
+import '../widgets/idle_hand_hint.dart';
 
 typedef Peg = (int row, int col);
 
@@ -545,6 +546,11 @@ class GeometryLabEngine
                       : null,
                   icon: const Icon(Icons.refresh_rounded),
                   label: Text(fr ? 'Recommencer' : 'Start over'),
+                  // Ink, not the theme's light grey (2.5:1, N10). Still
+                  // dims when there is nothing to clear.
+                  style: TextButton.styleFrom(
+                    foregroundColor: VillagePalette.of(context).ink,
+                  ),
                 ),
               ),
               if (c.creation && s.solved)
@@ -623,15 +629,25 @@ class _Board extends StatelessWidget {
                         top: at((r, col)).dy - step / 2,
                         width: step,
                         height: step,
-                        child: _PegView(
-                          peg: (r, col),
-                          index: band.indexOf((r, col)),
-                          first: band.isNotEmpty && band.first == (r, col),
-                          closable: !closed && band.length >= 3,
-                          ink: p.ink,
-                          color: color,
-                          fr: fr,
-                          onTap: onPeg == null ? null : () => onPeg!((r, col)),
+                        // The idle hand (N10): on a peg while the band is
+                        // empty, showing where to start.
+                        child: IdleHandHint(
+                          show:
+                              onPeg != null &&
+                              band.isEmpty &&
+                              (r, col) == (1, 1),
+                          child: _PegView(
+                            peg: (r, col),
+                            index: band.indexOf((r, col)),
+                            first: band.isNotEmpty && band.first == (r, col),
+                            closable: !closed && band.length >= 3,
+                            ink: p.ink,
+                            color: color,
+                            fr: fr,
+                            onTap: onPeg == null
+                                ? null
+                                : () => onPeg!((r, col)),
+                          ),
                         ),
                       ),
                 ],
