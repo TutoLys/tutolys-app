@@ -127,11 +127,28 @@ class _PillTabsState<T> extends State<PillTabs<T>> {
     final ctx = _keys[i].currentContext;
     if (ctx == null) return;
     final still = instant || MediaQuery.disableAnimationsOf(context);
-    Scrollable.ensureVisible(
-      ctx,
-      alignment: 0.5,
-      duration: still ? Duration.zero : Motion.quick,
-    );
+    final duration = still ? Duration.zero : Motion.quick;
+    final box = ctx.findRenderObject();
+    if (box == null) return;
+    // Only the row itself scrolls, never the page around it, and only as
+    // far as needed (A16): centring the selected pill pushed the first
+    // ones off a phone's edge. Each policy is a no-op when that edge is
+    // already in view.
+    final row = Scrollable.of(ctx).position;
+    row
+        .ensureVisible(
+          box,
+          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+          duration: duration,
+        )
+        .then((_) {
+          if (!ctx.mounted) return Future<void>.value();
+          return row.ensureVisible(
+            box,
+            alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtStart,
+            duration: duration,
+          );
+        });
   }
 
   KeyEventResult _onKey(int i, KeyEvent event) {
