@@ -456,6 +456,39 @@ void main() {
       expect(back.locked, s.locked);
     });
 
+    test('N15: no seed deals a board already aligned row by row', () {
+      for (var seed = 0; seed < 300; seed++) {
+        final st = engine.initialize(content, EngineSeed(seed));
+        final aligned = [
+          for (var i = 0; i < st.leftOrder.length; i++)
+            st.rightOrder[i] == content.answer[st.leftOrder[i]],
+        ].every((x) => x);
+        expect(aligned, isFalse, reason: 'seed $seed');
+      }
+      // Two pairs, no distractor: the smallest board still never aligns.
+      final two = engine.parse({
+        'pairs': [
+          {
+            'left': {'id': 'a', 'label': 'a'},
+            'right': {'id': 'A', 'label': 'A'},
+          },
+          {
+            'left': {'id': 'b', 'label': 'b'},
+            'right': {'id': 'B', 'label': 'B'},
+          },
+        ],
+      }).valueOrNull!;
+      for (var seed = 0; seed < 50; seed++) {
+        final st = engine.initialize(two, EngineSeed(seed));
+        expect(
+          st.rightOrder[0] == two.answer[st.leftOrder[0]] &&
+              st.rightOrder[1] == two.answer[st.leftOrder[1]],
+          isFalse,
+          reason: 'seed $seed',
+        );
+      }
+    });
+
     test('G4: a right tile picked first waits for its left partner', () {
       var st = engine.initialize(content, const EngineSeed(1));
       st = engine.reduce(st, const TapRight('d9')).state;

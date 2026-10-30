@@ -210,6 +210,14 @@ class PairMatchBoardEngine
     final random = seed.random();
     final lefts = [for (final i in content.lefts) i.id]..shuffle(random);
     final rights = [for (final i in content.rights) i.id]..shuffle(random);
+    // Never hand the child a board already solved row by row (UX review
+    // N15): if every left's partner sits across from it, rotate the right
+    // column by one, which can't line them up again.
+    var aligned = true;
+    for (var i = 0; i < lefts.length && aligned; i++) {
+      aligned = rights[i] == content.answer[lefts[i]];
+    }
+    if (aligned && rights.length > 1) rights.add(rights.removeAt(0));
     return PairMatchState(
       leftOrder: List.unmodifiable(lefts),
       rightOrder: List.unmodifiable(rights),
