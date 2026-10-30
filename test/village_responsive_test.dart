@@ -9,51 +9,56 @@ import 'package:tutolys_app/features/home/village_scene.dart';
 /// scene places buildings at fixed fractions of a wide canvas, so at ~390px
 /// they overlap, their pills collide and it clips.
 void main() {
-  testWidgets('the strip names every subject and shows a bar each',
-      (tester) async {
+  testWidgets('the grid names every subject, none hidden (A7)', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: SizedBox(
-            width: 390,
-            child: SubjectStrip(
-              buildings: villageBuildings(Strings.fr),
-              title: Strings.fr.villageYourSubjects,
+          body: SingleChildScrollView(
+            child: SizedBox(
+              width: 375,
+              child: SubjectStrip(
+                buildings: villageBuildings(Strings.fr),
+                title: Strings.fr.villageYourSubjects,
+              ),
             ),
           ),
         ),
       ),
     );
 
-    expect(find.text(Strings.fr.villageYourSubjects.toUpperCase()),
-        findsOneWidget);
-    // A horizontal list only builds what fits, so assert on the first few
-    // rather than all six.
-    expect(find.text(Strings.fr.subjectMath), findsOneWidget);
-    expect(find.byType(VillageProgressBar), findsWidgets);
+    expect(
+      find.text(Strings.fr.villageYourSubjects.toUpperCase()),
+      findsOneWidget,
+    );
+    for (final b in villageBuildings(Strings.fr)) {
+      expect(find.text(b.label), findsOneWidget, reason: b.label);
+    }
+    expect(find.byType(ListView), findsNothing, reason: 'a grid, no strip');
   });
 
-  testWidgets('it scrolls horizontally rather than wrapping or clipping',
-      (tester) async {
+  testWidgets('no data reads « À découvrir », never 0 % (A8)', (tester) async {
+    final buildings = [
+      for (final b in villageBuildings(Strings.fr))
+        b.subject == 'MATH' ? b.withProgress(0.4) : b,
+    ];
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: SizedBox(
-            width: 390,
-            child: SubjectStrip(
-              buildings: villageBuildings(Strings.fr),
-              title: 'x',
+          body: SingleChildScrollView(
+            child: SizedBox(
+              width: 375,
+              child: SubjectStrip(buildings: buildings, title: 'x'),
             ),
           ),
         ),
       ),
     );
-
-    final list = tester.widget<ListView>(find.descendant(
-      of: find.byType(SubjectStrip),
-      matching: find.byType(ListView),
-    ));
-    expect(list.scrollDirection, Axis.horizontal);
+    expect(find.text('40 %'), findsOneWidget);
+    expect(find.text('0 %'), findsNothing);
+    expect(find.byKey(const ValueKey('strip-new-FR')), findsOneWidget);
+    expect(find.byType(VillageProgressBar), findsOneWidget);
   });
 
   testWidgets('tiles fit the strip once their images have decoded',

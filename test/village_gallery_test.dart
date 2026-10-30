@@ -27,16 +27,11 @@ void main() {
     addTearDown(tester.view.reset);
   }
 
-  /// The phone strip is a lazy horizontal list: its last tile is built
-  /// once scrolled to.
+  /// The phone grid shows every tile (A7); bring the gallery's into view
+  /// on the page.
   Future<void> scrollStrip(WidgetTester tester) async {
-    await tester.scrollUntilVisible(
+    await tester.ensureVisible(
       find.byKey(const ValueKey('strip-building-GALLERY')),
-      120,
-      scrollable: find.descendant(
-        of: find.byType(SubjectStrip),
-        matching: find.byType(Scrollable),
-      ),
     );
     await tester.pumpAndSettle();
   }

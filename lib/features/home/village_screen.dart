@@ -1,6 +1,7 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../core/widgets/arrow_label.dart';
 
 import '../../core/i18n/strings.dart';
@@ -61,6 +62,17 @@ class VillageScreen extends ConsumerWidget {
     // node — no extra endpoint, and it works offline.
     final t = context.s;
     final next = ref.watch(carteNextProvider);
+    Widget recommend({required bool fullWidth}) => _RecommendBar(
+      fullWidth: fullWidth,
+      next: next,
+      // A2: the gold button starts the frontier's activity, as the
+      // design's `js-start-exercise` does. With nothing open yet it
+      // still leads to the Carte.
+      onContinue: next == null
+          ? onOpenPath
+          : () =>
+                playNode(context, ref, leaf: next.leaf, lessons: next.lessons),
+    );
     // A subject opens on the Carte; the gallery opens on the kid's own
     // shelf (ADR 0098).
     void openBuilding(VillageBuilding b) {
@@ -110,6 +122,10 @@ class VillageScreen extends ConsumerWidget {
                         text: _greetingFor(t, kid?.displayName, board),
                         onTapMascot: sing,
                       ),
+                      // A6: the one action that matters comes first on a
+                      // phone, its button full width.
+                      const SizedBox(height: Space.md),
+                      recommend(fullWidth: true),
                       const SizedBox(height: Space.md),
                       SubjectStrip(
                         buildings: buildings,
@@ -154,6 +170,8 @@ class VillageScreen extends ConsumerWidget {
                 // Side by side only while the scene keeps ~760px of its own
                 // (plus the 300px panel and the gap); below that six buildings
                 // and their pills crowd, so the panel moves underneath.
+                // Wider than a phone, the recommend bar sits under the
+                // scene and its panel, as the design draws it.
                 if (constraints.maxWidth < _sideBySideMinWidth) {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -161,6 +179,8 @@ class VillageScreen extends ConsumerWidget {
                       scene,
                       const SizedBox(height: Space.md),
                       panel,
+                      const SizedBox(height: Space.lg),
+                      recommend(fullWidth: false),
                     ],
                   );
                 }
@@ -169,44 +189,36 @@ class VillageScreen extends ConsumerWidget {
                 // inside it.
                 final sceneWidth =
                     constraints.maxWidth - _panelWidth - Space.lg;
-                return SizedBox(
-                  height: _sceneHeight(sceneWidth),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(child: scene),
-                      const SizedBox(width: Space.lg),
-                      SizedBox(
-                        width: _panelWidth,
-                        child: _QuestPanel(
-                          key: const ValueKey('village-quest-panel'),
-                          quests: board?.quests,
-                          failed: boardFailed,
-                          onRetry: retryBoard,
-                          onOpenPath: onOpenPath,
-                          onOpenQuests: onOpenQuests,
-                          fillHeight: true,
-                        ),
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SizedBox(
+                      height: _sceneHeight(sceneWidth),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(child: scene),
+                          const SizedBox(width: Space.lg),
+                          SizedBox(
+                            width: _panelWidth,
+                            child: _QuestPanel(
+                              key: const ValueKey('village-quest-panel'),
+                              quests: board?.quests,
+                              failed: boardFailed,
+                              onRetry: retryBoard,
+                              onOpenPath: onOpenPath,
+                              onOpenQuests: onOpenQuests,
+                              fillHeight: true,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: Space.lg),
+                    recommend(fullWidth: false),
+                  ],
                 );
               },
-            ),
-            const SizedBox(height: Space.lg),
-            _RecommendBar(
-              next: next,
-              // A2: the gold button starts the frontier's activity, as the
-              // design's `js-start-exercise` does. With nothing open yet it
-              // still leads to the Carte.
-              onContinue: next == null
-                  ? onOpenPath
-                  : () => playNode(
-                      context,
-                      ref,
-                      leaf: next.leaf,
-                      lessons: next.lessons,
-                    ),
             ),
           ],
         ),
@@ -240,14 +252,127 @@ String _greetingFor(Strings t, String? name, QuestBoard? board) {
 /// building, area and skill (A2). With nothing open yet it says "Continue
 /// ton parcours" and leads to the Carte.
 class _RecommendBar extends StatelessWidget {
-  const _RecommendBar({this.next, this.onContinue});
+  const _RecommendBar({this.next, this.onContinue, this.fullWidth = false});
 
   final CarteNext? next;
   final VoidCallback? onContinue;
 
+  /// A phone (A6): the button goes under the text, full width, the
+  /// prototype's `.recommend .recommend-btn { width:100% }`.
+  final bool fullWidth;
+
   @override
   Widget build(BuildContext context) {
     final p = VillagePalette.of(context);
+    final info = <Widget>[
+      if (next case final next?) ...[
+        Image.asset(
+          'assets/images/${subjectArt[next.subject]}',
+          key: const ValueKey('recommend-building'),
+          width: 52,
+          height: 52,
+          fit: BoxFit.contain,
+        ),
+        const SizedBox(width: 14),
+      ],
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              context.s.villageRecommendedLabel,
+              style: TextStyle(
+                fontSize: 11,
+                letterSpacing: 0.66,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFFBFD3FF),
+              ),
+            ),
+            SizedBox(height: 3),
+            Text(
+              switch (next) {
+                final next? => [
+                  subjectLabel(context.s, next.subject),
+                  ?next.areaTitle,
+                ].join(' · '),
+                null => context.s.villageContinuePath,
+              },
+              key: const ValueKey('recommend-title'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: VillageType.display,
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+                color: Colors.white,
+              ),
+            ),
+            if (next case final next?)
+              Text(
+                next.label,
+                key: const ValueKey('recommend-skill'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFFBFD3FF),
+                ),
+              ),
+          ],
+        ),
+      ),
+    ];
+    final Widget button = Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        key: const ValueKey('recommend-continue'),
+        onTap: onContinue,
+        borderRadius: BorderRadius.circular(999),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [p.goldLight, p.gold],
+            ),
+            borderRadius: BorderRadius.circular(999),
+            boxShadow: [
+              BoxShadow(
+                color: p.gold.withValues(alpha: 0.35),
+                blurRadius: 18,
+                offset: Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 22, vertical: 11),
+            child: fullWidth
+                ? Center(
+                    child: ArrowLabel(
+                      context.s.villageContinueCta,
+                      style: TextStyle(
+                        fontFamily: VillageType.display,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        color: Color(0xFF241A04),
+                      ),
+                    ),
+                  )
+                : ArrowLabel(
+                    context.s.villageContinueCta,
+                    style: TextStyle(
+                      fontFamily: VillageType.display,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13.5,
+                      color: Color(0xFF241A04),
+                    ),
+                  ),
+          ),
+        ),
+      ),
+    );
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 22, vertical: 18),
       decoration: BoxDecoration(
@@ -261,105 +386,16 @@ class _RecommendBar extends StatelessWidget {
           BoxShadow(color: p.shadow, blurRadius: 40, offset: Offset(0, 16)),
         ],
       ),
-      child: Row(
-        children: [
-          if (next case final next?) ...[
-            Image.asset(
-              'assets/images/${subjectArt[next.subject]}',
-              key: const ValueKey('recommend-building'),
-              width: 52,
-              height: 52,
-              fit: BoxFit.contain,
-            ),
-            const SizedBox(width: 14),
-          ],
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: fullWidth
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  context.s.villageRecommendedLabel,
-                  style: TextStyle(
-                    fontSize: 11,
-                    letterSpacing: 0.66,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFFBFD3FF),
-                  ),
-                ),
-                SizedBox(height: 3),
-                Text(
-                  switch (next) {
-                    final next? => [
-                      subjectLabel(context.s, next.subject),
-                      ?next.areaTitle,
-                    ].join(' · '),
-                    null => context.s.villageContinuePath,
-                  },
-                  key: const ValueKey('recommend-title'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: VillageType.display,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                    color: Colors.white,
-                  ),
-                ),
-                if (next case final next?)
-                  Text(
-                    next.label,
-                    key: const ValueKey('recommend-skill'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFFBFD3FF),
-                    ),
-                  ),
+                Row(children: info),
+                const SizedBox(height: 14),
+                button,
               ],
-            ),
-          ),
-          Material(
-            color: Colors.transparent,
-            borderRadius: BorderRadius.circular(999),
-            child: InkWell(
-              key: const ValueKey('recommend-continue'),
-              onTap: onContinue,
-              borderRadius: BorderRadius.circular(999),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [p.goldLight, p.gold],
-                  ),
-                  borderRadius: BorderRadius.circular(999),
-                  boxShadow: [
-                    BoxShadow(
-                      color: p.gold.withValues(alpha: 0.35),
-                      blurRadius: 18,
-                      offset: Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 22, vertical: 11),
-                  child: ArrowLabel(
-                    context.s.villageContinueCta,
-                    style: TextStyle(
-                      fontFamily: VillageType.display,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13.5,
-                      color: Color(0xFF241A04),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+            )
+          : Row(children: [...info, button]),
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tutolys_app/data/api/curriculum_api.dart';
+import 'package:tutolys_app/features/home/subject_strip.dart';
 import 'package:tutolys_app/features/play/play_screen.dart';
 
 import 'path_screen_test.dart' show appUnder, exercise;
@@ -62,5 +63,29 @@ void main() {
       find.byKey(const ValueKey('carte-path')).hitTestable(),
       findsOneWidget,
     );
+  });
+
+  testWidgets('A6: on a phone it comes first, its button full width', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(375, 812);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      appUnder(
+        leaves: const [_one],
+        content: {'ex-1': exercise(id: 'ex-1', skillNodeId: 'leaf-1')},
+      ),
+    );
+    await tester.pumpAndSettle();
+    final button = find.byKey(const ValueKey('recommend-continue'));
+    expect(button, findsOneWidget);
+    expect(
+      tester.getTopLeft(button).dy,
+      lessThan(tester.getTopLeft(find.byType(SubjectStrip)).dy),
+      reason: 'above the subjects, not under the quests',
+    );
+    expect(tester.getSize(button).width, greaterThan(280));
+    expect(tester.takeException(), isNull);
   });
 }
