@@ -71,6 +71,11 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const ValueKey('carte-stale')), findsOneWidget);
+    // A10: nothing playable and unreachable: kid words and a Réessayer,
+    // never "connecte-toi".
+    expect(find.byKey(const ValueKey('carte-gap-retry')), findsOneWidget);
+    expect(find.text(Strings.fr.pathEmptyOffline), findsOneWidget);
+    expect(Strings.fr.pathEmptyOffline, isNot(contains('Connecte')));
   });
 
   testWidgets('a silent server: the fox and Réessayer after 8 s, then the '

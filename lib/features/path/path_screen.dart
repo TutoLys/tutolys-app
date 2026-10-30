@@ -226,6 +226,11 @@ class _PathScreenState extends ConsumerState<PathScreen> {
                           if (carteGapOf(state) case final gap?)
                             _Empty(
                               key: ValueKey('carte-gap-${gap.name}'),
+                              onRetry: gap == CarteGap.offline
+                                  ? () => ref
+                                        .read(pathControllerProvider.notifier)
+                                        .refresh()
+                                  : null,
                               text: switch (gap) {
                                 CarteGap.offline => t.pathEmptyOffline,
                                 CarteGap.noSkillsAtGrade => t.pathEmptyAtGrade(
@@ -546,9 +551,13 @@ class _SlowLoaderState extends State<_SlowLoader> {
 }
 
 class _Empty extends StatelessWidget {
-  const _Empty({required this.text, super.key});
+  const _Empty({required this.text, this.onRetry, super.key});
 
   final String text;
+
+  /// Offline (A10): a child can't fix Wi-Fi, but can tap this once an
+  /// adult has.
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -568,6 +577,20 @@ class _Empty extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14, color: p.inkMuted),
           ),
+          if (onRetry != null) ...[
+            const SizedBox(height: Space.sm),
+            FilledButton.icon(
+              key: const ValueKey('carte-gap-retry'),
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded),
+              label: Text(context.s.retry),
+              style: FilledButton.styleFrom(
+                backgroundColor: p.gold,
+                foregroundColor: const Color(0xFF241A04),
+                shape: const StadiumBorder(),
+              ),
+            ),
+          ],
         ],
       ),
     );

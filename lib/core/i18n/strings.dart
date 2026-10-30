@@ -726,7 +726,8 @@ class _FrenchStrings extends Strings {
 
   @override
   String get pathEmptyOffline =>
-      'Connecte-toi à Internet pour charger cette matière.';
+      "Pas d'Internet pour l'instant. Demande à un adulte, puis touche "
+      'Réessayer.';
 
   @override
   String pathEmptyAtGrade(int grade) =>
@@ -1376,8 +1377,7 @@ class _FrenchStrings extends Strings {
   String get questsStreakStart => 'Termine une leçon pour lancer ta série !';
 
   @override
-  String get questsStreakUnknown =>
-      'On ne peut pas lire ta série pour l\'instant.';
+  String get questsStreakUnknown => 'Ta série revient bientôt.';
 
   @override
   String get questsStreakOpenHint => 'Voir le détail de ta série';
@@ -2055,7 +2055,7 @@ class _EnglishStrings extends Strings {
 
   @override
   String get pathEmptyOffline =>
-      'Connect to the internet to load this subject.';
+      'No Internet right now. Ask a grown-up, then tap Try again.';
 
   @override
   String pathEmptyAtGrade(int grade) =>
@@ -2694,7 +2694,7 @@ class _EnglishStrings extends Strings {
   String get questsStreakStart => 'Finish a lesson to start your streak!';
 
   @override
-  String get questsStreakUnknown => 'We can\'t read your streak right now.';
+  String get questsStreakUnknown => 'Your streak will be back soon.';
 
   @override
   String get questsStreakOpenHint => 'See your streak details';
