@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
+import '../../core/widgets/arrow_label.dart';
 
 import '../../core/widgets/breathing_mascot.dart';
 import '../../core/i18n/strings.dart';
@@ -692,14 +693,15 @@ class _ActiveCard extends StatelessWidget {
                     ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 10),
-                      child: Text(
-                        cta,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontFamily: VillageType.display,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13.5,
-                          color: Color(0xFF241A04),
+                      child: Center(
+                        child: ArrowLabel(
+                          cta,
+                          style: const TextStyle(
+                            fontFamily: VillageType.display,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13.5,
+                            color: Color(0xFF241A04),
+                          ),
                         ),
                       ),
                     ),

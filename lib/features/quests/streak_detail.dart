@@ -1,5 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
+import '../../core/widgets/arrow_label.dart';
 
 import '../../core/i18n/strings.dart';
 import '../../data/api/progress_api.dart';
@@ -482,7 +483,7 @@ class _Nudge extends StatelessWidget {
                   const SizedBox(height: 6),
                   InkWell(
                     onTap: onOpenPath,
-                    child: Text(
+                    child: ArrowLabel(
                       t.streakDetailNudgeCta.toUpperCase(),
                       style: TextStyle(
                         fontSize: 11,

@@ -22,7 +22,7 @@ Widget pathIn({
             nodes: nodes,
             compact: compact,
             statusLabel: (n) => 'status-${n.id}',
-            continueLabel: 'Continuer →',
+            continueLabel: 'Continuer',
             onTapNode: onTap,
           ),
         ),
@@ -82,7 +82,7 @@ void main() {
     );
 
     expect(find.text('STATUS-X'), findsOneWidget);
-    expect(find.text('Continuer →'), findsOneWidget);
+    expect(find.text('Continuer'), findsOneWidget);
   });
 
   testWidgets('a completed orb can be replayed, and carries no card', (
@@ -101,7 +101,7 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('path-orb-d')));
     expect(tapped, ['d']);
-    expect(find.text('Continuer →'), findsNothing);
+    expect(find.text('Continuer'), findsNothing);
   });
 
   testWidgets('a locked orb ignores taps and shows no click cursor', (

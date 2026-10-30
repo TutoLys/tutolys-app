@@ -1192,7 +1192,7 @@ class _FrenchStrings extends Strings {
   String get villageContinuePath => 'Continue ton parcours';
 
   @override
-  String get villageContinueCta => 'Continuer →';
+  String get villageContinueCta => 'Continuer';
 
   @override
   String get villageQuestsTitle => 'Quêtes du jour';
@@ -1408,7 +1408,7 @@ class _FrenchStrings extends Strings {
       'Termine une leçon aujourd\'hui pour prolonger ta série !';
 
   @override
-  String get streakDetailNudgeCta => 'Prolonger ma série →';
+  String get streakDetailNudgeCta => 'Prolonger ma série';
 
   @override
   String get streakDetailCalendar => 'Calendrier';
@@ -2513,7 +2513,7 @@ class _EnglishStrings extends Strings {
   String get villageContinuePath => 'Keep going on your path';
 
   @override
-  String get villageContinueCta => 'Continue →';
+  String get villageContinueCta => 'Continue';
 
   @override
   String get villageQuestsTitle => 'Today\'s quests';
@@ -2725,7 +2725,7 @@ class _EnglishStrings extends Strings {
       'Finish a lesson today to keep your streak going!';
 
   @override
-  String get streakDetailNudgeCta => 'Keep my streak →';
+  String get streakDetailNudgeCta => 'Keep my streak';
 
   @override
   String get streakDetailCalendar => 'Calendar';

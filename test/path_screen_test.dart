@@ -239,7 +239,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Continuer →'));
+    await tester.tap(find.text('Continuer'));
     await tester.pumpAndSettle();
 
     expect(find.byType(PlayScreen), findsOneWidget);
@@ -303,7 +303,7 @@ void main() {
     );
 
     // Nothing playable means no active node, so no Continuer card either.
-    expect(find.text('Continuer →'), findsNothing);
+    expect(find.text('Continuer'), findsNothing);
 
     // A locked orb has no handler at all, so tapping it cannot play.
     await tester.tap(
@@ -410,10 +410,10 @@ void main() {
       }
 
       // One Continuer card, and it plays the frontier's unfinished lesson.
-      expect(find.text('Continuer →'), findsOneWidget);
-      await tester.ensureVisible(find.text('Continuer →'));
+      expect(find.text('Continuer'), findsOneWidget);
+      await tester.ensureVisible(find.text('Continuer'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Continuer →'));
+      await tester.tap(find.text('Continuer'));
       await tester.pumpAndSettle();
       final play = tester.widget<PlayScreen>(find.byType(PlayScreen));
       expect(play.node.id, 'a');

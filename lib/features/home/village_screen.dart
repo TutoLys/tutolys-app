@@ -1,6 +1,7 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/widgets/arrow_label.dart';
 
 import '../../core/i18n/strings.dart';
 
@@ -344,7 +345,7 @@ class _RecommendBar extends StatelessWidget {
                 ),
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 22, vertical: 11),
-                  child: Text(
+                  child: ArrowLabel(
                     context.s.villageContinueCta,
                     style: TextStyle(
                       fontFamily: VillageType.display,
