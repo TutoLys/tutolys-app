@@ -9,6 +9,9 @@ import 'package:tutolys_app/data/local_db/session_store.dart';
 import 'package:tutolys_app/features/about/about_screen.dart';
 import 'package:tutolys_app/features/pairing/pairing_controller.dart';
 import 'package:tutolys_app/features/qa/qa_lesson_picker.dart';
+import 'package:tutolys_app/features/play/play_screen.dart';
+import 'package:tutolys_app/data/sync/content_hash.dart';
+import 'dart:convert';
 
 class _Session extends SessionController {
   @override
@@ -55,6 +58,43 @@ void main() {
               ),
             );
       }
+      final envelope = {
+        'schema_version': 1,
+        'exercise_id': 'e1',
+        'version': 1,
+        'engine_key': 'mcq',
+        'engine_min_version': 1,
+        'skill_node_id': 'n-e1',
+        'subject': 'MATH',
+        'grade': 1,
+        'rank': 0,
+        'locale': 'fr-CA',
+        'prompt': {'text': 'Invente ta phrase', 'audio_ref': null},
+        'config': {
+          'options': [
+            {'id': 'a', 'label': '4'},
+            {'id': 'b', 'label': '5'},
+          ],
+          'correct': 'a',
+        },
+        'assets': const <Object?>[],
+      };
+      await db
+          .into(db.exerciseCacheTable)
+          .insert(
+            ExerciseCacheTableCompanion.insert(
+              exerciseId: 'e1',
+              version: 1,
+              payload: jsonEncode(envelope),
+              contentHash: contentSha256(envelope),
+              engineKey: 'mcq',
+              skillNodeId: 'n-e1',
+              subject: 'MATH',
+              grade: 1,
+              rank: 0,
+              cachedAt: DateTime.utc(2026, 10, 29),
+            ),
+          );
     });
     await tester.pumpWidget(
       ProviderScope(
@@ -102,5 +142,24 @@ void main() {
     }
     expect(find.textContaining('pair_match'), findsOneWidget);
     expect(find.textContaining('speed_tap'), findsOneWidget);
+  });
+
+  testWidgets('a row opens its lesson, titled by its prompt, as practice', (
+    tester,
+  ) async {
+    await openLog(tester, qa: true);
+    await tester.tap(find.byKey(const ValueKey('qa-open-picker')));
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+    await tester.pumpAndSettle();
+    expect(find.text('Invente ta phrase'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('qa-lesson-e1')));
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+    // A game's animations never settle: pump frames instead.
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+    final play = tester.widget<PlayScreen>(find.byType(PlayScreen));
+    expect(play.practice, isTrue);
+    expect(play.envelope['exercise_id'], 'e1');
   });
 }

@@ -1,11 +1,12 @@
+import 'dart:convert';
+
 import 'package:design_system/design_system.dart';
 import 'package:drift/drift.dart' show OrderingTerm;
 import 'package:flutter/foundation.dart' show kReleaseMode, visibleForTesting;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../core/routing/paired_router.dart';
+import '../play/play_screen.dart';
 import '../../data/local_db/database.dart';
 import '../../data/sync/content_sync.dart' show NodeDownload;
 import '../pairing/pairing_controller.dart';
@@ -28,6 +29,39 @@ const qaToolsEnabled = !kReleaseMode && _qaDefine;
 
 /// Every published lesson at the kid's grade, from the stored manifests,
 /// downloaded or not.
+/// What a reviewer reads on a row: the skill's name and, once
+/// downloaded, the lesson's prompt.
+final qaLessonTitlesProvider =
+    FutureProvider.autoDispose<Map<String, String>>((ref) async {
+      final db = ref.watch(localDatabaseProvider);
+      final titles = <String, String>{};
+      for (final n in await db.select(db.skillNodeTable).get()) {
+        titles['node:${n.id}'] = n.labelFr;
+      }
+      for (final e in await db.select(db.exerciseCacheTable).get()) {
+        final text = _promptOf(e.payload);
+        if (text != null) titles['ex:${e.exerciseId}'] = text;
+      }
+      return titles;
+    });
+
+/// The lesson's first prompt: its own, or its first question's.
+String? _promptOf(String payload) {
+  try {
+    final envelope = jsonDecode(payload) as Map<String, Object?>;
+    Object? prompt = envelope['prompt'];
+    if (prompt == null) {
+      if (envelope['questions'] case [final Map first, ...]) {
+        prompt = first['prompt'];
+      }
+    }
+    final text = prompt is Map ? prompt['text'] : null;
+    return text is String && text.trim().isNotEmpty ? text : null;
+  } on Object {
+    return null;
+  }
+}
+
 final qaLessonsProvider = FutureProvider.autoDispose<List<ManifestEntryRow>>((
   ref,
 ) async {
@@ -63,6 +97,7 @@ class QaLessonPicker extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = context.s;
     final lessons = ref.watch(qaLessonsProvider);
+    final titles = ref.watch(qaLessonTitlesProvider).value ?? const {};
     return Scaffold(
       key: const ValueKey('qa-lesson-picker'),
       appBar: AppBar(title: const Text('QA · lessons')),
@@ -90,8 +125,17 @@ class QaLessonPicker extends ConsumerWidget {
               ListTile(
                 key: ValueKey('qa-lesson-${r.exerciseId}'),
                 dense: true,
-                title: Text('${r.engineKey} · rank ${r.rank} · ${r.locale}'),
-                subtitle: Text(r.skillNodeId),
+                title: Text(
+                  titles['ex:${r.exerciseId}'] ??
+                      titles['node:${r.skillNodeId}'] ??
+                      r.skillNodeId,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(
+                  '${r.engineKey} · rank ${r.rank} · ${r.locale}'
+                  '${titles.containsKey('ex:${r.exerciseId}') ? '' : ' · not downloaded'}',
+                ),
                 onTap: () => _play(context, ref, r),
               ),
             ],
@@ -141,9 +185,14 @@ class QaLessonPicker extends ConsumerWidget {
           grade: r.grade,
         );
     if (!context.mounted) return;
-    await GoRouter.of(context).push(
-      '/play',
-      extra: PlayRequest(node: leaf, envelope: envelope, practice: true),
+    // Pushed on the navigator the picker itself lives on. It opens from
+    // the technical log's dialog, above the paired router, so GoRouter
+    // isn't in reach here (it threw « No GoRouter found in context »).
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) =>
+            PlayScreen(node: leaf, envelope: envelope!, practice: true),
+      ),
     );
   }
 }
