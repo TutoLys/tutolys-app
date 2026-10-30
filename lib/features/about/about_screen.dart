@@ -9,6 +9,7 @@ import '../../core/i18n/strings.dart';
 import '../../core/widgets/fleur_de_lys.dart';
 import '../pairing/pairing_controller.dart';
 import '../path/path_controller.dart' show contentSyncProvider;
+import '../qa/qa_lesson_picker.dart';
 
 /// À propos de TutoLys.
 ///
@@ -152,6 +153,7 @@ Future<void> showTechnicalLog(
   BootLog? bootLog,
   DiagLog? diagLog,
   List<String> offline = const [],
+  bool qaTools = qaToolsEnabled,
 }) {
   final boot = bootLog ?? BootLog.instance;
   final diag = diagLog ?? DiagLog.instance;
@@ -179,6 +181,21 @@ Future<void> showTechnicalLog(
         ),
       ),
       actions: [
+        // QA builds only (ADR 0100): a release build compiles this out.
+        if (qaTools)
+          TextButton(
+            key: const ValueKey('qa-open-picker'),
+            onPressed: () {
+              final navigator = Navigator.of(context);
+              navigator.pop();
+              navigator.push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const QaLessonPicker(),
+                ),
+              );
+            },
+            child: const Text('QA · lessons'),
+          ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: Text(MaterialLocalizations.of(context).closeButtonLabel),
