@@ -218,10 +218,16 @@ class AnswerTile extends StatelessWidget {
                           Expanded(
                             child: Text(
                               label,
+                              // A picture answer (emoji only) draws big:
+                              // the child reads the picture, not the word.
                               style: TextStyle(
                                 fontFamily: VillageType.display,
                                 fontWeight: FontWeight.w700,
-                                fontSize: large ? 20 : 15,
+                                fontSize: _pictureOnly(label)
+                                    ? 34
+                                    : large
+                                    ? 20
+                                    : 15,
                                 color: text,
                               ),
                             ),
@@ -309,4 +315,12 @@ class _FocusOutlineState extends State<_FocusOutline> {
       ),
     );
   }
+}
+
+/// Whether [label] is only pictures (emoji), with no letters or digits, so
+/// it can be drawn at picture size.
+bool _pictureOnly(String label) {
+  final t = label.trim();
+  if (t.isEmpty) return false;
+  return !RegExp(r'[\p{L}\p{N}]', unicode: true).hasMatch(t);
 }

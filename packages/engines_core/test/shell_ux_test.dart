@@ -499,6 +499,11 @@ void main() {
         _app(LearningActivityView(controller: c, locale: fr, onDone: () {})),
       );
       expect(find.text('1 / 2'), findsOneWidget);
+      // The track has real width at 0 %: its Stack shrank to 0 px before.
+      expect(
+        tester.getSize(find.byKey(const ValueKey('progress-track'))).width,
+        greaterThan(100),
+      );
       final track = tester.widget<DecoratedBox>(
         find.byKey(const ValueKey('progress-track')),
       );
@@ -731,6 +736,33 @@ void main() {
       node.requestFocus();
       await tester.pump();
       expect(ring, findsNothing);
+    });
+  });
+
+  group('picture answers draw big for pre-readers', () {
+    testWidgets('an emoji-only label is 34 px; a word stays 15 px', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _app(
+          Column(
+            children: [
+              AnswerTile(
+                label: '🐱',
+                state: AnswerTileState.idle,
+                onTap: () {},
+              ),
+              AnswerTile(
+                label: 'cat',
+                state: AnswerTileState.idle,
+                onTap: () {},
+              ),
+            ],
+          ),
+        ),
+      );
+      expect(tester.widget<Text>(find.text('🐱')).style!.fontSize, 34);
+      expect(tester.widget<Text>(find.text('cat')).style!.fontSize, 15);
     });
   });
 }
