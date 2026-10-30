@@ -251,6 +251,7 @@ class PatternState {
     this.filled = const {},
     this.locked = const {},
     this.tried = const {},
+    this.missed = const {},
   });
 
   final List<String> choiceOrder;
@@ -270,6 +271,11 @@ class PatternState {
   /// `choice|gap` pairs checked wrong.
   final Set<String> tried;
 
+  /// Invent: the strip the last check refused, gap → choice. The strip is
+  /// empty again, but these show in amber until the child's next tap, so a
+  /// full strip never blocks the retry (UX review N11).
+  final Map<String, String> missed;
+
   bool get complete => filled.length == gaps.length;
 
   String? get firstOpen {
@@ -285,6 +291,7 @@ class PatternState {
     Map<String, String>? filled,
     Set<String>? locked,
     Set<String>? tried,
+    Map<String, String>? missed,
   }) => PatternState(
     choiceOrder: choiceOrder,
     gaps: gaps,
@@ -292,6 +299,7 @@ class PatternState {
     filled: filled ?? this.filled,
     locked: locked ?? this.locked,
     tried: tried ?? this.tried,
+    missed: missed ?? this.missed,
   );
 }
 
@@ -309,6 +317,11 @@ class TapPatternGap extends PatternAction {
 class TapPatternChoice extends PatternAction {
   const TapPatternChoice(this.choiceId);
   final String choiceId;
+}
+
+/// Invent: « Recommencer », empty every cell not locked.
+class ClearPatternStrip extends PatternAction {
+  const ClearPatternStrip();
 }
 
 /// "Qu'est-ce qui suit ?" — the `pattern_machine` engine (app ADR 0048;
@@ -545,7 +558,18 @@ class PatternMachineEngine
 
   @override
   Transition<PatternState> reduce(PatternState s, PatternAction action) {
+    // Any tap starts the retry, so the refused strip's marks go.
+    if (s.missed.isNotEmpty) s = s.copyWith(missed: const {});
     switch (action) {
+      case ClearPatternStrip():
+        final kept = {
+          for (final e in s.filled.entries)
+            if (s.locked.contains(e.key)) e.key: e.value,
+        };
+        if (kept.length == s.filled.length) return Transition(s);
+        return Transition(s.copyWith(clearActive: true, filled: kept), [
+          const InteractionEvent('item_removed', {'item_id': 'strip'}),
+        ]);
       case TapPatternGap(:final gapId):
         if (!s.gaps.contains(gapId) || s.locked.contains(gapId)) {
           return Transition(s);
@@ -594,9 +618,11 @@ class PatternMachineEngine
     if (result.itemResults.isEmpty) {
       // Invent: the strip is the child's, so a miss keeps every piece for
       // them to change; a pattern that repeats locks whole.
+      // A miss empties the strip, so the stamps work again (N11), and
+      // shows the refused strip in amber until the next tap.
       return result.outcome == Outcome.correct
           ? s.copyWith(clearActive: true, locked: s.gaps.toSet())
-          : s.copyWith(clearActive: true);
+          : s.copyWith(clearActive: true, filled: const {}, missed: s.filled);
     }
     final locked = {...s.locked};
     final tried = {...s.tried};
@@ -694,7 +720,8 @@ class PatternMachineEngine
       }
       gapNumber++;
       final gap = PatternContent.gapId(i);
-      final choiceId = s.filled[gap];
+      final ghost = s.filled[gap] == null ? s.missed[gap] : null;
+      final choiceId = s.filled[gap] ?? ghost;
       final locked = s.locked.contains(gap);
       final isTarget = target == gap;
       final piece = choiceId == null ? null : c.choice(choiceId).piece;
@@ -717,8 +744,15 @@ class PatternMachineEngine
             key: ValueKey('pattern-gap-$gap'),
             size: cell,
             piece: piece,
-            state: locked ? AnswerTileState.correct : AnswerTileState.idle,
+            state: locked
+                ? AnswerTileState.correct
+                : ghost != null
+                ? AnswerTileState.retry
+                : AnswerTileState.idle,
             isGap: true,
+            // Invent: a filled cell shows it can be emptied (N11).
+            removable:
+                c.invent && view.enabled && !locked && s.filled[gap] != null,
             highlighted: isTarget,
             onTap: view.enabled && !locked
                 ? () => view.dispatch(TapPatternGap(gap))
@@ -811,6 +845,36 @@ class PatternMachineEngine
                     ),
                 ],
               ),
+              // Invent: say a cell can be emptied, and offer to start over.
+              if (c.invent &&
+                  view.enabled &&
+                  s.filled.isNotEmpty &&
+                  s.locked.length < s.gaps.length) ...[
+                const SizedBox(height: 16),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 12,
+                  children: [
+                    Text(
+                      fr
+                          ? 'Touche une case pour l’enlever.'
+                          : 'Tap a box to take it out.',
+                      style: TextStyle(fontSize: 15, color: p.ink),
+                    ),
+                    OutlinedButton.icon(
+                      key: const ValueKey('pattern-clear'),
+                      onPressed: () => view.dispatch(const ClearPatternStrip()),
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: Text(fr ? 'Recommencer' : 'Start over'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: p.ink,
+                        side: BorderSide(color: p.inkMuted, width: 2),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
               if (c.creation && s.locked.length == s.gaps.length)
                 KeepCreationButton(
                   locale: view.locale,
@@ -843,6 +907,7 @@ class _Cell extends StatelessWidget {
     required this.state,
     this.isGap = false,
     this.highlighted = false,
+    this.removable = false,
     this.onTap,
     super.key,
   });
@@ -852,6 +917,9 @@ class _Cell extends StatelessWidget {
   final AnswerTileState? state;
   final bool isGap;
   final bool highlighted;
+
+  /// Draw a small ✕: tapping empties the cell.
+  final bool removable;
   final VoidCallback? onTap;
 
   @override
@@ -887,6 +955,17 @@ class _Cell extends StatelessWidget {
             right: 3,
             top: 3,
             child: Icon(icon, size: 14, color: border),
+          )
+        else if (removable)
+          Positioned(
+            right: 2,
+            top: 2,
+            child: Icon(
+              Icons.close_rounded,
+              key: const ValueKey('pattern-cell-remove'),
+              size: 14,
+              color: p.inkMuted,
+            ),
           ),
       ],
     );

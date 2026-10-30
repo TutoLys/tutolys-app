@@ -151,20 +151,33 @@ void main() {
       expect(grade(shapesOnly, 'acacac').outcome, Outcome.correct);
     });
 
-    test('a miss keeps the strip; a pattern locks whole', () {
-      final c = parsed(invent);
-      var s = engine.initialize(c, const EngineSeed(1));
-      for (final id in 'aaaaaa'.split('')) {
-        s = engine.reduce(s, TapPatternChoice(id)).state;
-      }
-      final miss = engine.applyFeedback(
-        s,
-        evaluator.evaluate(c, engine.extractAnswer(s)!, ctx),
-      );
-      expect(miss.filled.length, 6);
-      expect(miss.locked, isEmpty);
-      expect(miss.tried, isEmpty);
-    });
+    test(
+      'a miss empties the strip and marks it amber (N11); Recommencer clears',
+      () {
+        final c = parsed(invent);
+        var s = engine.initialize(c, const EngineSeed(1));
+        for (final id in 'aaaaaa'.split('')) {
+          s = engine.reduce(s, TapPatternChoice(id)).state;
+        }
+        final miss = engine.applyFeedback(
+          s,
+          evaluator.evaluate(c, engine.extractAnswer(s)!, ctx),
+        );
+        // The strip is empty again, so the stamps work; the refused strip
+        // shows in amber until the next tap.
+        expect(miss.filled, isEmpty);
+        expect(miss.missed, hasLength(6));
+        expect(miss.locked, isEmpty);
+        final next = engine.reduce(miss, const TapPatternChoice('b')).state;
+        expect(next.missed, isEmpty);
+        expect(next.filled, {'g0': 'b'});
+        // Recommencer empties every cell.
+        expect(
+          engine.reduce(next, const ClearPatternStrip()).state.filled,
+          isEmpty,
+        );
+      },
+    );
   });
 
   testWidgets('in the shell: a hand on the palette, a miss, then kept', (
@@ -233,16 +246,16 @@ void main() {
     await settle();
     expect(find.text('Presque !'), findsOneWidget);
     expect(find.text('Ta suite ne se répète pas encore.'), findsOneWidget);
-    expect((c.current!.state as PatternState).filled, hasLength(6));
-
-    // Change the last three: tap a cell to empty it, then stamp.
-    await tester.tap(find.text('RÉESSAYER'));
+    // N11: the stamps work again straight away (the board is the retry).
+    await stamp('abcab');
+    expect(find.text('Presque !'), findsNothing);
+    // Each filled cell shows it can be emptied, and Recommencer is there.
+    expect(find.byKey(const ValueKey('pattern-cell-remove')), findsNWidgets(5));
+    expect(find.text('Touche une case pour l’enlever.'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('pattern-clear')));
     await settle();
-    for (final g in ['g3', 'g4', 'g5']) {
-      await tester.tap(find.byKey(ValueKey('pattern-gap-$g')));
-      await settle();
-      await stamp('abc'[int.parse(g.substring(1)) - 3]);
-    }
+    expect((c.current!.state as PatternState).filled, isEmpty);
+    await stamp('abcabc');
     await tester.tap(find.text('VALIDER'));
     await settle();
     expect(find.text('Bravo !'), findsOneWidget);

@@ -49,3 +49,13 @@ child make a regularity of their own.
   as unavailable. No app has shipped.
 - Tests: `test/pattern_invent_test.dart` covers parsing, every edge case
   above, and a play in the shell (hand, miss, fix, keep).
+
+## Revision (2026-10-29, UX review N11)
+
+Keeping the strip after a miss left a full strip: a stamp had nowhere to
+go, VALIDER failed again, and only tapping a cell emptied it, which
+nothing said. A grade-1 child was stuck. Now a miss empties the strip and
+shows the refused one in amber until the next tap (as G7/N5 do for the
+other boards). Filled cells show a small ✕ with « Touche une case pour
+l'enlever. », and a « Recommencer » button empties the strip at any time
+(`ClearPatternStrip`).
