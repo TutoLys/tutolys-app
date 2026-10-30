@@ -400,36 +400,41 @@ class _TopBar extends StatelessWidget {
                     value: '${(progress!.clamp(0, 1) * 100).round()} %',
                     // An outlined track (3:1) shows the whole way even
                     // at 0 %, where only the gold fill drew before (N1).
-                    child: DecoratedBox(
-                      key: const ValueKey('progress-track'),
-                      position: DecorationPosition.foreground,
-                      decoration: BoxDecoration(
-                        borderRadius: Radii.pillAll,
-                        border: Border.all(color: p.inkMuted, width: 1.5),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: Radii.pillAll,
-                        child: SizedBox(
-                          height: 10,
-                          child: Stack(
-                            children: [
-                              Positioned.fill(
-                                child: ColoredBox(color: p.track),
-                              ),
-                              FractionallySizedBox(
-                                // Full height: a childless box in a Stack is otherwise
-                                // sized to zero, and the fill never shows.
-                                heightFactor: 1,
-                                widthFactor: progress!.clamp(0, 1).toDouble(),
-                                child: DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [p.goldLight, p.gold],
+                    // Full width: in this start-aligned column the track's
+                    // Stack had nothing to size it and shrank to 0 px.
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: DecoratedBox(
+                        key: const ValueKey('progress-track'),
+                        position: DecorationPosition.foreground,
+                        decoration: BoxDecoration(
+                          borderRadius: Radii.pillAll,
+                          border: Border.all(color: p.inkMuted, width: 1.5),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: Radii.pillAll,
+                          child: SizedBox(
+                            height: 10,
+                            child: Stack(
+                              children: [
+                                Positioned.fill(
+                                  child: ColoredBox(color: p.track),
+                                ),
+                                FractionallySizedBox(
+                                  // Full height: a childless box in a Stack is otherwise
+                                  // sized to zero, and the fill never shows.
+                                  heightFactor: 1,
+                                  widthFactor: progress!.clamp(0, 1).toDouble(),
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [p.goldLight, p.gold],
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
