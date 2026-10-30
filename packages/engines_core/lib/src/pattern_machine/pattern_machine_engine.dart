@@ -938,8 +938,15 @@ class _Cell extends StatelessWidget {
         Icons.check_rounded,
       ),
       _ when highlighted => (p.quebecBlueBright, p.navHoverFill, null),
-      _ when isGap && empty => (p.line, p.track.withValues(alpha: 0.35), null),
-      _ => (p.line, p.surface, null),
+      // Gaps and stamps are things to tap: a 3:1 edge (UX review N16; `line`
+      // was 1.2:1). A shown term (no state) keeps the light line.
+      _ when isGap && empty => (
+        p.inkMuted,
+        p.track.withValues(alpha: 0.35),
+        null,
+      ),
+      null => (p.line, p.surface, null),
+      _ => (p.inkMuted, p.surface, null),
     };
     final content = Stack(
       children: [

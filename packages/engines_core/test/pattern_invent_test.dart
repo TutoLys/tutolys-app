@@ -180,6 +180,43 @@ void main() {
     );
   });
 
+  testWidgets('N16: empty cells and stamps have a 3:1 edge', (tester) async {
+    final c = parsed(invent);
+    final s = engine.initialize(c, const EngineSeed(1));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: TutolysTheme.village(),
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => engine.buildView(
+              context,
+              EngineView(
+                content: c,
+                state: s,
+                dispatch: (_) {},
+                locale: fr,
+                enabled: true,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    // g0 is the target (highlighted blue); g1 is a plain empty cell.
+    for (final key in ['pattern-gap-g1', 'pattern-choice-a']) {
+      final material = tester.widget<Material>(
+        find
+            .descendant(
+              of: find.byKey(ValueKey(key)),
+              matching: find.byType(Material),
+            )
+            .first,
+      );
+      final side = (material.shape! as RoundedRectangleBorder).side.color;
+      expect(side, VillagePalette.light.inkMuted, reason: key);
+    }
+  });
+
   testWidgets('in the shell: a hand on the palette, a miss, then kept', (
     tester,
   ) async {
