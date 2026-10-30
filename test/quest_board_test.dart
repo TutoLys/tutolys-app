@@ -3,6 +3,7 @@ import 'package:tutolys_app/data/api/progress_api.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
 import 'package:tutolys_app/data/local_db/quest_log.dart';
 import 'package:tutolys_app/features/quests/quest_board.dart';
+import 'package:tutolys_app/features/path/programme.dart';
 
 void main() {
   group('buildDailyQuests', () {
@@ -128,14 +129,14 @@ void main() {
     test('all subjects at 50 % needs all five measured', () {
       expect(earned(subjects: {'MATH': 1, 'FR': 1}), isEmpty);
       expect(
-        earned(subjects: {for (final s in realSubjects) s: 0.5}),
+        earned(subjects: {for (final s in frenchProgramme.toSet()) s: 0.5}),
         {Achievement.allSubjects50},
       );
     });
 
     test('explorer means a skill played in every subject', () {
       expect(earned(played: {'MATH', 'FR', 'EN', 'SCI'}), isEmpty);
-      expect(earned(played: realSubjects), {Achievement.explorer});
+      expect(earned(played: frenchProgramme.toSet()), {Achievement.explorer});
     });
   });
 

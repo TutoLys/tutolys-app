@@ -5,7 +5,8 @@ import '../../core/i18n/strings.dart';
 import '../../core/widgets/breathing_mascot.dart';
 import '../../core/widgets/fleur_de_lys.dart';
 import '../gallery/village_gallery.dart' show galleryBuildingCode;
-import '../path/path_controller.dart' show pathSubjects;
+import '../path/programme.dart' show frenchProgramme;
+import '../path/subject_pills.dart';
 
 /// One subject's building in the village.
 class VillageBuilding {
@@ -20,7 +21,14 @@ class VillageBuilding {
     this.small = false,
     this.progress,
     this.measured = true,
+    this.hasLessons = true,
   });
+
+  /// False once a sync found no lesson for this subject at the kid's grade
+  /// (ESL and FLS today, ADR 0101). The building stays in colour and opens
+  /// its Carte, which says lessons are coming; its pill says « Bientôt »
+  /// instead of a progress track.
+  final bool hasLessons;
 
   /// False for a building that isn't a subject (the gallery, ADR 0098):
   /// its pill shows only its name, never a progress track.
@@ -58,100 +66,103 @@ class VillageBuilding {
   /// than as a missing feature.
   final double? progress;
 
-  VillageBuilding withProgress(double? value) => VillageBuilding(
-    label: label,
-    asset: asset,
-    subject: subject,
-    live: live,
-    left: left,
-    top: top,
-    accent: accent,
-    small: small,
-    progress: value,
-    measured: measured,
-  );
+  VillageBuilding withProgress(double? value, {bool? hasLessons}) =>
+      VillageBuilding(
+        label: label,
+        asset: asset,
+        subject: subject,
+        live: live,
+        left: left,
+        top: top,
+        accent: accent,
+        small: small,
+        progress: value,
+        measured: measured,
+        hasLessons: hasLessons ?? this.hasLessons,
+      );
 }
 
-/// Every subject building, at the exact positions the design places them:
-/// the six academic subjects of Québec's primary program that this app
-/// covers. Live or not, every one is drawn, so the village never changes
-/// shape as subjects arrive.
+/// One place on the scene, from the design's own inline positions, and
+/// the subjects that may stand there, first present wins.
+class _Plot {
+  const _Plot(this.codes, this.left, this.top, {this.small = false});
+  final List<String> codes;
+  final double left;
+  final double top;
+  final bool small;
+}
+
+/// Six plots for six subjects (ADR 0101). The language of instruction
+/// stands where the design put Français, the second language where it put
+/// Anglais: a French-school kid sees Français + Anglais (ESL), an
+/// English-school kid English + Français (FLS). Never both pairs, so the
+/// village keeps the design's shape for every child.
+const _plots = [
+  _Plot(['MATH'], 0.17, 0.40),
+  _Plot(['FR', 'EN'], 0.50, 0.22),
+  _Plot(['SOC'], 0.83, 0.32),
+  _Plot(['ESL', 'FLS', 'EN', 'FR'], 0.12, 0.76),
+  _Plot(['SCI'], 0.84, 0.82),
+  _Plot(['CCQ'], 0.37, 0.72, small: true),
+];
+
+/// The kid's subject buildings, each on its plot, then the gallery.
+///
+/// [subjects] is the kid's programme (`programmeSubjectsProvider`, ADR
+/// 0101). A subject with no plot yet, a code the backend started serving
+/// after this build, has no building; the Carte and Progrès still offer it
+/// from the same list.
 ///
 /// A function of [Strings] rather than a const list: these labels sit on the
 /// most-looked-at screen in the app and must follow the language toggle.
 ///
-/// [live] defaults to the Carte's own [pathSubjects]: a subject goes live in
-/// one place, once its curriculum is imported, and the Village lights its
-/// building up and the Carte offers its pill together. All six are live
-/// since CCQ's curriculum landed (backend ADR 0025); the coming-soon state
-/// stays for whatever comes next.
+/// [live] defaults to [subjects]: a building that isn't live is drawn
+/// greyed out, "bientôt", for whatever a programme lists before it can be
+/// played.
 List<VillageBuilding> villageBuildings(
   Strings s, {
-  Iterable<String> live = pathSubjects,
-}) => [
-  VillageBuilding(
-    label: s.subjectMath,
-    asset: 'asset-bldg-math.webp',
-    subject: 'MATH',
-    live: live.contains('MATH'),
-    left: 0.17,
-    top: 0.40,
-  ),
-  VillageBuilding(
-    label: s.subjectFrancais,
-    asset: 'asset-bldg-francais.webp',
-    subject: 'FR',
-    live: live.contains('FR'),
-    left: 0.50,
-    top: 0.22,
-  ),
-  VillageBuilding(
-    label: s.subjectUniversSocial,
-    asset: 'asset-bldg-univers-social.webp',
-    subject: 'SOC',
-    live: live.contains('SOC'),
-    left: 0.83,
-    top: 0.32,
-  ),
-  VillageBuilding(
-    label: s.subjectAnglais,
-    asset: 'asset-bldg-anglais.webp',
-    subject: 'EN',
-    live: live.contains('EN'),
-    left: 0.12,
-    top: 0.76,
-  ),
-  VillageBuilding(
-    label: s.subjectScience,
-    asset: 'asset-bldg-science.webp',
-    subject: 'SCI',
-    live: live.contains('SCI'),
-    left: 0.84,
-    top: 0.82,
-  ),
-  VillageBuilding(
-    label: s.subjectCulture,
-    asset: 'asset-bldg-ccq.webp',
-    subject: 'CCQ',
-    live: live.contains('CCQ'),
-    left: 0.37,
-    top: 0.72,
-    accent: VillageColors.gold,
-    small: true,
-  ),
-  // Not a subject: "Ma galerie au village" (ADR 0098), up in the free sky
-  // between Français and Univers social, clear of the fox and the sign.
-  VillageBuilding(
-    label: s.galleryBuilding,
-    asset: 'asset-bldg-gallery.webp',
-    subject: galleryBuildingCode,
-    left: 0.67,
-    top: 0.15,
-    accent: VillageColors.gold,
-    small: true,
-    measured: false,
-  ),
-];
+  Iterable<String> subjects = frenchProgramme,
+  Iterable<String>? live,
+}) {
+  final listed = subjects.toSet();
+  final lit = (live ?? subjects).toSet();
+  final placed = <String>{};
+  String? standing(_Plot plot) {
+    for (final code in plot.codes) {
+      if (listed.contains(code) && placed.add(code)) return code;
+    }
+    return null;
+  }
+
+  return [
+    for (final plot in _plots)
+      if (standing(plot) case final first?)
+        VillageBuilding(
+          label: subjectLabel(s, first),
+          asset: subjectArt[first] ?? subjectArtFallback,
+          subject: first,
+          live: lit.contains(first),
+          left: plot.left,
+          top: plot.top,
+          accent: first == 'CCQ'
+              ? VillageColors.gold
+              : VillageColors.quebecBlueBright,
+          small: plot.small,
+        ),
+    // Not a subject: "Ma galerie au village" (ADR 0098), up in the free sky
+    // between Français and Univers social, clear of the fox and the sign.
+    VillageBuilding(
+      label: s.galleryBuilding,
+      asset: 'asset-bldg-gallery.webp',
+      subject: galleryBuildingCode,
+      left: 0.67,
+      top: 0.15,
+      accent: VillageColors.gold,
+      small: true,
+      measured: false,
+    ),
+  ];
+}
 
 /// Greyscale for buildings whose subject is not live yet (Rec. 709 luma).
 const _greyscale = ColorFilter.matrix([
@@ -512,9 +523,9 @@ class _Pill extends StatelessWidget {
           ),
           if (!building.measured)
             const SizedBox.shrink()
-          else if (!building.live) ...[
+          else if (!building.live || !building.hasLessons) ...[
             const SizedBox(width: 8),
-            const ComingSoonTag(),
+            ComingSoonTag(key: ValueKey('scene-soon-${building.subject}')),
           ] else if (building.progress == null) ...[
             // A8: nothing measured yet reads « À découvrir », never 0/100,
             // which a child takes for failing.

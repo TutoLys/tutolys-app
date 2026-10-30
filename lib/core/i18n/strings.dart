@@ -245,6 +245,10 @@ abstract class Strings {
   String get settingsParentZoneBody;
   String get settingsParentZoneCta;
   String get settingsParentZoneSoon;
+
+  /// Zone parent, for an adult only, while the school's language is unset
+  /// (ADR 0101). Never shown to the child.
+  String get settingsSchoolLanguageNeeded;
   String get settingsAbout;
   String get settingsSignOut;
   String get comingSoonTitle;
@@ -1085,6 +1089,11 @@ class _FrenchStrings extends Strings {
   @override
   String get settingsParentZoneSoon =>
       'Le site des parents arrive bientôt !';
+
+  @override
+  String get settingsSchoolLanguageNeeded =>
+      'À faire sur le site : indiquez la langue d’enseignement de l’école. '
+      'D’ici là, TutoLys suit le programme des écoles francophones.';
 
   @override
   String get settingsAbout => 'À propos de TutoLys';
@@ -2407,6 +2416,11 @@ class _EnglishStrings extends Strings {
 
   @override
   String get settingsParentZoneSoon => 'The parents’ website is coming soon!';
+
+  @override
+  String get settingsSchoolLanguageNeeded =>
+      'To do on the website: tell us which language the school teaches in. '
+      'Until then, TutoLys follows the French-language school programme.';
 
   @override
   String get settingsAbout => 'About TutoLys';

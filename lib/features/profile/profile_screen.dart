@@ -8,6 +8,7 @@ import '../../core/routing/page_tab.dart';
 import '../../core/widgets/kid_avatar.dart';
 import '../../core/widgets/pill_tabs.dart';
 import '../home/subject_progress.dart';
+import '../path/programme.dart';
 import '../home/village_scene.dart';
 import '../pairing/pairing_controller.dart';
 import '../progress/progress_controller.dart';
@@ -129,7 +130,10 @@ class ProfileScreen extends ConsumerWidget {
                           )
                         : Column(
                             children: [
-                              for (final b in villageBuildings(t))
+                              for (final b in villageBuildings(
+                                t,
+                                subjects: ref.watch(programmeSubjectsProvider),
+                              ))
                                 if (bySubject[b.subject] != null)
                                   _SubjectRow(
                                     label: b.label,

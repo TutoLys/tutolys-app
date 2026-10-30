@@ -8,9 +8,19 @@ import 'package:flutter/widgets.dart';
 /// (an English sentence, French words) is written that way in the lesson
 /// content and stays exactly as authored; the app never converts one.
 ///
+/// The second languages are language subjects too (ADR 0101): an ESL
+/// lesson is in English and an FLS lesson in French, whatever the app is
+/// set to. Never tagged "FR" for want of a translation: that is what they
+/// are.
+///
 /// Every other subject (mathématique, science, univers social, CCQ) follows
 /// the app's language: a kid who chose English does maths in English.
-const languageSubjects = {'FR': 'fr-CA', 'EN': 'en-CA'};
+const languageSubjects = {
+  'FR': 'fr-CA',
+  'EN': 'en-CA',
+  'ESL': 'en-CA',
+  'FLS': 'fr-CA',
+};
 
 /// The content locale to ask the backend for, for [subject].
 String contentLocaleFor(String subject, Locale appLocale) =>

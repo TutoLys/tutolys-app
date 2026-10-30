@@ -308,7 +308,7 @@ class _ByArea extends ConsumerWidget {
             Row(
               children: [
                 Image.asset(
-                  'assets/images/${subjectArt[subject]}',
+                  'assets/images/${subjectArt[subject] ?? subjectArtFallback}',
                   width: 18,
                   height: 18,
                 ),

@@ -9,6 +9,7 @@ import 'package:tutolys_app/data/local_db/session_store.dart';
 import 'package:tutolys_app/data/sync/content_hash.dart';
 import 'package:tutolys_app/features/pairing/pairing_controller.dart';
 import 'package:tutolys_app/features/path/path_controller.dart';
+import 'package:tutolys_app/features/path/programme.dart';
 import 'package:tutolys_app/features/settings/settings_controller.dart';
 
 class _FixedSessionController extends SessionController {
@@ -263,7 +264,7 @@ void main() {
 
     expect(
       contentApi.asked.map((a) => a.$1).toSet(),
-      pathSubjects.toSet(),
+      frenchProgramme.toSet(),
       reason: 'the whole village plays offline (ADR 0095)',
     );
     final count = contentApi.asked.length;

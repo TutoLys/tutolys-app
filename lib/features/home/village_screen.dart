@@ -16,7 +16,9 @@ import '../quests/quest_board.dart';
 import '../quests/quests_screen.dart' show QuestListPending, questTitle;
 import '../gallery/village_gallery.dart';
 import '../path/play_node.dart';
-import '../path/subject_pills.dart' show subjectArt, subjectLabel;
+import '../path/programme.dart';
+import '../path/subject_pills.dart'
+    show subjectArt, subjectArtFallback, subjectLabel;
 
 /// Village — the learner's home.
 ///
@@ -85,6 +87,8 @@ class VillageScreen extends ConsumerWidget {
 
     final bySubject =
         ref.watch(subjectProgressProvider).value ?? <String, double>{};
+    final withoutLessons =
+        ref.watch(subjectsWithoutLessonsProvider).value ?? const <String>{};
     // The fox sings in the app's language, not a subject's (ADR 0035).
     void sing() => ref
         .read(musicDirectorProvider)
@@ -106,8 +110,14 @@ class VillageScreen extends ConsumerWidget {
             LayoutBuilder(
               builder: (context, constraints) {
                 final buildings = [
-                  for (final b in villageBuildings(t))
-                    b.withProgress(bySubject[b.subject]),
+                  for (final b in villageBuildings(
+                    t,
+                    subjects: ref.watch(programmeSubjectsProvider),
+                  ))
+                    b.withProgress(
+                      bySubject[b.subject],
+                      hasLessons: !withoutLessons.contains(b.subject),
+                    ),
                 ];
 
                 // Below the phone breakpoint the design does not shrink the
@@ -267,7 +277,7 @@ class _RecommendBar extends StatelessWidget {
     final info = <Widget>[
       if (next case final next?) ...[
         Image.asset(
-          'assets/images/${subjectArt[next.subject]}',
+          'assets/images/${subjectArt[next.subject] ?? subjectArtFallback}',
           key: const ValueKey('recommend-building'),
           width: 52,
           height: 52,

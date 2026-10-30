@@ -125,8 +125,8 @@ class _Tile extends StatelessWidget {
             const SizedBox(height: 4),
             if (!building.measured)
               const SizedBox.shrink()
-            else if (!building.live) ...[
-              const ComingSoonTag(),
+            else if (!building.live || !building.hasLessons) ...[
+              ComingSoonTag(key: ValueKey('strip-soon-${building.subject}')),
               const SizedBox(height: 4),
             ] else if (value == null)
               // A8: nothing measured yet is not 0 %: a child reads that as

@@ -6,7 +6,7 @@ import '../../data/local_db/quest_log.dart';
 import '../home/home_controller.dart';
 import '../home/subject_progress.dart';
 import '../pairing/pairing_controller.dart';
-import '../path/path_controller.dart' show pathSubjects;
+import '../path/programme.dart';
 import '../progress/progress_controller.dart';
 import '../notifications/local_notifications.dart';
 import '../notifications/notifications_controller.dart';
@@ -82,7 +82,8 @@ List<DailyQuestItem> buildDailyQuests({
   final byKind = {for (final d in served ?? const []) d.kind: d};
   QuestDefinitionDto? def(QuestKind k) => byKind[_servedKind[k]];
   final minutes = msToday ~/ 60000;
-  final lessonsTarget = def(QuestKind.exercises)?.target ?? exercisesQuestTarget;
+  final lessonsTarget =
+      def(QuestKind.exercises)?.target ?? exercisesQuestTarget;
   final minutesTarget = def(QuestKind.minutes)?.target ?? minutesQuestTarget;
   return [
     if (challenge != null)
@@ -122,10 +123,6 @@ enum Achievement {
   explorer,
 }
 
-/// Every subject with curriculum: the Carte's own list, so an achievement
-/// over "all subjects" counts the same subjects the kid can actually play.
-final realSubjects = pathSubjects.toSet();
-
 /// Which achievements the kid's real data earns right now. Unlocks are
 /// recorded once and never revoked, so this only ever adds.
 Set<Achievement> earnedAchievements({
@@ -134,6 +131,9 @@ Set<Achievement> earnedAchievements({
   required Map<String, Set<String>> history,
   required Map<String, double> subjectProgress,
   required Set<String> playedSubjects,
+  // The kid's programme (ADR 0101), so "all subjects" means the subjects
+  // this child actually has: never ELA for a French-school kid.
+  Iterable<String> subjects = frenchProgramme,
 }) {
   final total = history.values.fold<int>(0, (n, s) => n + s.length);
   return {
@@ -144,9 +144,9 @@ Set<Achievement> earnedAchievements({
     if (history.values.any((day) => day.length >= QuestKind.values.length))
       Achievement.questMaster,
     if (total >= 50) Achievement.quests50,
-    if (realSubjects.every((s) => (subjectProgress[s] ?? 0) >= 0.5))
+    if (subjects.every((s) => (subjectProgress[s] ?? 0) >= 0.5))
       Achievement.allSubjects50,
-    if (playedSubjects.containsAll(realSubjects)) Achievement.explorer,
+    if (playedSubjects.containsAll(subjects)) Achievement.explorer,
   };
 }
 
@@ -154,10 +154,15 @@ Set<Achievement> earnedAchievements({
 const weeklyBadgeTarget = 15;
 
 int completedInWeek(Map<String, Set<String>> history, DateTime today) {
-  final monday = DateTime(today.year, today.month, today.day - (today.weekday - 1));
+  final monday = DateTime(
+    today.year,
+    today.month,
+    today.day - (today.weekday - 1),
+  );
   var n = 0;
   for (var i = 0; i < 7; i++) {
-    n += history[isoDay(DateTime(monday.year, monday.month, monday.day + i))]
+    n +=
+        history[isoDay(DateTime(monday.year, monday.month, monday.day + i))]
             ?.length ??
         0;
   }
@@ -167,9 +172,8 @@ int completedInWeek(Map<String, Set<String>> history, DateTime today) {
 String isoDay(DateTime d) => d.toIso8601String().substring(0, 10);
 
 /// The key a weekly badge is recorded under: `week:<that Monday>`.
-String weeklyBadgeKey(DateTime today) => 'week:${isoDay(
-      DateTime(today.year, today.month, today.day - (today.weekday - 1)),
-    )}';
+String weeklyBadgeKey(DateTime today) =>
+    'week:${isoDay(DateTime(today.year, today.month, today.day - (today.weekday - 1)))}';
 
 /// One earned thing for "Réussites récentes": an achievement or a week's
 /// badge, and the day it was earned.
@@ -242,19 +246,19 @@ final questBoardProvider = FutureProvider<QuestBoard>((ref) async {
   );
   final doneBefore = (await log.completedByDay())[day] ?? const <String>{};
   final unlockedBefore = (await log.unlocked()).keys.toSet();
-  final history = await log.recordCompleted(
-    day,
-    [for (final q in quests) if (q.done) q.key],
-  );
+  final history = await log.recordCompleted(day, [
+    for (final q in quests)
+      if (q.done) q.key,
+  ]);
 
   final db = ref.watch(localDatabaseProvider);
   final ids = {for (final m in progress.masteries) m.skillNodeId};
   final playedSubjects = ids.isEmpty
       ? const <String>{}
       : {
-          for (final row in await (db.select(db.skillNodeTable)
-                ..where((t) => t.id.isIn(ids)))
-              .get())
+          for (final row in await (db.select(
+            db.skillNodeTable,
+          )..where((t) => t.id.isIn(ids))).get())
             row.subject,
         };
 
@@ -266,6 +270,7 @@ final questBoardProvider = FutureProvider<QuestBoard>((ref) async {
       history: history,
       subjectProgress: bySubject,
       playedSubjects: playedSubjects,
+      subjects: ref.watch(programmeSubjectsProvider),
     ))
       a.name,
     if (week >= weeklyBadgeTarget) weeklyBadgeKey(today),

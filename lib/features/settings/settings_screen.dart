@@ -8,6 +8,7 @@ import '../../core/widgets/page_column.dart';
 import '../../core/widgets/pill_tabs.dart';
 import '../pairing/pairing_controller.dart';
 import '../passcode/passcode_setup_screen.dart';
+import '../path/programme.dart';
 import '../profile/pin_gate.dart';
 import 'remove_kid_dialog.dart';
 import '../../data/local_db/app_settings.dart';
@@ -677,13 +678,19 @@ class _SliderRow extends StatelessWidget {
 
 /// The navy card. Everything behind it is portal work (Track F), so the
 /// button says what it would do rather than pretending to do it.
-class _ParentZone extends StatelessWidget {
+class _ParentZone extends ConsumerWidget {
   const _ParentZone();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final p = VillagePalette.of(context);
     final t = context.s;
+    // Asked of an adult, here, never of the child (ADR 0101): which
+    // language the school teaches in is a fact about the school, and only
+    // the portal may set it.
+    final askSchoolLanguage = ref.watch(
+      programmeProvider.select((p) => p.schoolLanguageRequired),
+    );
     return Material(
       color: p.quebecBlue,
       borderRadius: VillageMetrics.mdAll,
@@ -716,6 +723,19 @@ class _ParentZone extends StatelessWidget {
                       color: Color(0xFFC9D8F5),
                     ),
                   ),
+                  if (askSchoolLanguage) ...[
+                    const SizedBox(height: Space.xs),
+                    Text(
+                      t.settingsSchoolLanguageNeeded,
+                      key: const ValueKey('parent-zone-school-language'),
+                      style: const TextStyle(
+                        fontFamily: VillageType.display,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

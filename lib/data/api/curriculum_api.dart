@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 
+import '../local_db/programme_store.dart' show Programme;
+
 /// One taggable curriculum leaf, as the backend serves it — flat, no
 /// parent/child linkage (A7's thin slice; a tree-shaped response is a later
 /// extension, not built ahead of a screen that would use it).
@@ -62,8 +64,12 @@ sealed class CurriculumTreeResult {
 }
 
 class CurriculumTreeFetched extends CurriculumTreeResult {
-  const CurriculumTreeFetched(this.leaves);
+  const CurriculumTreeFetched(this.leaves, {this.programme});
   final List<CurriculumLeaf> leaves;
+
+  /// The kid's subjects, served beside the tree (ADR 0101). Null from a
+  /// backend older than the field.
+  final Programme? programme;
 }
 
 class CurriculumTreeOffline extends CurriculumTreeResult {
@@ -104,7 +110,10 @@ class CurriculumApi {
           .map(CurriculumLeaf.fromJson)
           .toList(growable: false);
 
-      return CurriculumTreeFetched(leaves);
+      return CurriculumTreeFetched(
+        leaves,
+        programme: Programme.fromJson(body),
+      );
     } on DioException catch (error) {
       if (_isOffline(error)) return const CurriculumTreeOffline();
       if (error.response?.statusCode == 401) {

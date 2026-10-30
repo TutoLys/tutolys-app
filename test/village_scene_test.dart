@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tutolys_app/core/i18n/strings.dart';
 import 'package:tutolys_app/features/home/village_scene.dart';
+import 'package:tutolys_app/features/gallery/village_gallery.dart'
+    show galleryBuildingCode;
+import 'package:tutolys_app/features/path/programme.dart';
 
 final _buildings = villageBuildings(Strings.fr);
 
@@ -92,37 +95,69 @@ void main() {
   });
 
   group('the full program, live or coming soon', () {
-    test('six subjects, all live now that CCQ has curriculum', () {
+    test('a French-school kid: Français and Anglais (ESL), never ELA', () {
       expect(_subjects.map((b) => b.subject), [
         'MATH',
         'FR',
         'SOC',
-        'EN',
+        'ESL',
         'SCI',
         'CCQ',
       ]);
       expect(_buildings.every((b) => b.live), isTrue);
     });
 
-    test('a subject not in the list is coming soon', () {
-      final noCcq = villageBuildings(
+    test('an English-school kid: English where Français was, French (FLS) '
+        'where Anglais was, on the same plots', () {
+      final en = villageBuildings(
         Strings.fr,
-        live: const ['MATH', 'FR', 'EN', 'SCI', 'SOC'],
+        subjects: const ['MATH', 'EN', 'SCI', 'SOC', 'CCQ', 'FLS'],
       );
-      expect(noCcq.where((b) => !b.live).map((b) => b.subject), ['CCQ']);
+      expect(en.map((b) => b.subject), [
+        'MATH',
+        'EN',
+        'SOC',
+        'FLS',
+        'SCI',
+        'CCQ',
+        galleryBuildingCode,
+      ]);
+      expect(
+        en.map((b) => (b.left, b.top)),
+        _buildings.map((b) => (b.left, b.top)),
+        reason: 'every child gets the design\'s village',
+      );
+      final fls = en.singleWhere((b) => b.subject == 'FLS');
+      expect(fls.label, 'Français');
+      expect(fls.asset, 'asset-bldg-francais.webp');
     });
 
-    test('a subject goes live by being listed, nothing else changes', () {
-      final all = villageBuildings(
+    test('a subject not in the programme has no building', () {
+      final noCcq = villageBuildings(
         Strings.fr,
-        live: const ['MATH', 'FR', 'EN', 'SCI', 'SOC', 'CCQ'],
+        subjects: const ['MATH', 'FR', 'SCI', 'SOC', 'ESL'],
       );
-      expect(all.every((b) => b.live), isTrue);
+      expect(noCcq.map((b) => b.subject), isNot(contains('CCQ')));
+    });
+
+    test('a listed subject not yet live is coming soon, same shape', () {
+      final soon = villageBuildings(
+        Strings.fr,
+        live: const ['MATH', 'FR', 'SCI', 'SOC', 'ESL'],
+      );
+      expect(soon.where((b) => !b.live).map((b) => b.subject), ['CCQ']);
       expect(
-        all.map((b) => (b.left, b.top)),
+        soon.map((b) => (b.left, b.top)),
         _buildings.map((b) => (b.left, b.top)),
-        reason: 'the village keeps its shape as subjects arrive',
       );
+    });
+
+    test('a code with no plot yet is skipped, not crashed on', () {
+      final next = villageBuildings(
+        Strings.fr,
+        subjects: const [...frenchProgramme, 'NEW'],
+      );
+      expect(next.map((b) => b.subject), isNot(contains('NEW')));
     });
 
     testWidgets('a coming-soon building takes no tap and says so', (
@@ -139,7 +174,7 @@ void main() {
                 buildings: [
                   villageBuildings(
                     Strings.fr,
-                    live: const ['MATH', 'FR', 'EN', 'SCI', 'SOC'],
+                    live: const ['MATH', 'FR', 'SCI', 'SOC', 'ESL'],
                   ).firstWhere((b) => b.subject == 'CCQ'),
                 ],
                 signTitle: 'x',

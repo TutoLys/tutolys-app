@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' show Value;
 
+import '../local_db/programme_store.dart' show Programme;
 import '../api/curriculum_api.dart';
 import '../local_db/database.dart';
 
@@ -10,7 +11,11 @@ class CurriculumSyncReport {
     this.offline = false,
     this.unauthorized = false,
     this.error,
+    this.programme,
   });
+
+  /// The kid's subjects, when the backend sent them (ADR 0101).
+  final Programme? programme;
 
   /// Leaves now cached for the synced subject/grade. Unchanged from before
   /// the call on `offline`/`unauthorized`/`error` — the cache is never
@@ -57,7 +62,12 @@ class CurriculumSync {
     final result = await api.fetchTree(accessToken: token, subject: subject);
 
     return switch (result) {
-      CurriculumTreeFetched(:final leaves) => _replace(subject, grade, leaves),
+      CurriculumTreeFetched(:final leaves, :final programme) => _replace(
+        subject,
+        grade,
+        leaves,
+        programme,
+      ),
       // Offline is not an error: whatever is already cached stays playable,
       // which is the entire point of caching it — the existing rows are
       // left untouched, not cleared.
@@ -83,6 +93,7 @@ class CurriculumSync {
     String subject,
     int grade,
     List<CurriculumLeaf> leaves,
+    Programme? programme,
   ) async {
     await db.transaction(() async {
       await (db.delete(db.skillNodeTable)
@@ -111,7 +122,7 @@ class CurriculumSync {
             );
       }
     });
-    return CurriculumSyncReport(count: leaves.length);
+    return CurriculumSyncReport(count: leaves.length, programme: programme);
   }
 
   /// The locally cached slice, for the path screen to read — works with no

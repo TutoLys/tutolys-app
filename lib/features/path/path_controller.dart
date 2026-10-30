@@ -10,10 +10,12 @@ import '../../data/sync/curriculum_sync.dart';
 import '../../data/sync/content_in_use.dart';
 import '../../data/sync/lesson_key.dart';
 import '../../data/local_db/node_progress_local.dart';
+import '../home/subject_progress.dart' show subjectsWithoutLessonsProvider;
 import '../progress/progress_controller.dart';
 import 'offline_window.dart';
 import '../pairing/pairing_controller.dart';
 import '../settings/settings_controller.dart';
+import 'programme.dart';
 import 'subject_language.dart';
 import '../../core/diagnostics/diag_log.dart';
 import '../../core/net/recovery.dart';
@@ -22,8 +24,8 @@ import '../../core/net/recovery.dart';
 /// subject with the most real content; the subject pills switch from here.
 const defaultPathSubject = 'MATH';
 
-/// The subjects the Carte can show: every subject with real curriculum.
-const pathSubjects = ['MATH', 'FR', 'EN', 'SCI', 'SOC', 'CCQ'];
+/// The subjects the Carte can show are the kid's programme, from the
+/// backend (`programmeSubjectsProvider`, ADR 0101), never a list in here.
 
 /// What the path screen renders.
 class PathState {
@@ -265,6 +267,7 @@ class PathController extends Notifier<PathState> {
           onTimeout: () =>
               const CurriculumSyncReport(count: 0, error: 'timeout'),
         );
+    _adoptProgramme(kid.id, curriculumReport.programme);
     // The map is drawn from here on (A1): the lessons download in the
     // background and land on it as they come. Before, the Carte waited for
     // the whole download — tens of MB of audio on a first visit.
@@ -305,6 +308,7 @@ class PathController extends Notifier<PathState> {
     final syncedAt = synced
         ? await freshness.markSynced(subject, kid.gradeLevel)
         : await freshness.lastSynced(subject, kid.gradeLevel);
+    if (synced && ref.mounted) ref.invalidate(subjectsWithoutLessonsProvider);
 
     final fresh = await _fromCache(subject, kid.gradeLevel);
 
@@ -415,7 +419,7 @@ class PathController extends Notifier<PathState> {
     final curriculumSync = ref.read(curriculumSyncProvider);
     final contentSync = ref.read(contentSyncProvider);
     Future(() async {
-      for (final subject in pathSubjects) {
+      for (final subject in ref.read(programmeSubjectsProvider)) {
         if (subject == loaded) continue;
         if (ref.read(sessionControllerProvider).kid?.id != kid.id) return;
         final curriculum = await curriculumSync.sync(
@@ -423,13 +427,44 @@ class PathController extends Notifier<PathState> {
           grade: kid.gradeLevel,
         );
         if (curriculum.offline) return;
+        _adoptProgramme(kid.id, curriculum.programme);
         final content = await contentSync.sync(
           subject: subject,
           locale: contentLocaleFor(subject, _localeOf(english)),
         );
         if (content.offline) return;
+        if (curriculum.isOk && content.isOk) {
+          await ContentFreshness(ref.read(localDatabaseProvider))
+              .markSynced(subject, kid.gradeLevel);
+          if (ref.mounted) ref.invalidate(subjectsWithoutLessonsProvider);
+        }
       }
     }).catchError((Object _) {});
+  }
+
+  /// Records what the backend says [kidId] studies (ADR 0101). If the
+  /// subject on screen left the programme (an adult set the school's
+  /// language), the Carte moves to the first subject of the new one.
+  void _adoptProgramme(String kidId, Programme? programme) {
+    if (programme == null) return;
+    ref
+        .read(programmeProvider.notifier)
+        .adopt(kidId, programme)
+        .then((_) {
+          if (!ref.mounted) return;
+          if (ref.read(sessionControllerProvider).kid?.id != kidId) return;
+          final subjects = programme.subjects;
+          if (!subjects.contains(state.subject)) {
+            selectSubject(
+              subjects.contains(defaultPathSubject)
+                  ? defaultPathSubject
+                  : subjects.first,
+            );
+          }
+        })
+        .catchError((Object e, StackTrace st) {
+          recordCaught('programme_adopt', e, st);
+        });
   }
 
   DateTime? _lastLoad;
