@@ -75,4 +75,37 @@ void main() {
       }
     }, skip: _dir.existsSync() ? false : 'no tutolys-backend checkout');
   }
+
+  // The second-language slices: every lesson, with the engine it names.
+  const byKey = <String, LearningEngine<Object?, Object?, Object?, Object?>>{
+    'mcq': SingleChoiceEngine(),
+    'pair_match': PairMatchBoardEngine(),
+    'compose_build': ComposeSlotsEngine(),
+  };
+  for (final folder in ['pfeq_grade1_esl', 'pfeq_grade1_fls']) {
+    final dir = Directory('${_dir.path}/$folder');
+    test('$folder: every lesson parses in the app', () {
+      final files = dir.listSync().whereType<File>().where(
+        (f) => f.path.endsWith('.json'),
+      );
+      expect(files, isNotEmpty);
+      for (final f in files) {
+        final lesson = jsonDecode(f.readAsStringSync()) as Map<String, Object?>;
+        final engine = byKey[lesson['engine_key']]!;
+        final questions =
+            (lesson['config']! as Map)['questions']! as List<Object?>;
+        for (final (i, q) in questions.indexed) {
+          final parsed = engine.parse(
+            ((q! as Map)['config']! as Map).cast<String, Object?>(),
+          );
+          expect(
+            parsed,
+            isA<ParseOk<Object?>>(),
+            reason:
+                '${f.path} q$i: ${parsed is ParseInvalid ? parsed.reason : ''}',
+          );
+        }
+      }
+    }, skip: dir.existsSync() ? false : 'no tutolys-backend checkout');
+  }
 }
