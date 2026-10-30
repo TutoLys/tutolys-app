@@ -515,6 +515,20 @@ class _Pill extends StatelessWidget {
           else if (!building.live) ...[
             const SizedBox(width: 8),
             const ComingSoonTag(),
+          ] else if (building.progress == null) ...[
+            // A8: nothing measured yet reads « À découvrir », never 0/100,
+            // which a child takes for failing.
+            const SizedBox(width: 8),
+            Text(
+              context.s.pathNotStarted,
+              key: ValueKey('scene-new-${building.subject}'),
+              style: TextStyle(
+                fontFamily: VillageType.display,
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+                color: p.quebecBlueBright,
+              ),
+            ),
           ] else ...[
             const SizedBox(width: 8),
             SizedBox(

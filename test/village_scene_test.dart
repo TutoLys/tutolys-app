@@ -42,28 +42,18 @@ void main() {
     expect(find.byKey(const ValueKey('sign-fleur-de-lys')), findsOneWidget);
   });
 
-  testWidgets('every live building shows a track, measured or not', (
+  testWidgets('an unmeasured subject reads « À découvrir », no track (A8)', (
     tester,
   ) async {
-    // The track is always drawn — the design needs it, and an empty bar
-    // reads as "nothing recorded yet" rather than as a missing feature.
-    // A subject that isn't live wears "bientôt" instead.
     await tester.pumpWidget(harness(_buildings));
     final live = _subjects.where((b) => b.live).length;
-
-    expect(find.byType(VillageProgressBar), findsNWidgets(live));
+    for (final b in _subjects.where((b) => b.live)) {
+      expect(find.byKey(ValueKey('scene-new-${b.subject}')), findsOneWidget);
+    }
+    expect(live, greaterThan(0));
+    expect(find.text('0/100'), findsNothing);
+    expect(find.byType(VillageProgressBar), findsNothing);
     expect(find.byType(ComingSoonTag), findsNWidgets(_subjects.length - live));
-  });
-
-  testWidgets('an unmeasured subject reads 0/100, never an invented figure', (
-    tester,
-  ) async {
-    await tester.pumpWidget(harness(_buildings));
-
-    expect(
-      find.text('0/100'),
-      findsNWidgets(_subjects.where((b) => b.live).length),
-    );
   });
 
   testWidgets('a real figure renders as a filled track and its number', (
