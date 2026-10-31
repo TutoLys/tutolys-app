@@ -162,6 +162,9 @@ abstract final class PickOne {
         for (final id in state.order)
           SizedBox(
             width: width,
+            // Narrow slots hold short answers (« 20 °C »): big square-ish
+            // tiles (UX review AM3). Wide ones hold sentences.
+            height: width <= 160 ? 96 : null,
             child: Semantics(
               label: (spoken ?? label)(id),
               hint: switch (stateOf(id)) {
@@ -177,6 +180,7 @@ abstract final class PickOne {
               child: AnswerTile(
                 key: ValueKey('$keyPrefix-$id'),
                 label: label(id),
+                square: width <= 160,
                 state: stateOf(id),
                 onTap: enabled && !state.solved && !state.tried.contains(id)
                     ? () => onPick(id)

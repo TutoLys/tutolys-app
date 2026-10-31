@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../single_choice/single_choice_engine.dart';
 import '../widgets/answer_tile.dart';
+import '../widgets/choice_layout.dart';
 import '../widgets/countdown_bar.dart';
 
 class TimedChoiceContent {
@@ -248,12 +249,18 @@ class TimedChoiceEngine
               ),
               const SizedBox(height: 16),
             ],
-            for (final id in s.order) ...[
-              AnswerTile(
+            ChoiceLayout(
+              ids: s.order,
+              labelOf: (id) => view.content.choice.option(id)!.label,
+              hasPicture: (id) =>
+                  view.content.choice.option(id)!.imageRef != null,
+              tile: (id, {required square}) => AnswerTile(
                 key: ValueKey('speed-option-$id'),
                 label: view.content.choice.option(id)!.label,
                 imageRef: view.content.choice.option(id)!.imageRef,
                 audioRef: view.content.choice.option(id)!.audioRef,
+                prominent: true,
+                square: square,
                 state: switch (id) {
                   _ when s.tried.contains(id) => AnswerTileState.retry,
                   _ when s.selected == id && s.solved =>
@@ -268,8 +275,7 @@ class TimedChoiceEngine
                     ? () => view.dispatch(TapOption(id))
                     : null,
               ),
-              const SizedBox(height: 12),
-            ],
+            ),
           ],
         ),
       ),

@@ -66,6 +66,14 @@ const tens = <String, Object?>{
   },
 };
 
+// « Léa a 4 billes. Elle en gagne 3. » (the review's board, UX AM1).
+const gains = <String, Object?>{
+  'mode': 'free',
+  'start': {'mat': 4},
+  'supply': true,
+  'target': {'mat': 7},
+};
+
 Map<String, Object?> envelope(Map<String, Object?> config) => {
   'exercise_id': '6f1a4a18-7a3b-4c1e-9f51-6d2a1b2c3d4e',
   'version': 1,
@@ -455,6 +463,41 @@ void main() {
       await g.up();
       await settle(tester);
       expect((c.current!.state as CountersState).plates, [0, 1, 0]);
+      c.dispose();
+    });
+
+    testWidgets('AM1: 56 px − and + with a gap; a tap on the reserve adds', (
+      tester,
+    ) async {
+      tallView(tester, width: 375);
+      final (c, _) = controllerFor(gains);
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(app(c));
+      final take = find.byKey(const ValueKey('counters-take--1'));
+      final add = find.byKey(const ValueKey('counters-add--1'));
+      expect(tester.getSize(take), const Size(56, 56));
+      expect(tester.getSize(add), const Size(56, 56));
+      expect(
+        tester.getTopLeft(add).dx - tester.getTopRight(take).dx,
+        greaterThanOrEqualTo(16),
+      );
+      final reserve = find.byKey(const ValueKey('counters-reserve'));
+      expect(tester.getSize(reserve).height, greaterThanOrEqualTo(64));
+      // Under the mat, in the thumb zone.
+      expect(
+        tester.getTopLeft(reserve).dy,
+        greaterThan(
+          tester
+              .getBottomLeft(find.byKey(const ValueKey('counters-area--1')))
+              .dy,
+        ),
+      );
+      for (var i = 0; i < 3; i++) {
+        await tester.tap(reserve);
+        await settle(tester);
+      }
+      expect((c.current!.state as CountersState).mat, 7);
+      expect(tester.takeException(), isNull);
       c.dispose();
     });
 

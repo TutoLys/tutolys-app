@@ -43,11 +43,27 @@ const Map<int, Swatch> swatches = {
   0x2B50: Swatch(Color(0xFFFFC107), SwatchShape.star), // ⭐
 };
 
+/// The bundled colour emoji font (UX review AM2, ADR 0105): Noto Color
+/// Emoji cut to the emoji lessons use. Flutter web's own fallback drew many
+/// of them as grey outlines (🐟, 🏖️, 🏫), so counting questions couldn't be
+/// answered. A package font, so its registered name carries the prefix.
+const emojiFontFamily = 'packages/engines_core/TutolysEmoji';
+
+/// [style] with the colour emoji font as its last fallback. Text glyphs
+/// still come from the primary font; only emoji fall through to it.
+TextStyle withEmojiFallback(TextStyle? style) {
+  final base = style ?? const TextStyle();
+  final fallback = base.fontFamilyFallback ?? const <String>[];
+  if (fallback.contains(emojiFontFamily)) return base;
+  return base.copyWith(fontFamilyFallback: [...fallback, emojiFontFamily]);
+}
+
 /// Whether [text] holds at least one painted swatch.
 bool hasSwatch(String text) => text.runes.any(swatches.containsKey);
 
-/// A drop-in for [Text] on content strings: swatch emoji are painted, the
-/// rest is ordinary text. With no swatch in [data] it *is* a plain [Text].
+/// A drop-in for [Text] on content strings: swatch emoji are painted,
+/// other emoji come from the bundled colour font, the rest is ordinary
+/// text. With no swatch in [data] it *is* a plain [Text].
 /// The screen-reader name stays the original string.
 class SwatchText extends StatelessWidget {
   const SwatchText(
@@ -69,6 +85,7 @@ class SwatchText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final style = withEmojiFallback(this.style);
     if (!hasSwatch(data)) {
       return Text(
         data,
@@ -80,7 +97,7 @@ class SwatchText extends StatelessWidget {
       );
     }
     final size =
-        (style?.fontSize ?? DefaultTextStyle.of(context).style.fontSize ?? 14);
+        (style.fontSize ?? DefaultTextStyle.of(context).style.fontSize ?? 14);
     final spans = <InlineSpan>[];
     final buf = StringBuffer();
     void flush() {

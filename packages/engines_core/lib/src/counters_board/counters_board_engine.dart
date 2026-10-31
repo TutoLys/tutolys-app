@@ -768,14 +768,15 @@ class _CountersView extends StatelessWidget {
                 color: p.ink,
               ),
             ),
-            IconButton(
+            const SizedBox(width: 8),
+            _StepButton(
               key: ValueKey('$key-minus'),
               tooltip: fr ? 'Une de moins' : 'One fewer',
               onPressed: open && value > 0 ? () => set(value - 1) : null,
-              icon: const Icon(Icons.remove_circle_outline_rounded),
+              add: false,
             ),
             SizedBox(
-              width: 28,
+              width: 36,
               child: Text(
                 '$value',
                 textAlign: TextAlign.center,
@@ -787,11 +788,11 @@ class _CountersView extends StatelessWidget {
                 ),
               ),
             ),
-            IconButton(
+            _StepButton(
               key: ValueKey('$key-plus'),
               tooltip: fr ? 'Une de plus' : 'One more',
               onPressed: open && value < max ? () => set(value + 1) : null,
-              icon: const Icon(Icons.add_circle_outline_rounded),
+              add: true,
             ),
           ],
         ),
@@ -939,24 +940,29 @@ class _CountersView extends StatelessWidget {
                           ],
                         ),
                 ),
+                const SizedBox(height: 6),
+                // 56 px round buttons, 16 px apart: a 6-year-old's finger
+                // hit « Enlever » for « Ajouter » on 40 px ones that touched
+                // (UX review AM1).
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    IconButton(
+                    _StepButton(
                       key: ValueKey('counters-take-$id'),
                       tooltip: fr ? 'Enlever un jeton' : 'Take one away',
                       onPressed: canTake
                           ? () => view.dispatch(TakeCounter(id))
                           : null,
-                      icon: const Icon(Icons.remove_circle_outline_rounded),
+                      add: false,
                     ),
-                    IconButton(
+                    const SizedBox(width: 16),
+                    _StepButton(
                       key: ValueKey('counters-add-$id'),
                       tooltip: fr ? 'Ajouter un jeton' : 'Add one',
                       onPressed: canAdd
                           ? () => view.dispatch(AddCounter(id))
                           : null,
-                      icon: const Icon(Icons.add_circle_outline_rounded),
+                      add: true,
                     ),
                   ],
                 ),
@@ -967,6 +973,20 @@ class _CountersView extends StatelessWidget {
       );
     }
 
+    // Where a tap on the reserve puts its counter: the mat, else the first
+    // plate with room.
+    final tapTarget = c.hasMat
+        ? (s.mat < CountersContent.maxTotal ? CountersArea.mat : null)
+        : s.plates.indexed
+              .where((e) => e.$2 < c.plateCap)
+              .map((e) => e.$1)
+              .firstOrNull;
+    final canTapReserve =
+        open && tapTarget != null && s.total < CountersContent.maxTotal;
+
+    // A 64 px pile, tapped to add one counter, dragged as the bonus
+    // gesture. A single 24 px dot was the board's main control (UX review
+    // AM1).
     final reserve = c.supply
         ? DragTarget<int>(
             onWillAcceptWithDetails: (d) =>
@@ -974,36 +994,84 @@ class _CountersView extends StatelessWidget {
             onAcceptWithDetails: (d) =>
                 view.dispatch(MoveCounter(d.data, CountersArea.reserve)),
             builder: (context, candidates, _) => Semantics(
+              button: true,
+              enabled: canTapReserve,
               label: fr
-                  ? 'Réserve de jetons. Glisse un jeton vers une assiette.'
-                  : 'Counter reserve. Drag a counter to a plate.',
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Draggable<int>(
-                    data: CountersArea.reserve,
-                    maxSimultaneousDrags: open ? 1 : 0,
-                    feedback: Material(
-                      type: MaterialType.transparency,
-                      child: counter(34),
-                    ),
-                    child: counter(36),
+                  ? 'Réserve de jetons. Touche pour ajouter un jeton, ou glisse-le.'
+                  : 'Counter reserve. Tap to add a counter, or drag one.',
+              excludeSemantics: true,
+              child: Material(
+                key: const ValueKey('counters-reserve'),
+                color: candidates.isNotEmpty ? p.navHoverFill : p.surface,
+                shape: StadiumBorder(
+                  side: BorderSide(
+                    color: candidates.isNotEmpty
+                        ? p.quebecBlueBright
+                        : p.inkMuted,
+                    width: 2,
                   ),
-                  const SizedBox(width: 8),
-                  ExcludeSemantics(
-                    child: Text(
-                      fr ? 'Réserve' : 'Reserve',
-                      style: TextStyle(
-                        fontFamily: VillageType.display,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 14,
-                        color: candidates.isNotEmpty
-                            ? p.quebecBlueBright
-                            : p.inkMuted,
-                      ),
+                ),
+                child: InkWell(
+                  customBorder: const StadiumBorder(),
+                  onTap: canTapReserve
+                      ? () => view.dispatch(AddCounter(tapTarget))
+                      : null,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 6, 20, 6),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Draggable<int>(
+                          data: CountersArea.reserve,
+                          maxSimultaneousDrags: open ? 1 : 0,
+                          // The whole pile, gaps included, starts a drag.
+                          hitTestBehavior: HitTestBehavior.opaque,
+                          feedback: Material(
+                            type: MaterialType.transparency,
+                            child: counter(40),
+                          ),
+                          child: SizedBox.square(
+                            dimension: 64,
+                            child: Stack(
+                              children: [
+                                Positioned(
+                                  left: 0,
+                                  top: 16,
+                                  child: counter(32),
+                                ),
+                                Positioned(
+                                  right: 0,
+                                  top: 16,
+                                  child: counter(32),
+                                ),
+                                Positioned(
+                                  left: 16,
+                                  top: 0,
+                                  child: counter(32),
+                                ),
+                                Positioned(
+                                  left: 16,
+                                  bottom: 0,
+                                  child: counter(32),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          fr ? 'Réserve' : 'Reserve',
+                          style: TextStyle(
+                            fontFamily: VillageType.display,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 18,
+                            color: p.ink,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ),
             ),
           )
@@ -1017,8 +1085,6 @@ class _CountersView extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Center(child: reserve),
-              if (c.supply) const SizedBox(height: 10),
               if (c.hasMat) area(CountersArea.mat, fr ? 'Tapis' : 'Mat', s.mat),
               if (c.hasMat && s.plates.isNotEmpty) const SizedBox(height: 12),
               if (s.plates.isNotEmpty)
@@ -1037,10 +1103,46 @@ class _CountersView extends StatelessWidget {
                       ),
                   ],
                 ),
+              // Under the board, in the thumb zone (UX review AM1).
+              if (c.supply) ...[
+                const SizedBox(height: 16),
+                Center(child: reserve),
+              ],
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+/// A 56 px round − or + (UX review AM1), with a 24 px glyph.
+class _StepButton extends StatelessWidget {
+  const _StepButton({
+    required this.tooltip,
+    required this.onPressed,
+    required this.add,
+    super.key,
+  });
+
+  final String tooltip;
+  final VoidCallback? onPressed;
+  final bool add;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
+    return IconButton.filledTonal(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      iconSize: 24,
+      constraints: const BoxConstraints.tightFor(width: 56, height: 56),
+      style: IconButton.styleFrom(
+        backgroundColor: p.navHoverFill,
+        foregroundColor: p.isDark ? p.quebecBlueBright : p.quebecBlue,
+        side: BorderSide(color: p.quebecBlueBright, width: 2),
+      ),
+      icon: Icon(add ? Icons.add_rounded : Icons.remove_rounded),
     );
   }
 }

@@ -39,6 +39,8 @@ class AnswerTile extends StatelessWidget {
     this.imageRef,
     this.dense = false,
     this.large = false,
+    this.prominent = false,
+    this.square = false,
     this.audioRef,
     super.key,
   });
@@ -74,6 +76,16 @@ class AnswerTile extends StatelessWidget {
   /// a bigger label.
   final bool large;
 
+  /// The answer list of a choice question (mcq, speed_tap): the label
+  /// centred and big, 24 px when it's short (UX review AM3: 15 px labels,
+  /// left-aligned in 343 px tiles, read smaller than the question).
+  final bool prominent;
+
+  /// One of a row of short answers (« 3 », « 20 °C »): a big square tile,
+  /// the label centred at 30 px and the state icon under it (UX review
+  /// AM3). The parent sizes the square.
+  final bool square;
+
   /// A recording of [label] (`audio_ref`), for a child who can't read it
   /// yet. Played only when asked: the small speaker on the tile, or a long
   /// press. A plain tap still just chooses, so answers are never read
@@ -82,27 +94,50 @@ class AnswerTile extends StatelessWidget {
   final String? audioRef;
 
   Widget _dense(Color text, IconData? icon, Color border) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
+    padding: square
+        ? const EdgeInsets.all(8)
+        : const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
     child: Column(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        SwatchText(
-          label,
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          softWrap: false,
-          style: TextStyle(
-            fontFamily: VillageType.display,
-            fontWeight: FontWeight.w700,
-            fontSize: 15,
-            color: text,
+        // Square: scaled down rather than cut when a label is wider than
+        // the tile.
+        _maybeFit(
+          SwatchText(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            softWrap: false,
+            style: TextStyle(
+              fontFamily: VillageType.display,
+              fontWeight: square ? FontWeight.w800 : FontWeight.w700,
+              fontSize: !square
+                  ? 15
+                  : _pictureOnly(label)
+                  ? 44
+                  : 30,
+              color: text,
+            ),
           ),
         ),
-        if (icon != null) Icon(icon, size: 12, color: border),
+        if (icon != null) Icon(icon, size: square ? 22 : 12, color: border),
       ],
     ),
   );
+
+  Widget _maybeFit(Widget child) => square
+      ? Flexible(
+          child: FittedBox(fit: BoxFit.scaleDown, child: child),
+        )
+      : child;
+
+  /// The label's size in the list layout.
+  double get _fontSize {
+    if (_pictureOnly(label)) return prominent ? 44 : 34;
+    if (prominent) return label.length <= 24 && !label.contains('\n') ? 24 : 19;
+    return large ? 20 : 15;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -164,13 +199,17 @@ class AnswerTile extends StatelessWidget {
             child: ConstrainedBox(
               // ≥48px: the frontend spec's tap-target floor.
               constraints: BoxConstraints(
-                minHeight: !large
+                minHeight: square
+                    ? 88
+                    : prominent
+                    ? 64
+                    : !large
                     ? 52
                     : MediaQuery.sizeOf(context).width < Breakpoints.compact
                     ? 72
                     : 88,
               ),
-              child: dense
+              child: dense || square
                   ? _dense(text, icon, border)
                   : Padding(
                       padding: EdgeInsets.symmetric(
@@ -222,14 +261,13 @@ class AnswerTile extends StatelessWidget {
                               label,
                               // A picture answer (emoji only) draws big:
                               // the child reads the picture, not the word.
+                              textAlign: prominent || _pictureOnly(label)
+                                  ? TextAlign.center
+                                  : null,
                               style: TextStyle(
                                 fontFamily: VillageType.display,
                                 fontWeight: FontWeight.w700,
-                                fontSize: _pictureOnly(label)
-                                    ? 34
-                                    : large
-                                    ? 20
-                                    : 15,
+                                fontSize: _fontSize,
                                 color: text,
                               ),
                             ),

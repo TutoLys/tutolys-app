@@ -2,6 +2,7 @@ import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
 
 import '../widgets/answer_tile.dart';
+import '../widgets/choice_layout.dart';
 
 /// One answer option.
 class ChoiceOption {
@@ -277,45 +278,39 @@ class SingleChoiceEngine
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 360),
         child: FocusTraversalGroup(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              for (final id in s.order) ...[
-                Builder(
-                  builder: (context) {
-                    final option = view.content.option(id)!;
-                    final tried = s.tried.contains(id);
-                    final state = switch (id) {
-                      _ when tried => AnswerTileState.retry,
-                      _ when s.selected == id && s.solved =>
-                        AnswerTileState.correct,
-                      _ when s.selected == id => AnswerTileState.picked,
-                      _ => AnswerTileState.idle,
-                    };
-                    return AnswerTile(
-                      key: ValueKey('mcq-option-$id'),
-                      label: option.label,
-                      imageRef: option.imageRef,
-                      audioRef: option.audioRef,
-                      state: state,
-                      semanticsState: switch (state) {
-                        AnswerTileState.retry =>
-                          fr ? 'déjà essayé' : 'already tried',
-                        AnswerTileState.correct =>
-                          fr ? 'bonne réponse' : 'right answer',
-                        AnswerTileState.picked => fr ? 'choisi' : 'chosen',
-                        AnswerTileState.idle => null,
-                      },
-                      onTap: !view.enabled || tried || s.solved
-                          ? null
-                          : () => view.dispatch(SelectOption(id)),
-                    );
-                  },
-                ),
-                const SizedBox(height: 12),
-              ],
-            ],
+          child: ChoiceLayout(
+            ids: s.order,
+            labelOf: (id) => view.content.option(id)!.label,
+            hasPicture: (id) => view.content.option(id)!.imageRef != null,
+            tile: (id, {required square}) {
+              final option = view.content.option(id)!;
+              final tried = s.tried.contains(id);
+              final state = switch (id) {
+                _ when tried => AnswerTileState.retry,
+                _ when s.selected == id && s.solved => AnswerTileState.correct,
+                _ when s.selected == id => AnswerTileState.picked,
+                _ => AnswerTileState.idle,
+              };
+              return AnswerTile(
+                key: ValueKey('mcq-option-$id'),
+                label: option.label,
+                imageRef: option.imageRef,
+                audioRef: option.audioRef,
+                state: state,
+                prominent: true,
+                square: square,
+                semanticsState: switch (state) {
+                  AnswerTileState.retry => fr ? 'déjà essayé' : 'already tried',
+                  AnswerTileState.correct =>
+                    fr ? 'bonne réponse' : 'right answer',
+                  AnswerTileState.picked => fr ? 'choisi' : 'chosen',
+                  AnswerTileState.idle => null,
+                },
+                onTap: !view.enabled || tried || s.solved
+                    ? null
+                    : () => view.dispatch(SelectOption(id)),
+              );
+            },
           ),
         ),
       ),

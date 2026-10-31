@@ -18,3 +18,12 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+
+flutter:
+  # Colour emoji for lesson content, bundled (UX review AM2, ADR 0105):
+  # Flutter web's fallback drew many as grey outlines. Rebuilt by
+  # tool/build_emoji_font.py.
+  fonts:
+    - family: TutolysEmoji
+      fonts:
+        - asset: fonts/TutolysEmoji.ttf

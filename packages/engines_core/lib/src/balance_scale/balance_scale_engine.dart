@@ -533,8 +533,9 @@ class BalanceScaleEngine
                 alignment: WrapAlignment.center,
                 children: [
                   for (final id in s.order)
-                    SizedBox(
-                      width: 96,
+                    SizedBox.square(
+                      // A big square tile per answer (UX review AM3).
+                      dimension: 96,
                       child: Semantics(
                         label: spokenOf(id),
                         hint: hintOf(id),
@@ -544,6 +545,7 @@ class BalanceScaleEngine
                         child: AnswerTile(
                           key: ValueKey('balance-choice-$id'),
                           label: labelOf(id),
+                          square: true,
                           state: stateOf(id),
                           onTap:
                               view.enabled && !s.solved && !s.tried.contains(id)

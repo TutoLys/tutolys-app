@@ -234,78 +234,84 @@ class ActivityShell extends StatelessWidget {
         },
         child: Material(
           color: p.surface,
-          child: SafeArea(
-            child: Column(
-              children: [
-                _TopBar(
-                  palette: p,
-                  strings: s,
-                  gutter: gutter,
-                  onClose: onClose,
-                  progress: progress,
-                  progressLabel: progressLabel,
-                  progressCount: progressCount,
-                  xp: xp,
-                  inARow: inARow,
-                  character: hasPrompt ? null : character,
-                ),
-                Expanded(
-                  child: Stack(
-                    children: [
-                      Positioned.fill(
-                        child: Padding(
-                          // Room under the board for the banner, so it
-                          // never hides a tile (UX review G9).
-                          padding: EdgeInsets.fromLTRB(
-                            compact ? Space.md : Space.xxl,
-                            compact ? Space.lg : 36,
-                            compact ? Space.md : Space.xxl,
-                            (compact ? Space.lg : 36) +
-                                (feedback != null ? bannerRoom : 0),
-                          ),
-                          child: scrollBody
-                              ? SingleChildScrollView(
-                                  child: Column(children: [...header, body]),
-                                )
-                              : Column(
-                                  children: [
-                                    ...header,
-                                    Expanded(child: body),
-                                  ],
-                                ),
-                        ),
-                      ),
-                      if (feedback != null)
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          child: _FeedbackBanner(
-                            palette: p,
-                            gutter: gutter,
-                            feedback: feedback!,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                // The hint opens here, above the buttons, not above the
-                // board: inserting it there pushed the tiles down under
-                // the child's finger (UX review N3).
-                if (feedback == null &&
-                    (showValidate || onHint != null || revealedHint != null))
-                  _BottomBar(
-                    revealedHint: revealedHint,
+          // Every text inside, engine text included, falls back to the
+          // bundled colour emoji font (UX review AM2). Inside Material,
+          // which replaces the default style rather than merging it.
+          child: DefaultTextStyle.merge(
+            style: withEmojiFallback(null),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  _TopBar(
                     palette: p,
                     strings: s,
                     gutter: gutter,
-                    compact: compact,
-                    onHint: onHint,
-                    offerHint: offerHint,
-                    showValidate: showValidate,
-                    onValidate: onValidate,
+                    onClose: onClose,
+                    progress: progress,
+                    progressLabel: progressLabel,
+                    progressCount: progressCount,
+                    xp: xp,
+                    inARow: inARow,
+                    character: hasPrompt ? null : character,
                   ),
-              ],
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: Padding(
+                            // Room under the board for the banner, so it
+                            // never hides a tile (UX review G9).
+                            padding: EdgeInsets.fromLTRB(
+                              compact ? Space.md : Space.xxl,
+                              compact ? Space.lg : 36,
+                              compact ? Space.md : Space.xxl,
+                              (compact ? Space.lg : 36) +
+                                  (feedback != null ? bannerRoom : 0),
+                            ),
+                            child: scrollBody
+                                ? SingleChildScrollView(
+                                    child: Column(children: [...header, body]),
+                                  )
+                                : Column(
+                                    children: [
+                                      ...header,
+                                      Expanded(child: body),
+                                    ],
+                                  ),
+                          ),
+                        ),
+                        if (feedback != null)
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            child: _FeedbackBanner(
+                              palette: p,
+                              gutter: gutter,
+                              feedback: feedback!,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  // The hint opens here, above the buttons, not above the
+                  // board: inserting it there pushed the tiles down under
+                  // the child's finger (UX review N3).
+                  if (feedback == null &&
+                      (showValidate || onHint != null || revealedHint != null))
+                    _BottomBar(
+                      revealedHint: revealedHint,
+                      palette: p,
+                      strings: s,
+                      gutter: gutter,
+                      compact: compact,
+                      onHint: onHint,
+                      offerHint: offerHint,
+                      showValidate: showValidate,
+                      onValidate: onValidate,
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -531,7 +537,14 @@ class _PromptRow extends StatelessWidget {
           // down either.
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (character != null) ...[character!, const SizedBox(width: 14)],
+            // Below 420 px the fox gives its width to the question, which
+            // wrapped to 4–5 lines beside it (UX review AM4). Foxy still
+            // shows in the celebration; the speaker stays left.
+            if (character != null &&
+                MediaQuery.sizeOf(context).width >= 420) ...[
+              character!,
+              const SizedBox(width: 14),
+            ],
             // 56 dp, solid bright blue: the one control a non-reader needs to
             // find (UX review G10, the design's `.exo-listen-btn`).
             if (onSpeak != null)
