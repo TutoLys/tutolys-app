@@ -1,4 +1,4 @@
-# ADR 0108: The day ends at midnight in Québec (K8)
+# ADR 0110: The day ends at midnight in Québec (K8)
 
 - Status: accepted
 - Date: 2026-10-31

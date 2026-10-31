@@ -106,6 +106,9 @@ void main() {
     expect(play.practice, isTrue);
     expect(play.envelope['engine_key'], 'my_gallery');
     expect(play.node.subject, galleryBuildingCode);
+    // N12: it opens on the wall of creations, not on a task.
+    expect(find.byKey(const ValueKey('gallery-wall')), findsOneWidget);
+    expect(find.text('Le chat dort'), findsOneWidget);
   });
 
   testWidgets('on a phone, the strip tile opens it too', (tester) async {
@@ -178,6 +181,9 @@ void main() {
     expect(find.text('Le chien court'), findsOneWidget);
     expect(find.text('Noah joue'), findsNothing);
 
+    // Hanging is the optional step after the wall (N12).
+    await tester.tap(find.byKey(const ValueKey('gallery-start-hanging')));
+    await tester.pumpAndSettle();
     for (final id in ids!) {
       await tester.tap(find.byKey(ValueKey('gallery-card-$id')));
       await tester.pumpAndSettle();
