@@ -267,6 +267,17 @@ class SessionStore {
     ]);
   }
 
+  /// Forget the guardian PIN and its wrong-try count, after an adult proved
+  /// they hold the account with a fresh pairing code (« NIP oublié ? »,
+  /// ADR 0109). The next gate offers to create one.
+  Future<void> clearGuardianPin() => Future.wait([
+    _storage.delete(key: _guardianPinSaltKey),
+    _storage.delete(key: _guardianPinHashKey),
+    _storage.delete(key: _guardianPinDigitsKey),
+    _storage.delete(key: _guardianPinFailsKey),
+    _storage.delete(key: _guardianPinLockedUntilKey),
+  ]);
+
   /// Whether a guardian has set a PIN on this device yet.
   Future<bool> hasGuardianPin() async {
     final hash = await _storage.read(key: _guardianPinHashKey);

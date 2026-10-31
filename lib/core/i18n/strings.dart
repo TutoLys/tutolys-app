@@ -182,6 +182,14 @@ abstract class Strings {
   String pinGateLocked(int seconds);
   String get later;
 
+  /// « NIP oublié ? »: a fresh pairing code from the portal clears the PIN
+  /// (option A, ADR 0109).
+  String get pinForgot;
+  String get pinForgotTitle;
+  String get pinForgotBody;
+  String get pinForgotSubmit;
+  String get pinForgotNew;
+
   /// The app's own notifications, written offline too (ADR 0097).
   String notificationQuestDone(String quest);
   String notificationAchievement(String name);
@@ -927,6 +935,25 @@ class _FrenchStrings extends Strings {
   @override
   String pinGateLocked(int seconds) =>
       'Trop d\'essais. Réessayez dans $seconds s.';
+
+  @override
+  String get pinForgot => 'NIP oublié ?';
+
+  @override
+  String get pinForgotTitle => 'Réinitialiser le NIP';
+
+  @override
+  String get pinForgotBody =>
+      'Sur le site TutoLys, ouvrez Appareils et créez un code de jumelage '
+      'pour un de vos enfants. Entrez-le ici : le NIP sera effacé et vous en '
+      'choisirez un nouveau.';
+
+  @override
+  String get pinForgotSubmit => 'Réinitialiser';
+
+  @override
+  String get pinForgotNew =>
+      'C\'est fait. Choisissez un nouveau NIP parent pour cet appareil.';
 
   @override
   String get later => 'Plus tard';
@@ -2305,6 +2332,24 @@ class _EnglishStrings extends Strings {
   @override
   String pinGateLocked(int seconds) =>
       'Too many tries. Try again in $seconds s.';
+
+  @override
+  String get pinForgot => 'Forgot PIN?';
+
+  @override
+  String get pinForgotTitle => 'Reset the PIN';
+
+  @override
+  String get pinForgotBody =>
+      'On the TutoLys website, open Devices and create a pairing code for one '
+      'of your children. Enter it here: the PIN will be cleared and you\'ll '
+      'choose a new one.';
+
+  @override
+  String get pinForgotSubmit => 'Reset';
+
+  @override
+  String get pinForgotNew => 'Done. Choose a new parent PIN for this device.';
 
   @override
   String get later => 'Later';

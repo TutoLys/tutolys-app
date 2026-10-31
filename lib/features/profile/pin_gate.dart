@@ -8,7 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/i18n/strings.dart';
 import '../../data/local_db/session_store.dart';
-import '../pairing/pairing_controller.dart' show sessionStoreProvider;
+import '../pairing/pairing_controller.dart'
+    show PairingError, sessionControllerProvider, sessionStoreProvider;
 
 /// Gate before "sign out this device": requires a parent-set PIN.
 ///
@@ -59,7 +60,7 @@ Future<bool> requireGuardianPin(
         false;
   }
 
-  final entered = await showDialog<bool>(
+  final entered = await showDialog<Object>(
     context: context,
     builder: (context) => _EnterPinDialog(
       store: store,
@@ -68,6 +69,10 @@ Future<bool> requireGuardianPin(
       subtitle: enterSubtitle,
     ),
   );
+  if (entered == _forgot) {
+    if (!context.mounted) return false;
+    return _resetForgottenPin(context, store);
+  }
   if (entered != true) return false;
   if (digits == SessionStore.guardianPinLength) return true;
   if (!context.mounted) return false;
@@ -77,6 +82,106 @@ Future<bool> requireGuardianPin(
         builder: (context) => _CreatePinDialog(store: store, upgrade: true),
       ) ??
       false;
+}
+
+/// What the entry dialog returns when « NIP oublié ? » is tapped.
+const _forgot = #forgotPin;
+
+/// « NIP oublié ? » (option A, ADR 0109): a fresh pairing code from the
+/// portal clears the PIN, then the adult chooses a new one. The action
+/// goes ahead only once they have.
+Future<bool> _resetForgottenPin(
+  BuildContext context,
+  SessionStore store,
+) async {
+  final reset =
+      await showDialog<bool>(
+        context: context,
+        builder: (context) => const _ForgotPinDialog(),
+      ) ??
+      false;
+  if (!reset || !context.mounted) return false;
+  return await showDialog<bool>(
+        context: context,
+        builder: (context) => _CreatePinDialog(
+          store: store,
+          subtitle: context.s.pinForgotNew,
+          cancelLabel: context.s.later,
+        ),
+      ) ??
+      false;
+}
+
+class _ForgotPinDialog extends ConsumerStatefulWidget {
+  const _ForgotPinDialog();
+
+  @override
+  ConsumerState<_ForgotPinDialog> createState() => _ForgotPinDialogState();
+}
+
+class _ForgotPinDialogState extends ConsumerState<_ForgotPinDialog> {
+  static const _codeLength = 6;
+  static const _alphabet = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+
+  String _code = '';
+  PairingError? _error;
+  bool _submitting = false;
+
+  Future<void> _submit() async {
+    if (_code.length != _codeLength || _submitting) return;
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    final error = await ref
+        .read(sessionControllerProvider.notifier)
+        .resetGuardianPinWithCode(_code);
+    if (!mounted) return;
+    if (error == null) {
+      Navigator.of(context).pop(true);
+      return;
+    }
+    setState(() {
+      _submitting = false;
+      _error = error;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.s;
+    return _PinDialogFrame(
+      key: const ValueKey('pin-forgot-dialog'),
+      title: s.pinForgotTitle,
+      subtitle: s.pinForgotBody,
+      error: switch (_error) {
+        null => null,
+        PairingError.invalidCode => s.pairingCodeInvalid,
+        PairingError.offline => s.pairingOffline,
+        PairingError.noSeat => s.pairingNoSeat,
+        _ => s.pairingUnexpectedError,
+      },
+      busy: _submitting,
+      primaryLabel: s.pinForgotSubmit,
+      onPrimary: _submit,
+      fields: [
+        TutolysCodeField(
+          length: _codeLength,
+          alphabet: _alphabet,
+          enabled: !_submitting,
+          hasError: _error != null,
+          onChanged: (value) => setState(() {
+            _code = value;
+            _error = null;
+          }),
+          onCompleted: (value) {
+            _code = value;
+            _submit();
+          },
+        ),
+      ],
+    );
+  }
 }
 
 /// Right after a kid's pairing, the adult who typed the portal's code is
@@ -363,6 +468,22 @@ class _EnterPinDialogState extends State<_EnterPinDialog> {
           digits: widget.digits,
           autofocus: true,
           onSubmitted: _submit,
+        ),
+        // Live while the gate waits too: that's when it's needed most.
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(
+            key: const ValueKey('pin-forgot'),
+            onPressed: _submitting
+                ? null
+                : () => Navigator.of(context).pop(_forgot),
+            style: TextButton.styleFrom(
+              foregroundColor: VillagePalette.of(context).quebecBlueBright,
+              minimumSize: const Size(0, 44),
+              padding: EdgeInsets.zero,
+            ),
+            child: Text(s.pinForgot),
+          ),
         ),
       ],
     );

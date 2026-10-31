@@ -525,28 +525,73 @@ class SessionController extends Notifier<SessionState> {
 
     switch (result) {
       case PairingSucceeded():
-        await _store.savePairing(
-          deviceToken: result.deviceToken,
-          kidId: result.kidId,
-          kidDisplayName: result.kidDisplayName,
-          gradeLevel: result.gradeLevel,
-        );
-        state = SessionState(
-          status: SessionStatus.paired,
-          kid: PairedKid(
-            id: result.kidId,
-            displayName: result.kidDisplayName,
-            gradeLevel: result.gradeLevel,
-          ),
-          accessToken: result.accessToken,
-          kids: await _store.pairedKids(),
-          classroom: await _store.classroom(),
-        );
-        _scheduleRefresh(result.expiresIn);
+        await _adopt(result);
         // The adult who typed the code is here now: offer the parent PIN
         // once the shell is up (A5).
         ref.read(guardianPinOfferProvider.notifier).offer();
         return null;
+      default:
+        return _pairingError(result);
+    }
+  }
+
+  /// Store a good kid code's pairing and make that kid the active one.
+  Future<void> _adopt(PairingSucceeded result) async {
+    await _store.savePairing(
+      deviceToken: result.deviceToken,
+      kidId: result.kidId,
+      kidDisplayName: result.kidDisplayName,
+      gradeLevel: result.gradeLevel,
+    );
+    state = SessionState(
+      status: SessionStatus.paired,
+      kid: PairedKid(
+        id: result.kidId,
+        displayName: result.kidDisplayName,
+        gradeLevel: result.gradeLevel,
+      ),
+      accessToken: result.accessToken,
+      kids: await _store.pairedKids(),
+      classroom: await _store.classroom(),
+    );
+    _scheduleRefresh(result.expiresIn);
+  }
+
+  /// « NIP oublié ? » (option A, Hafid 2026-10-31; ADR 0109). A fresh pairing
+  /// code from the portal proves an adult who holds the account is here, so
+  /// a good one clears the parent PIN. It's exchanged like any kid code: it
+  /// re-pairs that kid on this device, or adds them. The kid who was playing
+  /// stays the active one. Returns the error, or null on success.
+  Future<PairingError?> resetGuardianPinWithCode(String code) async {
+    // A refresh still running on the old token must not land after the new
+    // one and drop the kid as revoked.
+    await _inFlightRefresh;
+    final activeId = state.kid?.id;
+    final result = await _api.exchangeCode(
+      code: code,
+      deviceId: await _store.deviceId(),
+      platform: currentPlatform(),
+      appVersion: appVersion,
+    );
+    if (result is! PairingSucceeded) return _pairingError(result);
+    await _store.clearGuardianPin();
+    if (activeId == null || activeId == result.kidId) {
+      await _adopt(result);
+    } else {
+      await _store.savePairing(
+        deviceToken: result.deviceToken,
+        kidId: result.kidId,
+        kidDisplayName: result.kidDisplayName,
+        gradeLevel: result.gradeLevel,
+      );
+      await _store.setActiveKid(activeId);
+      state = state.copyWith(kids: await _store.pairedKids());
+    }
+    return null;
+  }
+
+  PairingError _pairingError(PairingResult result) {
+    switch (result) {
       case PairingCodeRejected():
         return PairingError.invalidCode;
       case PairingNoSeat():
@@ -555,7 +600,8 @@ class SessionController extends Notifier<SessionState> {
         return PairingError.offline;
       case PairingRateLimited():
         return PairingError.rateLimited;
-      case PairingFailed() ||
+      case PairingSucceeded() ||
+            PairingFailed() ||
             ClassPairingSucceeded() ||
             ClassIsEmpty() ||
             ClassNotEntitled():
