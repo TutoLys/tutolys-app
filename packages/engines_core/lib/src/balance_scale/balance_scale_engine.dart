@@ -5,6 +5,7 @@ import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
 
 import '../widgets/answer_tile.dart';
+import '../widgets/swatch_text.dart';
 
 enum BalanceMode {
   /// Both pans are known; pick <, > or =.
@@ -584,7 +585,10 @@ class _PanContent extends StatelessWidget {
                   width: size,
                   height: size,
                   child: Center(
-                    child: Text(symbol, style: TextStyle(fontSize: size * 0.8)),
+                    child: SwatchText(
+                      symbol,
+                      style: TextStyle(fontSize: size * 0.8),
+                    ),
                   ),
                 ),
             ],
@@ -594,7 +598,7 @@ class _PanContent extends StatelessWidget {
     }
     return FittedBox(
       fit: BoxFit.scaleDown,
-      child: Text(
+      child: SwatchText(
         text,
         style: TextStyle(
           fontFamily: VillageType.display,
@@ -693,7 +697,7 @@ class _Scale extends StatelessWidget {
                         border: Border.all(color: p.gold, width: 2),
                       ),
                       child: Center(
-                        child: Text(
+                        child: SwatchText(
                           middle,
                           style: TextStyle(
                             fontFamily: VillageType.display,

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../widgets/answer_slot.dart';
 import '../widgets/answer_tile.dart';
+import '../widgets/swatch_text.dart';
 
 /// A run of the sentence: words, or a blank to fill.
 sealed class ClozePiece {
@@ -451,7 +452,7 @@ class FillBlankEngine
             sentence.add(
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10),
-                child: Text(word, style: textStyle),
+                child: SwatchText(word, style: textStyle),
               ),
             );
           }

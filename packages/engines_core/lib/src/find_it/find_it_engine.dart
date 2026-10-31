@@ -3,6 +3,7 @@ import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
 
 import '../widgets/answer_tile.dart';
+import '../widgets/swatch_text.dart';
 
 /// How the scene is laid out. The content decides; the engine never
 /// reorders a sentence or a plan.
@@ -629,7 +630,7 @@ class FindItEngine
                   alignment: WrapAlignment.center,
                   children: [
                     for (final e in content.legend)
-                      Text(
+                      SwatchText(
                         '${e.symbol}  ${e.label}',
                         style: TextStyle(
                           fontFamily: VillageType.display,
@@ -844,7 +845,7 @@ class _FindCell extends StatelessWidget {
       ),
     };
     final square = shape == _CellShape.square;
-    final text = Text(
+    final text = SwatchText(
       label,
       textAlign: TextAlign.center,
       style: TextStyle(

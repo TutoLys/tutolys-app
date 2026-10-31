@@ -3,6 +3,7 @@ import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
 
 import '../widgets/answer_tile.dart';
+import '../widgets/swatch_text.dart';
 
 enum DataGraphMode {
   /// Read the chart, answer a question about it (the old engine).
@@ -502,7 +503,7 @@ class DataGraphEngine
                       alignment: WrapAlignment.center,
                       children: [
                         for (final t in content.source)
-                          Text(t, style: const TextStyle(fontSize: 26)),
+                          SwatchText(t, style: const TextStyle(fontSize: 26)),
                       ],
                     ),
                   ),
@@ -621,7 +622,7 @@ class _Chart extends StatelessWidget {
                 for (var i = 0; i < v; i++)
                   SizedBox(
                     height: unit,
-                    child: FittedBox(child: Text(c.symbol ?? '■')),
+                    child: FittedBox(child: SwatchText(c.symbol ?? '■')),
                   ),
               ],
             );
@@ -645,7 +646,7 @@ class _Chart extends StatelessWidget {
               Container(height: 2, color: p.ink),
               const SizedBox(height: 6),
               ExcludeSemantics(
-                child: Text(
+                child: SwatchText(
                   content.chartType == ChartType.pictograph
                       ? '${c.symbol} ${c.label}'
                       : c.label,

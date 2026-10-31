@@ -5,6 +5,7 @@ import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
 
 import '../pattern_machine/pattern_machine_engine.dart';
+import '../widgets/swatch_text.dart';
 
 enum CountersMode { free, plates, array }
 
@@ -732,7 +733,10 @@ class _CountersView extends StatelessWidget {
       dimension: size,
       child: c.symbol != null
           ? Center(
-              child: Text(c.symbol!, style: TextStyle(fontSize: size * 0.8)),
+              child: SwatchText(
+                c.symbol!,
+                style: TextStyle(fontSize: size * 0.8),
+              ),
             )
           : Padding(
               padding: EdgeInsets.all(size * 0.08),
@@ -755,7 +759,7 @@ class _CountersView extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
+            SwatchText(
               label,
               style: TextStyle(
                 fontFamily: VillageType.display,

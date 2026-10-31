@@ -3,6 +3,8 @@ import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 
+import 'swatch_text.dart';
+
 /// What an answer tile shows about itself.
 enum AnswerTileState {
   idle,
@@ -85,7 +87,7 @@ class AnswerTile extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(
+        SwatchText(
           label,
           textAlign: TextAlign.center,
           maxLines: 1,
@@ -216,7 +218,7 @@ class AnswerTile extends StatelessWidget {
                               ),
                             ),
                           Expanded(
-                            child: Text(
+                            child: SwatchText(
                               label,
                               // A picture answer (emoji only) draws big:
                               // the child reads the picture, not the word.

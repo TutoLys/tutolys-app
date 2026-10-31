@@ -3,6 +3,7 @@ import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
 
 import '../widgets/answer_tile.dart';
+import '../widgets/swatch_text.dart';
 
 class SortBucket {
   const SortBucket({
@@ -559,7 +560,7 @@ class _BucketCard extends StatelessWidget {
                         excludeSemantics: true,
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Text(
+                          child: SwatchText(
                             label,
                             textAlign: TextAlign.center,
                             style: TextStyle(

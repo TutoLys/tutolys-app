@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../widgets/answer_slot.dart';
 import '../widgets/answer_tile.dart';
 import '../widgets/idle_hand_hint.dart';
+import '../widgets/swatch_text.dart';
 
 class TimelineItem {
   const TimelineItem({
@@ -436,7 +437,7 @@ class TimelineOrderEngine
           ? (fr ? 'au début : $text' : 'first: $text')
           : (fr ? 'à la fin : $text' : 'last: $text'),
       excludeSemantics: true,
-      child: Text(
+      child: SwatchText(
         text,
         key: ValueKey(start ? 'timeline-start' : 'timeline-end'),
         style: TextStyle(

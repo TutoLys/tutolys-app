@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'shell_strings.dart';
+import '../widgets/swatch_text.dart';
 
 enum ShellFeedbackKind { correct, retry, neutral }
 
@@ -559,7 +560,7 @@ class _PromptRow extends StatelessWidget {
                 // Lines a one-line prompt up with the 56 dp speaker's middle.
                 child: Padding(
                   padding: EdgeInsets.only(top: onSpeak != null ? 12 : 0),
-                  child: Text(
+                  child: SwatchText(
                     text!,
                     style: TextStyle(
                       fontFamily: VillageType.display,
