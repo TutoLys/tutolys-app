@@ -1,6 +1,7 @@
 import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
 
+import '../shell/activity_assist.dart';
 import 'answer_tile.dart';
 
 /// Where a "pick one value" question stands: the engines that draw
@@ -145,6 +146,7 @@ abstract final class PickOne {
     required void Function(String id) onPick,
     required String keyPrefix,
     double width = 120,
+    String? correctId,
   }) {
     AnswerTileState stateOf(String id) => state.solved && id == state.selected
         ? AnswerTileState.correct
@@ -155,6 +157,15 @@ abstract final class PickOne {
         : AnswerTileState.idle;
 
     final square = width <= 160;
+    // Three misses: one wrong answer is set aside (UX review G8).
+    String? dimIn(BuildContext context) =>
+        correctId == null || state.solved || !ActivityAssist.narrowOf(context)
+        ? null
+        : answerToDim(
+            order: state.order,
+            right: {correctId},
+            tried: state.tried,
+          );
     Widget tile(String id) => Semantics(
       label: (spoken ?? label)(id),
       hint: switch (stateOf(id)) {
@@ -166,14 +177,17 @@ abstract final class PickOne {
       excludeSemantics: true,
       button: true,
       selected: state.selected == id,
-      child: AnswerTile(
-        key: ValueKey('$keyPrefix-$id'),
-        label: label(id),
-        square: square,
-        state: stateOf(id),
-        onTap: enabled && !state.solved && !state.tried.contains(id)
-            ? () => onPick(id)
-            : null,
+      child: Builder(
+        builder: (context) => AnswerTile(
+          key: ValueKey('$keyPrefix-$id'),
+          label: label(id),
+          square: square,
+          dimmed: id == dimIn(context),
+          state: stateOf(id),
+          onTap: enabled && !state.solved && !state.tried.contains(id)
+              ? () => onPick(id)
+              : null,
+        ),
       ),
     );
 

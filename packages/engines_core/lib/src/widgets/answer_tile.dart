@@ -41,6 +41,8 @@ class AnswerTile extends StatelessWidget {
     this.large = false,
     this.prominent = false,
     this.square = false,
+    this.dimmed = false,
+    this.suggested = false,
     this.audioRef,
     super.key,
   });
@@ -85,6 +87,14 @@ class AnswerTile extends StatelessWidget {
   /// the label centred at 30 px and the state icon under it (UX review
   /// AM3). The parent sizes the square.
   final bool square;
+
+  /// Set aside after three misses (UX review G8, ADR 0108): faded and not
+  /// tappable, so the problem is smaller. Never the right answer.
+  final bool dimmed;
+
+  /// Pointed at after three misses on a board (one right tile of a pair or
+  /// slot): a gold edge and a sparkle. The child still makes the move.
+  final bool suggested;
 
   /// A recording of [label] (`audio_ref`), for a child who can't read it
   /// yet. Played only when asked: the small speaker on the tile, or a long
@@ -134,7 +144,9 @@ class AnswerTile extends StatelessWidget {
 
   /// The label's size in the list layout.
   double get _fontSize {
-    if (_pictureOnly(label)) return prominent ? 44 : 34;
+    // A picture answer is the content: 56 px in an answer list (UX review
+    // N19), 40 elsewhere, where slots are narrower.
+    if (_pictureOnly(label)) return prominent ? 56 : 40;
     if (prominent) return label.length <= 24 && !label.contains('\n') ? 24 : 19;
     return large ? 20 : 15;
   }
@@ -173,12 +185,26 @@ class AnswerTile extends StatelessWidget {
       ),
     };
 
-    return Semantics(
+    final onTap = dimmed ? null : this.onTap;
+    final edge = suggested && state == AnswerTileState.idle ? p.gold : border;
+    final mark =
+        icon ??
+        (suggested && state == AnswerTileState.idle
+            ? Icons.auto_awesome_rounded
+            : null);
+    final markColor = edge == border
+        ? border
+        : (p.isDark ? p.gold : const Color(0xFF9A4A0C));
+    final tile = Semantics(
       button: true,
       selected: state == AnswerTileState.picked,
       enabled: onTap != null,
       label: label,
-      hint: semanticsState,
+      hint: dimmed
+          ? (en ? 'set aside' : 'écartée')
+          : suggested
+          ? (en ? 'try this one' : 'essaie celle-ci')
+          : semanticsState,
       excludeSemantics: true,
       onLongPress: speak,
       customSemanticsActions: speak == null
@@ -190,8 +216,8 @@ class AnswerTile extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: Radii.cardMd,
             side: BorderSide(
-              color: border,
-              width: state == AnswerTileState.picked ? 3 : 2,
+              color: edge,
+              width: state == AnswerTileState.picked || edge != border ? 3 : 2,
             ),
           ),
           child: InkWell(
@@ -215,7 +241,7 @@ class AnswerTile extends StatelessWidget {
                     : 88,
               ),
               child: dense || square
-                  ? _dense(text, icon, border)
+                  ? _dense(text, mark, markColor)
                   : Padding(
                       padding: EdgeInsets.symmetric(
                         horizontal: 20,
@@ -297,9 +323,9 @@ class AnswerTile extends StatelessWidget {
                                 ),
                               ),
                             ),
-                          if (icon != null) ...[
+                          if (mark != null) ...[
                             const SizedBox(width: 8),
-                            Icon(icon, size: 18, color: border),
+                            Icon(mark, size: 18, color: markColor),
                           ],
                         ],
                       ),
@@ -309,6 +335,7 @@ class AnswerTile extends StatelessWidget {
         ),
       ),
     );
+    return dimmed ? Opacity(opacity: 0.35, child: tile) : tile;
   }
 }
 

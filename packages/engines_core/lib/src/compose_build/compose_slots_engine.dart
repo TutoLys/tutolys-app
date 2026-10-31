@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../widgets/creations.dart';
 import '../widgets/answer_slot.dart';
+import '../shell/activity_assist.dart';
 import '../widgets/answer_tile.dart';
 import '../widgets/idle_hand_hint.dart';
 
@@ -342,6 +343,26 @@ class ComposeSlotsEngine
         view.enabled && s.locked.isEmpty && s.slots.every((t) => t == null)
         ? s.tray.first
         : null;
+    // Three misses: point at one right tile still in the tray (UX review
+    // G8). Not in a creation, where every fit is right.
+    String? hintTile;
+    final c = view.content;
+    if (ActivityAssist.narrowOf(context) && c.frame == null) {
+      final lockedTiles = {for (final i in s.locked) s.slots[i]};
+      for (var i = 0; i < c.target.length; i++) {
+        final want = c.ordered
+            ? c.target[i]
+            : c.target.firstWhere(
+                (t) => !lockedTiles.contains(t),
+                orElse: () => '',
+              );
+        if (s.locked.contains(i) || want.isEmpty || s.isPlaced(want)) {
+          continue;
+        }
+        hintTile = want;
+        break;
+      }
+    }
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 560),
@@ -401,6 +422,7 @@ class ComposeSlotsEngine
                             large: true,
                             label: view.content.tile(id).label,
                             audioRef: view.content.tile(id).audioRef,
+                            suggested: id == hintTile,
                             // A tile the last check found wrong is back in
                             // the tray, amber until the next tap (G7). Shown
                             // once: not also as a ghost in its slot (N5).

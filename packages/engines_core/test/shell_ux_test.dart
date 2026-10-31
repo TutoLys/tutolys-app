@@ -740,7 +740,7 @@ void main() {
   });
 
   group('picture answers draw big for pre-readers', () {
-    testWidgets('an emoji-only label is 34 px; a word stays 15 px', (
+    testWidgets('an emoji-only label is 40 px; a word stays 15 px', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -761,8 +761,26 @@ void main() {
           ),
         ),
       );
-      expect(tester.widget<Text>(find.text('🐱')).style!.fontSize, 34);
+      expect(tester.widget<Text>(find.text('🐱')).style!.fontSize, 40);
       expect(tester.widget<Text>(find.text('cat')).style!.fontSize, 15);
+    });
+
+    testWidgets('N19: in an answer list it is 56 px and centred', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _app(
+          AnswerTile(
+            label: '🐱',
+            prominent: true,
+            state: AnswerTileState.idle,
+            onTap: () {},
+          ),
+        ),
+      );
+      final t = tester.widget<Text>(find.text('🐱'));
+      expect(t.style!.fontSize, 56);
+      expect(t.textAlign, TextAlign.center);
     });
   });
 }

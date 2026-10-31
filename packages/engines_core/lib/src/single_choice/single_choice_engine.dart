@@ -1,6 +1,7 @@
 import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
 
+import '../shell/activity_assist.dart';
 import '../widgets/answer_tile.dart';
 import '../widgets/choice_layout.dart';
 
@@ -274,6 +275,14 @@ class SingleChoiceEngine
   ) {
     final fr = view.locale.languageCode == 'fr';
     final s = view.state;
+    // Three misses: one wrong answer is set aside (UX review G8).
+    final dim = ActivityAssist.narrowOf(context) && !s.solved
+        ? answerToDim(
+            order: s.order,
+            right: {view.content.correct},
+            tried: s.tried,
+          )
+        : null;
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 360),
@@ -299,6 +308,7 @@ class SingleChoiceEngine
                 state: state,
                 prominent: true,
                 square: square,
+                dimmed: id == dim,
                 semanticsState: switch (state) {
                   AnswerTileState.retry => fr ? 'déjà essayé' : 'already tried',
                   AnswerTileState.correct =>

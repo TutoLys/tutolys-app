@@ -4,6 +4,7 @@ import 'package:design_system/design_system.dart';
 import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
 
+import '../shell/activity_assist.dart';
 import '../widgets/answer_tile.dart';
 import '../widgets/swatch_text.dart';
 
@@ -546,6 +547,16 @@ class BalanceScaleEngine
                           key: ValueKey('balance-choice-$id'),
                           label: labelOf(id),
                           square: true,
+                          // Three misses: one wrong answer set aside (G8).
+                          dimmed:
+                              !s.solved &&
+                              ActivityAssist.narrowOf(context) &&
+                              id ==
+                                  answerToDim(
+                                    order: s.order,
+                                    right: {c.correctId},
+                                    tried: s.tried,
+                                  ),
                           state: stateOf(id),
                           onTap:
                               view.enabled && !s.solved && !s.tried.contains(id)

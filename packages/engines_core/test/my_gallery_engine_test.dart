@@ -243,6 +243,15 @@ void main() {
       await settle(tester);
       final id = shelf.items.single.id;
       expect(find.text('Le chat dort'), findsOne);
+      // N12: it opens on the wall; tapping a creation shows it big.
+      expect(find.byKey(const ValueKey('gallery-wall')), findsOne);
+      await tester.tap(find.byKey(ValueKey('gallery-wall-$id')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(ValueKey('gallery-large-$id')), findsOne);
+      await tester.tap(find.byKey(const ValueKey('gallery-large-close')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('gallery-start-hanging')));
+      await settle(tester);
       await tester.tap(find.byKey(ValueKey('gallery-card-$id')));
       await settle(tester);
       await tester.tap(find.byKey(ValueKey('gallery-reason-$id-fier')));
@@ -302,6 +311,8 @@ void main() {
         await tester.pumpWidget(app(c, shelf, dark: dark));
         await settle(tester);
         final id = shelf.items.single.id;
+        await tester.tap(find.byKey(const ValueKey('gallery-start-hanging')));
+        await settle(tester);
         await tester.tap(find.byKey(ValueKey('gallery-card-$id')));
         await settle(tester);
         for (final r in ['fier', 'travail']) {

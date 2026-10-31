@@ -3,6 +3,7 @@ import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
 
 import '../widgets/answer_tile.dart';
+import '../shell/activity_assist.dart';
 import 'passage_discuss.dart';
 
 /// What the child does with the passage.
@@ -573,6 +574,15 @@ class PassageReaderEngine
                           .label,
                       // Big and centred (UX review AM3).
                       prominent: true,
+                      // Three misses: one wrong answer set aside (G8).
+                      dimmed:
+                          ActivityAssist.narrowOf(context) &&
+                          id ==
+                              answerToDim(
+                                order: s.order,
+                                right: content.correct,
+                                tried: {...s.tried, ...s.found},
+                              ),
                       state: stateOf(id),
                       semanticsState: hintOf(id),
                       onTap: tapOf(id),

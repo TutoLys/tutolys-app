@@ -2,6 +2,7 @@ import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
 
 import '../single_choice/single_choice_engine.dart';
+import '../shell/activity_assist.dart';
 import '../widgets/answer_tile.dart';
 import '../widgets/choice_layout.dart';
 import '../widgets/countdown_bar.dart';
@@ -232,6 +233,14 @@ class TimedChoiceEngine
     final fr = view.locale.languageCode == 'fr';
     final s = view.state;
     final live = view.enabled && !s.solved && s.selected == null && !s.timedOut;
+    // Three misses: one wrong answer is set aside (UX review G8).
+    final dim = ActivityAssist.narrowOf(context) && !s.solved
+        ? answerToDim(
+            order: s.order,
+            right: {view.content.choice.correct},
+            tried: s.tried,
+          )
+        : null;
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 360),
@@ -243,7 +252,9 @@ class TimedChoiceEngine
               CountdownBar(
                 duration: view.content.timeLimit!,
                 round: s.round,
-                running: live,
+                // Stops while the question is read aloud or the hint is
+                // open: listening never costs time (UX review G17, G8).
+                running: live && !ActivityAssist.pausedOf(context),
                 onExpired: () => view.dispatch(TimeUp(s.round)),
                 semanticsLabel: fr ? 'Temps restant' : 'Time left',
               ),
@@ -261,6 +272,7 @@ class TimedChoiceEngine
                 audioRef: view.content.choice.option(id)!.audioRef,
                 prominent: true,
                 square: square,
+                dimmed: id == dim,
                 state: switch (id) {
                   _ when s.tried.contains(id) => AnswerTileState.retry,
                   _ when s.selected == id && s.solved =>

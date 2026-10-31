@@ -1,6 +1,7 @@
 import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
 
+import '../shell/activity_assist.dart';
 import '../widgets/answer_tile.dart';
 import '../widgets/idle_hand_hint.dart';
 
@@ -417,6 +418,19 @@ class PairMatchBoardEngine
         : AnswerTileState.idle;
     final toFix = fr ? 'à corriger' : 'to fix';
 
+    // Three misses: point at one right pair that isn't made yet, both its
+    // tiles in gold (UX review G8). The child still makes the link.
+    String? hintLeft;
+    if (ActivityAssist.narrowOf(context)) {
+      for (final l in s.leftOrder) {
+        if (!s.locked.contains(l) && s.links[l] != view.content.answer[l]) {
+          hintLeft = l;
+          break;
+        }
+      }
+    }
+    final hintRight = hintLeft == null ? null : view.content.answer[hintLeft];
+
     Widget column(List<Widget> tiles) => Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -449,6 +463,7 @@ class PairMatchBoardEngine
                         missed: s.missed.containsKey(l),
                       ),
                       badge: s.locked.contains(l) ? null : badgeOf[l],
+                      suggested: l == hintLeft,
                       semanticsState: s.locked.contains(l)
                           ? (fr ? 'bien associé' : 'matched')
                           : s.selectedLeft == l
@@ -485,6 +500,7 @@ class PairMatchBoardEngine
                             missed: s.missed.containsValue(r),
                           ),
                           badge: lockedRight ? null : badge,
+                          suggested: r == hintRight,
                           semanticsState: lockedRight
                               ? (fr ? 'bien associé' : 'matched')
                               : s.selectedRight == r

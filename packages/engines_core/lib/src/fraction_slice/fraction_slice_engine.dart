@@ -471,6 +471,7 @@ class FractionSliceEngine
                   spoken: (id) => c.option(id).fraction.words(view.locale),
                   onPick: (id) => view.dispatch(PickFraction(id)),
                   keyPrefix: 'fraction-choice',
+                  correctId: c.correctId,
                   width: c.words ? 160 : 96,
                 ),
             ],

@@ -296,6 +296,46 @@ class _GalleryViewState extends State<_GalleryView> {
   var _persisted = false;
   var _loading = false;
 
+  /// The gallery opens on a wall of the child's creations; hanging is an
+  /// optional step (UX review N12: it opened as a task). A snapshot with
+  /// something already hung reopens straight in hanging.
+  late var _hanging = widget.view.state.hung.isNotEmpty;
+
+  Future<void> _showLarge(Creation x) => showDialog<void>(
+    context: context,
+    builder: (context) {
+      final fr = widget.view.locale.languageCode == 'fr';
+      return Dialog(
+        key: ValueKey('gallery-large-${x.id}'),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 320,
+                height: 320,
+                child: FittedBox(
+                  child: SizedBox(
+                    width: 200,
+                    height: 200,
+                    child: creationView(x, locale: widget.view.locale),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              FilledButton(
+                key: const ValueKey('gallery-large-close'),
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(fr ? 'Fermer' : 'Close'),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -378,6 +418,82 @@ class _GalleryViewState extends State<_GalleryView> {
                     'appuie sur « Garder dans mes créations ».'
               : 'Your gallery is still empty! When you finish a creation, '
                     'press “Keep in my creations”.',
+        ),
+      );
+    }
+
+    if (!_hanging) {
+      return Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: FocusTraversalGroup(
+            child: Column(
+              key: const ValueKey('gallery-wall'),
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Wrap(
+                  spacing: 14,
+                  runSpacing: 14,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    for (final (i, x) in _creations.indexed)
+                      Semantics(
+                        button: true,
+                        label: fr
+                            ? 'Création ${i + 1}, touche pour la voir en grand'
+                            : 'Creation ${i + 1}, tap to see it big',
+                        excludeSemantics: true,
+                        child: Material(
+                          color: p.surface,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: Radii.cardMd,
+                            side: BorderSide(
+                              color: x.hung ? p.gold : p.line,
+                              width: x.hung ? 4 : 2,
+                            ),
+                          ),
+                          child: InkWell(
+                            key: ValueKey('gallery-wall-${x.id}'),
+                            borderRadius: Radii.cardMd,
+                            onTap: () => unawaited(_showLarge(x)),
+                            child: SizedBox(
+                              width: 160,
+                              height: 160,
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: creationView(x, locale: view.locale),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                OutlinedButton.icon(
+                  key: const ValueKey('gallery-start-hanging'),
+                  onPressed: view.enabled
+                      ? () => setState(() => _hanging = true)
+                      : null,
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(48, 52),
+                    side: BorderSide(color: p.gold, width: 2),
+                    foregroundColor: p.ink,
+                    shape: const StadiumBorder(),
+                  ),
+                  icon: const Icon(Icons.push_pin_rounded),
+                  label: Text(
+                    fr ? 'Accrocher mes préférées' : 'Hang my favourites',
+                    style: const TextStyle(
+                      fontFamily: VillageType.display,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       );
     }

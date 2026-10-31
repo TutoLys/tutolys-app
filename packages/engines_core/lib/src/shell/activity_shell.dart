@@ -63,6 +63,7 @@ class ActivityShell extends StatelessWidget {
     this.onSpeak,
     this.character,
     this.revealedHint,
+    this.onSpeakHint,
     this.onHint,
     this.offerHint = false,
     this.onValidate,
@@ -120,6 +121,10 @@ class ActivityShell extends StatelessWidget {
 
   /// The hint, once the child asked for it.
   final String? revealedHint;
+
+  /// Reads the open hint aloud, on tap only (UX review G8). Null: the hint
+  /// has no clip, and no speaker is drawn.
+  final VoidCallback? onSpeakHint;
 
   /// Null hides INDICE (no hint, hints off, or already revealed).
   final VoidCallback? onHint;
@@ -312,6 +317,7 @@ class ActivityShell extends StatelessWidget {
                       (showValidate || onHint != null || revealedHint != null))
                     _BottomBar(
                       revealedHint: revealedHint,
+                      onSpeakHint: onSpeakHint,
                       palette: p,
                       strings: s,
                       gutter: gutter,
@@ -762,9 +768,16 @@ class _PromptText extends StatelessWidget {
 }
 
 class _HintPanel extends StatelessWidget {
-  const _HintPanel({required this.palette, required this.text});
+  const _HintPanel({
+    required this.palette,
+    required this.text,
+    this.onSpeak,
+    this.listenLabel = '',
+  });
   final VillagePalette palette;
   final String text;
+  final VoidCallback? onSpeak;
+  final String listenLabel;
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -782,6 +795,22 @@ class _HintPanel extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Left of the text, like the question's speaker (Hafid's rule).
+          if (onSpeak != null) ...[
+            IconButton.filled(
+              key: const ValueKey('hint-speak'),
+              onPressed: onSpeak,
+              tooltip: listenLabel,
+              iconSize: 22,
+              constraints: const BoxConstraints.tightFor(width: 48, height: 48),
+              style: IconButton.styleFrom(
+                backgroundColor: palette.quebecBlueBright,
+                foregroundColor: Colors.white,
+              ),
+              icon: const Icon(Icons.volume_up_rounded),
+            ),
+            const SizedBox(width: Space.sm),
+          ],
           // The design's sparkle, in a colour that reads on the gold
           // ground (UX review G18): gold on gold-pale was 1.7:1.
           Icon(
@@ -808,12 +837,14 @@ class _BottomBar extends StatefulWidget {
     required this.onHint,
     required this.offerHint,
     required this.revealedHint,
+    this.onSpeakHint,
     required this.showValidate,
     required this.onValidate,
   });
 
   final bool offerHint;
   final String? revealedHint;
+  final VoidCallback? onSpeakHint;
   final VillagePalette palette;
   final ShellStrings strings;
   final double gutter;
@@ -884,7 +915,12 @@ class _BottomBarState extends State<_BottomBar> {
           if (widget.revealedHint case final hint?)
             Align(
               alignment: Alignment.centerLeft,
-              child: _HintPanel(palette: p, text: hint),
+              child: _HintPanel(
+                palette: p,
+                text: hint,
+                onSpeak: widget.onSpeakHint,
+                listenLabel: strings.listenHint,
+              ),
             ),
           if (nudging)
             Padding(

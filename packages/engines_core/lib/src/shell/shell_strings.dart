@@ -15,6 +15,7 @@ class ShellStrings {
 
   String get close => _t("Quitter l'exercice", 'Leave the exercise');
   String get moreBelow => _t('Voir la suite', 'See more');
+  String get listenHint => _t('Écouter l’indice', 'Listen to the hint');
   String get stopTitle => _t('Tu veux arrêter ?', 'Do you want to stop?');
   String get stopMessage =>
       _t('Ta série n’est pas finie.', "Your set isn't finished.");

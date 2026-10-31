@@ -618,6 +618,7 @@ class ExperimentLabEngine
                 label: (id) => c.option(id).label,
                 onPick: (id) => view.dispatch(PickConclusion(id)),
                 keyPrefix: 'exp-choice',
+                correctId: c.correctId,
                 width: 300,
               ),
             ],

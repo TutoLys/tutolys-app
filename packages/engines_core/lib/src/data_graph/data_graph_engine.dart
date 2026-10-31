@@ -2,6 +2,7 @@ import 'package:design_system/design_system.dart';
 import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
 
+import '../shell/activity_assist.dart';
 import '../widgets/answer_tile.dart';
 import '../widgets/choice_layout.dart';
 import '../widgets/swatch_text.dart';
@@ -526,6 +527,16 @@ class DataGraphEngine
                       label: content.option(id)!.label,
                       prominent: true,
                       square: square,
+                      // Three misses: one wrong answer is set aside (G8).
+                      dimmed:
+                          content.correct != null &&
+                          ActivityAssist.narrowOf(context) &&
+                          id ==
+                              answerToDim(
+                                order: s.optionOrder,
+                                right: {content.correct!},
+                                tried: s.tried,
+                              ),
                       state: s.tried.contains(id)
                           ? AnswerTileState.retry
                           : s.selected == id

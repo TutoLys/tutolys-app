@@ -2,11 +2,13 @@ import 'dart:async';
 
 import 'package:design_system/design_system.dart';
 import 'package:engine_sdk/engine_sdk.dart';
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 
 import '../widgets/creations.dart';
 import '../widgets/idle_hand_hint.dart';
 
+import 'activity_assist.dart';
 import 'activity_shell.dart';
 import 'shell_strings.dart';
 
@@ -26,6 +28,7 @@ class LearningActivityView extends StatefulWidget {
     this.character,
     this.hintsEnabled = true,
     this.xpEarned,
+    this.narrating,
     super.key,
   });
 
@@ -45,6 +48,11 @@ class LearningActivityView extends StatefulWidget {
 
   /// XP to show so far; null or 0 hides the pill.
   final int Function()? xpEarned;
+
+  /// True while the host is reading the question aloud. A countdown pauses
+  /// meanwhile (UX review G17, ADR 0108). Null: the host doesn't say, and
+  /// only the hint pauses it.
+  final ValueListenable<bool>? narrating;
 
   @override
   State<LearningActivityView> createState() => _LearningActivityViewState();
@@ -251,6 +259,15 @@ class _LearningActivityViewState extends State<LearningActivityView> {
 
     final interactive = c.isInteractive;
     final hint = q?.hintText;
+    // The hint's clip, when the content has one (`hint`, or `q<i>_hint` in
+    // a série, like the prompt's `audio` / `q<i>_audio`). Read on tap only
+    // (UX review G8).
+    final speaker = ContentSpeakerScope.maybeOf(context);
+    final hintRef = q == null
+        ? null
+        : _assetRef(
+            c.envelope.questions.length == 1 ? 'hint' : 'q${q.spec.index}_hint',
+          );
     final explicit = q?.engine.descriptor.submitMode == SubmitMode.explicit;
     // While « Presque » shows, the board stays live: a tap on it is the
     // retry, so the child needn't press RÉESSAYER first (UX review G9).
@@ -293,6 +310,9 @@ class _LearningActivityViewState extends State<LearningActivityView> {
       onSpeak: q == null ? null : widget.speakPrompt?.call(q.spec),
       character: widget.character,
       revealedHint: _hintRevealed ? hint : null,
+      onSpeakHint: speaker == null || hintRef == null
+          ? null
+          : () => speaker.speak(audioRef: hintRef, partId: hintRef),
       onHint:
           hint == null || !widget.hintsEnabled || _hintRevealed || !interactive
           ? null
@@ -317,21 +337,55 @@ class _LearningActivityViewState extends State<LearningActivityView> {
                 // The hand demo: the série's first question, or after two
                 // misses on this one (N4).
                 enabled: state.questionIndex == 0 || state.attempts >= 2,
-                child: q.engine.buildView(
-                  context,
-                  content: q.content,
-                  state: q.state,
-                  dispatch: (a) {
-                    // The controller runs these in order: back to the
-                    // question, then the move.
-                    if (retrying) unawaited(c.proceed());
-                    unawaited(c.dispatch(a));
-                  },
-                  locale: widget.locale,
-                  enabled: interactive || retrying,
+                child: _assist(
+                  narrow: state.attempts >= ActivityAssist.narrowAfter,
+                  // Its own context, under the scope: an engine reads
+                  // ActivityAssist from the context it's built with.
+                  child: Builder(
+                    builder: (context) => q.engine.buildView(
+                      context,
+                      content: q.content,
+                      state: q.state,
+                      dispatch: (a) {
+                        // The controller runs these in order: back to the
+                        // question, then the move.
+                        if (retrying) unawaited(c.proceed());
+                        unawaited(c.dispatch(a));
+                      },
+                      locale: widget.locale,
+                      enabled: interactive || retrying,
+                    ),
+                  ),
                 ),
               ),
             ),
     );
+  }
+
+  /// [ActivityAssist] over the engine: paused while the hint is open or the
+  /// question is being read, narrowed after three misses.
+  Widget _assist({required bool narrow, required Widget child}) {
+    Widget scope(bool narrating) => ActivityAssist(
+      paused: _hintRevealed || narrating,
+      narrow: narrow,
+      child: child,
+    );
+    final n = widget.narrating;
+    return n == null
+        ? scope(false)
+        : ValueListenableBuilder<bool>(
+            valueListenable: n,
+            builder: (_, v, _) => scope(v),
+          );
+  }
+
+  /// [ref] when the exercise ships an asset of that name, else null.
+  String? _assetRef(String ref) {
+    final assets = widget.controller.envelope.raw['assets'];
+    if (assets is! List) return null;
+    for (final a in assets) {
+      if (a is Map && a['ref'] == ref) return ref;
+    }
+    return null;
   }
 }

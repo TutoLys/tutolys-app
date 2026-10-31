@@ -364,6 +364,7 @@ class MeasureToolEngine
                 label: (id) => c.label(id, view.locale),
                 onPick: (id) => view.dispatch(PickChoice(id)),
                 keyPrefix: 'measure-choice',
+                correctId: c.correctId,
               ),
             ],
           ),
