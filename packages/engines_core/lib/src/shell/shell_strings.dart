@@ -49,7 +49,9 @@ class ShellStrings {
     _ => null,
   };
   String get answerFirst =>
-      _t('Choisis d’abord ta réponse !', 'Pick your answer first!');
+      // True at every step: some answers have several parts (a discussion
+      // asks for a pick, then a sentence per friend). UX review AM28.
+      _t('Termine d’abord ta réponse !', 'Finish your answer first!');
   String get listen => _t('Écouter la question', 'Listen to the question');
   String get audioUnavailable => _t('Audio indisponible', 'Audio unavailable');
   // Not « en série »: that's the streak's name (UX review G13).

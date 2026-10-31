@@ -70,11 +70,17 @@ class ActivityShell extends StatelessWidget {
     this.feedback,
     this.notice,
     this.scrollBody = true,
+    this.questionKey,
     super.key,
   });
 
   final Locale locale;
   final VoidCallback onClose;
+
+  /// Which question is on screen. A new one starts its body scrolled to
+  /// the top: the scroll used to carry over, so question 2 opened with its
+  /// speaker and prompt off the top (UX review AM29).
+  final Object? questionKey;
 
   /// The engine's interactive area.
   final Widget body;
@@ -270,8 +276,11 @@ class ActivityShell extends StatelessWidget {
                             ),
                             child: scrollBody
                                 ? _ScrollCue(
+                                    key: ValueKey(('body', questionKey)),
                                     palette: p,
                                     label: s.moreBelow,
+                                    // Not over « Bravo ! » / « Presque ».
+                                    showCue: feedback == null,
                                     child: Column(children: [...header, body]),
                                   )
                                 : Column(
@@ -333,10 +342,13 @@ class _ScrollCue extends StatefulWidget {
     required this.palette,
     required this.label,
     required this.child,
+    this.showCue = true,
+    super.key,
   });
   final VillagePalette palette;
   final String label;
   final Widget child;
+  final bool showCue;
 
   @override
   State<_ScrollCue> createState() => _ScrollCueState();
@@ -383,7 +395,7 @@ class _ScrollCueState extends State<_ScrollCue> {
                 child: widget.child,
               ),
             ),
-            if (_more) ...[
+            if (_more && widget.showCue) ...[
               Positioned(
                 left: 0,
                 right: 0,

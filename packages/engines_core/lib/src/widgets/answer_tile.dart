@@ -151,11 +151,13 @@ class AnswerTile extends StatelessWidget {
     final (border, fill, text, icon) = switch (state) {
       // A 3:1 edge (UX review G11): `line` was 1.2:1 on white.
       AnswerTileState.idle => (p.inkMuted, p.surface, p.ink, null),
+      // A filled dot and a 3 px edge, not only a pale fill (UX review
+      // AM32). A dot, not ✓: ✓ means « right ».
       AnswerTileState.picked => (
         p.quebecBlueBright,
         p.navHoverFill,
         p.ink,
-        null,
+        Icons.radio_button_checked_rounded,
       ),
       AnswerTileState.retry => (
         p.retry,
@@ -187,7 +189,10 @@ class AnswerTile extends StatelessWidget {
           color: fill,
           shape: RoundedRectangleBorder(
             borderRadius: Radii.cardMd,
-            side: BorderSide(color: border, width: 2),
+            side: BorderSide(
+              color: border,
+              width: state == AnswerTileState.picked ? 3 : 2,
+            ),
           ),
           child: InkWell(
             onTap: onTap,

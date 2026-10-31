@@ -181,6 +181,34 @@ void main() {
     c.dispose();
   });
 
+  testWidgets('AM32: a chosen answer shows a dot and a 3 px edge', (
+    tester,
+  ) async {
+    final c = await pump(tester, ['un carré', 'un triangle']);
+    await tester.tap(find.byKey(const ValueKey('mcq-option-o1')));
+    await tester.runAsync(() => pumpEventQueue());
+    await tester.pump();
+    final tile = find.byKey(const ValueKey('mcq-option-o1'));
+    expect(
+      find.descendant(
+        of: tile,
+        matching: find.byIcon(Icons.radio_button_checked_rounded),
+      ),
+      findsOneWidget,
+    );
+    final shape =
+        tester
+                .widget<Material>(
+                  find
+                      .descendant(of: tile, matching: find.byType(Material))
+                      .first,
+                )
+                .shape!
+            as RoundedRectangleBorder;
+    expect(shape.side.width, 3);
+    c.dispose();
+  });
+
   test('a picture answer never goes in a square', () {
     final layout = ChoiceLayout(
       ids: const ['a', 'b'],

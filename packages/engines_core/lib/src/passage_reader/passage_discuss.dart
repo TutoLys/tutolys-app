@@ -509,12 +509,14 @@ class DiscussView extends StatelessWidget {
               for (final id in optionOrder) optionTile(id, forFinal: false),
               if (s.first != null) ...[
                 const SizedBox(height: 12),
-                Text(
-                  fr
-                      ? 'Deux amis ont lu la même histoire. Quelle phrase montre ce que chacun pense ?'
-                      : 'Two friends read the same story. Which sentence shows what each one thinks?',
-                  key: const ValueKey('discuss-takes'),
-                  style: heading,
+                RevealIntoView(
+                  child: Text(
+                    fr
+                        ? 'Deux amis ont lu la même histoire. Quelle phrase montre ce que chacun pense ?'
+                        : 'Two friends read the same story. Which sentence shows what each one thinks?',
+                    key: const ValueKey('discuss-takes'),
+                    style: heading,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 for (final take in part.takes)
@@ -529,59 +531,63 @@ class DiscussView extends StatelessWidget {
                   ),
               ],
               if (s.clueShown) ...[
-                Container(
-                  key: const ValueKey('discuss-clue'),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: p.goldPale,
-                    borderRadius: Radii.cardMd,
-                    border: Border.all(color: p.gold, width: 2),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (speaker != null && clue.audioRef != null)
-                        IconButton(
-                          key: const ValueKey('discuss-clue-speak'),
-                          onPressed: () => speaker!.speak(
-                            audioRef: clue.audioRef!,
-                            partId: clue.id,
+                RevealIntoView(
+                  child: Container(
+                    key: const ValueKey('discuss-clue'),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: p.goldPale,
+                      borderRadius: Radii.cardMd,
+                      border: Border.all(color: p.gold, width: 2),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (speaker != null && clue.audioRef != null)
+                          IconButton(
+                            key: const ValueKey('discuss-clue-speak'),
+                            onPressed: () => speaker!.speak(
+                              audioRef: clue.audioRef!,
+                              partId: clue.id,
+                            ),
+                            tooltip: fr
+                                ? 'Écouter l’indice'
+                                : 'Listen to the clue',
+                            color: p.quebecBlue,
+                            icon: const Icon(Icons.volume_up_rounded),
                           ),
-                          tooltip: fr
-                              ? 'Écouter l’indice'
-                              : 'Listen to the clue',
-                          color: p.quebecBlue,
-                          icon: const Icon(Icons.volume_up_rounded),
-                        ),
-                      Expanded(
-                        child: Semantics(
-                          label: fr
-                              ? 'Nouvel indice : ${clue.text}'
-                              : 'New clue: ${clue.text}',
-                          liveRegion: true,
-                          excludeSemantics: true,
-                          child: Text.rich(
-                            TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: fr ? 'Nouvel indice : ' : 'New clue: ',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w800,
+                        Expanded(
+                          child: Semantics(
+                            label: fr
+                                ? 'Nouvel indice : ${clue.text}'
+                                : 'New clue: ${clue.text}',
+                            liveRegion: true,
+                            excludeSemantics: true,
+                            child: Text.rich(
+                              TextSpan(
+                                children: [
+                                  TextSpan(
+                                    text: fr
+                                        ? 'Nouvel indice : '
+                                        : 'New clue: ',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                    ),
                                   ),
-                                ),
-                                TextSpan(text: clue.text),
-                              ],
-                            ),
-                            style: TextStyle(
-                              fontFamily: VillageType.display,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 18,
-                              color: p.ink,
+                                  TextSpan(text: clue.text),
+                                ],
+                              ),
+                              style: TextStyle(
+                                fontFamily: VillageType.display,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 18,
+                                color: p.ink,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -600,4 +606,36 @@ class DiscussView extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Scrolls itself to the top of the activity body when it first appears,
+/// so a part the child's tap just revealed isn't left below the fold (UX
+/// review AM28: Léa and Omar appeared off-screen). Instant when motion is
+/// reduced.
+class RevealIntoView extends StatefulWidget {
+  const RevealIntoView({required this.child, super.key});
+  final Widget child;
+
+  @override
+  State<RevealIntoView> createState() => _RevealIntoViewState();
+}
+
+class _RevealIntoViewState extends State<RevealIntoView> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || Scrollable.maybeOf(context) == null) return;
+      final still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+      Scrollable.ensureVisible(
+        context,
+        alignment: 0.05,
+        duration: still ? Duration.zero : const Duration(milliseconds: 400),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }

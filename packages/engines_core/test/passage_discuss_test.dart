@@ -342,6 +342,107 @@ void main() {
       c.dispose();
     });
 
+    void phone(WidgetTester tester) {
+      tester.view.physicalSize = const Size(375, 700);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+    }
+
+    Future<void> tapShown(WidgetTester tester, String key) async {
+      final f = find.byKey(ValueKey(key));
+      await tester.ensureVisible(f);
+      await tester.pumpAndSettle();
+      await tester.tap(f);
+      await settle(tester);
+      await tester.pumpAndSettle();
+    }
+
+    bool onScreen(WidgetTester tester, String key) {
+      final y = tester.getTopLeft(find.byKey(ValueKey(key))).dy;
+      return y > 0 && y < 600;
+    }
+
+    testWidgets('AM30: each sentence carries the number its cite button uses', (
+      tester,
+    ) async {
+      phone(tester);
+      final (c, _) = controllerFor(discuss);
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(app(c));
+      for (var i = 1; i <= 4; i++) {
+        expect(find.byKey(ValueKey('passage-number-$i')), findsOne);
+      }
+      c.dispose();
+    });
+
+    testWidgets('AM28: a part a tap reveals scrolls into view', (tester) async {
+      phone(tester);
+      final (c, _) = controllerFor(discuss);
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(app(c));
+      await tapShown(tester, 'discuss-first-peur');
+      expect(onScreen(tester, 'discuss-takes'), isTrue);
+      await tapShown(tester, 'discuss-cite-lea-s2');
+      await tapShown(tester, 'discuss-cite-omar-s3');
+      expect(onScreen(tester, 'discuss-clue'), isTrue);
+      c.dispose();
+    });
+
+    testWidgets('AM29: the next question opens at the top; no cue over Bravo', (
+      tester,
+    ) async {
+      phone(tester);
+      final c = ActivitySessionController(
+        envelope: QuestionEnvelope.parse({
+          ...envelope(discuss),
+          'config': {
+            'questions': [
+              for (final q in ['Pourquoi ?', 'Et encore ?'])
+                {
+                  'prompt': {'text': q},
+                  'config': discuss,
+                },
+            ],
+          },
+        }).valueOrNull!,
+        kidId: 'kid',
+        engines: LearningEngineRegistry([
+          eraseEngine(const PassageReaderEngine()),
+        ]),
+        evaluators: EvaluatorRegistry(const [PassageReaderEvaluator()]),
+        store: InMemoryActivitySessionStore(InMemoryEventOutbox()),
+        appVersion: '0.2.0',
+        seed: 3,
+      );
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(app(c));
+      await tapShown(tester, 'discuss-first-peur');
+      await tapShown(tester, 'discuss-cite-lea-s2');
+      await tapShown(tester, 'discuss-cite-omar-s3');
+      await tapShown(tester, 'discuss-final-peur');
+      ScrollPosition body() => tester
+          .state<ScrollableState>(
+            find
+                .descendant(
+                  of: find.byType(SingleChildScrollView),
+                  matching: find.byType(Scrollable),
+                )
+                .first,
+          )
+          .position;
+      expect(body().pixels, greaterThan(0));
+      await tester.tap(find.text('VALIDER'));
+      await settle(tester);
+      expect(find.text('Bravo !'), findsOneWidget);
+      expect(find.byKey(const ValueKey('scroll-more')), findsNothing);
+      await tester.tap(find.text('CONTINUER'));
+      await settle(tester);
+      await tester.pumpAndSettle();
+      expect(find.text('Et encore ?'), findsOneWidget);
+      expect(body().pixels, 0);
+      c.dispose();
+    });
+
     testWidgets('fits a phone once every step is open', (tester) async {
       tallView(tester, width: 375);
       final (c, _) = controllerFor(discuss);

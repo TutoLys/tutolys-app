@@ -35,7 +35,7 @@ void main() {
       // reason as a hint for a screen reader.
       expect(
         tester.getSemantics(find.byKey(const ValueKey('validate'))).hint,
-        'Choisis d’abord ta réponse !',
+        'Termine d’abord ta réponse !',
       );
       handle.dispose();
     });

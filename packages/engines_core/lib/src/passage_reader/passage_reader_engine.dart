@@ -500,6 +500,8 @@ class PassageReaderEngine
           _SentenceRow(
             key: ValueKey('passage-sentence-${sentence.id}'),
             number: i + 1,
+            // A discussion cites sentences by number (UX review AM30).
+            showNumber: content.task == PassageTask.discuss,
             text: sentence.text,
             fr: fr,
             onSpeak: speaker == null || sentence.audioRef == null
@@ -640,6 +642,7 @@ class _PassageCard extends StatelessWidget {
 class _SentenceRow extends StatelessWidget {
   const _SentenceRow({
     required this.number,
+    this.showNumber = false,
     required this.text,
     required this.fr,
     required this.onSpeak,
@@ -650,6 +653,9 @@ class _SentenceRow extends StatelessWidget {
   });
 
   final int number;
+
+  /// A badge with [number] before the text, matching the cite buttons.
+  final bool showNumber;
   final String text;
   final bool fr;
   final VoidCallback? onSpeak;
@@ -692,6 +698,30 @@ class _SentenceRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (showNumber) ...[
+            Container(
+              key: ValueKey('passage-number-$number'),
+              width: 30,
+              height: 30,
+              margin: const EdgeInsets.only(top: 1),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: p.navHoverFill,
+                shape: BoxShape.circle,
+                border: Border.all(color: p.quebecBlueBright, width: 2),
+              ),
+              child: Text(
+                '$number',
+                style: TextStyle(
+                  fontFamily: VillageType.display,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
+                  color: p.ink,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+          ],
           Expanded(child: textWidget),
           if (icon != null) ...[
             const SizedBox(width: 8),

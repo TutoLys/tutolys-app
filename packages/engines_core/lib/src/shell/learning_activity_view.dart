@@ -306,6 +306,7 @@ class _LearningActivityViewState extends State<LearningActivityView> {
       onValidate: interactive && q?.answer != null ? c.submit : null,
       feedback: feedback,
       notice: c.failure == ActivityFailure.storage ? s.storageError : null,
+      questionKey: state.questionIndex,
       body: q == null
           ? const SizedBox.shrink()
           // Lets an engine save a creation without the contract carrying

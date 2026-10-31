@@ -137,7 +137,7 @@ void main() {
       expect(find.byKey(const ValueKey('validate-nudge')), findsNothing);
       await tester.tap(find.text('VALIDER'));
       await tester.pump();
-      expect(find.text('Choisis d’abord ta réponse !'), findsOneWidget);
+      expect(find.text('Termine d’abord ta réponse !'), findsOneWidget);
       expect(find.byIcon(Icons.touch_app_rounded), findsOneWidget);
       expect(validated, 0);
       await tester.pump(const Duration(seconds: 3));

@@ -81,3 +81,16 @@ found four more, now done:
   now fades out at the bottom and shows a 48 px ↓ button (« Voir la
   suite ») while there's more below. It's in the shell, so every engine
   whose body scrolls gets it.
+- **Third re-check (AM28–AM32):**
+  - A part a tap reveals (a discussion's friends, then its clue) scrolls
+    itself into view (`RevealIntoView`), instantly when motion is reduced.
+    The grey VALIDER's nudge now says « Termine d'abord ta réponse ! »,
+    which is true at every step; « Choisis d'abord » was wrong once the
+    child had chosen.
+  - Each question opens with its body scrolled to the top: the shell keys
+    the scroll on the question index.
+  - The ↓ cue hides while « Bravo ! » / « Presque » shows.
+  - In a discussion, each passage sentence carries the number its cite
+    button uses.
+  - A chosen answer shows a filled dot and a 3 px edge. A dot, not ✓,
+    because ✓ means « right ».
