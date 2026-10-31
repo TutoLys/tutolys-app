@@ -303,7 +303,7 @@ void main() {
         completed: {'a'},
       ).single.nodes;
       expect(
-        nodes.first.state,
+        nodes.singleWhere((n) => n.id == 'a').state,
         PathNodeState.soon,
         reason: 'a completed node with no exercise could not be replayed',
       );
@@ -387,11 +387,13 @@ void main() {
         playable: {'a', 'c', 'd'},
         completed: {'a', 'c'},
       ).single.nodes;
+      // The lessonless node trails the strand (K10).
+      expect(nodes.map((n) => n.id), ['a', 'c', 'd', 'b']);
       expect(nodes.map((n) => n.state), [
         PathNodeState.completed,
-        PathNodeState.soon,
         PathNodeState.completed,
         PathNodeState.active,
+        PathNodeState.soon,
       ]);
     });
 
@@ -458,7 +460,7 @@ void main() {
 
     test('a node with no lesson past the frontier is still "soon"', () {
       final nodes = build(four, playable: {'a', 'b', 'd'}).single.nodes;
-      expect(nodes[2].state, PathNodeState.soon);
+      expect(nodes.singleWhere((n) => n.id == 'c').state, PathNodeState.soon);
     });
   });
 
@@ -480,5 +482,72 @@ void main() {
     test('is nothing when nothing is open', () {
       expect(focusNodeIdOf(build(three, playable: const {})), isNull);
     });
+  });
+
+  group('lessons before « Bientôt » (K10)', () {
+    CachedSkillNode at(String id, int order, String area, int ordinal) =>
+        CachedSkillNode(
+          id: id,
+          labelFr: 'fr-$id',
+          labelEn: '',
+          stableKey: 'fls/x/b:A/o:$order',
+          subject: 'FLS',
+          grade: 1,
+          docOrder: order,
+          areaLabelFr: area,
+          areaOrdinal: ordinal,
+        );
+
+    // FLS on the dev-stack: a long "Stratégies" strand with no lessons,
+    // then the one strand that has some.
+    final fls = [
+      for (var i = 0; i < 20; i++) at('s$i', i, 'Stratégies', 0),
+      at('v1', 30, 'Vocabulaire', 1),
+      at('v2', 31, 'Vocabulaire', 1),
+      at('v3', 32, 'Vocabulaire', 1),
+    ];
+
+    test('a strand with no lesson moves after the strands that have one', () {
+      final sections = build(fls, playable: {'v2'}, subject: 'FLS');
+      expect(sections.map((s) => s.title), ['Vocabulaire', 'Stratégies']);
+      expect(sections.first.nodes.first.id, 'v2');
+      expect(sections.first.nodes.first.state, PathNodeState.active);
+    });
+
+    test('inside a strand, « Bientôt » nodes trail the playable ones', () {
+      final nodes = build(fls, playable: {'v2', 'v3'}, subject: 'FLS')
+          .first
+          .nodes;
+      expect(nodes.map((n) => n.id), ['v2', 'v3', 'v1']);
+      expect(nodes.map((n) => n.state), [
+        PathNodeState.active,
+        PathNodeState.locked,
+        PathNodeState.soon,
+      ]);
+    });
+
+    test('nothing playable yet keeps the document order', () {
+      final sections = build(fls, playable: const {}, subject: 'FLS');
+      expect(sections.map((s) => s.title), ['Stratégies', 'Vocabulaire']);
+    });
+  });
+
+  test('connectors are solid only between two open nodes (K10)', () {
+    PathNode n(PathNodeState state) =>
+        PathNode(id: state.name, label: '', state: state);
+    expect(
+      dottedConnectors([
+        n(PathNodeState.completed),
+        n(PathNodeState.active),
+        n(PathNodeState.locked),
+        n(PathNodeState.soon),
+      ]),
+      [false, true, true],
+    );
+    expect(
+      dottedConnectors([n(PathNodeState.soon), n(PathNodeState.active)]),
+      [true],
+      reason: 'the line out of an hourglass was solid',
+    );
   });
 }

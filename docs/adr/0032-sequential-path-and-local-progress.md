@@ -134,3 +134,20 @@ scrolling all the way back up. "Like a freeze row in Excel."
 - The frontier scroll is unchanged: `ensureVisible` centres in the path's
   own viewport, which now starts under the header, so the fox is never
   hidden behind it.
+
+## Revision 2026-10-31: lessons before « Bientôt » (UX review K10)
+
+On the dev-stack, French (FLS) opened on "Stratégies": 20+ `soon` nodes,
+with the only playable node about four screens down. ESL had three `soon`
+nodes above its active one, linked by a solid connector.
+
+- `buildCarteSections` now puts `soon` nodes after the other nodes in their
+  section, and moves sections made only of `soon` nodes after every section
+  that has a lesson. Unlocking already skipped `soon`, so the relative order
+  of everything playable, and so the active node, is unchanged. With nothing
+  playable yet (lessons still syncing), document order stands.
+- A connector is solid only when **both** of its nodes are open
+  (`dottedConnectors`). Before, a line out of a `soon` node into the active
+  one was solid.
+- The Carte also re-centres when the frontier node changes, not only on
+  load or subject change, because lessons usually land after the tree.

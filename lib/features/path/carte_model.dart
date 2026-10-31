@@ -161,7 +161,7 @@ List<PathSection> buildCarteSections({
   final englishLabels = showsEnglishLabels(subject, appLocale);
   var frontierTaken = false;
 
-  return [
+  return _lessonsFirst([
     for (final group in groupLeavesByArea(
       subject: subject,
       leaves: leaves,
@@ -243,7 +243,35 @@ List<PathSection> buildCarteSections({
             }(),
         ],
       ),
-  ];
+  ]);
+}
+
+/// Puts what a kid can play ahead of what is coming (K10). Inside a
+/// section, `soon` nodes move after the rest; sections made only of `soon`
+/// nodes move after every section that has a lesson. Unlocking already
+/// skips `soon` (ADR 0032), so the order of everything else, and so which
+/// node is active, doesn't change. Without this, French (FLS) opened on 20+
+/// hourglasses in "Stratégies" with its only lesson four screens down.
+List<PathSection> _lessonsFirst(List<PathSection> sections) {
+  bool isSoon(PathNode n) => n.state == PathNodeState.soon;
+  final withLessons = <PathSection>[];
+  final comingSoon = <PathSection>[];
+  for (final section in sections) {
+    if (section.nodes.every(isSoon)) {
+      comingSoon.add(section);
+    } else {
+      withLessons.add(
+        PathSection(
+          title: section.title,
+          nodes: [
+            ...section.nodes.where((n) => !isSoon(n)),
+            ...section.nodes.where(isSoon),
+          ],
+        ),
+      );
+    }
+  }
+  return [...withLessons, ...comingSoon];
 }
 
 /// `'FR'` when a lesson came back in French though English was asked for

@@ -140,6 +140,14 @@ class _Metrics {
   );
 }
 
+/// For each connector (node i-1 → node i), whether it is drawn dotted.
+/// Solid only between two open nodes, so a line out of an hourglass or a
+/// padlock never reads as a road (K10).
+List<bool> dottedConnectors(List<PathNode> nodes) => [
+  for (var i = 1; i < nodes.length; i++)
+    !isOpenState(nodes[i - 1].state) || !isOpenState(nodes[i].state),
+];
+
 /// The design's serpentine path.
 ///
 /// Nodes weave across four columns — 50%, 28%, 50%, 72%, repeating — inside a
@@ -147,7 +155,7 @@ class _Metrics {
 /// weaving is what makes a strand read as a journey rather than a list.
 ///
 /// Connectors are the design's bezier curves, drawn behind the orbs: solid
-/// blue into any node that is open, dotted grey into one that is locked, so
+/// blue between two open nodes, dotted grey touching a locked or `soon` one, so
 /// "how far can I go" is legible without reading a label.
 ///
 /// The **active** node carries the "Continuer" card and the fox beside it.
@@ -214,11 +222,7 @@ class SkillPath extends StatelessWidget {
                     child: CustomPaint(
                       painter: _ConnectorPainter(
                         centres: centres,
-                        lockedAhead: [
-                          for (var i = 1; i < nodes.length; i++)
-                            nodes[i].state == PathNodeState.locked ||
-                                nodes[i].state == PathNodeState.soon,
-                        ],
+                        lockedAhead: dottedConnectors(nodes),
                         solid: p.quebecBlueBright,
                         // The design's `--track` itself is invisible on the
                         // pale path card (#E1E9F7 on ~#E6F3FF); a third of

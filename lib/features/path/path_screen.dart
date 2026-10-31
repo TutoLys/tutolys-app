@@ -48,6 +48,11 @@ class _PathScreenState extends ConsumerState<PathScreen> {
 
   /// The section whose title the pinned header shows.
   int _topSection = 0;
+
+  /// The frontier last scrolled to. Lessons often arrive after the tree,
+  /// moving the frontier with no load or subject change; it is followed
+  /// then too (K10).
+  String? _focusId;
   bool _topUpdateQueued = false;
 
   @override
@@ -137,6 +142,9 @@ class _PathScreenState extends ConsumerState<PathScreen> {
     final sections = showPath
         ? _sectionsOf(context, state, lessons)
         : const <PathSection>[];
+    final focusId = focusNodeIdOf(sections);
+    if (focusId != null && focusId != _focusId) _scrollToFocus();
+    _focusId = focusId;
     while (_sectionKeys.length < sections.length) {
       _sectionKeys.add(GlobalKey(debugLabel: 'carte-section'));
     }
