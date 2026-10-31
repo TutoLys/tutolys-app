@@ -309,8 +309,8 @@ void main() {
 
     // The window widths Hafid named, as the width the shell leaves the page
     // (84px rail from 600, 224px sidebar from 1024).
+    // A phone gets the grid instead (AM6), tested below.
     for (final (window, page) in [
-      (375.0, 375.0),
       (768.0, 684.0),
       (1024.0, 800.0),
       (1950.0, 1726.0),
@@ -343,18 +343,38 @@ void main() {
       });
     }
 
-    testWidgets('a phone: the far edge fades, and swaps once scrolled', (
+    testWidgets('a phone: all four tabs in a 2×2 grid, 48px or taller (AM6)', (
       tester,
     ) async {
-      await pump(tester, width: 320);
-      final dynamic state = tester.state(find.byType(PillTabs<SettingsTab>));
-      expect(state.fading, (before: false, after: true));
-      await tester.drag(
-        find.byKey(const ValueKey('settings-tab-sound')),
-        const Offset(-600, 0),
-      );
+      await pump(tester, width: 375);
+      expect(find.byKey(const ValueKey('pill-tabs-fade')), findsNothing);
+      final rects = [
+        for (final tab in SettingsTab.values)
+          tester.getRect(find.byKey(ValueKey('settings-tab-${tab.name}'))),
+      ];
+      for (final r in rects) {
+        expect(r.left, greaterThanOrEqualTo(0));
+        expect(r.right, lessThanOrEqualTo(375));
+        expect(r.height, greaterThanOrEqualTo(48));
+      }
+      expect(rects[0].top, rects[1].top, reason: 'two to a row');
+      expect(rects[2].top, greaterThan(rects[0].bottom));
+      expect(rects[0].width, closeTo(rects[1].width, 0.5), reason: 'equal');
+      await tester.tap(find.byKey(const ValueKey('settings-tab-parents')));
       await tester.pumpAndSettle();
-      expect(state.fading, (before: true, after: false));
+      expect(find.byKey(const ValueKey('settings-passcodes')), findsOneWidget);
+    });
+
+    testWidgets('sign-out is a neutral outline, never red (AM7)', (
+      tester,
+    ) async {
+      await pump(tester, stored: SettingsTab.parents.name);
+      final button = tester.widget<OutlinedButton>(
+        find.byKey(const ValueKey('settings-sign-out')),
+      );
+      final fg = button.style!.foregroundColor!.resolve({});
+      expect(fg, isIn([VillagePalette.light.ink, VillagePalette.dark.ink]));
+      expect(fg, isNot(TutolysColors.danger));
     });
 
     testWidgets('Zone parent holds sign-out', (tester) async {

@@ -32,6 +32,9 @@ class PillTab<T> {
 ///   fades out, so a pill half out of view reads as "more this way" rather
 ///   than as a clipped label (Hafid, 2026-10-29). The selected pill is
 ///   brought into view when it changes, instantly when motion is reduced.
+/// - **[grid]:** for a page with a few fixed tabs, a phone shows them all as
+///   a two-column grid of 56px cells, icon over label, instead of a row
+///   whose last pill starts past the screen's edge (AM6, Réglages).
 class PillTabs<T> extends StatefulWidget {
   const PillTabs({
     required this.tabs,
@@ -39,8 +42,12 @@ class PillTabs<T> extends StatefulWidget {
     required this.onSelect,
     required this.compact,
     this.keyPrefix = 'pill',
+    this.grid = false,
     super.key,
   });
+
+  /// Two columns of equal cells instead of a scrolling row.
+  final bool grid;
 
   final List<PillTab<T>> tabs;
   final T selected;
@@ -169,9 +176,42 @@ class _PillTabsState<T> extends State<PillTabs<T>> {
     return KeyEventResult.handled;
   }
 
+  /// [PillTabs.grid]: every tab in view, two to a row, none scrolled away.
+  Widget _gridLayout(BuildContext context) {
+    final rows = <Widget>[];
+    for (var i = 0; i < widget.tabs.length; i += 2) {
+      rows.add(
+        Padding(
+          padding: EdgeInsets.only(top: i == 0 ? 0 : 8),
+          child: Row(
+            children: [
+              Expanded(child: _pill(context, i, cell: true)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: i + 1 < widget.tabs.length
+                    ? _pill(context, i + 1, cell: true)
+                    : const SizedBox.shrink(),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Semantics(
+        role: SemanticsRole.tabBar,
+        container: true,
+        explicitChildNodes: true,
+        child: Column(children: rows),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final compact = widget.compact;
+    if (widget.grid) return _gridLayout(context);
     return Padding(
       padding: EdgeInsets.only(bottom: compact ? 14 : 18),
       child: SizedBox(
@@ -189,9 +229,8 @@ class _PillTabsState<T> extends State<PillTabs<T>> {
               child: ScrollConfiguration(
                 // Desktop: Flutter drags only touch by default, so a mouse
                 // could never reach a pill past the edge.
-                behavior: ScrollConfiguration.of(context).copyWith(
-                  dragDevices: PointerDeviceKind.values.toSet(),
-                ),
+                behavior: ScrollConfiguration.of(context)
+                    .copyWith(dragDevices: PointerDeviceKind.values.toSet()),
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Semantics(
@@ -235,7 +274,7 @@ class _PillTabsState<T> extends State<PillTabs<T>> {
   ({bool before, bool after}) get fading =>
       (before: _moreBefore, after: _moreAfter);
 
-  Widget _pill(BuildContext context, int i) {
+  Widget _pill(BuildContext context, int i, {bool cell = false}) {
     final p = VillagePalette.of(context);
     final t = context.s;
     final compact = widget.compact;
@@ -256,50 +295,82 @@ class _PillTabsState<T> extends State<PillTabs<T>> {
           child: Material(
             // `.subject-tab.is-active { background: #E8F0FF; border: none }`
             color: active ? p.navActiveFill : p.surface,
-            shape: StadiumBorder(
-              side: active ? BorderSide.none : BorderSide(color: p.line),
-            ),
+            shape: cell
+                ? RoundedRectangleBorder(
+                    borderRadius: VillageMetrics.mdAll,
+                    side: active ? BorderSide.none : BorderSide(color: p.line),
+                  )
+                : StadiumBorder(
+                    side: active ? BorderSide.none : BorderSide(color: p.line),
+                  ),
             child: InkWell(
               key: ValueKey('${widget.keyPrefix}-${_name(tab.value)}'),
               focusNode: _nodes[i],
-              customBorder: const StadiumBorder(),
+              customBorder: cell
+                  ? const RoundedRectangleBorder(
+                      borderRadius: VillageMetrics.mdAll,
+                    )
+                  : const StadiumBorder(),
               // The active pill stays tappable: on the Carte it re-syncs a
               // stale subject.
               onTap: () => widget.onSelect(tab.value),
               mouseCursor: active
                   ? SystemMouseCursors.basic
                   : SystemMouseCursors.click,
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  tab.leading == null
-                      ? (compact ? 13 : 16)
-                      : (compact ? 6 : 8),
-                  compact ? 6 : 7,
-                  compact ? 13 : 16,
-                  compact ? 6 : 7,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (tab.leading case final leading?) ...[
-                      SizedBox.square(
-                        dimension: PillTabs.leadingSize(compact),
-                        child: leading,
+              child: cell
+                  ? SizedBox(
+                      height: 56,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (tab.leading case final leading?)
+                            SizedBox.square(dimension: 22, child: leading),
+                          const SizedBox(height: 2),
+                          Text(
+                            tab.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: VillageType.display,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                              color: active ? p.quebecBlueBright : p.inkMuted,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                    ],
-                    Text(
-                      tab.label,
-                      style: TextStyle(
-                        fontFamily: VillageType.display,
-                        fontWeight: FontWeight.w700,
-                        fontSize: compact ? 12 : 13,
-                        color: active ? p.quebecBlueBright : p.inkMuted,
+                    )
+                  : Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        tab.leading == null
+                            ? (compact ? 13 : 16)
+                            : (compact ? 6 : 8),
+                        compact ? 6 : 7,
+                        compact ? 13 : 16,
+                        compact ? 6 : 7,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (tab.leading case final leading?) ...[
+                            SizedBox.square(
+                              dimension: PillTabs.leadingSize(compact),
+                              child: leading,
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          Text(
+                            tab.label,
+                            style: TextStyle(
+                              fontFamily: VillageType.display,
+                              fontWeight: FontWeight.w700,
+                              fontSize: compact ? 12 : 13,
+                              color: active ? p.quebecBlueBright : p.inkMuted,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
             ),
           ),
         ),

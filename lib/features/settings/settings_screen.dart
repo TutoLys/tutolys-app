@@ -150,6 +150,8 @@ class SettingsScreen extends ConsumerWidget {
               keyPrefix: 'settings-tab',
               selected: tab,
               compact: compact,
+              // AM6: on a phone the fourth tab started past the edge.
+              grid: compact,
               onSelect: (next) => ref
                   .read(pageTabProvider(TabbedPage.settings).notifier)
                   .select(next.name),
@@ -821,14 +823,19 @@ class _SignOutButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return TextButton.icon(
-      style: TextButton.styleFrom(
-        foregroundColor: TutolysColors.danger,
-        backgroundColor: Color(0xFFFFF1F1),
+    final p = VillagePalette.of(context);
+    // AM7: a neutral outline, never red. It's an adult's action behind the
+    // PIN, and nothing in a kid's app is drawn as danger.
+    return OutlinedButton.icon(
+      key: const ValueKey('settings-sign-out'),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: p.ink,
+        backgroundColor: p.surface,
+        side: BorderSide(color: p.line, width: 1.5),
         minimumSize: Size(0, 52),
         shape: RoundedRectangleBorder(borderRadius: VillageMetrics.mdAll),
       ),
-      icon: Icon(Icons.logout, size: 19),
+      icon: Icon(Icons.logout, size: 19, color: p.inkMuted),
       label: Text(
         context.s.settingsSignOut,
         style: TextStyle(
