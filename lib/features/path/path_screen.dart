@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import '../../data/local_db/database.dart' show CachedSkillNode;
+import 'review.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -142,6 +144,13 @@ class _PathScreenState extends ConsumerState<PathScreen> {
     final sections = showPath
         ? _sectionsOf(context, state, lessons)
         : const <PathSection>[];
+    final review = showPath
+        ? reviewLeaves(
+            masteries: ref.watch(progressControllerProvider).masteries,
+            leaves: state.leaves,
+            playable: lessons.keys.toSet(),
+          )
+        : const <CachedSkillNode>[];
     final focusId = focusNodeIdOf(sections);
     if (focusId != null && focusId != _focusId) _scrollToFocus();
     _focusId = focusId;
@@ -251,6 +260,22 @@ class _PathScreenState extends ConsumerState<PathScreen> {
                                 CarteGap.noLessonsYet => t.pathNoLessonsYet,
                               },
                             ),
+                          // Evidence-only review, in its own row (OW3).
+                          if (showPath && review.isNotEmpty)
+                            _ReviewRow(
+                              leaves: review,
+                              onTap: (leaf) async {
+                                final l = lessons[leaf.id];
+                                if (l == null) return;
+                                await playNode(
+                                  context,
+                                  ref,
+                                  leaf: leaf,
+                                  lessons: l,
+                                );
+                                _scrollToFocus();
+                              },
+                            ),
                           // Skills with no lessons yet still show, locked:
                           // the kid sees what's coming.
                           if (showPath)
@@ -315,6 +340,113 @@ class _PathScreenState extends ConsumerState<PathScreen> {
         _ => null,
       },
       describeNotDownloaded: t.pathNotDownloaded,
+    );
+  }
+}
+
+/// « Révision » (OW3, ADR 0111): up to three skills the kid's own data says
+/// to go back to, above the path. Gold and calm, never amber: a review is
+/// an invitation, not a mark against them.
+class _ReviewRow extends StatelessWidget {
+  const _ReviewRow({required this.leaves, required this.onTap});
+
+  final List<CachedSkillNode> leaves;
+  final Future<void> Function(CachedSkillNode leaf) onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
+    final t = context.s;
+    final english = Localizations.localeOf(context).languageCode == 'en';
+    return Padding(
+      key: const ValueKey('carte-review'),
+      padding: const EdgeInsets.only(bottom: Space.lg),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: p.surface,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: p.gold, width: 2),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(Space.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.replay_rounded, color: p.gold, size: 26),
+                  const SizedBox(width: Space.xs),
+                  Text(
+                    t.reviewTitle,
+                    style: TextStyle(
+                      fontFamily: VillageType.display,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 19,
+                      color: p.ink,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                t.reviewSubtitle,
+                style: TextStyle(fontSize: 14, color: p.inkMuted),
+              ),
+              const SizedBox(height: Space.sm),
+              Wrap(
+                spacing: Space.sm,
+                runSpacing: Space.sm,
+                children: [
+                  for (final leaf in leaves)
+                    Material(
+                      color: p.navActiveFill,
+                      shape: const StadiumBorder(),
+                      child: InkWell(
+                        key: ValueKey('carte-review-${leaf.id}'),
+                        customBorder: const StadiumBorder(),
+                        onTap: () => onTap(leaf),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(minHeight: 52),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: Space.md,
+                              vertical: Space.xs,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.play_arrow_rounded,
+                                  color: p.quebecBlue,
+                                ),
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: Text(
+                                    english && leaf.labelEn.isNotEmpty
+                                        ? leaf.labelEn
+                                        : leaf.labelFr,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontFamily: VillageType.display,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15,
+                                      color: p.ink,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

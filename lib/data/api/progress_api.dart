@@ -7,6 +7,7 @@ class SkillMasteryDto {
     required this.skillNodeId,
     required this.masteryPct,
     required this.isMastered,
+    this.status,
   });
 
   factory SkillMasteryDto.fromJson(Map<String, Object?> json) {
@@ -14,6 +15,7 @@ class SkillMasteryDto {
       skillNodeId: json['skill_node'] as String,
       masteryPct: (json['mastery_pct'] as num).toDouble(),
       isMastered: json['is_mastered'] as bool,
+      status: json['status'] as String?,
     );
   }
 
@@ -21,10 +23,16 @@ class SkillMasteryDto {
   final double masteryPct;
   final bool isMastered;
 
+  /// The §5.9 classifier's verdict (`struggling`, `watch`, `learning`,
+  /// `mastered`, `not_started`), or null while the backend doesn't serve
+  /// it. Feeds the Carte's « Révision » row (OW3, ADR 0111).
+  final String? status;
+
   Map<String, Object?> toJson() => {
     'skill_node': skillNodeId,
     'mastery_pct': masteryPct,
     'is_mastered': isMastered,
+    if (status != null) 'status': status,
   };
 }
 

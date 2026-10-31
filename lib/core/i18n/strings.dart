@@ -284,6 +284,10 @@ abstract class Strings {
   String get galleryEmptyBody;
   String get galleryEmptyBack;
 
+  /// The Carte's « Révision » row (OW3, ADR 0111).
+  String get reviewTitle;
+  String get reviewSubtitle;
+
   /// The quest board couldn't be read (A3).
   String get questsLoadFailed;
 
@@ -1205,6 +1209,13 @@ class _FrenchStrings extends Strings {
 
   @override
   String get galleryEmptyBack => 'Retour au village';
+
+  @override
+  String get reviewTitle => 'Révision';
+
+  @override
+  String get reviewSubtitle =>
+      'Rejoue ces leçons pour les réussir encore mieux.';
 
   @override
   String get questsLoadFailed => "Je n'arrive pas à charger tes quêtes.";
@@ -2596,6 +2607,12 @@ class _EnglishStrings extends Strings {
 
   @override
   String get galleryEmptyBack => 'Back to the village';
+
+  @override
+  String get reviewTitle => 'Review';
+
+  @override
+  String get reviewSubtitle => 'Play these again to do them even better.';
 
   @override
   String get questsLoadFailed => "I can't load your quests.";
