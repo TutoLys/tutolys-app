@@ -6,8 +6,8 @@ import 'database.dart';
 /// (ADR 0037).
 ///
 /// Erases every kid-scoped row: queued events, streak days, engine
-/// settings, the kid's own `app_state` keys, unfinished sessions and
-/// "Mes créations". Leaves alone what the device shares between kids:
+/// settings, the kid's own `app_state` keys (unsent ideas and bug reports
+/// among them, ADR 0104), unfinished sessions and "Mes créations". Leaves alone what the device shares between kids:
 /// the content caches, and `app_state` rows owned by [deviceScope].
 class KidLocalData {
   const KidLocalData(this.db, {required this.kidId});

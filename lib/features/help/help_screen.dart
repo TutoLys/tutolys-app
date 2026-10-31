@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../core/widgets/page_column.dart';
 import '../../core/i18n/strings.dart';
 import '../../core/widgets/breathing_mascot.dart';
+import '../feedback/feedback_card.dart';
 
 /// One question and its answer.
 class HelpEntry {
@@ -101,6 +102,8 @@ class HelpScreen extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: Space.md),
+          const FeedbackCard(),
           const SizedBox(height: Space.md),
           _ParentContact(palette: p, strings: t),
           const SizedBox(height: Space.xl),

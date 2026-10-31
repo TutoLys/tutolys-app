@@ -1,0 +1,220 @@
+import 'package:design_system/design_system.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/i18n/strings.dart';
+import '../../data/local_db/feedback_queue.dart';
+import '../pairing/pairing_controller.dart' show appVersion;
+import '../profile/pin_gate.dart';
+import 'feedback_sender.dart';
+
+/// « Une idée ? Un problème ? » in Aide & support (work order F3, app ADR
+/// 0104). The kid may write; only an adult's PIN sends, because a child
+/// may type a name, a school or an address.
+class FeedbackCard extends ConsumerWidget {
+  const FeedbackCard({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = VillagePalette.of(context);
+    final t = context.s;
+    final sender = ref.watch(feedbackSenderProvider);
+
+    return Material(
+      color: p.surface,
+      borderRadius: VillageMetrics.mdAll,
+      elevation: VillageColors.elevationSmall,
+      shadowColor: p.shadowSmall,
+      child: Padding(
+        padding: const EdgeInsets.all(Space.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.lightbulb_outline, size: 18, color: p.quebecBlue),
+                const SizedBox(width: Space.xs),
+                Expanded(
+                  child: Text(
+                    t.feedbackTitle,
+                    style: TextStyle(
+                      fontFamily: VillageType.display,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                      color: p.ink,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: Space.xs),
+            Text(
+              t.feedbackBody,
+              style: TextStyle(fontSize: 13, height: 1.45, color: p.inkMuted),
+            ),
+            const SizedBox(height: Space.sm),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FilledButton.icon(
+                key: const ValueKey('feedback-open'),
+                onPressed: sender == null
+                    ? null
+                    : () => showDialog<void>(
+                        context: context,
+                        builder: (_) => const FeedbackDialog(),
+                      ),
+                icon: const Icon(Icons.edit_outlined, size: 18),
+                label: Text(t.feedbackOpen),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The form: idea or problem, then the text. « Envoyer » asks for the
+/// guardian PIN first, and only then queues and sends.
+class FeedbackDialog extends ConsumerStatefulWidget {
+  const FeedbackDialog({super.key, this.route = 'aide'});
+
+  /// Where the message was written from, sent as context.
+  final String route;
+
+  @override
+  ConsumerState<FeedbackDialog> createState() => _FeedbackDialogState();
+}
+
+class _FeedbackDialogState extends ConsumerState<FeedbackDialog> {
+  final _text = TextEditingController();
+  FeedbackKind _kind = FeedbackKind.idea;
+  bool _sending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _text.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _text.dispose();
+    super.dispose();
+  }
+
+  int get _length => feedbackLength(_text.text);
+
+  bool get _canSend => !_sending && _length > 0 && _length <= feedbackMaxLength;
+
+  Future<void> _send() async {
+    final t = context.s;
+    final sender = ref.read(feedbackSenderProvider);
+    if (sender == null) return;
+    final feedbackContext = FeedbackContext(
+      appVersion: appVersion,
+      platform: FeedbackContext.currentPlatform(),
+      locale: Localizations.localeOf(context).languageCode,
+      route: widget.route,
+    );
+    final allowed = await requireGuardianPin(
+      context,
+      ref,
+      confirmLabel: t.feedbackSend,
+      createSubtitle: t.feedbackPinCreate,
+      enterSubtitle: t.feedbackPinEnter,
+    );
+    if (!allowed || !mounted) return;
+    setState(() => _sending = true);
+    final outcome = await sender.submit(
+      kind: _kind,
+      text: _text.text,
+      context: feedbackContext,
+    );
+    if (!mounted) return;
+    final navigator = Navigator.of(context);
+    VillageToast.show(
+      context,
+      outcome == FeedbackOutcome.sent ? t.feedbackSent : t.feedbackQueued,
+      icon: Icons.check_circle_outline,
+    );
+    navigator.pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
+    final t = context.s;
+    final over = _length > feedbackMaxLength;
+
+    return AlertDialog(
+      title: Text(t.feedbackTitle),
+      content: SizedBox(
+        width: 480,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Wrap(
+              spacing: Space.xs,
+              children: [
+                for (final (kind, label, icon) in [
+                  (
+                    FeedbackKind.idea,
+                    t.feedbackKindIdea,
+                    Icons.lightbulb_outline,
+                  ),
+                  (FeedbackKind.bug, t.feedbackKindBug, Icons.build_outlined),
+                ])
+                  ChoiceChip(
+                    key: ValueKey('feedback-kind-${kind.wire}'),
+                    avatar: Icon(icon, size: 16),
+                    label: Text(label),
+                    selected: _kind == kind,
+                    onSelected: _sending
+                        ? null
+                        : (_) => setState(() => _kind = kind),
+                  ),
+              ],
+            ),
+            const SizedBox(height: Space.sm),
+            TextField(
+              key: const ValueKey('feedback-text'),
+              controller: _text,
+              enabled: !_sending,
+              minLines: 4,
+              maxLines: 8,
+              keyboardType: TextInputType.multiline,
+              decoration: InputDecoration(
+                hintText: t.feedbackHint,
+                border: const OutlineInputBorder(),
+                counterText: '$_length / $feedbackMaxLength',
+                counterStyle: TextStyle(
+                  // Amber, never red: the design's retry colour.
+                  color: over ? p.retry : p.inkMuted,
+                  fontWeight: over ? FontWeight.w700 : null,
+                ),
+              ),
+            ),
+            const SizedBox(height: Space.xs),
+            Text(
+              t.feedbackPrivacyNote,
+              style: TextStyle(fontSize: 12, color: p.inkMuted),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _sending ? null : () => Navigator.of(context).pop(),
+          child: Text(t.cancel),
+        ),
+        FilledButton(
+          key: const ValueKey('feedback-send'),
+          onPressed: _canSend ? _send : null,
+          child: Text(t.feedbackSend),
+        ),
+      ],
+    );
+  }
+}

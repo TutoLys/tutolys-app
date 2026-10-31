@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../diagnostics/boot_log.dart';
 import '../../data/sync/outbox_flusher.dart';
+import '../../features/feedback/feedback_sender.dart';
 import '../../data/sync/outbox_flusher_provider.dart';
 import '../../features/launch/launch_flow.dart';
 import '../../features/pairing/pairing_controller.dart';
@@ -127,6 +128,7 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
       session.noteAway(DateTime.now());
     } else if (state == AppLifecycleState.resumed) {
       session.noteBack(DateTime.now());
+      ref.read(feedbackSenderProvider)?.flush().ignore();
       // A day may have passed, or a lesson been played elsewhere.
       _rescheduleReminders();
     }
@@ -164,6 +166,12 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
     ref.listen<SessionState>(sessionControllerProvider, (previous, next) {
       if (next.status == SessionStatus.paired) {
         _flusher.resume();
+      }
+      // Ideas and bug reports written offline go once a token is back
+      // (app ADR 0104).
+      if (next.accessToken != null &&
+          next.accessToken != previous?.accessToken) {
+        ref.read(feedbackSenderProvider)?.flush().ignore();
       }
       // Paired, unpaired, a kid added or removed: the reminders follow.
       if (previous?.status != next.status ||

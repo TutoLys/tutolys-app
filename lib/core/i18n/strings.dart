@@ -354,6 +354,18 @@ abstract class Strings {
   String get helpFaqTitle;
   String get helpParentsTitle;
   String get helpParentsBody;
+  String get feedbackTitle;
+  String get feedbackBody;
+  String get feedbackOpen;
+  String get feedbackKindIdea;
+  String get feedbackKindBug;
+  String get feedbackHint;
+  String get feedbackPrivacyNote;
+  String get feedbackSend;
+  String get feedbackPinCreate;
+  String get feedbackPinEnter;
+  String get feedbackSent;
+  String get feedbackQueued;
   String get aboutTagline;
   String get aboutVersion;
   String get aboutCurriculum;
@@ -1339,6 +1351,49 @@ class _FrenchStrings extends Strings {
 
   @override
   String get helpParentsBody => 'Une question technique, un problème de compte ? Passez par le site web.';
+
+  @override
+  String get feedbackTitle => 'Une idée ? Un problème ?';
+
+  @override
+  String get feedbackBody =>
+      'Dis-nous ce que tu aimerais, ou ce qui ne marche pas. Un adulte '
+      'entre le NIP pour l\'envoyer.';
+
+  @override
+  String get feedbackOpen => 'Écrire un message';
+
+  @override
+  String get feedbackKindIdea => 'Une idée';
+
+  @override
+  String get feedbackKindBug => 'Un problème';
+
+  @override
+  String get feedbackHint => 'Écris ton message ici…';
+
+  @override
+  String get feedbackPrivacyNote =>
+      'N\'écris pas ton nom, ton école ni ton adresse.';
+
+  @override
+  String get feedbackSend => 'Envoyer';
+
+  @override
+  String get feedbackPinCreate =>
+      'Créez d\'abord un NIP parent à 6 chiffres : seul un adulte pourra '
+      'envoyer un message à l\'équipe TutoLys.';
+
+  @override
+  String get feedbackPinEnter =>
+      'Demande à un adulte d\'entrer le NIP pour envoyer ton message.';
+
+  @override
+  String get feedbackSent => 'Merci ! Ton message est envoyé.';
+
+  @override
+  String get feedbackQueued =>
+      'Merci ! Il partira dès que l\'appareil sera connecté.';
 
   @override
   String get aboutTagline => 'Apprendre en jouant, selon le programme du Québec.';
@@ -2662,6 +2717,49 @@ class _EnglishStrings extends Strings {
 
   @override
   String get helpParentsBody => 'A technical question, an account problem? Go through the website.';
+
+  @override
+  String get feedbackTitle => 'An idea? A problem?';
+
+  @override
+  String get feedbackBody =>
+      'Tell us what you would like, or what isn\'t working. An adult enters '
+      'the PIN to send it.';
+
+  @override
+  String get feedbackOpen => 'Write a message';
+
+  @override
+  String get feedbackKindIdea => 'An idea';
+
+  @override
+  String get feedbackKindBug => 'A problem';
+
+  @override
+  String get feedbackHint => 'Write your message here…';
+
+  @override
+  String get feedbackPrivacyNote =>
+      'Don\'t write your name, your school or your address.';
+
+  @override
+  String get feedbackSend => 'Send';
+
+  @override
+  String get feedbackPinCreate =>
+      'First create a 6-digit parent PIN: only an adult will be able to send '
+      'a message to the TutoLys team.';
+
+  @override
+  String get feedbackPinEnter =>
+      'Ask an adult to enter the PIN to send your message.';
+
+  @override
+  String get feedbackSent => 'Thank you! Your message was sent.';
+
+  @override
+  String get feedbackQueued =>
+      'Thank you! It will go as soon as the device is online.';
 
   @override
   String get aboutTagline => 'Learning through play, following the Quebec curriculum.';
