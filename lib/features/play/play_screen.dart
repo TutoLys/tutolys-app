@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tutolys_motion/tutolys_motion.dart';
 import 'package:uuid/uuid.dart';
 
+import '../progress/progress_controller.dart' show progressControllerProvider;
 import '../../data/local_db/creation_store.dart';
 import '../../data/local_db/database.dart';
 import '../../data/local_db/drift_activity_session_store.dart';
@@ -222,6 +223,7 @@ class PlayScreenState extends ConsumerState<PlayScreen> {
     _lifecycle.dispose();
     unawaited(_autoRead?.cancel());
     unawaited(_audio.stopChannel(AudioChannel.narration));
+    _narrating.dispose();
     // Not exited and not finished means the screen went away mid-session:
     // leave the snapshot in place so the next visit resumes it.
     _controller?.dispose();
@@ -285,12 +287,31 @@ class PlayScreenState extends ConsumerState<PlayScreen> {
     final source = plan.promptSource();
     if (source == null) return;
     unawaited(c.recordAudioRequest(SpeechPart.prompt));
-    _audio.play(
+    _narrate(
       AudioRequest(
         source: source,
         channel: AudioChannel.narration,
         priority: 10,
       ),
+    );
+  }
+
+  /// True while a read-aloud clip plays, for the shell (G17): speed_tap's
+  /// clock pauses meanwhile.
+  final _narrating = ValueNotifier<bool>(false);
+  PlaybackHandle? _narration;
+
+  void _narrate(AudioRequest request) {
+    final handle = _audio.play(request);
+    _narration = handle;
+    _narrating.value = true;
+    unawaited(
+      handle.done.then((_) {
+        if (mounted && identical(_narration, handle)) {
+          _narration = null;
+          _narrating.value = false;
+        }
+      }),
     );
   }
 
@@ -312,7 +333,7 @@ class PlayScreenState extends ConsumerState<PlayScreen> {
     return ContentSpeakerScope(
       speaker: _ContentSpeaker((audioRef, partId) {
         unawaited(c.recordAudioRequest(SpeechPart.prompt, partId: partId));
-        _audio.play(
+        _narrate(
           AudioRequest(
             source: PrerecordedAudio(exerciseId: _exerciseId, ref: audioRef),
             channel: AudioChannel.narration,
@@ -436,6 +457,9 @@ class PlayScreenState extends ConsumerState<PlayScreen> {
     );
     StreakLocal(db, kidId: _kidId).recordPlayedToday();
     unawaited(
+      ref.read(progressControllerProvider.notifier).creditLocalXp(summary.xp),
+    );
+    unawaited(
       NodeProgressLocal(db, kidId: _kidId)
           .recordCompleted(
             widget.node.id,
@@ -535,7 +559,10 @@ class PlayScreenState extends ConsumerState<PlayScreen> {
                 locale: locale,
                 character: stage,
                 onDone: _onRuntimeDone,
-                xpEarned: _runtimeXp,
+                // Practice credits nothing, so it shows no XP (N14).
+                xpEarned: widget.practice ? null : _runtimeXp,
+                // speed_tap's clock waits while the question is read (G17).
+                narrating: _narrating,
                 speakPrompt: (q) {
                   final plan = _planFor(c, q.index);
                   if (plan == null || plan.promptSource() == null) return null;

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'local_xp.dart';
 import '../../data/api/progress_api.dart';
 import '../../data/local_db/streak_local.dart';
 import '../pairing/pairing_controller.dart';
@@ -85,6 +86,26 @@ class ProgressState {
   /// The last read failed, and these are the last good values this device
   /// saw (`ProgressCache`), never zeros. At most a subtle hint.
   final bool stale;
+
+  ProgressState withTotalXp(int xp) => ProgressState(
+    currentStreakDays: currentStreakDays,
+    masteredCount: masteredCount,
+    totalSkills: totalSkills,
+    loading: loading,
+    offline: offline,
+    isStreakEstimated: isStreakEstimated,
+    freezesAvailable: freezesAvailable,
+    dailyQuest: dailyQuest,
+    streakFreeze: streakFreeze,
+    questDefinitions: questDefinitions,
+    totalXp: xp,
+    masteries: masteries,
+    level: level,
+    skillsCompleted: skillsCompleted,
+    skillsTotal: skillsTotal,
+    levelProgress: levelProgress,
+    stale: stale,
+  );
 
   ProgressState withLevel(GradeLevel? g) => ProgressState(
     currentStreakDays: currentStreakDays,
@@ -204,7 +225,11 @@ class ProgressController extends Notifier<ProgressState> {
                 ? shown.streakFreeze
                 : shown.streakFreeze?.withoutEarned(),
             questDefinitions: shown.quests,
-            totalXp: shown.totalXp,
+            // Never below what a série just credited (N7).
+            totalXp: await LocalXp(
+              ref.read(localDatabaseProvider),
+              kidId: ref.read(activeKidIdProvider) ?? unpairedKidId,
+            ).reconcile(shown.totalXp),
             masteries: shown.masteries,
           );
     _server = shown;
@@ -246,6 +271,18 @@ class ProgressController extends Notifier<ProgressState> {
   }
 
   Future<void> refresh() => _load();
+
+  /// A finished série's XP, in the header now rather than when the ledger
+  /// catches up (N7, ADR 0112).
+  Future<void> creditLocalXp(int earned) async {
+    if (earned <= 0) return;
+    final total = await LocalXp(
+      ref.read(localDatabaseProvider),
+      kidId: ref.read(activeKidIdProvider) ?? unpairedKidId,
+    ).credit(shown: state.totalXp, earned: earned);
+    if (!ref.mounted) return;
+    state = state.withTotalXp(total);
+  }
 }
 
 final progressControllerProvider =

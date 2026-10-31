@@ -24,10 +24,13 @@ import 'package:tutolys_motion/tutolys_motion.dart';
 class _SilentAudio implements AudioCoordinator {
   final List<AudioRequest> requests = [];
 
+  /// Set to keep the next clips playing until it completes.
+  Completer<PlaybackPhase>? hold;
+
   @override
   PlaybackHandle play(AudioRequest request) {
     requests.add(request);
-    return _DoneHandle(requests.length);
+    return _DoneHandle(requests.length, hold?.future);
   }
 
   @override
@@ -45,11 +48,13 @@ class _SilentAudio implements AudioCoordinator {
 }
 
 class _DoneHandle implements PlaybackHandle {
-  _DoneHandle(this.requestId);
+  _DoneHandle(this.requestId, [this._held]);
   @override
   final int requestId;
+  final Future<PlaybackPhase>? _held;
   @override
-  Future<PlaybackPhase> get done => Future.value(PlaybackPhase.completed);
+  Future<PlaybackPhase> get done =>
+      _held ?? Future.value(PlaybackPhase.completed);
   @override
   Future<void> stop() async {}
 }
@@ -145,6 +150,7 @@ void main() {
     bool legacyOnly = false,
     bool english = false,
     bool dark = false,
+    bool practice = false,
     List<CelebrationRowData> celebrationRows = const [],
   }) => ProviderScope(
     overrides: [
@@ -182,7 +188,11 @@ void main() {
               child: TextButton(
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) => PlayScreen(node: _node, envelope: envelope),
+                    builder: (_) => PlayScreen(
+                      node: _node,
+                      envelope: envelope,
+                      practice: practice,
+                    ),
                   ),
                 ),
                 child: const Text('open'),
@@ -860,6 +870,42 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(PlayScreen), findsNothing);
       expect(find.text('home'), findsOneWidget);
+    });
+  });
+
+  group('2026-10-31 game calls', () {
+    testWidgets('G17: the shell hears "narrating" while the question is read',
+        (tester) async {
+      await tester.pumpWidget(app(_mcqEnvelope));
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await settle(tester);
+      final narrating = tester
+          .widget<LearningActivityView>(find.byType(LearningActivityView))
+          .narrating!;
+      expect(narrating.value, isFalse);
+
+      audio.hold = Completer<PlaybackPhase>();
+      await tester.tap(find.byTooltip('Écouter la question'));
+      await tester.pump();
+      expect(narrating.value, isTrue);
+
+      audio.hold!.complete(PlaybackPhase.completed);
+      await tester.pump();
+      expect(narrating.value, isFalse);
+    });
+
+    testWidgets('N14: practice shows no XP in the game', (tester) async {
+      await tester.pumpWidget(app(_mcqEnvelope, practice: true));
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await settle(tester);
+      await tester.tap(find.text('12'));
+      await settle(tester);
+      await tester.tap(find.text('VALIDER'));
+      await settle(tester);
+      expect(find.text('Bravo !'), findsOneWidget);
+      expect(find.text('+3'), findsNothing);
     });
   });
 }

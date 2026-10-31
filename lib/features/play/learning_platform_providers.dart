@@ -82,13 +82,35 @@ final evaluatorRegistryProvider = Provider<EvaluatorRegistry>(
 /// day) is a change here and nowhere else — ADR 0060.
 final characterRegistryProvider = Provider<CharacterRegistry>(
   (ref) => CharacterRegistry(
-    manifests: [BitmapCharacterRenderer.fox],
+    manifests: [villageFox],
     renderers: const [
       BitmapCharacterRenderer(),
       PlaceholderCharacterRenderer(),
     ],
   ),
 );
+
+/// The fox as the Village and the Carte draw it, in every reaction (N6,
+/// ADR 0112). The joyful, victory and surprised renders are a different
+/// model (blue body, scarf instead of the cape), so the celebration showed
+/// another character. Until renders of this fox arrive, its one pose plays
+/// every reaction and the motion recipes tell them apart. Re-adding a pose
+/// slot here is all a matching render needs.
+final villageFox = CharacterManifest(
+  id: BitmapCharacterRenderer.fox.id,
+  version: BitmapCharacterRenderer.fox.version,
+  rendererType: BitmapCharacterRenderer.fox.rendererType,
+  supported: BitmapCharacterRenderer.fox.supported,
+  fallbacks: BitmapCharacterRenderer.fox.fallbacks,
+  idle: BitmapCharacterRenderer.fox.idle,
+  assets: {
+    for (final MapEntry(:key, :value)
+        in BitmapCharacterRenderer.fox.assets.entries)
+      if (!_offModelPoses.contains(key)) key: value,
+  },
+);
+
+const _offModelPoses = {'pose.celebrating', 'pose.victory', 'pose.encouraging'};
 
 /// The cast for every activity, for now. Subject-specific companions arrive
 /// as data here, never as a name inside an engine.
