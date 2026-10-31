@@ -81,6 +81,10 @@ class _PairingScreenState extends ConsumerState<PairingScreen> {
     final ui = ref.watch(pairingFormProvider);
     final s = context.s;
     final error = _errorText(ui, s);
+    // Read above the Scaffold, which hides the inset from its body. With
+    // the keyboard up, the logo and « Salut ! » step aside so the code
+    // boxes and the button stay above it (AM22).
+    final keyboard = MediaQuery.viewInsetsOf(context).bottom > 0;
 
     final form = _PairingForm(
       alphabet: _alphabet,
@@ -97,6 +101,7 @@ class _PairingScreenState extends ConsumerState<PairingScreen> {
       },
       onCompleted: (_) => _submit(),
       onSubmit: _submit,
+      showTitle: !keyboard,
       title: _classMode ? s.pairingClassTitle : null,
       hint: _classMode ? null : s.pairingHint,
       subtitle: _classMode
@@ -140,7 +145,8 @@ class _PairingScreenState extends ConsumerState<PairingScreen> {
               padding: const EdgeInsets.all(Space.lg),
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final stacked = constraints.maxWidth < Breakpoints.compact;
+                  final stacked =
+                      keyboard || constraints.maxWidth < Breakpoints.compact;
                   final mascot = _Mascot(
                     mood: _moodFor(ui),
                     size: stacked ? 108 : 168,
@@ -148,11 +154,17 @@ class _PairingScreenState extends ConsumerState<PairingScreen> {
 
                   if (stacked) {
                     return SingleChildScrollView(
+                      key: const ValueKey('pairing-scroll'),
+                      // Anchored to the bottom while the keyboard is up, so
+                      // the button sits just above it rather than under it.
+                      reverse: keyboard,
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          mascot,
-                          const SizedBox(height: Space.lg),
+                          if (!keyboard) ...[
+                            mascot,
+                            const SizedBox(height: Space.lg),
+                          ],
                           form,
                         ],
                       ),
@@ -223,6 +235,7 @@ class _PairingForm extends StatelessWidget {
     required this.onChanged,
     required this.onCompleted,
     required this.onSubmit,
+    this.showTitle = true,
     this.title,
     this.subtitle,
     this.hint,
@@ -238,6 +251,10 @@ class _PairingForm extends StatelessWidget {
   final ValueChanged<String> onChanged;
   final ValueChanged<String> onCompleted;
   final VoidCallback onSubmit;
+
+  /// False while the keyboard is up (AM22): the subtitle still says what
+  /// to type, and the boxes keep the room.
+  final bool showTitle;
 
   /// Replace the default title and subtitle: adding a profile, or a class.
   final String? title;
@@ -271,22 +288,24 @@ class _PairingForm extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              title ?? s.pairingTitle,
-              textAlign: TextAlign.center,
-              // The design's display face, like every other title.
-              style: context.text.displaySmall?.copyWith(
-                fontFamily: VillageType.display,
-                fontWeight: FontWeight.w800,
+            if (showTitle) ...[
+              Text(
+                title ?? s.pairingTitle,
+                textAlign: TextAlign.center,
+                // The design's display face, like every other title.
+                style: context.text.displaySmall?.copyWith(
+                  fontFamily: VillageType.display,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ),
-            const SizedBox(height: Space.xs),
+              const SizedBox(height: Space.xs),
+            ],
             Text(
               subtitle ?? s.pairingSubtitle,
               textAlign: TextAlign.center,
               style: context.text.bodyLarge?.copyWith(color: extras.mutedText),
             ),
-            const SizedBox(height: Space.xl),
+            SizedBox(height: showTitle ? Space.xl : Space.md),
 
             TutolysCodeField(
               length: codeLength,
@@ -351,6 +370,7 @@ class _PairingForm extends StatelessWidget {
             const SizedBox(height: Space.sm),
 
             FilledButton(
+              key: const ValueKey('pairing-submit'),
               onPressed: canSubmit ? onSubmit : null,
               child: isSubmitting
                   ? Row(

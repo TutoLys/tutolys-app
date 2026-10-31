@@ -13,6 +13,7 @@ import 'core/diagnostics/crash_reporting.dart';
 import 'core/diagnostics/diag_log.dart';
 import 'core/diagnostics/diag_store.dart';
 import 'core/routing/app_shell.dart';
+import 'core/startup/phone_orientation.dart';
 import 'core/startup/storage_problem.dart';
 import 'core/routing/paired_router.dart' show rememberLaunchLocation;
 import 'core/startup/release_config_guard.dart';
@@ -43,6 +44,9 @@ void _main() {
   // From the first tap, keep the audio output awake (web only), so the first
   // read-aloud isn't clipped while the OS wakes the sink (ADR 0043).
   AudioOutputKeepAlive.instance.armOnFirstGesture();
+  // Phones stay upright: a picture and its answers never fit side by side
+  // in a phone's landscape (AM21, ADR 0107).
+  lockPhonesToPortrait().ignore();
 
   // Hold the native splash until Flutter's first frame is up.
   //

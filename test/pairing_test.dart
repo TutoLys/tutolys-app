@@ -465,6 +465,52 @@ void main() {
       );
     });
 
+    testWidgets('keyboard up: no logo or title, boxes and button above it '
+        '(AM22)', (tester) async {
+      tester.view.physicalSize = const Size(375, 812);
+      tester.view.devicePixelRatio = 1;
+      // An iPhone keyboard leaves 476px of the 812.
+      tester.view.viewInsets = const FakeViewPadding(bottom: 336);
+      addTearDown(tester.view.reset);
+      final container = containerWith(
+        store: FakeSessionStore(),
+        api: FakePairingApi(
+          exchangeResult: _success,
+          refreshResult: const RefreshRejected(),
+        ),
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            locale: const Locale('fr', 'CA'),
+            supportedLocales: const [Locale('fr', 'CA'), Locale('en', 'CA')],
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            theme: TutolysTheme.learner(),
+            home: const PairingScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Salut !'), findsNothing);
+      expect(find.byType(Image), findsNothing, reason: 'the logo steps aside');
+      final button = tester.getRect(
+        find.byKey(const ValueKey('pairing-submit')),
+      );
+      expect(button.bottom, lessThanOrEqualTo(476));
+      expect(button.top, greaterThanOrEqualTo(0));
+      final boxes = tester.getRect(find.byType(TutolysCodeField));
+      expect(boxes.top, greaterThanOrEqualTo(0));
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('the connect button is disabled until six characters', (
       tester,
     ) async {

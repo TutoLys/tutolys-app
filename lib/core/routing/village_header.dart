@@ -101,12 +101,18 @@ class VillageHeader extends StatelessWidget {
   /// The bell's tooltip and screen-reader name, unread count included.
   final String notificationsLabel;
 
+  /// Below this window height the header is the short one (AM23).
+  static const shortHeight = 500.0;
+
   @override
   Widget build(BuildContext context) {
     final p = VillagePalette.of(context);
 
+    // AM23: in a phone's landscape the 92px header took a quarter of the
+    // height. Under 500px tall it's 56px, the avatar and buttons smaller.
+    final short = MediaQuery.sizeOf(context).height < shortHeight;
     return Container(
-      height: VillageMetrics.headerHeight,
+      height: short ? 56 : VillageMetrics.headerHeight,
       padding: EdgeInsets.symmetric(horizontal: compact ? 16 : 28),
       decoration: BoxDecoration(
         color: p.surface,
@@ -116,7 +122,7 @@ class VillageHeader extends StatelessWidget {
         builder: (context, box) {
           // What the pills may take: everything but the avatar, the gear and
           // a name at least ~90px wide.
-          final avatar = compact ? 36.0 : 52.0;
+          final avatar = short ? 32.0 : (compact ? 36.0 : 52.0);
           final gear =
               (onBack == null ? 0.0 : 52.0) +
               (onSettings == null ? 0.0 : 50.0) +

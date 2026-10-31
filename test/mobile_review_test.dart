@@ -1,6 +1,10 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
+
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tutolys_app/core/startup/phone_orientation.dart';
 import 'package:tutolys_app/core/routing/village_header.dart';
 import 'package:tutolys_app/core/routing/village_nav.dart';
 import 'package:tutolys_app/features/path/skill_path.dart';
@@ -176,5 +180,85 @@ void main() {
       );
       expect(find.byKey(const ValueKey('recent-empty')), findsNothing);
     });
+  });
+
+  group('AM21: phones stay upright', () {
+    test('an Android or iOS phone locks to portrait', () {
+      for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
+        expect(
+          shouldLockPortrait(
+            platform: platform,
+            isWeb: false,
+            logicalSize: const Size(390, 844),
+          ),
+          isTrue,
+        );
+      }
+    });
+
+    test('tablets, desktops and the web rotate freely', () {
+      expect(
+        shouldLockPortrait(
+          platform: TargetPlatform.android,
+          isWeb: false,
+          logicalSize: const Size(800, 1280),
+        ),
+        isFalse,
+      );
+      expect(
+        shouldLockPortrait(
+          platform: TargetPlatform.linux,
+          isWeb: false,
+          logicalSize: const Size(390, 844),
+        ),
+        isFalse,
+      );
+      expect(
+        shouldLockPortrait(
+          platform: TargetPlatform.iOS,
+          isWeb: true,
+          logicalSize: const Size(390, 844),
+        ),
+        isFalse,
+      );
+    });
+  });
+
+  group('AM23: a short header in a phone\'s landscape', () {
+    Future<double> headerHeight(WidgetTester tester, Size size) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        themed(
+          const Align(
+            alignment: Alignment.topCenter,
+            child: VillageHeader(
+              key: ValueKey('h'),
+              name: 'Léa',
+              subtitle: '',
+              stats: [],
+              compact: true,
+            ),
+          ),
+        ),
+      );
+      return tester.getSize(find.byKey(const ValueKey('h'))).height;
+    }
+
+    testWidgets('56px under 500px tall', (tester) async {
+      expect(await headerHeight(tester, const Size(812, 375)), 56);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('the design\'s 92px otherwise', (tester) async {
+      expect(await headerHeight(tester, const Size(375, 812)), 92);
+    });
+  });
+
+  test('AM24: the web page lets a parent pinch-zoom', () {
+    final html = File('web/index.html').readAsStringSync();
+    expect(html, isNot(contains('user-scalable=no')));
+    expect(html, isNot(contains('maximum-scale=1')));
   });
 }
