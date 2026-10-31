@@ -62,3 +62,17 @@ At 375 px on the web build:
   That is deliberate: a grey fish is a question nobody can answer.
 - Tests: `emoji_font_test.dart` (4), `answer_layout_test.dart` (7), one new
   counters test, and both goldens refreshed (picture answers are centred).
+
+## Re-check, same day
+ux-review confirmed AM1–AM4 at 375 (`ux-review/shots/mobile/after/`). It
+found four more, now done:
+- **data_graph and passage_reader** answers use the same big answers
+  (`ChoiceLayout` and `prominent`), so a number becomes a square tile.
+- **A line of pictures in a question** (« 🐟🐟 » above « Combien de
+  poissons ? ») is what a counting question counts, so it draws at 40 px,
+  not at the text's 20. The whole question is still one screen-reader
+  label.
+- **AM25:** measure_tool's « 40 °C » fell half under VALIDER. Up to three
+  short pick-one answers now share one row, each 96 px tall.
+- **AM26:** data_graph's chart is 260 px tall (was 220), so pictograph
+  faces are ~26 px, and its axis is 15 px (was 12, and « 0 » was clipped).

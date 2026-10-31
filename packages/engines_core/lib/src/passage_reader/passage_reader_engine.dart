@@ -569,6 +569,8 @@ class PassageReaderEngine
                       label: content.options
                           .firstWhere((o) => o.id == id)
                           .label,
+                      // Big and centred (UX review AM3).
+                      prominent: true,
                       state: stateOf(id),
                       semanticsState: hintOf(id),
                       onTap: tapOf(id),

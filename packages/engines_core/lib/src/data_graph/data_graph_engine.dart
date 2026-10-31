@@ -3,6 +3,7 @@ import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
 
 import '../widgets/answer_tile.dart';
+import '../widgets/choice_layout.dart';
 import '../widgets/swatch_text.dart';
 
 enum DataGraphMode {
@@ -513,31 +514,31 @@ class DataGraphEngine
               chart,
               if (!build) ...[
                 const SizedBox(height: 24),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    for (final id in s.optionOrder)
-                      SizedBox(
-                        width: 200,
-                        child: AnswerTile(
-                          key: ValueKey('graph-option-$id'),
-                          label: content.option(id)!.label,
-                          state: s.tried.contains(id)
-                              ? AnswerTileState.retry
-                              : s.selected == id
-                              ? AnswerTileState.picked
-                              : AnswerTileState.idle,
-                          semanticsState: s.tried.contains(id)
-                              ? (fr ? 'déjà essayé' : 'already tried')
-                              : null,
-                          onTap: view.enabled && !s.tried.contains(id)
-                              ? () => view.dispatch(PickGraphOption(id))
-                              : null,
-                        ),
-                      ),
-                  ],
+                // Big centred answers, numbers as square tiles (UX review
+                // AM3).
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 360),
+                  child: ChoiceLayout(
+                    ids: s.optionOrder,
+                    labelOf: (id) => content.option(id)!.label,
+                    tile: (id, {required square}) => AnswerTile(
+                      key: ValueKey('graph-option-$id'),
+                      label: content.option(id)!.label,
+                      prominent: true,
+                      square: square,
+                      state: s.tried.contains(id)
+                          ? AnswerTileState.retry
+                          : s.selected == id
+                          ? AnswerTileState.picked
+                          : AnswerTileState.idle,
+                      semanticsState: s.tried.contains(id)
+                          ? (fr ? 'déjà essayé' : 'already tried')
+                          : null,
+                      onTap: view.enabled && !s.tried.contains(id)
+                          ? () => view.dispatch(PickGraphOption(id))
+                          : null,
+                    ),
+                  ),
                 ),
               ],
             ],
@@ -568,8 +569,10 @@ class _Chart extends StatelessWidget {
   final bool fr;
   final Widget Function(GraphCategory c)? stepper;
 
-  static const _height = 220.0;
-  static const _axis = 32.0;
+  // Tall enough that a pictograph's faces are ~26 px and the axis reads at
+  // 15 px on a phone (UX review AM26: 14 px faces, 8 px numbers).
+  static const _height = 260.0;
+  static const _axis = 40.0;
 
   @override
   Widget build(BuildContext context) {
@@ -580,8 +583,8 @@ class _Chart extends StatelessWidget {
     final every = max <= 10 ? 1 : 2;
     final axisStyle = TextStyle(
       fontFamily: VillageType.display,
-      fontWeight: FontWeight.w700,
-      fontSize: 12,
+      fontWeight: FontWeight.w800,
+      fontSize: 15,
       color: p.inkMuted,
     );
     final labelStyle = TextStyle(
@@ -671,11 +674,13 @@ class _Chart extends StatelessWidget {
             width: _axis,
             height: _height + 20,
             child: Stack(
+              // « 0 » sits half below the baseline; don't cut it.
+              clipBehavior: Clip.none,
               children: [
                 for (var v = 0; v <= max; v += every)
                   Positioned(
                     right: 6,
-                    bottom: v * unit - 7,
+                    bottom: v * unit - 9,
                     child: Text('$v', style: axisStyle),
                   ),
               ],

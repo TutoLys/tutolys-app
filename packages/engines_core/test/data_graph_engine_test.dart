@@ -297,6 +297,24 @@ void main() {
       c.dispose();
     });
 
+    testWidgets('AM3/AM26: big centred answers, a 15 px axis', (tester) async {
+      view(tester, width: 375);
+      final (c, _) = controllerFor(readConfig);
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(app(c));
+      final label = tester.widget<Text>(
+        find.descendant(
+          of: find.byKey(const ValueKey('graph-option-b')),
+          matching: find.byType(Text),
+        ),
+      );
+      expect(label.style!.fontSize, 24);
+      expect(label.textAlign, TextAlign.center);
+      expect(tester.widget<Text>(find.text('10')).style!.fontSize, 15);
+      expect(tester.takeException(), isNull);
+      c.dispose();
+    });
+
     testWidgets('keyboard alone can raise a bar', (tester) async {
       view(tester);
       final (c, _) = controllerFor(buildConfig);

@@ -231,6 +231,28 @@ void main() {
       }
     }
 
+    testWidgets('AM25: three answers share one row at 375', (tester) async {
+      tester.view.physicalSize = const Size(375, 812);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final (c, _) = controllerFor(thermometer);
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(app(c));
+      final tiles = find.descendant(
+        of: find.byKey(const ValueKey('pick-one-row')),
+        matching: find.byType(AnswerTile),
+      );
+      expect(tiles, findsNWidgets(3));
+      final tops = {
+        for (final e in tiles.evaluate())
+          tester.getTopLeft(find.byWidget(e.widget)).dy,
+      };
+      expect(tops, hasLength(1));
+      expect(tester.getSize(tiles.first).height, 96);
+      expect(tester.takeException(), isNull);
+      c.dispose();
+    });
+
     testWidgets('the ruler: wrong, then right', (tester) async {
       tester.view.physicalSize = const Size(1000, 1200);
       tester.view.devicePixelRatio = 1;

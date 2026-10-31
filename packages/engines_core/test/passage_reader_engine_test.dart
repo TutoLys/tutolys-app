@@ -391,6 +391,22 @@ void main() {
       c.dispose();
     });
 
+    testWidgets('AM3: the answers are big and centred', (tester) async {
+      tallView(tester, width: 375);
+      final (c, _) = controllerFor(chooseConfig);
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(app(c));
+      final tile = tester.widget<AnswerTile>(
+        find.byKey(const ValueKey('passage-option-a')),
+      );
+      expect(tile.prominent, isTrue);
+      expect(
+        tester.getSize(find.byKey(const ValueKey('passage-option-a'))).height,
+        greaterThanOrEqualTo(64),
+      );
+      c.dispose();
+    });
+
     testWidgets('several: the count follows what is found', (tester) async {
       tallView(tester);
       final (c, _) = controllerFor(multiConfig);

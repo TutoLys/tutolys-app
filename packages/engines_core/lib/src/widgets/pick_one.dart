@@ -154,6 +154,52 @@ abstract final class PickOne {
         ? AnswerTileState.picked
         : AnswerTileState.idle;
 
+    final square = width <= 160;
+    Widget tile(String id) => Semantics(
+      label: (spoken ?? label)(id),
+      hint: switch (stateOf(id)) {
+        AnswerTileState.correct => fr ? 'bonne réponse' : 'right answer',
+        AnswerTileState.retry => fr ? 'déjà essayé' : 'already tried',
+        AnswerTileState.picked => fr ? 'choisi' : 'chosen',
+        AnswerTileState.idle => null,
+      },
+      excludeSemantics: true,
+      button: true,
+      selected: state.selected == id,
+      child: AnswerTile(
+        key: ValueKey('$keyPrefix-$id'),
+        label: label(id),
+        square: square,
+        state: stateOf(id),
+        onTap: enabled && !state.solved && !state.tried.contains(id)
+            ? () => onPick(id)
+            : null,
+      ),
+    );
+
+    // Up to three short answers share one row, so the third doesn't fall
+    // under VALIDER on a phone (UX review AM25: « 40 °C » sat half under
+    // it). The row splits the width; tiles stay 96 px tall.
+    if (square && state.order.length <= 3) {
+      return Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth:
+                state.order.length * width + (state.order.length - 1) * 12,
+          ),
+          child: Row(
+            key: const ValueKey('pick-one-row'),
+            children: [
+              for (final (i, id) in state.order.indexed) ...[
+                if (i > 0) const SizedBox(width: 12),
+                Expanded(child: SizedBox(height: 96, child: tile(id))),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+
     return Wrap(
       spacing: 12,
       runSpacing: 12,
@@ -164,29 +210,8 @@ abstract final class PickOne {
             width: width,
             // Narrow slots hold short answers (« 20 °C »): big square-ish
             // tiles (UX review AM3). Wide ones hold sentences.
-            height: width <= 160 ? 96 : null,
-            child: Semantics(
-              label: (spoken ?? label)(id),
-              hint: switch (stateOf(id)) {
-                AnswerTileState.correct =>
-                  fr ? 'bonne réponse' : 'right answer',
-                AnswerTileState.retry => fr ? 'déjà essayé' : 'already tried',
-                AnswerTileState.picked => fr ? 'choisi' : 'chosen',
-                AnswerTileState.idle => null,
-              },
-              excludeSemantics: true,
-              button: true,
-              selected: state.selected == id,
-              child: AnswerTile(
-                key: ValueKey('$keyPrefix-$id'),
-                label: label(id),
-                square: width <= 160,
-                state: stateOf(id),
-                onTap: enabled && !state.solved && !state.tried.contains(id)
-                    ? () => onPick(id)
-                    : null,
-              ),
-            ),
+            height: square ? 96 : null,
+            child: tile(id),
           ),
       ],
     );

@@ -357,10 +357,4 @@ class _FocusOutlineState extends State<_FocusOutline> {
   }
 }
 
-/// Whether [label] is only pictures (emoji), with no letters or digits, so
-/// it can be drawn at picture size.
-bool _pictureOnly(String label) {
-  final t = label.trim();
-  if (t.isEmpty) return false;
-  return !RegExp(r'[\p{L}\p{N}]', unicode: true).hasMatch(t);
-}
+bool _pictureOnly(String label) => isPictureOnly(label);

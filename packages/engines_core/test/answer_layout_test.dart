@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// UX review AM3: answers were 15 px, left-aligned, in 343 px tiles, with
 /// the bottom 40 % of a phone screen empty.
 void main() {
+  String? promptOverride;
   Map<String, Object?> envelope(List<String> labels, {String? prompt}) => {
     'exercise_id': '1c3d6d41-a465-42be-b3a9-c1dc8460e24c',
     'version': 1,
@@ -18,7 +19,9 @@ void main() {
     'subject': 'MATH',
     'grade': 1,
     'rank': 0,
-    'prompt': {'text': prompt ?? 'Combien de poissons y a-t-il ?'},
+    'prompt': {
+      'text': prompt ?? promptOverride ?? 'Combien de poissons y a-t-il ?',
+    },
     'config': {
       'options': [
         for (final (i, l) in labels.indexed) {'id': 'o$i', 'label': l},
@@ -156,6 +159,25 @@ void main() {
   testWidgets('AM4: a wider screen keeps the fox', (tester) async {
     final c = await pump(tester, ['1', '3', '2'], width: 800);
     expect(find.byKey(const ValueKey('fox')), findsOneWidget);
+    c.dispose();
+  });
+
+  testWidgets('the fish a question counts draw at 40 px', (tester) async {
+    promptOverride = '🐟🐟\nCombien de poissons y a-t-il ?';
+    addTearDown(() => promptOverride = null);
+    final c = await pump(tester, ['1', '3', '2']);
+    final texts = tester
+        .widgetList<Text>(
+          find.descendant(
+            of: find.byKey(const ValueKey('prompt-text')),
+            matching: find.byType(Text),
+          ),
+        )
+        .toList();
+    expect(texts.first.data, '🐟🐟');
+    expect(texts.first.style!.fontSize, 40);
+    expect(texts.last.style!.fontSize, 20);
+    expect(find.bySemanticsLabel(RegExp('Combien de poissons')), findsWidgets);
     c.dispose();
   });
 

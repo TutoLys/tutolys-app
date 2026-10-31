@@ -58,6 +58,14 @@ TextStyle withEmojiFallback(TextStyle? style) {
   return base.copyWith(fontFamilyFallback: [...fallback, emojiFontFamily]);
 }
 
+/// Whether [text] is only pictures (emoji), with no letters or digits, so
+/// it can be drawn at picture size.
+bool isPictureOnly(String text) {
+  final t = text.trim();
+  if (t.isEmpty) return false;
+  return !RegExp(r'[\p{L}\p{N}]', unicode: true).hasMatch(t);
+}
+
 /// Whether [text] holds at least one painted swatch.
 bool hasSwatch(String text) => text.runes.any(swatches.containsKey);
 

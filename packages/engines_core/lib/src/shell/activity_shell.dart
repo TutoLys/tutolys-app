@@ -573,15 +573,7 @@ class _PromptRow extends StatelessWidget {
                 // Lines a one-line prompt up with the 56 dp speaker's middle.
                 child: Padding(
                   padding: EdgeInsets.only(top: onSpeak != null ? 12 : 0),
-                  child: SwatchText(
-                    text!,
-                    style: TextStyle(
-                      fontFamily: VillageType.display,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      color: palette.ink,
-                    ),
-                  ),
+                  child: _PromptText(text: text!, color: palette.ink),
                 ),
               ),
           ],
@@ -589,6 +581,52 @@ class _PromptRow extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// The question's text. A line of pictures only (« 🐟🐟 » above « Combien
+/// de poissons ? ») is what a counting question counts, so it draws at
+/// 40 px, not at the text's 20 (UX review, mobile re-check).
+class _PromptText extends StatelessWidget {
+  const _PromptText({required this.text, required this.color});
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = TextStyle(
+      fontFamily: VillageType.display,
+      fontSize: 20,
+      fontWeight: FontWeight.w700,
+      color: color,
+    );
+    final lines = text.split('\n');
+    if (!lines.any(isPictureOnly)) return SwatchText(text, style: style);
+    // Consecutive lines of one kind stay one text, so words still wrap.
+    final runs = <(bool, List<String>)>[];
+    for (final l in lines) {
+      final pic = isPictureOnly(l);
+      if (runs.isNotEmpty && runs.last.$1 == pic) {
+        runs.last.$2.add(l);
+      } else {
+        runs.add((pic, [l]));
+      }
+    }
+    return Semantics(
+      label: text,
+      excludeSemantics: true,
+      child: Column(
+        key: const ValueKey('prompt-text'),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final (pic, run) in runs)
+            SwatchText(
+              run.join('\n'),
+              style: pic ? style.copyWith(fontSize: 40, height: 1.15) : style,
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 class _HintPanel extends StatelessWidget {
