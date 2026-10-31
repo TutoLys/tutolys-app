@@ -357,7 +357,7 @@ abstract class Strings {
   String get feedbackTitle;
   String get feedbackBody;
   String get feedbackOpen;
-  String get feedbackKindIdea;
+  String get feedbackKindFeature;
   String get feedbackKindBug;
   String get feedbackHint;
   String get feedbackPrivacyNote;
@@ -1353,7 +1353,7 @@ class _FrenchStrings extends Strings {
   String get helpParentsBody => 'Une question technique, un problème de compte ? Passez par le site web.';
 
   @override
-  String get feedbackTitle => 'Une idée ? Un problème ?';
+  String get feedbackTitle => 'Une suggestion ? Un bug ?';
 
   @override
   String get feedbackBody =>
@@ -1364,10 +1364,10 @@ class _FrenchStrings extends Strings {
   String get feedbackOpen => 'Écrire un message';
 
   @override
-  String get feedbackKindIdea => 'Une idée';
+  String get feedbackKindFeature => 'Suggérer une fonctionnalité';
 
   @override
-  String get feedbackKindBug => 'Un problème';
+  String get feedbackKindBug => 'Signaler un bug';
 
   @override
   String get feedbackHint => 'Écris ton message ici…';
@@ -2719,7 +2719,7 @@ class _EnglishStrings extends Strings {
   String get helpParentsBody => 'A technical question, an account problem? Go through the website.';
 
   @override
-  String get feedbackTitle => 'An idea? A problem?';
+  String get feedbackTitle => 'A suggestion? A bug?';
 
   @override
   String get feedbackBody =>
@@ -2730,10 +2730,10 @@ class _EnglishStrings extends Strings {
   String get feedbackOpen => 'Write a message';
 
   @override
-  String get feedbackKindIdea => 'An idea';
+  String get feedbackKindFeature => 'Suggest a feature';
 
   @override
-  String get feedbackKindBug => 'A problem';
+  String get feedbackKindBug => 'Report a bug';
 
   @override
   String get feedbackHint => 'Write your message here…';

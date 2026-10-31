@@ -81,6 +81,28 @@ void main() {
       },
     );
 
+    test('the kind goes out as feature or bug, never idea', () {
+      expect(FeedbackKind.values.map((k) => k.wire), ['feature', 'bug']);
+    });
+
+    test('a message queued under the old name still reads', () async {
+      await db
+          .into(db.appStateTable)
+          .insert(
+            AppStateTableCompanion.insert(
+              kidId: 'a',
+              key: 'feedback.queue',
+              value:
+                  '[{"client_id":"1","kind":"idea","text":"t",'
+                  '"context":{},"created_at":"2026-10-31T00:00:00Z"}]',
+              updatedAt: DateTime.utc(2026, 10, 31),
+            ),
+          );
+      final item = (await FeedbackQueue(db, kidId: 'a').pending()).single;
+      expect(item.kind, FeedbackKind.feature);
+      expect(item.toBody()['kind'], 'feature');
+    });
+
     test('never touches the telemetry outbox', () async {
       await FeedbackQueue(db, kidId: 'a').add(_item('1'));
       expect(await db.select(db.eventOutboxTable).get(), isEmpty);
@@ -124,7 +146,7 @@ void main() {
       final s = sender(api);
       expect(
         await s.submit(
-          kind: FeedbackKind.idea,
+          kind: FeedbackKind.feature,
           text: 'Des dinos',
           context: ctx,
         ),
@@ -140,7 +162,7 @@ void main() {
       final api = _FakeApi([]);
       final s = sender(api, token: () => null);
       expect(
-        await s.submit(kind: FeedbackKind.idea, text: 'x', context: ctx),
+        await s.submit(kind: FeedbackKind.feature, text: 'x', context: ctx),
         FeedbackOutcome.queued,
       );
       expect(api.bodies, isEmpty);
@@ -153,7 +175,7 @@ void main() {
         FeedbackSendResult.sent,
       ]);
       final s = sender(api);
-      await s.submit(kind: FeedbackKind.idea, text: 'new', context: ctx);
+      await s.submit(kind: FeedbackKind.feature, text: 'new', context: ctx);
       expect(await s.queue.pending(), isEmpty);
       expect(api.bodies.map((b) => b['client_id']), ['old', 'id-0']);
     });
@@ -162,7 +184,7 @@ void main() {
       await FeedbackQueue(db, kidId: 'kid-a').add(_item('old'));
       final api = _FakeApi([FeedbackSendResult.retryLater]);
       final s = sender(api);
-      await s.submit(kind: FeedbackKind.idea, text: 'new', context: ctx);
+      await s.submit(kind: FeedbackKind.feature, text: 'new', context: ctx);
       expect(api.bodies, hasLength(1));
       expect((await s.queue.pending()).map((i) => i.clientId), ['old', 'id-0']);
     });
@@ -178,12 +200,12 @@ void main() {
     test('empty or over 4,000 characters is refused before queuing', () async {
       final s = sender(_FakeApi([]));
       expect(
-        () => s.submit(kind: FeedbackKind.idea, text: '   ', context: ctx),
+        () => s.submit(kind: FeedbackKind.feature, text: '   ', context: ctx),
         throwsArgumentError,
       );
       expect(
         () => s.submit(
-          kind: FeedbackKind.idea,
+          kind: FeedbackKind.feature,
           text: 'a' * (feedbackMaxLength + 1),
           context: ctx,
         ),
@@ -282,7 +304,7 @@ void main() {
       tester,
     ) async {
       await pump(tester);
-      expect(find.text(fr.feedbackKindIdea), findsOneWidget);
+      expect(find.text(fr.feedbackKindFeature), findsOneWidget);
       expect(find.text(fr.feedbackKindBug), findsOneWidget);
       expect(find.text(fr.feedbackPrivacyNote), findsOneWidget);
       expect(sendEnabled(tester), isFalse, reason: 'nothing written yet');
@@ -369,7 +391,7 @@ void main() {
 
 QueuedFeedback _item(String id) => QueuedFeedback(
   clientId: id,
-  kind: FeedbackKind.idea,
+  kind: FeedbackKind.feature,
   text: 'text $id',
   context: const {'locale': 'fr'},
   createdAt: DateTime.utc(2026, 10, 31),

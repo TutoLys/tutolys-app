@@ -1,4 +1,4 @@
-# ADR 0104: Ideas and bug reports from the app (« Une idée ? Un problème ? »)
+# ADR 0104: Feature suggestions and bug reports from the app (« Une suggestion ? Un bug ? »)
 
 - Status: accepted; built against a provisional contract
 - Date: 2026-10-31
@@ -14,7 +14,8 @@ paired device's token. The app's half sits in Aide & support.
 ## Decisions
 
 1. **Where:** a card in Aide & support, between the FAQ and « Pour les
-   parents ». It opens a dialog with a choice between idea and problem,
+   parents ». It opens a dialog with a choice between « Suggérer une
+   fonctionnalité » and « Signaler un bug »,
    plain text up to 4,000 characters, and a line asking the child not to
    write their name, school or address.
 2. **The guardian PIN sends.** The kid may write; « Envoyer » goes through
@@ -45,7 +46,7 @@ paired device's token. The app's half sits in Aide & support.
 
 ## Provisional
 
-The body (`client_id`, `kind`, `text`, `context`) is the app's proposal.
+The body (`client_id`, `kind` = `feature` | `bug`, `text`, `context`) is the app's proposal.
 When Backend sends the contract, `FeedbackApi` and `QueuedFeedback.toBody`
 are the only places to change. Until the endpoint exists, a message waits
 in the queue (404 means try later), so nothing is lost meanwhile.
@@ -55,3 +56,10 @@ in the queue (404 means try later), so nothing is lost meanwhile.
 - Kids' text stays on the device only as long as it is unsent, and goes when
   the kid is removed.
 - No screenshots or uploads (work order, security 2).
+
+## Revision 2026-10-31: "feature", never "idea"
+
+Hafid's wording: « Suggérer une fonctionnalité » / « Signaler un bug » (EN
+"Suggest a feature" / "Report a bug"), and the card's title is now « Une
+suggestion ? Un bug ? ». The kind sent is `feature` | `bug`. A message
+queued as `idea` before this change (pre-release only) reads as `feature`.

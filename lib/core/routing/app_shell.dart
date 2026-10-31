@@ -167,7 +167,7 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
       if (next.status == SessionStatus.paired) {
         _flusher.resume();
       }
-      // Ideas and bug reports written offline go once a token is back
+      // Suggestions and bug reports written offline go once a token is back
       // (app ADR 0104).
       if (next.accessToken != null &&
           next.accessToken != previous?.accessToken) {

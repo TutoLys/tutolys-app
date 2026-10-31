@@ -4,9 +4,10 @@ import 'package:drift/drift.dart';
 
 import 'database.dart';
 
-/// Whether a message is an idea or a problem.
+/// Whether a message suggests a feature or reports a bug. The wire values
+/// are `feature` and `bug` (Hafid, 2026-10-31: never « idée »).
 enum FeedbackKind {
-  idea,
+  feature,
   bug;
 
   String get wire => name;
@@ -45,14 +46,17 @@ class QueuedFeedback {
 
   static QueuedFeedback _fromJson(Map<String, dynamic> json) => QueuedFeedback(
     clientId: json['client_id'] as String,
-    kind: FeedbackKind.values.byName(json['kind'] as String),
+    // `idea` was this enum's first name, before any release.
+    kind: json['kind'] == 'idea'
+        ? FeedbackKind.feature
+        : FeedbackKind.values.byName(json['kind'] as String),
     text: json['text'] as String,
     context: (json['context'] as Map<String, dynamic>).cast<String, String>(),
     createdAt: DateTime.parse(json['created_at'] as String),
   );
 }
 
-/// Ideas and bug reports a guardian sent while the device was offline (app
+/// Feature suggestions and bug reports a guardian sent while the device was offline (app
 /// ADR 0104). **Its own store, never the telemetry outbox**: the text is
 /// what a child typed and is personal data, and telemetry must never hold
 /// it.

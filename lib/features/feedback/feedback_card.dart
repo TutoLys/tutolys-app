@@ -8,7 +8,7 @@ import '../pairing/pairing_controller.dart' show appVersion;
 import '../profile/pin_gate.dart';
 import 'feedback_sender.dart';
 
-/// « Une idée ? Un problème ? » in Aide & support (work order F3, app ADR
+/// « Une suggestion ? Un bug ? » in Aide & support (work order F3, app ADR
 /// 0104). The kid may write; only an adult's PIN sends, because a child
 /// may type a name, a school or an address.
 class FeedbackCard extends ConsumerWidget {
@@ -74,7 +74,7 @@ class FeedbackCard extends ConsumerWidget {
   }
 }
 
-/// The form: idea or problem, then the text. « Envoyer » asks for the
+/// The form: a feature to suggest or a bug, then the text. « Envoyer » asks for the
 /// guardian PIN first, and only then queues and sends.
 class FeedbackDialog extends ConsumerStatefulWidget {
   const FeedbackDialog({super.key, this.route = 'aide'});
@@ -88,7 +88,7 @@ class FeedbackDialog extends ConsumerStatefulWidget {
 
 class _FeedbackDialogState extends ConsumerState<FeedbackDialog> {
   final _text = TextEditingController();
-  FeedbackKind _kind = FeedbackKind.idea;
+  FeedbackKind _kind = FeedbackKind.feature;
   bool _sending = false;
 
   @override
@@ -160,8 +160,8 @@ class _FeedbackDialogState extends ConsumerState<FeedbackDialog> {
               children: [
                 for (final (kind, label, icon) in [
                   (
-                    FeedbackKind.idea,
-                    t.feedbackKindIdea,
+                    FeedbackKind.feature,
+                    t.feedbackKindFeature,
                     Icons.lightbulb_outline,
                   ),
                   (FeedbackKind.bug, t.feedbackKindBug, Icons.build_outlined),
