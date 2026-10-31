@@ -108,14 +108,20 @@ void main() {
   });
 
   group('tablet, 768-1023', () {
-    testWidgets('collapses to an 84px rail with no labels', (tester) async {
+    testWidgets('collapses to an 84px rail, labels under the icons (AM11)', (
+      tester,
+    ) async {
       await tester.pumpWidget(harness(size: tablet));
 
       final rail = tester.widgetList<Container>(find.byType(Container))
           .firstWhere((c) => c.constraints?.maxWidth == 84);
       expect(rail.constraints!.maxWidth, VillageMetrics.railWidth);
 
-      expect(find.text('Village'), findsNothing);
+      expect(find.text('Village'), findsOneWidget);
+      expect(
+        tester.getSize(find.text('Village')).height,
+        greaterThanOrEqualTo(12),
+      );
       expect(find.text('TutoLys'), findsNothing,
           reason: 'the wordmark goes, the mark stays');
       expect(find.text('Aide & support'), findsNothing);
@@ -194,11 +200,11 @@ void main() {
       expect(find.text('0'), findsNothing);
     });
 
-    testWidgets('badges survive the rail, where labels do not', (tester) async {
+    testWidgets('badges survive the rail, beside its labels', (tester) async {
       await tester.pumpWidget(
         harness(size: tablet, destinations: withBadge),
       );
-      expect(find.text('Quêtes'), findsNothing);
+      expect(find.text('Quêtes'), findsOneWidget);
       expect(find.text('3'), findsOneWidget);
     });
   });

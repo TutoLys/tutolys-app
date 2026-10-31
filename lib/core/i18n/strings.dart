@@ -209,6 +209,9 @@ abstract class Strings {
   // --- play --------------------------------------------------------------
   String get playBack;
 
+  /// The phone header's ← on Réglages, Aide and À propos (AM8).
+  String get navBack;
+
 
   // --- navigation & settings ---------------------------------------------
   String get navVillage;
@@ -999,6 +1002,8 @@ class _FrenchStrings extends Strings {
 
   @override
   String get playBack => 'Retour';
+  @override
+  String get navBack => 'Retour';
 
 
   @override
@@ -2370,6 +2375,8 @@ class _EnglishStrings extends Strings {
 
   @override
   String get playBack => 'Back';
+  @override
+  String get navBack => 'Back';
 
 
   @override

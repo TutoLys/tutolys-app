@@ -77,6 +77,20 @@ class _VillageShellState extends ConsumerState<VillageShell> {
     super.dispose();
   }
 
+  /// The last of the five tabs shown, where ← from Réglages returns.
+  int _lastTab = 0;
+
+  @override
+  void didUpdateWidget(VillageShell old) {
+    super.didUpdateWidget(old);
+    final i = VillageShell.pages.indexOf(old.page);
+    if (i >= 0 && i < _settingsIndex) _lastTab = i;
+  }
+
+  /// ← on a phone (AM8): Aide and À propos go back to Réglages, which
+  /// is where a phone reaches them; Réglages goes back to the last tab.
+  void _back() => _open(_index > _settingsIndex ? _settingsIndex : _lastTab);
+
   int get _index {
     final i = VillageShell.pages.indexOf(widget.page);
     return i < 0 ? 0 : i;
@@ -165,6 +179,7 @@ class _VillageShellState extends ConsumerState<VillageShell> {
   /// they are pages, and routing them through the same stack keeps one
   /// mechanism rather than bolting a second one on for two screens.
   static const _profilIndex = 4;
+  static const _settingsIndex = 5;
   static const _helpIndex = 6;
   static const _aboutIndex = 7;
 
@@ -218,6 +233,13 @@ class _VillageShellState extends ConsumerState<VillageShell> {
                   ? () => _open(_primary(t).length)
                   : null,
               settingsLabel: t.navReglages,
+              settingsActive: _index >= _settingsIndex,
+              onBack:
+                  MediaQuery.sizeOf(context).width < Breakpoints.compact &&
+                      _index >= _settingsIndex
+                  ? _back
+                  : null,
+              backLabel: t.navBack,
               onNotifications: () => showNotificationsPanel(context),
               unreadNotifications: unread,
               notificationsLabel: t.notificationsBellLabel(unread),

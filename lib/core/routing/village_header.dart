@@ -48,6 +48,9 @@ class VillageHeader extends StatelessWidget {
     this.compact = false,
     this.onSettings,
     this.settingsLabel = '',
+    this.settingsActive = false,
+    this.onBack,
+    this.backLabel = '',
     this.onNotifications,
     this.unreadNotifications = 0,
     this.notificationsLabel = '',
@@ -79,10 +82,20 @@ class VillageHeader extends StatelessWidget {
   /// The gear's tooltip and screen-reader name.
   final String settingsLabel;
 
+  /// Réglages, or a page under it, is showing: the gear is drawn selected,
+  /// since the bottom bar has no tab for it to highlight (AM8).
+  final bool settingsActive;
+
+  /// A 48px ← before the avatar, on the pages a phone reaches through the
+  /// gear (AM8): with no tab selected and no system back on iOS, a child
+  /// otherwise has no way out but guessing a tab. Null hides it.
+  final VoidCallback? onBack;
+  final String backLabel;
+
   /// The design's `.bell-btn`: opens the inbox. Null hides it.
   final VoidCallback? onNotifications;
 
-  /// Drawn as the red badge on the bell; 0 draws none.
+  /// Drawn as the gold badge on the bell; 0 draws none.
   final int unreadNotifications;
 
   /// The bell's tooltip and screen-reader name, unread count included.
@@ -105,6 +118,7 @@ class VillageHeader extends StatelessWidget {
           // a name at least ~90px wide.
           final avatar = compact ? 36.0 : 52.0;
           final gear =
+              (onBack == null ? 0.0 : 52.0) +
               (onSettings == null ? 0.0 : 50.0) +
               (onNotifications == null ? 0.0 : 50.0);
           final maxStatsWidth =
@@ -114,6 +128,30 @@ class VillageHeader extends StatelessWidget {
               );
           return Row(
             children: [
+              if (onBack != null) ...[
+                Tooltip(
+                  message: backLabel,
+                  child: Semantics(
+                    button: true,
+                    label: backLabel,
+                    excludeSemantics: true,
+                    child: InkResponse(
+                      key: const ValueKey('header-back'),
+                      onTap: onBack,
+                      radius: 24,
+                      child: SizedBox.square(
+                        dimension: 48,
+                        child: Icon(
+                          Icons.arrow_back_rounded,
+                          size: 26,
+                          color: p.quebecBlueBright,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+              ],
               Expanded(
                 child: _Identity(
                   onTap: onIdentity,
@@ -208,6 +246,7 @@ class VillageHeader extends StatelessWidget {
                   asset: 'asset-reglages.png',
                   size: 32,
                   palette: p,
+                  active: settingsActive,
                 ),
               ],
             ],
@@ -308,7 +347,7 @@ class _StatPill extends StatelessWidget {
 
 /// `.bell-btn` / `.phone-gear-btn`: a round surface button with a hairline
 /// and the small shadow, holding a piece of the design's art, with an
-/// optional red count badge. The tap target is 44px around it.
+/// optional gold count badge. The tap target is 44px around it.
 class _RoundButton extends StatelessWidget {
   const _RoundButton({
     required this.onPressed,
@@ -317,8 +356,12 @@ class _RoundButton extends StatelessWidget {
     required this.size,
     required this.palette,
     this.badge = 0,
+    this.active = false,
     super.key,
   });
+
+  /// Drawn in the nav's selected fill with a blue ring.
+  final bool active;
 
   final VoidCallback onPressed;
   final String label;
@@ -334,6 +377,7 @@ class _RoundButton extends StatelessWidget {
       message: label,
       child: Semantics(
         button: true,
+        selected: active,
         label: label,
         excludeSemantics: true,
         child: InkResponse(
@@ -351,9 +395,12 @@ class _RoundButton extends StatelessWidget {
                     height: size,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: p.surface,
+                      color: active ? p.navActiveFill : p.surface,
                       shape: BoxShape.circle,
-                      border: Border.all(color: p.line),
+                      border: Border.all(
+                        color: active ? p.quebecBlueBright : p.line,
+                        width: active ? 2 : 1,
+                      ),
                       boxShadow: [
                         BoxShadow(
                           color: p.shadowSmall,
@@ -378,10 +425,12 @@ class _RoundButton extends StatelessWidget {
                         height: 16,
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         alignment: Alignment.center,
-                        decoration: const BoxDecoration(
-                          // The nav badge's own red.
-                          color: Color(0xFFEF4444),
-                          borderRadius: BorderRadius.all(Radius.circular(999)),
+                        decoration: BoxDecoration(
+                          // The nav badge's gold, never red (K2).
+                          color: p.gold,
+                          borderRadius: const BorderRadius.all(
+                            Radius.circular(999),
+                          ),
                         ),
                         child: Text(
                           badge > 9 ? '9+' : '$badge',
@@ -389,7 +438,7 @@ class _RoundButton extends StatelessWidget {
                             fontFamily: VillageType.display,
                             fontSize: 9.5,
                             fontWeight: FontWeight.w800,
-                            color: Colors.white,
+                            color: Color(0xFF223047),
                             height: 1,
                           ),
                         ),

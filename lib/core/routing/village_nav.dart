@@ -17,7 +17,7 @@ class VillageDestination {
   /// and not an `IconData` — see `docs/design/README.md`.
   final String asset;
 
-  /// Unread/pending count, rendered as the red pill. Null means no badge;
+  /// Unread/pending count, rendered as the gold pill. Null means no badge;
   /// zero is treated the same, so a caller never has to special-case it.
   final int? badge;
 
@@ -47,8 +47,9 @@ class VillageDestination {
 ///
 /// - **>= 1024px** — a 224px sidebar, icon and label, the active row tinted
 ///   with a 4px indicator bleeding off its left edge.
-/// - **768-1023px** — the same sidebar collapsed to an 84px rail: icons
-///   only, labels hidden, badges moved into the icon's corner.
+/// - **768-1023px** — the same sidebar collapsed to an 84px rail: each icon
+///   with a short label under it (AM11; the design hid them, and an icon
+///   alone made a child guess), badges in the icon's corner.
 /// - **< 768px** — a 78px bottom tab bar of five, with Réglages promoted to
 ///   the header instead (the design's own split; six tabs in a thumb's reach
 ///   is one too many).
@@ -87,9 +88,9 @@ class VillageNavShell extends StatelessWidget {
 
   final Widget child;
 
-  static const _hoverFill = Color(0xFFF4F8FF);
-  static const _activeFill = Color(0xFFE8F0FF);
-  static const _badgeFill = Color(0xFFEF4444);
+  /// K2: the count badge is gold, never red (the design's no-red rule),
+  /// with navy figures at 6.3:1.
+  static const _badgeInk = Color(0xFF223047);
 
   bool get _hasSecondary => (secondary?.isNotEmpty ?? false);
 
@@ -99,13 +100,25 @@ class VillageNavShell extends StatelessWidget {
     final width = MediaQuery.sizeOf(context).width;
 
     if (width >= Breakpoints.medium) {
-      return _withSky(p, Row(children: [_sidebar(p, expanded: true), _content()]));
+      return _withSky(
+        p,
+        Row(children: [_sidebar(p, expanded: true), _content()]),
+      );
     }
     if (width >= Breakpoints.compact) {
-      return _withSky(p, Row(children: [_sidebar(p, expanded: false), _content()]));
+      return _withSky(
+        p,
+        Row(children: [_sidebar(p, expanded: false), _content()]),
+      );
     }
-    return _withSky(p, 
-      Column(children: [Expanded(child: child), _tabBar(p)]),
+    return _withSky(
+      p,
+      Column(
+        children: [
+          Expanded(child: child),
+          _tabBar(p),
+        ],
+      ),
     );
   }
 
@@ -128,9 +141,7 @@ class VillageNavShell extends StatelessWidget {
 
   Widget _sidebar(VillagePalette p, {required bool expanded}) {
     return Container(
-      width: expanded
-          ? VillageMetrics.sidebarWidth
-          : VillageMetrics.railWidth,
+      width: expanded ? VillageMetrics.sidebarWidth : VillageMetrics.railWidth,
       padding: expanded
           ? EdgeInsets.fromLTRB(14, 22, 14, 16)
           : EdgeInsets.fromLTRB(0, 22, 0, 16),
@@ -139,8 +150,9 @@ class VillageNavShell extends StatelessWidget {
         border: Border(right: BorderSide(color: p.line)),
       ),
       child: Column(
-        crossAxisAlignment:
-            expanded ? CrossAxisAlignment.stretch : CrossAxisAlignment.center,
+        crossAxisAlignment: expanded
+            ? CrossAxisAlignment.stretch
+            : CrossAxisAlignment.center,
         children: [
           _brand(p, expanded: expanded),
           for (var i = 0; i < destinations.length; i++)
@@ -188,10 +200,7 @@ class VillageNavShell extends StatelessWidget {
     );
 
     if (!expanded) {
-      return Padding(
-        padding: EdgeInsets.only(bottom: 22),
-        child: mark,
-      );
+      return Padding(padding: EdgeInsets.only(bottom: 22), child: mark);
     }
     return Padding(
       padding: EdgeInsets.fromLTRB(8, 2, 8, 22),
@@ -224,40 +233,62 @@ class VillageNavShell extends StatelessWidget {
     final icon = destination.iconAt(expanded ? 22 : 24);
 
     final row = Material(
-      color: active ? _activeFill : Colors.transparent,
+      color: active ? p.navActiveFill : Colors.transparent,
       borderRadius: BorderRadius.circular(13),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(13),
-        hoverColor: _hoverFill,
+        hoverColor: p.navHoverFill,
         child: Padding(
           padding: expanded
               ? EdgeInsets.fromLTRB(17, 11, 14, 11)
-              : EdgeInsets.all(12),
-          child: Row(
-            mainAxisAlignment:
-                expanded ? MainAxisAlignment.start : MainAxisAlignment.center,
-            children: [
-              icon,
-              if (expanded) ...[
-                const SizedBox(width: 13),
-                Expanded(
-                  child: Text(
-                    destination.label,
-                    style: TextStyle(
-                      fontFamily: VillageType.display,
-                      fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-                      fontSize: 14.5,
-                      color: active
-                          ? p.quebecBlueBright
-                          : p.inkMuted,
+              : EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+          // AM11: the rail labels its icons too; 84px fits « Réglages ».
+          child: !expanded
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    icon,
+                    const SizedBox(height: 3),
+                    Text(
+                      destination.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: VillageType.display,
+                        fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+                        fontSize: 12,
+                        color: active ? p.quebecBlueBright : p.inkMuted,
+                      ),
                     ),
-                  ),
+                  ],
+                )
+              : Row(
+                  mainAxisAlignment: expanded
+                      ? MainAxisAlignment.start
+                      : MainAxisAlignment.center,
+                  children: [
+                    icon,
+                    if (expanded) ...[
+                      const SizedBox(width: 13),
+                      Expanded(
+                        child: Text(
+                          destination.label,
+                          style: TextStyle(
+                            fontFamily: VillageType.display,
+                            fontWeight: active
+                                ? FontWeight.w700
+                                : FontWeight.w600,
+                            fontSize: 14.5,
+                            color: active ? p.quebecBlueBright : p.inkMuted,
+                          ),
+                        ),
+                      ),
+                      if ((destination.badge ?? 0) > 0)
+                        _badge(p, destination.badge!),
+                    ],
+                  ],
                 ),
-                if ((destination.badge ?? 0) > 0) _badge(p, destination.badge!),
-              ],
-            ],
-          ),
         ),
       ),
     );
@@ -266,7 +297,7 @@ class VillageNavShell extends StatelessWidget {
     // exactly the sidebar's own horizontal padding — so it sits flush
     // against the panel edge rather than floating inside it.
     return SizedBox(
-      width: expanded ? null : 56,
+      width: expanded ? null : 76,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -306,7 +337,7 @@ class VillageNavShell extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: 5),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: _badgeFill,
+        color: p.gold,
         borderRadius: BorderRadius.all(Radius.circular(999)),
       ),
       child: Text(
@@ -315,7 +346,7 @@ class VillageNavShell extends StatelessWidget {
           fontFamily: VillageType.display,
           fontSize: 10.5,
           fontWeight: FontWeight.w800,
-          color: Colors.white,
+          color: _badgeInk,
           height: 1,
         ),
       ),
@@ -334,7 +365,7 @@ class VillageNavShell extends StatelessWidget {
         child: InkWell(
           onTap: onHelp,
           borderRadius: BorderRadius.circular(12),
-          hoverColor: _hoverFill,
+          hoverColor: p.navHoverFill,
           child: Padding(
             padding: expanded
                 ? EdgeInsets.symmetric(horizontal: 14, vertical: 10)
@@ -345,11 +376,7 @@ class VillageNavShell extends StatelessWidget {
                   ? MainAxisAlignment.start
                   : MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.help_outline,
-                  size: 17,
-                  color: p.inkMuted,
-                ),
+                Icon(Icons.help_outline, size: 17, color: p.inkMuted),
                 if (expanded) ...[
                   const SizedBox(width: 10),
                   // Flexible, not bare: at 224px the sidebar is narrow
@@ -412,14 +439,14 @@ class VillageNavShell extends StatelessWidget {
           children: [
             // The pill sits *behind* the icon and above the bar's top edge.
             if (active)
-              const Positioned(
+              Positioned(
                 top: -7,
                 child: SizedBox(
                   width: 34,
                   height: 32,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: _activeFill,
+                      color: p.navActiveFill,
                       borderRadius: BorderRadius.all(Radius.circular(13)),
                     ),
                   ),
@@ -438,15 +465,17 @@ class VillageNavShell extends StatelessWidget {
                     fontFamily: VillageType.display,
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
-                    color: active
-                        ? p.quebecBlueBright
-                        : p.inkMuted,
+                    color: active ? p.quebecBlueBright : p.inkMuted,
                   ),
                 ),
               ],
             ),
             if ((destination.badge ?? 0) > 0)
-              Positioned(top: -6, right: 4, child: _badge(p, destination.badge!)),
+              Positioned(
+                top: -6,
+                right: 4,
+                child: _badge(p, destination.badge!),
+              ),
           ],
         ),
       ),
