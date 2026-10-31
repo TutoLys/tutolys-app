@@ -1,6 +1,7 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/widgets/page_column.dart';
 import '../../core/diagnostics/boot_log.dart';
@@ -155,6 +156,7 @@ Future<void> showTechnicalLog(
   List<String> offline = const [],
   bool qaTools = qaToolsEnabled,
 }) {
+  final router = GoRouter.maybeOf(context);
   final boot = bootLog ?? BootLog.instance;
   final diag = diagLog ?? DiagLog.instance;
   final t = context.s;
@@ -190,7 +192,7 @@ Future<void> showTechnicalLog(
               navigator.pop();
               navigator.push(
                 MaterialPageRoute<void>(
-                  builder: (_) => const QaLessonPicker(),
+                  builder: (_) => QaLessonPicker(router: router),
                 ),
               );
             },

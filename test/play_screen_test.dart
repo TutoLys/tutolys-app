@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:tutolys_app/core/routing/paired_router.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
 import 'package:tutolys_app/data/local_db/home_stats.dart';
 import 'package:tutolys_app/data/local_db/node_progress_local.dart';
@@ -191,6 +193,59 @@ void main() {
       ),
     ),
   );
+
+  /// What the router writes to the address bar.
+  String? shownUrl(GoRouter router) => router.routeInformationParser
+      .restoreRouteInformation(router.routerDelegate.currentConfiguration)
+      ?.uri
+      .path;
+
+  /// The real `/play` route under a plain home page, as the shell plays a
+  /// game: through the router, so its exit check runs (AM20).
+  ({Widget app, GoRouter router}) routed() {
+    final play = buildPairedRouter().configuration.routes.first;
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, _) => const Scaffold(body: Text('home')),
+        ),
+        play,
+      ],
+    );
+    addTearDown(router.dispose);
+    return (
+      router: router,
+      app: ProviderScope(
+        overrides: [
+          celebrationRowsProvider.overrideWith((ref) async => const []),
+          localDatabaseProvider.overrideWithValue(db),
+          activeKidIdProvider.overrideWithValue('kid-lea'),
+          audioCoordinatorProvider.overrideWithValue(audio),
+          learningEngineRegistryProvider.overrideWithValue(
+            LearningEngineRegistry([eraseEngine(FakeChoiceEngine())]),
+          ),
+          evaluatorRegistryProvider.overrideWithValue(
+            EvaluatorRegistry([FakeExactEvaluator()]),
+          ),
+        ],
+        child: MediaQuery(
+          data: const MediaQueryData(disableAnimations: true),
+          child: MaterialApp.router(
+            theme: TutolysTheme.village(),
+            locale: const Locale('fr', 'CA'),
+            supportedLocales: const [Locale('fr', 'CA'), Locale('en', 'CA')],
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            routerConfig: router,
+          ),
+        ),
+      ),
+    );
+  }
 
   Future<List<Map<String, Object?>>> outbox() async => [
     for (final row in await db.select(db.eventOutboxTable).get())
@@ -735,6 +790,76 @@ void main() {
       expect(find.text('Pompon dort sur le lit.'), findsOneWidget);
       expect(find.byKey(const ValueKey('passage-speak-1')), findsNothing);
       expect(find.byKey(const ValueKey('passage-speak-2')), findsNothing);
+    });
+  });
+
+  group('AM20: Back leaves a game like ✕', () {
+    testWidgets('the game has its own URL', (tester) async {
+      final r = routed();
+      await tester.pumpWidget(r.app);
+      unawaited(
+        r.router.push(
+          '/play',
+          extra: PlayRequest(node: _node, envelope: fakeEnvelope(questions: 2)),
+        ),
+      );
+      await settle(tester);
+      expect(shownUrl(r.router), '/play');
+    });
+
+    testWidgets('nothing started: Back just leaves', (tester) async {
+      final r = routed();
+      await tester.pumpWidget(r.app);
+      unawaited(
+        r.router.push(
+          '/play',
+          extra: PlayRequest(node: _node, envelope: fakeEnvelope(questions: 2)),
+        ),
+      );
+      await settle(tester);
+      expect(find.byType(PlayScreen), findsOneWidget);
+      r.router.go('/');
+      await settle(tester);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('stop-sheet')), findsNothing);
+      expect(find.text('home'), findsOneWidget);
+    });
+
+    testWidgets('started: Back asks, Continuer stays, Arrêter leaves', (
+      tester,
+    ) async {
+      final r = routed();
+      await tester.pumpWidget(r.app);
+      unawaited(
+        r.router.push(
+          '/play',
+          extra: PlayRequest(node: _node, envelope: fakeEnvelope(questions: 2)),
+        ),
+      );
+      await settle(tester);
+      await tester.tap(find.byKey(const ValueKey('option-b')));
+      await settle(tester);
+
+      // The browser's Back: the URL moves to the previous page.
+      r.router.go('/');
+      await settle(tester);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('stop-sheet')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('stop-continue')));
+      await tester.pumpAndSettle();
+      expect(find.byType(PlayScreen), findsOneWidget);
+      expect(shownUrl(r.router), '/play');
+
+      // Android's Back: a pop.
+      unawaited(r.router.routerDelegate.popRoute());
+      await settle(tester);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('stop-sheet')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('stop-quit')));
+      await settle(tester);
+      await tester.pumpAndSettle();
+      expect(find.byType(PlayScreen), findsNothing);
+      expect(find.text('home'), findsOneWidget);
     });
   });
 }

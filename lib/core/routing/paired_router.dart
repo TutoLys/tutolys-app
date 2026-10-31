@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart' show ValueKey;
+import 'package:flutter/widgets.dart' show GlobalKey, ValueKey;
 import 'package:go_router/go_router.dart';
 
 import '../../data/local_db/database.dart';
@@ -10,11 +10,14 @@ import 'village_shell.dart';
 /// (it already has exercise-cache access to decide locked/available) rather
 /// than `PlayScreen` re-querying for itself.
 class PlayRequest {
-  const PlayRequest({
+  PlayRequest({
     required this.node,
     required this.envelope,
     this.practice = false,
   });
+
+  /// The game's state, so the route can ask it before leaving (AM20).
+  final GlobalKey<PlayScreenState> screenKey = GlobalKey<PlayScreenState>();
 
   final CachedSkillNode node;
   final Map<String, Object?> envelope;
@@ -56,6 +59,10 @@ void rememberLaunchLocation(Uri url) {
 GoRouter buildPairedRouter({String? initialLocation}) {
   final start = initialLocation ?? _launchLocation;
   _launchLocation = null;
+  // AM20: `push('/play')` writes `#/play` into the address bar, so the
+  // browser's Back has a game entry to leave rather than moving the page
+  // hidden underneath it.
+  GoRouter.optionURLReflectsImperativeAPIs = true;
   return GoRouter(
     initialLocation: start ?? '/${VillageShell.defaultPage}',
     routes: [
@@ -69,9 +76,18 @@ GoRouter buildPairedRouter({String? initialLocation}) {
         // `extra` carries the request directly — this router is never
         // deep-linked into from outside the app, so there is no need to
         // encode it into the URL and parse it back out.
+        // Every way out passes here: ✕, Android Back, the browser's Back
+        // and a page change. A série already started asks « Tu veux
+        // arrêter ? » first, exactly as ✕ does (AM20).
+        onExit: (context, state) => switch (state.extra) {
+          final PlayRequest r =>
+            r.screenKey.currentState?.confirmLeave() ?? true,
+          _ => true,
+        },
         builder: (context, state) {
           final request = state.extra! as PlayRequest;
           return PlayScreen(
+            key: request.screenKey,
             node: request.node,
             envelope: request.envelope,
             practice: request.practice,

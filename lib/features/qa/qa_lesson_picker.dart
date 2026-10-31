@@ -5,6 +5,9 @@ import 'package:drift/drift.dart' show OrderingTerm;
 import 'package:flutter/foundation.dart' show kReleaseMode, visibleForTesting;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../core/routing/paired_router.dart' show PlayRequest;
 
 import '../play/play_screen.dart';
 import '../../data/local_db/database.dart';
@@ -91,7 +94,12 @@ final qaLessonsProvider = FutureProvider.autoDispose<List<ManifestEntryRow>>((
 /// real data stays clean. A lesson outside the offline window downloads
 /// first.
 class QaLessonPicker extends ConsumerWidget {
-  const QaLessonPicker({super.key});
+  const QaLessonPicker({this.router, super.key});
+
+  /// The paired shell's router, from the page that opened the picker. A
+  /// game then plays at `#/play` like any other, so Back asks before
+  /// leaving and returns to that page (AM20). Null: pushed here instead.
+  final GoRouter? router;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -185,9 +193,24 @@ class QaLessonPicker extends ConsumerWidget {
           grade: r.grade,
         );
     if (!context.mounted) return;
-    // Pushed on the navigator the picker itself lives on. It opens from
-    // the technical log's dialog, above the paired router, so GoRouter
-    // isn't in reach here (it threw « No GoRouter found in context »).
+    if (router case final router?) {
+      // The picker sits on the root navigator above the router: close it,
+      // play through the router, then open it again for the next lesson.
+      Navigator.of(context, rootNavigator: true).popUntil((r) => r.isFirst);
+      await router.push(
+        '/play',
+        extra: PlayRequest(node: leaf, envelope: envelope, practice: true),
+      );
+      final back = router.routerDelegate.navigatorKey.currentContext;
+      if (back != null && back.mounted) {
+        await Navigator.of(back, rootNavigator: true).push<void>(
+          MaterialPageRoute(builder: (_) => QaLessonPicker(router: router)),
+        );
+      }
+      return;
+    }
+    // No router in reach (the log opened outside the paired shell): pushed
+    // on the picker's own navigator.
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (_) =>

@@ -28,6 +28,7 @@ import '../profile/rare_avatar_found.dart';
 import '../settings/settings_controller.dart';
 import 'engine_registry_provider.dart';
 import 'learning_platform_providers.dart';
+import 'stop_sheet.dart';
 import 'xp_estimate.dart';
 
 /// Hosts one exercise, reached by tapping an available node on the path.
@@ -65,10 +66,42 @@ class PlayScreen extends ConsumerStatefulWidget {
   final bool practice;
 
   @override
-  ConsumerState<PlayScreen> createState() => _PlayScreenState();
+  ConsumerState<PlayScreen> createState() => PlayScreenState();
 }
 
-class _PlayScreenState extends ConsumerState<PlayScreen> {
+class PlayScreenState extends ConsumerState<PlayScreen> {
+  /// Set once the game itself decided to leave (finished, or the child
+  /// confirmed on ✕), so the route's exit check doesn't ask again.
+  bool _leaving = false;
+
+  void _leave() {
+    _leaving = true;
+    Navigator.of(context).pop();
+  }
+
+  /// Asked by the route before it goes, whatever the way out (AM20): Back
+  /// acts like ✕. Nothing started, finished, or already confirmed: go.
+  /// Otherwise « Tu veux arrêter ? », where Continuer stays.
+  Future<bool> confirmLeave() async {
+    final c = _controller;
+    if (_leaving || _summary != null || c == null) return true;
+    final st = c.state;
+    final started =
+        st.questionsCompleted > 0 ||
+        st.attempts > 0 ||
+        c.current?.answer != null;
+    if (started && !st.phase.isTerminal) {
+      final stop = await showStopSheet(
+        context,
+        ShellStrings.of(Localizations.localeOf(context)),
+      );
+      if (stop != true || !mounted) return false;
+    }
+    _leaving = true;
+    await c.exit();
+    return true;
+  }
+
   late final AnimationDirector _director;
   late final AppLifecycleListener _lifecycle;
 
@@ -363,7 +396,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
         ),
       );
     } else {
-      Navigator.of(context).pop();
+      _leave();
     }
   }
 
@@ -372,7 +405,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   void _handleFinished(ExerciseResult result) {
     // An abandoned run taught nothing worth counting or celebrating.
     if (result.outcome != ExerciseOutcome.completed) {
-      Navigator.of(context).pop();
+      _leave();
       return;
     }
     _effect(SfxMoment.activityComplete);
@@ -477,7 +510,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                 max: row.max,
               ),
           ],
-          onContinue: () => Navigator.of(context).pop(),
+          onContinue: _leave,
         ),
       );
     }
@@ -535,7 +568,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
               locale: locale,
               character: stage,
               onFinished: _handleFinished,
-              onClose: () => Navigator.of(context).pop(),
+              onClose: _leave,
             ),
           ),
         ),
