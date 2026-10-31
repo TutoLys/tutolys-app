@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 
+import '../../core/time/quebec_day.dart';
 import 'database.dart';
 
 /// Today's real, countable play stats — never a mastery/XP judgment, just a
@@ -30,7 +31,8 @@ class HomeStats {
   static const _msKey = 'home_stats.ms_played';
   static const _lessonsKey = 'home_stats.lesson_ids';
 
-  String _today() => _clock().toIso8601String().substring(0, 10);
+  /// Québec's day, so the counters roll over at its midnight (K8).
+  String _today() => quebecIsoDay(_clock());
 
   /// Call once per finished exercise (completed, not abandoned — an
   /// abandoned run taught nothing worth counting as "played today").

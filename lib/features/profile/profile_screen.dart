@@ -1,4 +1,5 @@
 import 'package:design_system/design_system.dart';
+import '../../core/time/quebec_day.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -152,7 +153,7 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   ProfileTab.recent => _RecentActivity(
                     items: board?.recent ?? const [],
-                    today: board?.today ?? DateTime.now(),
+                    today: board?.today ?? quebecToday(),
                     palette: p,
                   ),
                 },

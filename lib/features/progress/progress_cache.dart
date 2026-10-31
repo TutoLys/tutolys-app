@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 
+import '../../core/time/quebec_day.dart';
 import '../../data/api/progress_api.dart';
 import '../../data/local_db/database.dart';
 
@@ -22,7 +23,7 @@ class ProgressCache {
 
   static const _key = 'progress.last_snapshot';
 
-  String _today() => _clock().toIso8601String().substring(0, 10);
+  String _today() => quebecIsoDay(_clock());
 
   /// The cached snapshot, or null. A daily quest saved on another day is
   /// dropped: yesterday's challenge is not today's.

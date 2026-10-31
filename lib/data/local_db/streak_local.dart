@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 
+import '../../core/time/quebec_day.dart';
 import 'database.dart';
 
 /// Offline streak estimate, reconciled with the backend whenever a live
@@ -23,7 +24,8 @@ class StreakLocal {
 
   final DateTime Function() _clock;
 
-  String _todayIso() => _clock().toIso8601String().substring(0, 10);
+  /// Québec's day, the same one quests and counters use (K8).
+  String _todayIso() => quebecIsoDay(_clock());
 
   /// Call once per finished exercise (completed, not abandoned — same rule
   /// `HomeStats.recordExerciseCompleted` already follows). Idempotent: a

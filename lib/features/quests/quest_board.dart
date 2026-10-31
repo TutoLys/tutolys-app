@@ -111,6 +111,27 @@ List<DailyQuestItem> buildDailyQuests({
   ];
 }
 
+/// A quest finished earlier today stays finished until Québec's midnight
+/// (K8), even if its source rolls over first: the backend's daily challenge
+/// still resets at UTC midnight, 20:00 in Québec, and a child must never
+/// watch a quest they finished at supper undo itself.
+List<DailyQuestItem> keepDoneToday(
+  List<DailyQuestItem> quests,
+  Set<String> doneToday,
+) => [
+  for (final q in quests)
+    if (!q.done && doneToday.contains(q.key))
+      DailyQuestItem(
+        kind: q.kind,
+        target: q.target,
+        progress: q.target,
+        done: true,
+        xpReward: q.xpReward,
+      )
+    else
+      q,
+];
+
 /// The eight achievements the design's badge grid names, in its order.
 enum Achievement {
   streak3,
@@ -238,7 +259,7 @@ final questBoardProvider = FutureProvider<QuestBoard>((ref) async {
   final today = played.today;
   final day = isoDay(today);
 
-  final quests = buildDailyQuests(
+  final served = buildDailyQuests(
     challenge: progress.dailyQuest,
     lessonsToday: stats.lessonsCompleted,
     msToday: stats.msPlayed,
@@ -247,9 +268,10 @@ final questBoardProvider = FutureProvider<QuestBoard>((ref) async {
   final doneBefore = (await log.completedByDay())[day] ?? const <String>{};
   final unlockedBefore = (await log.unlocked()).keys.toSet();
   final history = await log.recordCompleted(day, [
-    for (final q in quests)
+    for (final q in served)
       if (q.done) q.key,
   ]);
+  final quests = keepDoneToday(served, history[day]!);
 
   final db = ref.watch(localDatabaseProvider);
   final ids = {for (final m in progress.masteries) m.skillNodeId};

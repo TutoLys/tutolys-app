@@ -7,6 +7,7 @@ import '../../data/local_db/local_inbox.dart';
 import 'local_notifications.dart';
 import '../pairing/pairing_controller.dart';
 import '../../core/net/recovery.dart';
+import '../../core/time/quebec_day.dart';
 
 final notificationsApiProvider = Provider<NotificationsApi>(
   (ref) => NotificationsApi(dio: ref.watch(dioProvider)),
@@ -116,8 +117,8 @@ class NotificationsController extends Notifier<NotificationsState> {
 
 /// The fact keys a served notification may stand for, in the backend's
 /// format (`daily_quest:<day>`). Its key isn't served yet, so the day comes
-/// from `created_at`, as a local day and as a UTC day, since the backend's
-/// day boundary is still UTC (work order N1).
+/// from `created_at`, as Québec's day (K8) and as a UTC day, since the
+/// backend's day boundary is still UTC (work order N1).
 Set<String> serverFactKeys(NotificationDto n) {
   String day(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-'
@@ -125,7 +126,7 @@ Set<String> serverFactKeys(NotificationDto n) {
       '${d.day.toString().padLeft(2, '0')}';
   return switch (n.type) {
     'daily_quest_completed' => {
-      'daily_quest:${day(n.createdAt.toLocal())}',
+      'daily_quest:${day(quebecNow(n.createdAt))}',
       'daily_quest:${day(n.createdAt.toUtc())}',
     },
     _ => const {},
