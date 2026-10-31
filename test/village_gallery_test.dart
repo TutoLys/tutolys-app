@@ -76,13 +76,15 @@ void main() {
 
   for (final (width, key) in [
     (2000.0, 'village-building-GALLERY'),
-    (900.0, 'village-building-GALLERY'),
+    (1000.0, 'village-building-GALLERY'),
+    // Below 900px of content the phone layout replaces the scene (AM11).
+    (900.0, 'strip-building-GALLERY'),
     (375.0, 'strip-building-GALLERY'),
   ]) {
     testWidgets('drawn at $width px', (tester) async {
       size(tester, width);
       await open(tester);
-      if (width < 600) await scrollStrip(tester);
+      if (key.startsWith('strip')) await scrollStrip(tester);
       expect(find.byKey(ValueKey(key), skipOffstage: false), findsOneWidget);
       expect(tester.takeException(), isNull);
     });

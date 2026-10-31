@@ -325,6 +325,9 @@ class VillageScene extends StatelessWidget {
                         scale: scale,
                         child: _Building(
                           building: b,
+                          // AM11: the scene shrinks, its labels don't. A
+                          // 12px pill drawn at 0.62 read as 7px.
+                          labelScale: (1 / scale).clamp(1.0, 1.25),
                           // A subject that isn't live yet has nothing to
                           // open, so it takes no tap at all.
                           onTap: onTapBuilding == null || !b.live
@@ -414,10 +417,13 @@ class _Sign extends StatelessWidget {
 /// lift is decoration, and a kid who asked for less motion (or whose OS did)
 /// should not get it anyway.
 class _Building extends StatefulWidget {
-  const _Building({required this.building, this.onTap});
+  const _Building({required this.building, this.onTap, this.labelScale = 1});
 
   final VillageBuilding building;
   final VoidCallback? onTap;
+
+  /// Undoes the scene's scale for the pill, so its text stays readable.
+  final double labelScale;
 
   @override
   State<_Building> createState() => _BuildingState();
@@ -465,7 +471,11 @@ class _BuildingState extends State<_Building> {
                 // base.
                 Transform.translate(
                   offset: Offset(0, -16),
-                  child: _Pill(building: building),
+                  child: Transform.scale(
+                    scale: widget.labelScale,
+                    alignment: Alignment.topCenter,
+                    child: _Pill(building: building),
+                  ),
                 ),
               ],
             ),

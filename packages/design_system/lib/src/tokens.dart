@@ -255,7 +255,16 @@ abstract final class VillageDarkColors {
   static const Color inkMuted = Color(0xFF96A5CB);
 
   static const Color line = Color(0xFF2A3655);
-  static const Color track = Color(0xFF243150);
+
+  /// The design's `#243150` measured 1.3:1 on a card, so progress tracks
+  /// vanished (AM10, 2026-10-31). Lifted to 1.9:1; the fill carries the
+  /// value, the track only has to be seen.
+  static const Color track = Color(0xFF3A4D78);
+
+  /// A locked orb in dark (AM10): a fill and a 3.2:1 ring instead of the
+  /// light theme's half opacity, which left a grey lock on navy.
+  static const Color lockedFill = Color(0xFF2A3A5E);
+  static const Color lockedRing = Color(0xFF5B6E99);
 
   static const Color success = Color(0xFF3FCB83);
   static const Color successPale = Color(0xFF163828);

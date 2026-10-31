@@ -502,8 +502,11 @@ class _OrbState extends State<_Orb> with SingleTickerProviderStateMixin {
       PathNodeState.completed ||
       PathNodeState.active ||
       PathNodeState.available => p.quebecBlueBright,
-      PathNodeState.locked || PathNodeState.soon => p.track,
+      PathNodeState.locked ||
+      PathNodeState.soon => p.isDark ? VillageDarkColors.lockedRing : p.track,
     };
+    final dim =
+        node.state == PathNodeState.locked || node.state == PathNodeState.soon;
     final icon = switch (node.state) {
       PathNodeState.mastered => _Check(size: m.icon, color: p.gold),
       // Done here, not yet mastered on the server: the same check, in blue.
@@ -559,7 +562,7 @@ class _OrbState extends State<_Orb> with SingleTickerProviderStateMixin {
         return DecoratedBox(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: p.surface,
+            color: dim && p.isDark ? VillageDarkColors.lockedFill : p.surface,
             border: Border.all(color: ring, width: 3),
             boxShadow: shadows,
           ),
@@ -578,11 +581,9 @@ class _OrbState extends State<_Orb> with SingleTickerProviderStateMixin {
         : 0.0;
 
     return Opacity(
-      // `.path-node.locked .orb { opacity: .5 }`
-      opacity:
-          node.state == PathNodeState.locked || node.state == PathNodeState.soon
-          ? 0.5
-          : 1,
+      // `.path-node.locked .orb { opacity: .5 }`, light only: on navy it
+      // left the lock nearly invisible (AM10), so dark has its own colours.
+      opacity: dim && !p.isDark ? 0.5 : 1,
       child: MouseRegion(
         cursor: widget.onTap == null
             ? SystemMouseCursors.basic

@@ -297,7 +297,8 @@ class _HeroCard extends StatelessWidget {
                     icon: const Icon(Icons.swap_horiz_rounded, size: 18),
                     label: Text(t.switchProfile),
                     style: TextButton.styleFrom(
-                      foregroundColor: p.quebecBlue,
+                      // Bright blue: navy on navy vanished in dark (AM10).
+                      foregroundColor: p.quebecBlueBright,
                       visualDensity: VisualDensity.compact,
                       textStyle: const TextStyle(
                         fontFamily: VillageType.display,

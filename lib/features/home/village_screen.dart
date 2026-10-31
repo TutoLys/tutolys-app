@@ -124,7 +124,10 @@ class VillageScreen extends ConsumerWidget {
                 // village — it replaces it. The scene positions buildings at
                 // fixed fractions of a wide canvas, so on ~390px they
                 // overlap, their pills collide and the whole thing clips.
-                if (constraints.maxWidth < Breakpoints.compact) {
+                // AM11: and below 900px too. At 768 the scene drew at 0.62
+                // and its labels read at ~7px; the phone layout is legible
+                // and puts « Continuer » first.
+                if (constraints.maxWidth < _sceneMinWidth) {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -182,15 +185,17 @@ class VillageScreen extends ConsumerWidget {
                 // and their pills crowd, so the panel moves underneath.
                 // Wider than a phone, the recommend bar sits under the
                 // scene and its panel, as the design draws it.
+                // « Continuer » comes first at every width (AM11), as it
+                // does on a phone.
                 if (constraints.maxWidth < _sideBySideMinWidth) {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      recommend(fullWidth: false),
+                      const SizedBox(height: Space.lg),
                       scene,
                       const SizedBox(height: Space.md),
                       panel,
-                      const SizedBox(height: Space.lg),
-                      recommend(fullWidth: false),
                     ],
                   );
                 }
@@ -202,6 +207,8 @@ class VillageScreen extends ConsumerWidget {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    recommend(fullWidth: false),
+                    const SizedBox(height: Space.lg),
                     SizedBox(
                       height: _sceneHeight(sceneWidth),
                       child: Row(
@@ -224,8 +231,6 @@ class VillageScreen extends ConsumerWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(height: Space.lg),
-                    recommend(fullWidth: false),
                   ],
                 );
               },
@@ -239,6 +244,10 @@ class VillageScreen extends ConsumerWidget {
 
 /// Below this the quest panel sits under the scene rather than beside it.
 const double _sideBySideMinWidth = 1100;
+
+/// Narrower content than this gets the phone layout instead of the scene
+/// (AM11).
+const double _sceneMinWidth = 900;
 
 /// The design's `grid-template-columns: 1fr 300px`.
 const double _panelWidth = 300;
