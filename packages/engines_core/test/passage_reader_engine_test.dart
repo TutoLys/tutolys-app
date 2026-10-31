@@ -407,6 +407,41 @@ void main() {
       c.dispose();
     });
 
+    testWidgets('AM27: on a short screen a ↓ cue shows more below', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(375, 600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final (c, _) = controllerFor(chooseConfig);
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(app(c));
+      await tester.pump();
+      expect(find.byKey(const ValueKey('scroll-fade')), findsOneWidget);
+      final more = find.byKey(const ValueKey('scroll-more'));
+      expect(more, findsOneWidget);
+      // Tapped until the end: the last answer is reachable, the cue goes.
+      for (var i = 0; i < 6 && more.evaluate().isNotEmpty; i++) {
+        await tester.tap(more);
+        await tester.pumpAndSettle();
+      }
+      expect(more, findsNothing);
+      await tester.tap(find.byKey(const ValueKey('passage-option-c')));
+      await settle(tester);
+      expect((c.current!.state as PassageState).selected, contains('c'));
+      c.dispose();
+    });
+
+    testWidgets('AM27: a tall screen draws no cue', (tester) async {
+      tallView(tester, width: 375);
+      final (c, _) = controllerFor(chooseConfig);
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(app(c));
+      await tester.pump();
+      expect(find.byKey(const ValueKey('scroll-more')), findsNothing);
+      c.dispose();
+    });
+
     testWidgets('several: the count follows what is found', (tester) async {
       tallView(tester);
       final (c, _) = controllerFor(multiConfig);

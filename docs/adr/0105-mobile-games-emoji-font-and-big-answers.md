@@ -76,3 +76,8 @@ found four more, now done:
   short pick-one answers now share one row, each 96 px tall.
 - **AM26:** data_graph's chart is 260 px tall (was 220), so pictograph
   faces are ~26 px, and its axis is 15 px (was 12, and « 0 » was clipped).
+- **AM27 (second re-check):** passage_reader's third answer sat half under
+  VALIDER with nothing to say the page scrolls. The shell's scrolling body
+  now fades out at the bottom and shows a 48 px ↓ button (« Voir la
+  suite ») while there's more below. It's in the shell, so every engine
+  whose body scrolls gets it.

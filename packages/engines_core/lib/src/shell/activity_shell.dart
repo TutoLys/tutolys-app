@@ -269,7 +269,9 @@ class ActivityShell extends StatelessWidget {
                                   (feedback != null ? bannerRoom : 0),
                             ),
                             child: scrollBody
-                                ? SingleChildScrollView(
+                                ? _ScrollCue(
+                                    palette: p,
+                                    label: s.moreBelow,
                                     child: Column(children: [...header, body]),
                                   )
                                 : Column(
@@ -314,6 +316,124 @@ class ActivityShell extends StatelessWidget {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The activity's scrolling body, with a cue when it continues below.
+///
+/// On a short screen an answer could sit half under VALIDER with nothing to
+/// say the page scrolls (UX review AM27). While there's more below, the
+/// bottom edge fades out and a round ↓ button scrolls one screen's worth.
+/// For every engine whose body scrolls, so a future one gets it too.
+class _ScrollCue extends StatefulWidget {
+  const _ScrollCue({
+    required this.palette,
+    required this.label,
+    required this.child,
+  });
+  final VillagePalette palette;
+  final String label;
+  final Widget child;
+
+  @override
+  State<_ScrollCue> createState() => _ScrollCueState();
+}
+
+class _ScrollCueState extends State<_ScrollCue> {
+  final _controller = ScrollController();
+  var _more = false;
+
+  void _check() {
+    if (!_controller.hasClients) return;
+    final m = _controller.position;
+    final more = m.maxScrollExtent - m.pixels > 8;
+    if (more != _more) setState(() => _more = more);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.palette;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _check();
+    });
+    return NotificationListener<ScrollMetricsNotification>(
+      onNotification: (_) {
+        _check();
+        return false;
+      },
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (_) {
+          _check();
+          return false;
+        },
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: SingleChildScrollView(
+                controller: _controller,
+                child: widget.child,
+              ),
+            ),
+            if (_more) ...[
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: 48,
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    key: const ValueKey('scroll-fade'),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [p.surface.withValues(alpha: 0), p.surface],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                right: 0,
+                bottom: 4,
+                child: IconButton.filled(
+                  key: const ValueKey('scroll-more'),
+                  tooltip: widget.label,
+                  onPressed: () {
+                    final m = _controller.position;
+                    _controller.animateTo(
+                      (m.pixels + m.viewportDimension * 0.7).clamp(
+                        0,
+                        m.maxScrollExtent,
+                      ),
+                      duration: MediaQuery.of(context).disableAnimations
+                          ? Duration.zero
+                          : const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                    );
+                  },
+                  constraints: const BoxConstraints.tightFor(
+                    width: 48,
+                    height: 48,
+                  ),
+                  style: IconButton.styleFrom(
+                    backgroundColor: p.quebecBlueBright,
+                    foregroundColor: Colors.white,
+                  ),
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );
