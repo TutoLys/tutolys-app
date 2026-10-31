@@ -148,6 +148,9 @@ class _FeedbackDialogState extends ConsumerState<FeedbackDialog> {
     final over = _length > feedbackMaxLength;
 
     return AlertDialog(
+      // Scrolls rather than overflows on a short screen or under a phone's
+      // keyboard (AM12).
+      scrollable: true,
       title: Text(t.feedbackTitle),
       content: SizedBox(
         width: 480,
@@ -155,28 +158,26 @@ class _FeedbackDialogState extends ConsumerState<FeedbackDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Wrap(
-              spacing: Space.xs,
-              children: [
-                for (final (kind, label, icon) in [
-                  (
-                    FeedbackKind.feature,
-                    t.feedbackKindFeature,
-                    Icons.lightbulb_outline,
-                  ),
-                  (FeedbackKind.bug, t.feedbackKindBug, Icons.build_outlined),
-                ])
-                  ChoiceChip(
-                    key: ValueKey('feedback-kind-${kind.wire}'),
-                    avatar: Icon(icon, size: 16),
-                    label: Text(label),
-                    selected: _kind == kind,
-                    onSelected: _sending
-                        ? null
-                        : (_) => setState(() => _kind = kind),
-                  ),
-              ],
-            ),
+            // AM12: stacked, full width, in the app's own face. As chips
+            // side by side « Suggérer une fonctionnalité » was cut off.
+            for (final (kind, label, icon) in [
+              (
+                FeedbackKind.feature,
+                t.feedbackKindFeature,
+                Icons.lightbulb_outline,
+              ),
+              (FeedbackKind.bug, t.feedbackKindBug, Icons.build_outlined),
+            ]) ...[
+              if (kind != FeedbackKind.feature)
+                const SizedBox(height: Space.xs),
+              _KindOption(
+                key: ValueKey('feedback-kind-${kind.wire}'),
+                label: label,
+                icon: icon,
+                selected: _kind == kind,
+                onTap: _sending ? null : () => setState(() => _kind = kind),
+              ),
+            ],
             const SizedBox(height: Space.sm),
             TextField(
               key: const ValueKey('feedback-text'),
@@ -215,6 +216,76 @@ class _FeedbackDialogState extends ConsumerState<FeedbackDialog> {
           child: Text(t.feedbackSend),
         ),
       ],
+    );
+  }
+}
+
+/// One of the two kinds: a full-width row, selected like the app's pills.
+class _KindOption extends StatelessWidget {
+  const _KindOption({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+    super.key,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
+    final fg = selected ? p.quebecBlueBright : p.ink;
+    return Semantics(
+      button: true,
+      selected: selected,
+      inMutuallyExclusiveGroup: true,
+      child: Material(
+        color: selected ? p.navActiveFill : p.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: VillageMetrics.mdAll,
+          side: BorderSide(
+            color: selected ? p.quebecBlueBright : p.line,
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const RoundedRectangleBorder(
+            borderRadius: VillageMetrics.mdAll,
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: Space.sm,
+                vertical: Space.xs,
+              ),
+              child: Row(
+                children: [
+                  Icon(icon, size: 20, color: fg),
+                  const SizedBox(width: Space.xs),
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        fontFamily: VillageType.display,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14.5,
+                        color: fg,
+                      ),
+                    ),
+                  ),
+                  if (selected) Icon(Icons.check_rounded, size: 20, color: fg),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

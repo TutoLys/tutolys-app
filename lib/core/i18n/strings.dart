@@ -462,6 +462,9 @@ abstract class Strings {
   String weeklyBadgeProgress(int done, int target);
   String get weeklyBadgeEarned;
   String get recentTitle;
+
+  /// Under « Réussites récentes » while nothing is earned (AM15).
+  String get recentEmpty;
   String get lockedLabel;
 
   /// The eight achievements, in the design's badge-grid order.
@@ -1619,6 +1622,8 @@ class _FrenchStrings extends Strings {
 
   @override
   String get recentTitle => 'Réussites récentes';
+  @override
+  String get recentEmpty => 'Termine ta première quête pour gagner un badge !';
 
   @override
   String get lockedLabel => 'Verrouillé';
@@ -2987,6 +2992,8 @@ class _EnglishStrings extends Strings {
 
   @override
   String get recentTitle => 'Recent achievements';
+  @override
+  String get recentEmpty => 'Finish your first quest to earn a badge!';
 
   @override
   String get lockedLabel => 'Locked';

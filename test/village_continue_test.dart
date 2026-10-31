@@ -43,6 +43,30 @@ void main() {
     expect(find.byType(PlayScreen), findsOneWidget);
   });
 
+  testWidgets('a phone: the area alone, on up to two lines (AM16)', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(375, 812);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      appUnder(
+        leaves: const [_one],
+        content: {'ex-1': exercise(id: 'ex-1', skillNodeId: 'leaf-1')},
+      ),
+    );
+    await tester.pumpAndSettle();
+    final title = tester.widget<Text>(
+      find.byKey(const ValueKey('recommend-title')),
+    );
+    expect(title.data, 'Arithmétique');
+    expect(title.maxLines, 2);
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('recommend-skill'))).maxLines,
+      2,
+    );
+  });
+
   testWidgets('nothing open: Continuer leads to the Carte', (tester) async {
     tester.view.physicalSize = const Size(1400, 1000);
     tester.view.devicePixelRatio = 1;

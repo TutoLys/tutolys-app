@@ -962,6 +962,20 @@ class RecentAchievementsCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           PanelTitle(asset: 'asset-target.webp', title: t.recentTitle),
+          // AM15: five padlocks alone said nothing about how to fill them.
+          if (shown.isEmpty) ...[
+            const SizedBox(height: Space.xs),
+            Text(
+              t.recentEmpty,
+              key: const ValueKey('recent-empty'),
+              style: TextStyle(
+                fontFamily: VillageType.display,
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+                color: p.inkMuted,
+              ),
+            ),
+          ],
           const SizedBox(height: Space.sm),
           Wrap(
             spacing: 10,

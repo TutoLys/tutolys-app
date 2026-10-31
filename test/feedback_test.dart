@@ -310,6 +310,20 @@ void main() {
       expect(sendEnabled(tester), isFalse, reason: 'nothing written yet');
     });
 
+    testWidgets('the two kinds stack full width, neither cut (AM12)', (
+      tester,
+    ) async {
+      await pump(tester);
+      final feature = tester.getRect(
+        find.byKey(const ValueKey('feedback-kind-feature')),
+      );
+      final bug = tester.getRect(find.byKey(const ValueKey('feedback-kind-bug')));
+      expect(feature.width, closeTo(bug.width, 0.5));
+      expect(bug.top, greaterThan(feature.bottom));
+      expect(feature.height, greaterThanOrEqualTo(48));
+      expect(find.text(Strings.fr.feedbackKindFeature), findsOneWidget);
+    });
+
     testWidgets('over 4,000 characters cannot be sent', (tester) async {
       await pump(tester);
       await tester.enterText(

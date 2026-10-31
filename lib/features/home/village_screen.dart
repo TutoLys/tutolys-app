@@ -310,6 +310,10 @@ class _RecommendBar extends StatelessWidget {
             SizedBox(height: 3),
             Text(
               switch (next) {
+                // AM16: on a phone the building beside it already names the
+                // subject, so the line keeps its room for the area.
+                final next? when fullWidth && next.areaTitle != null =>
+                  next.areaTitle!,
                 final next? => [
                   subjectLabel(context.s, next.subject),
                   ?next.areaTitle,
@@ -317,7 +321,7 @@ class _RecommendBar extends StatelessWidget {
                 null => context.s.villageContinuePath,
               },
               key: const ValueKey('recommend-title'),
-              maxLines: 1,
+              maxLines: fullWidth ? 2 : 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontFamily: VillageType.display,
@@ -330,7 +334,7 @@ class _RecommendBar extends StatelessWidget {
               Text(
                 next.label,
                 key: const ValueKey('recommend-skill'),
-                maxLines: 1,
+                maxLines: fullWidth ? 2 : 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 13,

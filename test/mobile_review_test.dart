@@ -4,9 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tutolys_app/core/routing/village_header.dart';
 import 'package:tutolys_app/core/routing/village_nav.dart';
 import 'package:tutolys_app/features/path/skill_path.dart';
+import 'package:tutolys_app/features/quests/quest_board.dart';
+import 'package:tutolys_app/features/quests/quests_screen.dart';
 
 /// The 2026-10-31 mobile review (`Platforms/ux-review/mobile-2026-10-31.md`):
-/// AM8 (a way back), AM10 (dark contrast) and K2 (no red badge).
+/// AM8 (a way back), AM10 (dark contrast), AM15 (an empty state) and K2
+/// (no red badge).
 void main() {
   Widget themed(Widget child, {bool dark = false}) => MaterialApp(
     theme: dark ? TutolysTheme.villageDark() : TutolysTheme.village(),
@@ -40,7 +43,7 @@ void main() {
       expect(back, 1);
       expect(
         tester.getSemantics(find.bySemanticsLabel('Réglages')),
-        containsSemantics(isButton: true, isSelected: true),
+        isSemantics(isButton: true, isSelected: true),
       );
     });
 
@@ -152,6 +155,26 @@ void main() {
         ratio(VillageDarkColors.lockedRing, VillageDarkColors.surface),
         greaterThanOrEqualTo(3),
       );
+    });
+  });
+
+  group('AM15: « Réussites récentes » says how to earn one', () {
+    testWidgets('nothing earned: a sentence above the padlocks', (
+      tester,
+    ) async {
+      await tester.pumpWidget(themed(const RecentAchievementsCard(earned: [])));
+      expect(find.byKey(const ValueKey('recent-empty')), findsOneWidget);
+    });
+
+    testWidgets('one earned: no sentence', (tester) async {
+      await tester.pumpWidget(
+        themed(
+          const RecentAchievementsCard(
+            earned: [EarnedItem(key: 'w1', day: '2026-10-31')],
+          ),
+        ),
+      );
+      expect(find.byKey(const ValueKey('recent-empty')), findsNothing);
     });
   });
 }
