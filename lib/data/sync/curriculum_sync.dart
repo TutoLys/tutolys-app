@@ -118,6 +118,8 @@ class CurriculumSync {
                 areaLabelFr: Value(leaf.areaLabelFr),
                 areaLabelEn: Value(leaf.areaLabelEn),
                 areaOrdinal: Value(leaf.areaOrdinal),
+                shortLabelFr: Value(leaf.shortLabelFr),
+                shortLabelEn: Value(leaf.shortLabelEn),
               ),
             );
       }

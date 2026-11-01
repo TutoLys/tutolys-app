@@ -1327,6 +1327,28 @@ class $SkillNodeTableTable extends SkillNodeTable
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _shortLabelFrMeta = const VerificationMeta(
+    'shortLabelFr',
+  );
+  @override
+  late final GeneratedColumn<String> shortLabelFr = GeneratedColumn<String>(
+    'short_label_fr',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _shortLabelEnMeta = const VerificationMeta(
+    'shortLabelEn',
+  );
+  @override
+  late final GeneratedColumn<String> shortLabelEn = GeneratedColumn<String>(
+    'short_label_en',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1342,6 +1364,8 @@ class $SkillNodeTableTable extends SkillNodeTable
     areaLabelFr,
     areaLabelEn,
     areaOrdinal,
+    shortLabelFr,
+    shortLabelEn,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1457,6 +1481,24 @@ class $SkillNodeTableTable extends SkillNodeTable
         ),
       );
     }
+    if (data.containsKey('short_label_fr')) {
+      context.handle(
+        _shortLabelFrMeta,
+        shortLabelFr.isAcceptableOrUnknown(
+          data['short_label_fr']!,
+          _shortLabelFrMeta,
+        ),
+      );
+    }
+    if (data.containsKey('short_label_en')) {
+      context.handle(
+        _shortLabelEnMeta,
+        shortLabelEn.isAcceptableOrUnknown(
+          data['short_label_en']!,
+          _shortLabelEnMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1518,6 +1560,14 @@ class $SkillNodeTableTable extends SkillNodeTable
         DriftSqlType.int,
         data['${effectivePrefix}area_ordinal'],
       ),
+      shortLabelFr: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}short_label_fr'],
+      ),
+      shortLabelEn: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}short_label_en'],
+      ),
     );
   }
 
@@ -1545,6 +1595,12 @@ class CachedSkillNode extends DataClass implements Insertable<CachedSkillNode> {
   final String? areaLabelFr;
   final String? areaLabelEn;
   final int? areaOrdinal;
+
+  /// A 2–4 word kid label written in content (schema v11, AM9): what the
+  /// Carte shows under an orb. The full statement stays in `label_*` for
+  /// parent reports. Null until content supplies one.
+  final String? shortLabelFr;
+  final String? shortLabelEn;
   const CachedSkillNode({
     required this.id,
     required this.labelFr,
@@ -1559,6 +1615,8 @@ class CachedSkillNode extends DataClass implements Insertable<CachedSkillNode> {
     this.areaLabelFr,
     this.areaLabelEn,
     this.areaOrdinal,
+    this.shortLabelFr,
+    this.shortLabelEn,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1589,6 +1647,12 @@ class CachedSkillNode extends DataClass implements Insertable<CachedSkillNode> {
     }
     if (!nullToAbsent || areaOrdinal != null) {
       map['area_ordinal'] = Variable<int>(areaOrdinal);
+    }
+    if (!nullToAbsent || shortLabelFr != null) {
+      map['short_label_fr'] = Variable<String>(shortLabelFr);
+    }
+    if (!nullToAbsent || shortLabelEn != null) {
+      map['short_label_en'] = Variable<String>(shortLabelEn);
     }
     return map;
   }
@@ -1622,6 +1686,12 @@ class CachedSkillNode extends DataClass implements Insertable<CachedSkillNode> {
       areaOrdinal: areaOrdinal == null && nullToAbsent
           ? const Value.absent()
           : Value(areaOrdinal),
+      shortLabelFr: shortLabelFr == null && nullToAbsent
+          ? const Value.absent()
+          : Value(shortLabelFr),
+      shortLabelEn: shortLabelEn == null && nullToAbsent
+          ? const Value.absent()
+          : Value(shortLabelEn),
     );
   }
 
@@ -1644,6 +1714,8 @@ class CachedSkillNode extends DataClass implements Insertable<CachedSkillNode> {
       areaLabelFr: serializer.fromJson<String?>(json['areaLabelFr']),
       areaLabelEn: serializer.fromJson<String?>(json['areaLabelEn']),
       areaOrdinal: serializer.fromJson<int?>(json['areaOrdinal']),
+      shortLabelFr: serializer.fromJson<String?>(json['shortLabelFr']),
+      shortLabelEn: serializer.fromJson<String?>(json['shortLabelEn']),
     );
   }
   @override
@@ -1663,6 +1735,8 @@ class CachedSkillNode extends DataClass implements Insertable<CachedSkillNode> {
       'areaLabelFr': serializer.toJson<String?>(areaLabelFr),
       'areaLabelEn': serializer.toJson<String?>(areaLabelEn),
       'areaOrdinal': serializer.toJson<int?>(areaOrdinal),
+      'shortLabelFr': serializer.toJson<String?>(shortLabelFr),
+      'shortLabelEn': serializer.toJson<String?>(shortLabelEn),
     };
   }
 
@@ -1680,6 +1754,8 @@ class CachedSkillNode extends DataClass implements Insertable<CachedSkillNode> {
     Value<String?> areaLabelFr = const Value.absent(),
     Value<String?> areaLabelEn = const Value.absent(),
     Value<int?> areaOrdinal = const Value.absent(),
+    Value<String?> shortLabelFr = const Value.absent(),
+    Value<String?> shortLabelEn = const Value.absent(),
   }) => CachedSkillNode(
     id: id ?? this.id,
     labelFr: labelFr ?? this.labelFr,
@@ -1698,6 +1774,8 @@ class CachedSkillNode extends DataClass implements Insertable<CachedSkillNode> {
     areaLabelFr: areaLabelFr.present ? areaLabelFr.value : this.areaLabelFr,
     areaLabelEn: areaLabelEn.present ? areaLabelEn.value : this.areaLabelEn,
     areaOrdinal: areaOrdinal.present ? areaOrdinal.value : this.areaOrdinal,
+    shortLabelFr: shortLabelFr.present ? shortLabelFr.value : this.shortLabelFr,
+    shortLabelEn: shortLabelEn.present ? shortLabelEn.value : this.shortLabelEn,
   );
   CachedSkillNode copyWithCompanion(SkillNodeTableCompanion data) {
     return CachedSkillNode(
@@ -1724,6 +1802,12 @@ class CachedSkillNode extends DataClass implements Insertable<CachedSkillNode> {
       areaOrdinal: data.areaOrdinal.present
           ? data.areaOrdinal.value
           : this.areaOrdinal,
+      shortLabelFr: data.shortLabelFr.present
+          ? data.shortLabelFr.value
+          : this.shortLabelFr,
+      shortLabelEn: data.shortLabelEn.present
+          ? data.shortLabelEn.value
+          : this.shortLabelEn,
     );
   }
 
@@ -1742,7 +1826,9 @@ class CachedSkillNode extends DataClass implements Insertable<CachedSkillNode> {
           ..write('strandLabelEn: $strandLabelEn, ')
           ..write('areaLabelFr: $areaLabelFr, ')
           ..write('areaLabelEn: $areaLabelEn, ')
-          ..write('areaOrdinal: $areaOrdinal')
+          ..write('areaOrdinal: $areaOrdinal, ')
+          ..write('shortLabelFr: $shortLabelFr, ')
+          ..write('shortLabelEn: $shortLabelEn')
           ..write(')'))
         .toString();
   }
@@ -1762,6 +1848,8 @@ class CachedSkillNode extends DataClass implements Insertable<CachedSkillNode> {
     areaLabelFr,
     areaLabelEn,
     areaOrdinal,
+    shortLabelFr,
+    shortLabelEn,
   );
   @override
   bool operator ==(Object other) =>
@@ -1779,7 +1867,9 @@ class CachedSkillNode extends DataClass implements Insertable<CachedSkillNode> {
           other.strandLabelEn == this.strandLabelEn &&
           other.areaLabelFr == this.areaLabelFr &&
           other.areaLabelEn == this.areaLabelEn &&
-          other.areaOrdinal == this.areaOrdinal);
+          other.areaOrdinal == this.areaOrdinal &&
+          other.shortLabelFr == this.shortLabelFr &&
+          other.shortLabelEn == this.shortLabelEn);
 }
 
 class SkillNodeTableCompanion extends UpdateCompanion<CachedSkillNode> {
@@ -1796,6 +1886,8 @@ class SkillNodeTableCompanion extends UpdateCompanion<CachedSkillNode> {
   final Value<String?> areaLabelFr;
   final Value<String?> areaLabelEn;
   final Value<int?> areaOrdinal;
+  final Value<String?> shortLabelFr;
+  final Value<String?> shortLabelEn;
   final Value<int> rowid;
   const SkillNodeTableCompanion({
     this.id = const Value.absent(),
@@ -1811,6 +1903,8 @@ class SkillNodeTableCompanion extends UpdateCompanion<CachedSkillNode> {
     this.areaLabelFr = const Value.absent(),
     this.areaLabelEn = const Value.absent(),
     this.areaOrdinal = const Value.absent(),
+    this.shortLabelFr = const Value.absent(),
+    this.shortLabelEn = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   SkillNodeTableCompanion.insert({
@@ -1827,6 +1921,8 @@ class SkillNodeTableCompanion extends UpdateCompanion<CachedSkillNode> {
     this.areaLabelFr = const Value.absent(),
     this.areaLabelEn = const Value.absent(),
     this.areaOrdinal = const Value.absent(),
+    this.shortLabelFr = const Value.absent(),
+    this.shortLabelEn = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        labelFr = Value(labelFr),
@@ -1848,6 +1944,8 @@ class SkillNodeTableCompanion extends UpdateCompanion<CachedSkillNode> {
     Expression<String>? areaLabelFr,
     Expression<String>? areaLabelEn,
     Expression<int>? areaOrdinal,
+    Expression<String>? shortLabelFr,
+    Expression<String>? shortLabelEn,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1864,6 +1962,8 @@ class SkillNodeTableCompanion extends UpdateCompanion<CachedSkillNode> {
       if (areaLabelFr != null) 'area_label_fr': areaLabelFr,
       if (areaLabelEn != null) 'area_label_en': areaLabelEn,
       if (areaOrdinal != null) 'area_ordinal': areaOrdinal,
+      if (shortLabelFr != null) 'short_label_fr': shortLabelFr,
+      if (shortLabelEn != null) 'short_label_en': shortLabelEn,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1882,6 +1982,8 @@ class SkillNodeTableCompanion extends UpdateCompanion<CachedSkillNode> {
     Value<String?>? areaLabelFr,
     Value<String?>? areaLabelEn,
     Value<int?>? areaOrdinal,
+    Value<String?>? shortLabelFr,
+    Value<String?>? shortLabelEn,
     Value<int>? rowid,
   }) {
     return SkillNodeTableCompanion(
@@ -1898,6 +2000,8 @@ class SkillNodeTableCompanion extends UpdateCompanion<CachedSkillNode> {
       areaLabelFr: areaLabelFr ?? this.areaLabelFr,
       areaLabelEn: areaLabelEn ?? this.areaLabelEn,
       areaOrdinal: areaOrdinal ?? this.areaOrdinal,
+      shortLabelFr: shortLabelFr ?? this.shortLabelFr,
+      shortLabelEn: shortLabelEn ?? this.shortLabelEn,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1944,6 +2048,12 @@ class SkillNodeTableCompanion extends UpdateCompanion<CachedSkillNode> {
     if (areaOrdinal.present) {
       map['area_ordinal'] = Variable<int>(areaOrdinal.value);
     }
+    if (shortLabelFr.present) {
+      map['short_label_fr'] = Variable<String>(shortLabelFr.value);
+    }
+    if (shortLabelEn.present) {
+      map['short_label_en'] = Variable<String>(shortLabelEn.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1966,6 +2076,8 @@ class SkillNodeTableCompanion extends UpdateCompanion<CachedSkillNode> {
           ..write('areaLabelFr: $areaLabelFr, ')
           ..write('areaLabelEn: $areaLabelEn, ')
           ..write('areaOrdinal: $areaOrdinal, ')
+          ..write('shortLabelFr: $shortLabelFr, ')
+          ..write('shortLabelEn: $shortLabelEn, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -6185,6 +6297,8 @@ typedef $$SkillNodeTableTableCreateCompanionBuilder =
       Value<String?> areaLabelFr,
       Value<String?> areaLabelEn,
       Value<int?> areaOrdinal,
+      Value<String?> shortLabelFr,
+      Value<String?> shortLabelEn,
       Value<int> rowid,
     });
 typedef $$SkillNodeTableTableUpdateCompanionBuilder =
@@ -6202,6 +6316,8 @@ typedef $$SkillNodeTableTableUpdateCompanionBuilder =
       Value<String?> areaLabelFr,
       Value<String?> areaLabelEn,
       Value<int?> areaOrdinal,
+      Value<String?> shortLabelFr,
+      Value<String?> shortLabelEn,
       Value<int> rowid,
     });
 
@@ -6276,6 +6392,16 @@ class $$SkillNodeTableTableFilterComposer
 
   ColumnFilters<int> get areaOrdinal => $composableBuilder(
     column: $table.areaOrdinal,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get shortLabelFr => $composableBuilder(
+    column: $table.shortLabelFr,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get shortLabelEn => $composableBuilder(
+    column: $table.shortLabelEn,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -6353,6 +6479,16 @@ class $$SkillNodeTableTableOrderingComposer
     column: $table.areaOrdinal,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get shortLabelFr => $composableBuilder(
+    column: $table.shortLabelFr,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get shortLabelEn => $composableBuilder(
+    column: $table.shortLabelEn,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SkillNodeTableTableAnnotationComposer
@@ -6412,6 +6548,16 @@ class $$SkillNodeTableTableAnnotationComposer
     column: $table.areaOrdinal,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get shortLabelFr => $composableBuilder(
+    column: $table.shortLabelFr,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get shortLabelEn => $composableBuilder(
+    column: $table.shortLabelEn,
+    builder: (column) => column,
+  );
 }
 
 class $$SkillNodeTableTableTableManager
@@ -6464,6 +6610,8 @@ class $$SkillNodeTableTableTableManager
                 Value<String?> areaLabelFr = const Value.absent(),
                 Value<String?> areaLabelEn = const Value.absent(),
                 Value<int?> areaOrdinal = const Value.absent(),
+                Value<String?> shortLabelFr = const Value.absent(),
+                Value<String?> shortLabelEn = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SkillNodeTableCompanion(
                 id: id,
@@ -6479,6 +6627,8 @@ class $$SkillNodeTableTableTableManager
                 areaLabelFr: areaLabelFr,
                 areaLabelEn: areaLabelEn,
                 areaOrdinal: areaOrdinal,
+                shortLabelFr: shortLabelFr,
+                shortLabelEn: shortLabelEn,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -6496,6 +6646,8 @@ class $$SkillNodeTableTableTableManager
                 Value<String?> areaLabelFr = const Value.absent(),
                 Value<String?> areaLabelEn = const Value.absent(),
                 Value<int?> areaOrdinal = const Value.absent(),
+                Value<String?> shortLabelFr = const Value.absent(),
+                Value<String?> shortLabelEn = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SkillNodeTableCompanion.insert(
                 id: id,
@@ -6511,6 +6663,8 @@ class $$SkillNodeTableTableTableManager
                 areaLabelFr: areaLabelFr,
                 areaLabelEn: areaLabelEn,
                 areaOrdinal: areaOrdinal,
+                shortLabelFr: shortLabelFr,
+                shortLabelEn: shortLabelEn,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

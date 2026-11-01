@@ -18,6 +18,8 @@ class CurriculumLeaf {
     this.areaLabelFr,
     this.areaLabelEn,
     this.areaOrdinal,
+    this.shortLabelFr,
+    this.shortLabelEn,
   });
 
   factory CurriculumLeaf.fromJson(Map<String, Object?> json) {
@@ -35,6 +37,8 @@ class CurriculumLeaf {
       areaLabelFr: area?['label_fr'] as String?,
       areaLabelEn: area?['label_en'] as String?,
       areaOrdinal: area?['ordinal'] as int?,
+      shortLabelFr: _nonEmpty(json['short_label_fr']),
+      shortLabelEn: _nonEmpty(json['short_label_en']),
     );
   }
 
@@ -57,6 +61,17 @@ class CurriculumLeaf {
   final String? areaLabelFr;
   final String? areaLabelEn;
   final int? areaOrdinal;
+
+  /// A 2–4 word kid label for the Carte (AM9). Null when content hasn't
+  /// written one, or from an older backend: the Carte then trims
+  /// `label_*` itself.
+  final String? shortLabelFr;
+  final String? shortLabelEn;
+}
+
+String? _nonEmpty(Object? value) {
+  final text = (value as String?)?.trim();
+  return text == null || text.isEmpty ? null : text;
 }
 
 sealed class CurriculumTreeResult {

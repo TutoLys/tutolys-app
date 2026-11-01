@@ -17,6 +17,7 @@ import 'carte_model.dart';
 import 'node_lessons.dart';
 import 'path_controller.dart';
 import 'play_node.dart';
+import 'kid_label.dart';
 import 'skill_path.dart';
 import 'subject_pills.dart';
 
@@ -151,6 +152,10 @@ class _PathScreenState extends ConsumerState<PathScreen> {
             playable: lessons.keys.toSet(),
           )
         : const <CachedSkillNode>[];
+    final activeNode = sections
+        .expand((section) => section.nodes)
+        .where((node) => node.state == PathNodeState.active)
+        .firstOrNull;
     final focusId = focusNodeIdOf(sections);
     if (focusId != null && focusId != _focusId) _scrollToFocus();
     _focusId = focusId;
@@ -294,11 +299,42 @@ class _PathScreenState extends ConsumerState<PathScreen> {
                   ),
                 ),
               ),
+              // A phone pins « Continuer » here, above the tab bar, rather
+              // than under the orb where it covered the next node (AM9).
+              if (compact && activeNode != null)
+                Padding(
+                  padding: EdgeInsets.fromLTRB(pad, Space.xs, pad, Space.sm),
+                  child: ContinueCard(
+                    key: const ValueKey('carte-continue-bar'),
+                    languageTag: activeNode.otherLanguage,
+                    status: continueStatus(t, activeNode),
+                    title: activeNode.label,
+                    cta: t.villageContinueCta,
+                    compact: true,
+                    onTap: () => _playActive(activeNode, lessons),
+                  ),
+                ),
             ],
           );
         },
       ),
     );
+  }
+
+  Future<void> _playActive(
+    PathNode node,
+    Map<String, NodeLessons> lessons,
+  ) async {
+    final state = ref.read(pathControllerProvider);
+    final l = lessons[node.id];
+    if (!isOpenState(node.state) || l == null) return;
+    await playNode(
+      context,
+      ref,
+      leaf: state.leaves.firstWhere((leaf) => leaf.id == node.id),
+      lessons: l,
+    );
+    _scrollToFocus();
   }
 
   List<PathSection> _sectionsOf(
@@ -422,9 +458,7 @@ class _ReviewRow extends StatelessWidget {
                                 const SizedBox(width: 6),
                                 Flexible(
                                   child: Text(
-                                    english && leaf.labelEn.isNotEmpty
-                                        ? leaf.labelEn
-                                        : leaf.labelFr,
+                                    kidLabel(leaf, english: english),
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
@@ -560,11 +594,9 @@ class _Sections extends ConsumerWidget {
                   child: SkillPath(
                     nodes: section.nodes,
                     compact: compact,
+                    inlineCard: !compact,
                     continueLabel: t.villageContinueCta,
-                    statusLabel: (node) {
-                      final pct = ((node.masteryPct ?? 0) * 100).round();
-                      return pct > 0 ? t.pathInProgress(pct) : t.pathNotStarted;
-                    },
+                    statusLabel: (node) => continueStatus(t, node),
                     focusNodeId: focusNodeId,
                     focusKey: focusKey,
                     onTapNode: (node) =>
@@ -779,4 +811,10 @@ class _StaleNote extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The « Continuer » card's eyebrow: "En cours · 60 %" or "Pas commencé".
+String continueStatus(Strings t, PathNode node) {
+  final pct = ((node.masteryPct ?? 0) * 100).round();
+  return pct > 0 ? t.pathInProgress(pct) : t.pathNotStarted;
 }

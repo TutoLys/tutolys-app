@@ -170,6 +170,8 @@ void main() {
       'label_en': '',
       'stable_key': 'francais-langue/lire/b:A/o:1',
       'doc_order': 412,
+      'short_label_fr': 'Lire des mots',
+      'short_label_en': '  ',
       'strand': {
         'key': 'francais-langue/lire',
         'label_fr': 'Compétence Lire des textes variés — Section Stratégies',
@@ -190,6 +192,9 @@ void main() {
     expect(row.strandKey, 'francais-langue/lire');
     expect(row.strandLabelFr, startsWith('Compétence Lire'));
     expect(row.areaLabelFr, 'Lire des textes variés');
+    // AM9: the kid's short label is cached; a blank one is no label.
+    expect(row.shortLabelFr, 'Lire des mots');
+    expect(row.shortLabelEn, isNull);
     expect(row.areaLabelEn, '');
     expect(row.areaOrdinal, 1);
   });
@@ -203,5 +208,6 @@ void main() {
     });
     expect(old.docOrder, isNull);
     expect(old.areaLabelFr, isNull);
+    expect(old.shortLabelFr, isNull);
   });
 }

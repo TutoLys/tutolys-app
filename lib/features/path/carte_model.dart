@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart' show Locale;
 
 import '../../data/api/progress_api.dart';
 import '../../data/local_db/database.dart';
+import 'kid_label.dart';
 import 'learning_areas.dart';
 import 'skill_path.dart';
 import 'subject_language.dart';
@@ -204,11 +205,9 @@ List<PathSection> buildCarteSections({
               };
               return PathNode(
                 id: leaf.id,
-                // A missing English label is a content gap, not a reason to
-                // show nothing — fall back to French.
-                label: englishLabels && leaf.labelEn.isNotEmpty
-                    ? leaf.labelEn
-                    : leaf.labelFr,
+                // Content's short kid label, or the statement trimmed at
+                // a word (AM9).
+                label: kidLabel(leaf, english: englishLabels),
                 state: state,
                 masteryPct: mastery == null ? null : mastery.masteryPct / 100,
                 // Only worth showing when there is more than one lesson.

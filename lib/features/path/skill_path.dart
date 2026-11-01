@@ -168,10 +168,16 @@ class SkillPath extends StatelessWidget {
     this.compact = false,
     this.focusNodeId,
     this.focusKey,
+    this.inlineCard = true,
     super.key,
   });
 
   final List<PathNode> nodes;
+
+  /// Draw the « Continuer » card under the active orb. False on a phone,
+  /// where the Carte pins it above the tab bar instead: hung under the orb,
+  /// it covered the next node (AM9).
+  final bool inlineCard;
 
   /// The active card's eyebrow, e.g. "En cours · 60 % maîtrisé".
   final String Function(PathNode node) statusLabel;
@@ -197,7 +203,9 @@ class SkillPath extends StatelessWidget {
     var y = m.topPad;
     for (final node in nodes) {
       tops.add(y);
-      y += node.state == PathNodeState.active ? m.activeRow : m.row;
+      y += node.state == PathNodeState.active && inlineCard
+          ? m.activeRow
+          : m.row;
     }
     final height = y;
 
@@ -249,8 +257,10 @@ class SkillPath extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (nodes[i].state == PathNodeState.active) ...[
+                    if (nodes[i].state == PathNodeState.active)
                       _mascotFor(xOf(i), tops[i], w, m),
+                    if (nodes[i].state == PathNodeState.active &&
+                        inlineCard) ...[
                       Positioned(
                         left: (xOf(i) - m.cardWidth / 2).clamp(
                           0.0,
@@ -258,13 +268,12 @@ class SkillPath extends StatelessWidget {
                         ),
                         top: tops[i] + m.cardTop,
                         width: m.cardWidth,
-                        child: _ActiveCard(
+                        child: ContinueCard(
                           languageTag: nodes[i].otherLanguage,
                           status: statusLabel(nodes[i]),
                           title: nodes[i].label,
                           cta: continueLabel,
-                          metrics: m,
-                          palette: p,
+                          compact: compact,
                           onTap: () => onTapNode?.call(nodes[i]),
                         ),
                       ),
@@ -605,29 +614,31 @@ class _OrbState extends State<_Orb> with SingleTickerProviderStateMixin {
   }
 }
 
-/// "En cours · 60 % maîtrisé", the skill's name, and the gold CTA.
-class _ActiveCard extends StatelessWidget {
-  const _ActiveCard({
+/// "En cours · 60 % maîtrisé", the skill's name, and the gold CTA. Under
+/// the active orb on wide screens; pinned above the tab bar on a phone
+/// (AM9).
+class ContinueCard extends StatelessWidget {
+  const ContinueCard({
     this.languageTag,
     required this.status,
     required this.title,
     required this.cta,
-    required this.metrics,
-    required this.palette,
+    required this.compact,
     required this.onTap,
+    super.key,
   });
 
   final String? languageTag;
   final String status;
   final String title;
   final String cta;
-  final _Metrics metrics;
-  final VillagePalette palette;
+  final bool compact;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final p = palette;
+    final p = VillagePalette.of(context);
+    final metrics = compact ? _Metrics.compact : _Metrics.wide;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: p.surface,

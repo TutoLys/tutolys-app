@@ -248,6 +248,46 @@ void main() {
     expect(find.byType(PlayScreen), findsOneWidget);
   });
 
+  testWidgets('a phone pins Continuer above the tab bar, off the path (AM9)', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(375, 812);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await openCarte(
+      tester,
+      appUnder(
+        leaves: const [
+          _compter,
+          CurriculumLeaf(
+            id: 'leaf-2',
+            labelFr: "par ordre croissant ou décroissant à partir d'un nombre",
+            labelEn: '',
+            stableKey: 'mathematique/arithmetique/b:A/o:2',
+            shortLabelFr: 'Ranger les nombres',
+          ),
+        ],
+        content: {
+          'ex-1': exercise(id: 'ex-1', skillNodeId: 'leaf-1'),
+          'ex-2': exercise(id: 'ex-2', skillNodeId: 'leaf-2'),
+        },
+      ),
+    );
+
+    final bar = find.byKey(const ValueKey('carte-continue-bar'));
+    expect(bar, findsOneWidget);
+    expect(find.text('Continuer'), findsOneWidget, reason: 'only the bar');
+    // Below the scrolling path, never over a node.
+    final path = tester.getRect(find.byKey(const ValueKey('carte-path')));
+    expect(tester.getRect(bar).top, greaterThanOrEqualTo(path.bottom));
+    // Content's short label under the orb, not the trimmed statement.
+    expect(find.text('Ranger les nombres'), findsOneWidget);
+
+    await tester.tap(find.text('Continuer'));
+    await tester.pumpAndSettle();
+    expect(find.byType(PlayScreen), findsOneWidget);
+  });
+
   testWidgets('the active card shows the real mastery from /me/progress', (
     tester,
   ) async {

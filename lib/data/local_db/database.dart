@@ -237,6 +237,12 @@ class SkillNodeTable extends Table {
   TextColumn get areaLabelEn => text().named('area_label_en').nullable()();
   IntColumn get areaOrdinal => integer().named('area_ordinal').nullable()();
 
+  /// A 2–4 word kid label written in content (schema v11, AM9): what the
+  /// Carte shows under an orb. The full statement stays in `label_*` for
+  /// parent reports. Null until content supplies one.
+  TextColumn get shortLabelFr => text().named('short_label_fr').nullable()();
+  TextColumn get shortLabelEn => text().named('short_label_en').nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -436,7 +442,7 @@ class LocalDatabase extends _$LocalDatabase {
   Future<String?> Function()? migrationKidIdLoader;
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -511,6 +517,10 @@ class LocalDatabase extends _$LocalDatabase {
       }
       if (from < 10 && to >= 10) {
         await m.createTable(localNotificationTable);
+      }
+      if (from < 11 && to >= 11) {
+        await m.addColumn(skillNodeTable, skillNodeTable.shortLabelFr);
+        await m.addColumn(skillNodeTable, skillNodeTable.shortLabelEn);
       }
     },
   );

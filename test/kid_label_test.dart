@@ -1,0 +1,91 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:tutolys_app/data/local_db/database.dart';
+import 'package:tutolys_app/features/path/kid_label.dart';
+
+CachedSkillNode _leaf({
+  String fr = 'Compter',
+  String en = '',
+  String? shortFr,
+  String? shortEn,
+}) => CachedSkillNode(
+  id: 'l',
+  labelFr: fr,
+  labelEn: en,
+  stableKey: 'k',
+  subject: 'MATH',
+  grade: 1,
+  shortLabelFr: shortFr,
+  shortLabelEn: shortEn,
+);
+
+void main() {
+  group('trimLabel (AM9 fallback)', () {
+    test('the review\'s two labels are cut at a word, never mid-word', () {
+      expect(
+        trimLabel(
+          "par ordre croissant ou décroissant à partir d'un nombre donné",
+        ),
+        'par ordre croissant…',
+      );
+      expect(
+        trimLabel('coordonner le geste et le nom du nombre'),
+        'coordonner le geste…',
+      );
+    });
+
+    test('a short statement is kept whole', () {
+      expect(trimLabel('compter jusqu\'à 10'), "compter jusqu'à 10");
+    });
+
+    test('the first clause, when it stands on its own', () {
+      expect(
+        trimLabel('Reconnaître des solides, par exemple un cube'),
+        'Reconnaître des solides',
+      );
+      // One word before the comma isn't a label: keep going.
+      expect(trimLabel('Lire, écrire et compter'), 'Lire, écrire et compter');
+    });
+
+    test('never ends on « de », « l\' » or « the »', () {
+      for (final label in [
+        'Associer un nombre à une quantité de jetons',
+        "Décrire l'organisation d'une société",
+        'Identify the main idea of the text',
+      ]) {
+        final trimmed = trimLabel(label);
+        final last = trimmed.replaceAll('…', '').split(' ').last;
+        expect(
+          {'de', 'à', 'une', "l'", "d'", 'the', 'of'}.contains(last),
+          isFalse,
+          reason: trimmed,
+        );
+        expect(trimmed.length, lessThanOrEqualTo(kidLabelMaxChars + 1));
+      }
+    });
+  });
+
+  group('kidLabel', () {
+    test('content\'s short label wins', () {
+      expect(
+        kidLabel(
+          _leaf(fr: 'par ordre croissant ou décroissant', shortFr: 'Ranger'),
+          english: false,
+        ),
+        'Ranger',
+      );
+    });
+
+    test('English: the short English label, then English, then French', () {
+      expect(
+        kidLabel(_leaf(shortFr: 'Compter', shortEn: 'Count'), english: true),
+        'Count',
+      );
+      expect(kidLabel(_leaf(en: 'Count to 10'), english: true), 'Count to 10');
+      expect(kidLabel(_leaf(), english: true), 'Compter');
+    });
+
+    test('a blank short label is ignored', () {
+      expect(kidLabel(_leaf(shortFr: '  '), english: false), 'Compter');
+    });
+  });
+}
