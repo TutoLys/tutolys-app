@@ -27,7 +27,7 @@ class PathNode {
     required this.id,
     required this.label,
     required this.state,
-    this.spokenLabel,
+    this.fullStatement,
     this.masteryPct,
     this.otherLanguage,
     this.otherLanguageLabel,
@@ -50,9 +50,10 @@ class PathNode {
   final String label;
   final PathNodeState state;
 
-  /// The skill's full name, for screen readers: [label] may be trimmed
-  /// with an ellipsis (AM9), which reads as « ….  » aloud. Null: [label].
-  final String? spokenLabel;
+  /// The skill's whole curriculum statement, up to 300 characters: a
+  /// screen reader's hint, never its label, so it isn't read on every orb.
+  /// Null when [label] already is the whole statement.
+  final String? fullStatement;
 
   /// Set when this node's lesson is in another language than the subject
   /// asked for: `'FR'` for a French lesson in an English-mode maths path.
@@ -162,6 +163,11 @@ List<bool> dottedConnectors(List<PathNode> nodes) => [
 ///
 /// Connectors are the design's bezier curves, drawn behind the orbs: solid
 /// blue between two open nodes, dotted grey touching a locked or `soon` one, so
+/// A caption as a screen reader should say it: no trailing ellipsis.
+String spokenName(String label) => label.endsWith('…')
+    ? label.substring(0, label.length - 1).trimRight()
+    : label;
+
 /// "how far can I go" is legible without reading a label.
 ///
 /// The **active** node carries the "Continuer" card and the fox beside it.
@@ -339,12 +345,15 @@ class _Node extends StatelessWidget {
       children: [
         Semantics(
           button: !locked,
+          // The short label, or the trimmed name without its ellipsis,
+          // which read aloud as « …. » before the next part.
           label: [
-            node.spokenLabel ?? node.label,
+            spokenName(node.label),
             ?node.otherLanguageLabel,
             ?node.lessonsLabel,
             ?node.stateLabel,
           ].join('. '),
+          hint: node.fullStatement,
           child: Stack(
             clipBehavior: Clip.none,
             children: [

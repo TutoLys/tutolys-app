@@ -334,6 +334,32 @@ void main() {
       expect(node.label, 'fr-a');
     });
 
+    test('short labels follow the subject\'s language too, with the full '
+        'statement as a hint only', () {
+      CachedSkillNode short(String key) => CachedSkillNode(
+        id: 'a',
+        labelFr: 'lire des textes variés en contexte',
+        labelEn: 'read a variety of texts in context',
+        stableKey: key,
+        subject: 'MATH',
+        grade: 1,
+        shortLabelFr: 'Lire',
+        shortLabelEn: 'Read',
+      );
+      final english = build([
+        short('english-language-arts/reading/b:A/o:1'),
+      ], subject: 'EN').expand((s) => s.nodes).single;
+      expect(english.label, 'Read', reason: 'EN in a French app');
+      expect(english.fullStatement, 'read a variety of texts in context');
+
+      final french = build(
+        [short('francais-langue/lire/b:A/o:1')],
+        english: true,
+        subject: 'FR',
+      ).expand((s) => s.nodes).single;
+      expect(french.label, 'Lire', reason: 'FR in an English app');
+    });
+
     test('English stays English in a French app', () {
       final node = build([
         leaf('a', 'english-language-arts/reading/b:A/o:1', en: 'Read'),
@@ -515,9 +541,11 @@ void main() {
     });
 
     test('inside a strand, « Bientôt » nodes trail the playable ones', () {
-      final nodes = build(fls, playable: {'v2', 'v3'}, subject: 'FLS')
-          .first
-          .nodes;
+      final nodes = build(
+        fls,
+        playable: {'v2', 'v3'},
+        subject: 'FLS',
+      ).first.nodes;
       expect(nodes.map((n) => n.id), ['v2', 'v3', 'v1']);
       expect(nodes.map((n) => n.state), [
         PathNodeState.active,
@@ -544,10 +572,8 @@ void main() {
       ]),
       [false, true, true],
     );
-    expect(
-      dottedConnectors([n(PathNodeState.soon), n(PathNodeState.active)]),
-      [true],
-      reason: 'the line out of an hourglass was solid',
-    );
+    expect(dottedConnectors([n(PathNodeState.soon), n(PathNodeState.active)]), [
+      true,
+    ], reason: 'the line out of an hourglass was solid');
   });
 }

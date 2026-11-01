@@ -1,4 +1,7 @@
+import 'package:flutter/widgets.dart' show Locale;
+
 import '../../data/local_db/database.dart';
+import 'subject_language.dart';
 
 /// What the Carte writes under an orb (AM9).
 ///
@@ -13,7 +16,13 @@ String kidLabel(CachedSkillNode leaf, {required bool english}) {
   return trimLabel(fullLabel(leaf, english: english));
 }
 
-/// The skill's whole statement, what a screen reader says. A missing
+/// [kidLabel] in the leaf's own subject language (ADR 0023): Français and
+/// English, ESL and FLS keep theirs whatever the app is set to; other
+/// subjects follow [appLocale].
+String kidLabelFor(CachedSkillNode leaf, Locale appLocale) =>
+    kidLabel(leaf, english: showsEnglishLabels(leaf.subject, appLocale));
+
+/// The skill's whole statement, a screen reader's hint. A missing
 /// English label is a content gap, not a reason to say nothing — French.
 String fullLabel(CachedSkillNode leaf, {required bool english}) =>
     english && leaf.labelEn.isNotEmpty ? leaf.labelEn : leaf.labelFr;

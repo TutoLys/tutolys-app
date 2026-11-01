@@ -288,7 +288,7 @@ void main() {
     expect(find.byType(PlayScreen), findsOneWidget);
   });
 
-  testWidgets('a trimmed caption is read once, by its full name (AM9)', (
+  testWidgets('a trimmed caption is read once, short, full name as a hint', (
     tester,
   ) async {
     final semantics = tester.ensureSemantics();
@@ -309,12 +309,15 @@ void main() {
       ),
     );
 
-    // The orb says the whole statement, never « …. ».
-    expect(
-      find.bySemanticsLabel(RegExp('^${RegExp.escape(full)}')),
-      findsOneWidget,
+    // The orb says the short name, never « …. »; the whole statement is
+    // its hint, there for whoever asks, not read on every orb.
+    final orb = tester.getSemantics(
+      find.byKey(const ValueKey('path-orb-leaf-1')),
     );
-    expect(find.bySemanticsLabel(RegExp(r'…\.')), findsNothing);
+    expect(orb.label, startsWith('par ordre croissant'));
+    expect(orb.label, isNot(contains('…')));
+    expect(orb.label.length, lessThan(60));
+    expect(orb.hint, full);
     // The visible caption is drawn, but not read a second time.
     expect(find.text('par ordre croissant…'), findsWidgets);
     expect(find.bySemanticsLabel('par ordre croissant…'), findsNothing);

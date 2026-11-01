@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
 import 'package:tutolys_app/features/path/kid_label.dart';
@@ -7,12 +8,13 @@ CachedSkillNode _leaf({
   String en = '',
   String? shortFr,
   String? shortEn,
+  String subject = 'MATH',
 }) => CachedSkillNode(
   id: 'l',
   labelFr: fr,
   labelEn: en,
   stableKey: 'k',
-  subject: 'MATH',
+  subject: subject,
   grade: 1,
   shortLabelFr: shortFr,
   shortLabelEn: shortEn,
@@ -111,6 +113,33 @@ void main() {
 
     test('a blank short label is ignored', () {
       expect(kidLabel(_leaf(shortFr: '  '), english: false), 'Compter');
+    });
+  });
+
+  group('kidLabelFor: language subjects keep their language (ADR 0023)', () {
+    const fr = Locale('fr', 'CA');
+    const en = Locale('en', 'CA');
+    CachedSkillNode both(String subject) => _leaf(
+      fr: 'lire des textes variés',
+      en: 'read a variety of texts',
+      shortFr: 'Lire',
+      shortEn: 'Read',
+      subject: subject,
+    );
+
+    test('English subjects show short_label_en in a French app', () {
+      expect(kidLabelFor(both('EN'), fr), 'Read');
+      expect(kidLabelFor(both('ESL'), fr), 'Read');
+    });
+
+    test('Français and FLS show short_label_fr in an English app', () {
+      expect(kidLabelFor(both('FR'), en), 'Lire');
+      expect(kidLabelFor(both('FLS'), en), 'Lire');
+    });
+
+    test('other subjects follow the app', () {
+      expect(kidLabelFor(both('MATH'), fr), 'Lire');
+      expect(kidLabelFor(both('MATH'), en), 'Read');
     });
   });
 }

@@ -83,3 +83,18 @@
   rejected refresh, and no device request at all between the rebuild and a
   fresh pairing two minutes later. So the browser started with empty
   storage.
+
+## Addendum, 2026-11-01: short-label check
+
+- **Orb label.** A screen reader hears the short label, or the trimmed name
+  without its ellipsis. Hearing the full statement (up to 300 characters)
+  on every orb was too long. That statement is now the orb's semantic
+  hint (`PathNode.fullStatement`), reachable on request, and left out when
+  it is the label already.
+- **Language.** The Carte already chose the label language by subject
+  (`showsEnglishLabels`, ADR 0023), so short labels follow it: an EN or
+  ESL orb shows `short_label_en` in a French app, and an FR or FLS orb
+  shows `short_label_fr` in an English app. « Révision » used the app
+  language and now uses the same rule (`kidLabelFor`). The Continuer card
+  and Village's « Continuer » use the Carte node's label, so they follow
+  too.

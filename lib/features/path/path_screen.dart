@@ -2,6 +2,7 @@ import 'dart:async';
 
 import '../../data/local_db/database.dart' show CachedSkillNode;
 import 'review.dart';
+
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -238,8 +239,7 @@ class _PathScreenState extends ConsumerState<PathScreen> {
                                   .refresh(),
                             ),
                           // Drawn, lessons still arriving (A1).
-                          if (state.syncing &&
-                              state.carteLessons.isEmpty)
+                          if (state.syncing && state.carteLessons.isEmpty)
                             const Padding(
                               key: ValueKey('carte-syncing'),
                               padding: EdgeInsets.all(Space.lg),
@@ -393,7 +393,7 @@ class _ReviewRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = VillagePalette.of(context);
     final t = context.s;
-    final english = Localizations.localeOf(context).languageCode == 'en';
+    final locale = Localizations.localeOf(context);
     return Padding(
       key: const ValueKey('carte-review'),
       padding: const EdgeInsets.only(bottom: Space.lg),
@@ -458,7 +458,9 @@ class _ReviewRow extends StatelessWidget {
                                 const SizedBox(width: 6),
                                 Flexible(
                                   child: Text(
-                                    kidLabel(leaf, english: english),
+                                    // Language subjects keep their own
+                                    // language (ADR 0023), as on the path.
+                                    kidLabelFor(leaf, locale),
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
