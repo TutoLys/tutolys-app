@@ -13,6 +13,7 @@ class ActivitySummary {
     required this.solved,
     required this.firstTry,
     required this.xp,
+    this.practice = false,
   });
 
   final int questions;
@@ -24,6 +25,11 @@ class ActivitySummary {
   /// The client-side estimate (`estimateXp`); the backend's ledger is the
   /// real total.
   final int xp;
+
+  /// Practice pays no XP (Hafid, N14). The celebration then shows a calm
+  /// « Entraînement » label instead of a gold « +0 XP », which a
+  /// 6-year-old reads as having earned nothing (UX review K18).
+  final bool practice;
 
   bool get perfect => questions > 0 && firstTry == questions;
 
@@ -138,11 +144,14 @@ class ActivityCompleteView extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: Space.md),
-                            _XpPill(
-                              xp: summary.xp,
-                              animate: !still,
-                              label: s.xpEarnedLabel,
-                            ),
+                            if (summary.practice)
+                              _PracticeLabel(label: s.practiceLabel)
+                            else
+                              _XpPill(
+                                xp: summary.xp,
+                                animate: !still,
+                                label: s.xpEarnedLabel,
+                              ),
                             const SizedBox(height: Space.lg),
                             // Not « N/N bonnes réponses »: retries are
                             // unlimited, so that was always full (UX review
@@ -318,6 +327,46 @@ class CelebrationRow extends StatelessWidget {
           Text(
             '$value/$max',
             style: TextStyle(fontWeight: FontWeight.w700, color: p.inkMuted),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Practice's end: what this round was, with no number.
+class _PracticeLabel extends StatelessWidget {
+  const _PracticeLabel({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
+    return Container(
+      key: const ValueKey('complete-practice'),
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+      decoration: BoxDecoration(
+        borderRadius: Radii.pillAll,
+        color: p.navHoverFill,
+        border: Border.all(color: p.quebecBlueBright, width: 2),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.replay_rounded,
+            color: p.isDark ? p.quebecBlueBright : p.quebecBlue,
+            size: 24,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: VillageType.display,
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: p.ink,
+            ),
           ),
         ],
       ),

@@ -61,6 +61,53 @@ void main() {
     });
   });
 
+  testWidgets('K18: practice ends on « Entraînement », never « +0 XP »', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      host(
+        ActivityCompleteView(
+          summary: const ActivitySummary(
+            questions: 5,
+            solved: 5,
+            firstTry: 4,
+            xp: 0,
+            practice: true,
+          ),
+          locale: const Locale('fr'),
+          onContinue: () {},
+        ),
+      ),
+    );
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.byKey(const ValueKey('complete-practice')), findsOne);
+    expect(find.text('Entraînement'), findsOne);
+    expect(find.textContaining('XP'), findsNothing);
+  });
+
+  testWidgets('AM34: a big card\'s short label is 28 px and centred', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      host(
+        Center(
+          child: SizedBox(
+            width: 120,
+            child: AnswerTile(
+              label: '4',
+              large: true,
+              state: AnswerTileState.idle,
+              onTap: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    final t = tester.widget<Text>(find.text('4'));
+    expect(t.style!.fontSize, 28);
+    expect(t.textAlign, TextAlign.center);
+  });
+
   group('the stop sheet is exported', () {
     for (final (key, want) in [('stop-continue', false), ('stop-quit', true)]) {
       testWidgets('$key returns $want', (tester) async {
@@ -91,8 +138,9 @@ void main() {
   group('AM21: a phone on its side gets two columns', () {
     Future<ActivitySessionController> pump(
       WidgetTester tester,
-      Size size,
-    ) async {
+      Size size, {
+      bool picture = false,
+    }) async {
       tester.view.physicalSize = size;
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
@@ -111,6 +159,7 @@ void main() {
             'text':
                 'Il fait très chaud à la plage. Quelle température '
                 'fait-il ?',
+            if (picture) 'image_ref': 'foxy',
           },
           'config': {
             'options': [
@@ -140,6 +189,10 @@ void main() {
           LearningActivityView(
             controller: c,
             locale: const Locale('fr'),
+            character: const SizedBox.square(
+              key: ValueKey('fox'),
+              dimension: 56,
+            ),
             onDone: () {},
           ),
         ),
@@ -167,6 +220,33 @@ void main() {
       await tester.runAsync(() => pumpEventQueue());
       await tester.pump();
       expect(find.text('Bravo !'), findsOne);
+      c.dispose();
+    });
+
+    testWidgets('AM33: sideways, the question and 🔊 lead, above the picture, '
+        'with no fox', (tester) async {
+      final c = await pump(tester, const Size(812, 375), picture: true);
+      final question = tester.getTopLeft(
+        find.byKey(const ValueKey('prompt-row')),
+      );
+      final image = tester.getTopLeft(
+        find.byKey(const ValueKey('prompt-image')),
+      );
+      expect(question.dy, lessThan(image.dy));
+      expect(question.dy, lessThan(375));
+      expect(find.byKey(const ValueKey('fox')), findsNothing);
+      expect(tester.takeException(), isNull);
+      c.dispose();
+    });
+
+    testWidgets('upright, the picture still leads', (tester) async {
+      final c = await pump(tester, const Size(800, 1200), picture: true);
+      expect(
+        tester.getTopLeft(find.byKey(const ValueKey('prompt-image'))).dy,
+        lessThan(
+          tester.getTopLeft(find.byKey(const ValueKey('prompt-row'))).dy,
+        ),
+      );
       c.dispose();
     });
 

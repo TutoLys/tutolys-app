@@ -176,28 +176,39 @@ class ActivityShell extends StatelessWidget {
     // it sits beside the prompt — or, when the engine draws its own prompt
     // (the legacy path), small in the top bar.
     final hasPrompt = promptText != null || onSpeak != null;
-    final header = <Widget>[
-      if (promptImageRef != null)
-        Padding(
-          padding: const EdgeInsets.only(bottom: Space.md),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 180, maxWidth: 360),
-              child: ContentImage(
-                key: const ValueKey('prompt-image'),
-                ref: promptImageRef!,
-                fallback: const SizedBox.shrink(),
+    final picture = promptImageRef == null
+        ? null
+        : Padding(
+            padding: const EdgeInsets.only(bottom: Space.md),
+            child: Center(
+              child: ConstrainedBox(
+                // Sideways, the picture shares a ~300 px column with the
+                // question, so it's capped well below that.
+                constraints: BoxConstraints(
+                  maxHeight: landscape ? size.height * 0.4 : 180,
+                  maxWidth: 360,
+                ),
+                child: ContentImage(
+                  key: const ValueKey('prompt-image'),
+                  ref: promptImageRef!,
+                  fallback: const SizedBox.shrink(),
+                ),
               ),
             ),
-          ),
-        ),
+          );
+    final header = <Widget>[
+      // Upright the picture leads, as the design draws it. Sideways the
+      // question and its 🔊 lead: under the picture they fell off-screen,
+      // so the child saw the answers but no question (UX review AM33).
+      if (!landscape) ?picture,
       if (hasPrompt)
         _PromptRow(
           palette: p,
           strings: s,
           text: promptText,
           onSpeak: onSpeak,
-          character: character,
+          // Not sideways either: the fox took 70 px of a 300 px column.
+          character: landscape ? null : character,
         ),
       if (instruction != null)
         Padding(
@@ -222,7 +233,7 @@ class ActivityShell extends StatelessWidget {
             ],
           ),
         ),
-
+      if (landscape) ?picture,
       if (notice != null)
         Padding(
           padding: const EdgeInsets.only(bottom: Space.sm),
@@ -302,7 +313,17 @@ class ActivityShell extends StatelessWidget {
                                     children: [
                                       Expanded(
                                         flex: 2,
-                                        child: SingleChildScrollView(
+                                        // The ↓ cue here too: a long
+                                        // question can still run past the
+                                        // column (AM33).
+                                        child: _ScrollCue(
+                                          key: ValueKey((
+                                            'question',
+                                            questionKey,
+                                          )),
+                                          palette: p,
+                                          label: s.moreBelow,
+                                          showCue: feedback == null,
                                           child: Column(children: header),
                                         ),
                                       ),

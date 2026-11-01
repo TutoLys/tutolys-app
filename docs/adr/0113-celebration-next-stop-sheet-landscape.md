@@ -35,3 +35,19 @@ are UX items already decided: G12, AM20 and AM21.
 - At 812 × 375 the question sits left of the answers, with no overflow,
   and the question is still answerable through to « Bravo ! ».
 - 375 × 812 and 1280 × 800 keep one column.
+
+## Follow-up (2026-11-01, ux-review's verify pass, Manager's go)
+- **K18:** `ActivitySummary.practice` (default false). When true, the
+  celebration shows a calm « Entraînement » pill instead of a gold
+  « +0 XP ». It's a flag rather than a nullable `xp`, because the app
+  credits `summary.xp` to an `int` and a nullable field would break its
+  build until both sides moved together. The app passes
+  `practice: widget.practice`.
+- **AM33:** sideways, the left column leads with the question and its 🔊.
+  The picture comes after it, capped at 40 % of the screen height, and the
+  fox is left out (it took 70 px of a 300 px column). The left column gets
+  the ↓ cue too. Upright, the picture still leads, as the design draws it.
+- **AM34:** a big card's short label (six characters or fewer: « 4 »,
+  « chat ») is 28 px, and every big card's label is centred. That covers
+  compose_build's tiles and slots, and pair_match.
+- Tests: 4 more in `test/celebration_stop_landscape_test.dart`.

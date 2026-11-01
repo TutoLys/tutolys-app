@@ -16,6 +16,7 @@ class ShellStrings {
   String get close => _t("Quitter l'exercice", 'Leave the exercise');
   String get moreBelow => _t('Voir la suite', 'See more');
   String get nextLesson => _t('Suivant', 'Next');
+  String get practiceLabel => _t('Entraînement', 'Practice');
   String get backToMap => _t('Retour à la carte', 'Back to the map');
   String get listenHint => _t('Écouter l’indice', 'Listen to the hint');
   String get stopTitle => _t('Tu veux arrêter ?', 'Do you want to stop?');

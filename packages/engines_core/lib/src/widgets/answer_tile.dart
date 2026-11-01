@@ -148,7 +148,10 @@ class AnswerTile extends StatelessWidget {
     // N19), 40 elsewhere, where slots are narrower.
     if (_pictureOnly(label)) return prominent ? 56 : 40;
     if (prominent) return label.length <= 24 && !label.contains('\n') ? 24 : 19;
-    return large ? 20 : 15;
+    // A big card's short label (« 4 », « chat ») is the card: 28 px, so it
+    // reads across a 120 px tile (UX review AM34). Longer ones stay 20.
+    if (large) return label.trim().length <= 6 ? 28 : 20;
+    return 15;
   }
 
   @override
@@ -292,7 +295,8 @@ class AnswerTile extends StatelessWidget {
                               label,
                               // A picture answer (emoji only) draws big:
                               // the child reads the picture, not the word.
-                              textAlign: prominent || _pictureOnly(label)
+                              textAlign:
+                                  prominent || large || _pictureOnly(label)
                                   ? TextAlign.center
                                   : null,
                               style: TextStyle(
