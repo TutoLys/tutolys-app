@@ -180,7 +180,8 @@ class _HeroStat {
 }
 
 /// The design's `.profile-hero`: the avatar with its edit dot, the name and
-/// grade, and the three `.ph-stat-card`s, in one white panel.
+/// grade, and the three `.ph-stat-card`s as one strip, in one white panel.
+/// Profil is the only page with these three numbers (AM13).
 ///
 /// The design's header already shows the same face, name and grade, so
 /// this is the only place Profil shows them, and it puts them beside what
@@ -311,11 +312,23 @@ class _HeroCard extends StatelessWidget {
                 ],
               ],
             );
-            final statCards = Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              alignment: wide ? WrapAlignment.end : WrapAlignment.center,
-              children: [for (final s in stats) _StatCard(stat: s, palette: p)],
+            // One 3-up strip, never a wrap: a wrap left « Niv. 1 » alone on
+            // its own row at phone width (AM13).
+            final statCards = Row(
+              key: const ValueKey('profile-stat-strip'),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (var i = 0; i < stats.length; i++) ...[
+                  if (i > 0) const SizedBox(width: Space.sm),
+                  Expanded(
+                    child: _StatCard(
+                      key: ValueKey('profile-stat-$i'),
+                      stat: stats[i],
+                      palette: p,
+                    ),
+                  ),
+                ],
+              ],
             );
             if (!wide) {
               return Column(
@@ -390,9 +403,10 @@ class _EditDot extends StatelessWidget {
   }
 }
 
-/// The design's `.ph-stat-card`: icon left, value over label.
+/// The design's `.ph-stat-card`, a third of the strip: icon over value over
+/// label, centred, so three fit side by side at 375 px (AM13).
 class _StatCard extends StatelessWidget {
-  const _StatCard({required this.stat, required this.palette});
+  const _StatCard({super.key, required this.stat, required this.palette});
 
   final _HeroStat stat;
   final VillagePalette palette;
@@ -400,8 +414,7 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(minWidth: 110),
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
       decoration: BoxDecoration(
         color: palette.surface,
         borderRadius: BorderRadius.circular(16),
@@ -413,29 +426,33 @@ class _StatCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Image.asset('assets/images/${stat.asset}', width: 30, height: 30),
-          const SizedBox(width: 10),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                stat.value,
-                style: TextStyle(
-                  fontFamily: VillageType.display,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 17,
-                  color: palette.ink,
-                ),
-              ),
-              Text(
-                stat.label,
-                style: TextStyle(fontSize: 10.5, color: palette.inkMuted),
-              ),
-            ],
+          Image.asset(
+            'assets/images/${stat.asset}',
+            width: 28,
+            height: 28,
+            excludeFromSemantics: true,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            stat.value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: VillageType.display,
+              fontWeight: FontWeight.w700,
+              fontSize: 17,
+              color: palette.ink,
+            ),
+          ),
+          Text(
+            stat.label,
+            maxLines: 2,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 10.5, color: palette.inkMuted),
           ),
         ],
       ),

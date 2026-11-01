@@ -54,7 +54,7 @@ Widget screen({
 );
 
 void main() {
-  testWidgets('the headline stats are the real ones, level included', (
+  testWidgets('no level, streak or badge cards: Profil has them (AM13)', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -65,29 +65,14 @@ void main() {
           totalXp: 340,
           level: 14,
           masteredCount: 1,
-          masteries: [
-            SkillMasteryDto(skillNodeId: 'a', masteryPct: 90, isMastered: true),
-          ],
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Niv. 14'), findsOneWidget);
-    expect(find.text('340 points XP'), findsOneWidget);
-    expect(find.text('4'), findsOneWidget);
-    expect(find.text('1'), findsOneWidget);
-  });
-
-  testWidgets('an unknown streak is a dash, never a made-up zero', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      screen(progress: const ProgressState(loading: false)),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('–'), findsOneWidget);
+    expect(find.text('Niv. 14'), findsNothing);
+    expect(find.text('340 points XP'), findsNothing);
+    expect(find.text('–'), findsNothing);
   });
 
   testWidgets('one row per learning area, each with its status', (

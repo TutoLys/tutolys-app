@@ -393,6 +393,40 @@ void main() {
     }
   });
 
+  testWidgets('the three stats sit on one row at 375 px (AM13)', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(375, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final progressApi = _FakeProgressApi()
+      ..result = const ProgressFetched(
+        ProgressSnapshot(
+          masteries: [],
+          currentStreakDays: 12,
+          totalXp: 135,
+          level: 2,
+          skillsCompleted: 1,
+          skillsTotal: 98,
+        ),
+      );
+    await tester.pumpWidget(appUnder(progressApi: progressApi));
+    await tester.pumpAndSettle();
+
+    expect(find.text(Strings.fr.progressLevel(2)), findsOneWidget);
+    final cards = [
+      for (var i = 0; i < 3; i++)
+        tester.getRect(find.byKey(ValueKey('profile-stat-$i'))),
+    ];
+    // One row: same top, left to right, all inside the screen.
+    expect(cards[1].top, cards[0].top);
+    expect(cards[2].top, cards[0].top);
+    expect(cards[0].right, lessThan(cards[1].left));
+    expect(cards[1].right, lessThan(cards[2].left));
+    expect(cards[2].right, lessThanOrEqualTo(375));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('no title until it is earned', (tester) async {
     await tester.pumpWidget(appUnder());
     await tester.pumpAndSettle();

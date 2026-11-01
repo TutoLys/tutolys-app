@@ -26,8 +26,9 @@ final progressLeavesProvider = FutureProvider.autoDispose
       return sync.cachedLeaves(subject: subject, grade: kid.gradeLevel);
     });
 
-/// Progrès — the design's progress page: three headline stats, the subject
-/// pills, and a card with one row per learning area.
+/// Progrès — the design's progress page: the subject pills and a card with
+/// one row per learning area. Its three headline stats moved to Profil's
+/// strip (AM13).
 ///
 /// Every figure is real or absent. Mastery is `/me/progress`'s own per-skill
 /// list joined to the cached curriculum (no new endpoint); the level is the
@@ -49,12 +50,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final progress = ref.watch(progressControllerProvider);
-    final t = context.s;
     final p = VillagePalette.of(context);
-
-    final streak = progress.currentStreakDays;
-    final level = progress.level;
 
     return SafeArea(
       child: LayoutBuilder(
@@ -75,39 +71,9 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
             child: ListView(
               padding: insets,
               children: [
-                // `.progress-summary`: tiles that wrap rather than squeeze.
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    _StatCard(
-                      asset: 'asset-badge.webp',
-                      value: '${progress.masteredCount}',
-                      label: t.profileSkillsMastered(progress.masteredCount),
-                      palette: p,
-                    ),
-                    _StatCard(
-                      asset: 'asset-flame.webp',
-                      // Same rule as the header: unknown is a dash, never a
-                      // made-up zero (ADR 0032: no `~`, the value is
-                      // already local-instant and monotonic).
-                      value: streak == null ? '–' : '$streak',
-                      label: t.profileStreakDays(streak ?? 0),
-                      palette: p,
-                    ),
-                    _StatCard(
-                      asset: 'asset-xpstar.webp',
-                      value: level == null
-                          ? '${progress.totalXp}'
-                          : t.progressLevel(level),
-                      label: level == null
-                          ? t.profileTotalXp
-                          : '${progress.totalXp} ${t.profileTotalXp}',
-                      palette: p,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
+                // No level/streak/badge cards: Profil's strip has them, and
+                // the header shows them too. Progrès is per-subject detail
+                // (AM13).
                 SubjectPills(
                   selected: _subject,
                   compact: compact,
@@ -122,71 +88,6 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
             ),
           );
         },
-      ),
-    );
-  }
-}
-
-/// `.ph-stat-card`: icon, number, label.
-class _StatCard extends StatelessWidget {
-  const _StatCard({
-    required this.asset,
-    required this.value,
-    required this.label,
-    required this.palette,
-  });
-
-  final String asset;
-  final String value;
-  final String label;
-  final VillagePalette palette;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = palette;
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minWidth: 110),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: p.surface,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: p.shadowSmall,
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Image.asset('assets/images/$asset', width: 30, height: 30),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    value,
-                    style: TextStyle(
-                      fontFamily: VillageType.display,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 17,
-                      color: p.ink,
-                    ),
-                  ),
-                  Text(
-                    label,
-                    style: TextStyle(fontSize: 10.5, color: p.inkMuted),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
