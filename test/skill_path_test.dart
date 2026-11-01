@@ -265,4 +265,33 @@ void main() {
       expect(left + box.size.width, lessThanOrEqualTo(375));
     }
   });
+
+  testWidgets('connectors stop under caption text', (tester) async {
+    const label = 'Comment une histoire fonctionne';
+    await tester.pumpWidget(
+      pathIn(
+        compact: true,
+        nodes: const [
+          PathNode(id: 'a', label: label, state: PathNodeState.available),
+          PathNode(id: 'b', label: label, state: PathNodeState.locked),
+        ],
+      ),
+    );
+
+    final paint = tester.widget<CustomPaint>(
+      find.byKey(const ValueKey('path-connectors')),
+    );
+    final holes = (paint.painter! as dynamic).holes as List<Rect>;
+    final captions = find.text(label).evaluate().toList();
+    expect(holes, isNotEmpty);
+    for (final e in captions) {
+      final box = e.renderObject! as RenderBox;
+      final rect = box.localToGlobal(Offset.zero) & box.size;
+      final path = tester.getTopLeft(
+        find.byKey(const ValueKey('path-connectors')),
+      );
+      // Every caption's text lies inside the cut-outs.
+      expect(holes.any((h) => h.shift(path).overlaps(rect)), isTrue);
+    }
+  });
 }

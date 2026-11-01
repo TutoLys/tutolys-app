@@ -110,3 +110,8 @@ Every one of the 13 fits on two lines there, and so does a 32-character
 worst case made of three 10-letter words. Only the orb is tappable, and a
 row holds one node, so the wider caption covers nothing. It still fits on a
 375 px screen at the 28 % and 72 % columns. The text is unchanged.
+
+Wider captions sit across the connector lines between orbs. **The connector
+now stops under each line of caption text**, like a road under a map label
+(the cut-outs are laid out with the caption's own style). A mask in the
+card's colour wouldn't work, because the sky behind the card is a gradient.

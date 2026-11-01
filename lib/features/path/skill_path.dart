@@ -153,6 +153,14 @@ class _Metrics {
   );
 }
 
+/// Between an orb and its caption.
+const _captionGap = 7.0;
+
+/// The caption's text style, shared with the connector's cut-outs so the
+/// two lay out the same lines.
+TextStyle _captionStyle(_Metrics m, Color color) =>
+    TextStyle(fontSize: m.capSize, fontWeight: FontWeight.w700, color: color);
+
 /// For each connector (node i-1 → node i), whether it is drawn dotted.
 /// Solid only between two open nodes, so a line out of an hourglass or a
 /// padlock never reads as a road (K10).
@@ -240,14 +248,25 @@ class SkillPath extends StatelessWidget {
                 for (var i = 0; i < nodes.length; i++)
                   Offset(xOf(i), tops[i] + m.orb / 2),
               ];
+              final holes = [
+                for (var i = 0; i < nodes.length; i++)
+                  ..._captionLines(
+                    context,
+                    nodes[i].label,
+                    m,
+                    Offset(xOf(i), tops[i] + m.orb + _captionGap),
+                  ),
+              ];
 
               return Stack(
                 clipBehavior: Clip.none,
                 children: [
                   Positioned.fill(
                     child: CustomPaint(
+                      key: const ValueKey('path-connectors'),
                       painter: _ConnectorPainter(
                         centres: centres,
+                        holes: holes,
                         lockedAhead: dottedConnectors(nodes),
                         solid: p.quebecBlueBright,
                         // The design's `--track` itself is invisible on the
@@ -304,6 +323,46 @@ class SkillPath extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Where each line of a caption's text sits, a little padded, so the
+  /// connector stops under it like a road under a map label. Captions are
+  /// wide enough for a 32-character label, so lines run beneath them; a
+  /// mask in the card's colour can't work, since the sky behind is a
+  /// gradient.
+  static List<Rect> _captionLines(
+    BuildContext context,
+    String label,
+    _Metrics m,
+    Offset topCentre,
+  ) {
+    final tp = TextPainter(
+      text: TextSpan(
+        text: label,
+        style: DefaultTextStyle.of(context).style
+            .merge(_captionStyle(m, Colors.transparent)),
+      ),
+      textDirection: Directionality.of(context),
+      textAlign: TextAlign.center,
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 2,
+      ellipsis: '\u2026',
+    )..layout(maxWidth: m.capWidth);
+    final lines = [
+      for (final line in tp.computeLineMetrics())
+        Rect.fromCenter(
+          center: Offset(
+            topCentre.dx,
+            topCentre.dy + line.baseline - line.ascent + line.height / 2,
+          ),
+          width: line.width + 6,
+          // Lines touch but never overlap: the cut is even-odd, and an
+          // overlap would paint the connector back in.
+          height: line.height,
+        ),
+    ];
+    tp.dispose();
+    return lines;
   }
 
   /// `.mascot-hint` sits just left of the active orb. Where a left-hand
@@ -451,7 +510,7 @@ class _Node extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 7),
+        const SizedBox(height: _captionGap),
         // The orb above already says it, in full: read once, not twice.
         ExcludeSemantics(
           child: Text(
@@ -459,12 +518,8 @@ class _Node extends StatelessWidget {
             maxLines: 2,
             textAlign: TextAlign.center,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: m.capSize,
-              fontWeight: FontWeight.w700,
-              // `.path-node.mastered/.active/.available .cap { color: ink }`
-              color: locked ? p.inkMuted : p.ink,
-            ),
+            // `.path-node.mastered/.active/.available .cap { color: ink }`
+            style: _captionStyle(m, locked ? p.inkMuted : p.ink),
           ),
         ),
       ],
@@ -860,18 +915,31 @@ class _ArcPainter extends CustomPainter {
 class _ConnectorPainter extends CustomPainter {
   _ConnectorPainter({
     required this.centres,
+    required this.holes,
     required this.lockedAhead,
     required this.solid,
     required this.dotted,
   });
 
   final List<Offset> centres;
+
+  /// Caption text the connectors pass under, and so leave out.
+  final List<Rect> holes;
   final List<bool> lockedAhead;
   final Color solid;
   final Color dotted;
 
   @override
   void paint(Canvas canvas, Size size) {
+    canvas.save();
+    if (holes.isNotEmpty) {
+      final cut = Path()..fillType = PathFillType.evenOdd;
+      cut.addRect((Offset.zero & size).inflate(20));
+      for (final hole in holes) {
+        cut.addRRect(RRect.fromRectAndRadius(hole, const Radius.circular(4)));
+      }
+      canvas.clipPath(cut);
+    }
     for (var i = 0; i < centres.length - 1; i++) {
       final a = centres[i];
       final b = centres[i + 1];
@@ -899,11 +967,13 @@ class _ConnectorPainter extends CustomPainter {
         }
       }
     }
+    canvas.restore();
   }
 
   @override
   bool shouldRepaint(_ConnectorPainter old) =>
       old.centres != centres ||
+      old.holes != holes ||
       old.lockedAhead != lockedAhead ||
       old.solid != solid ||
       old.dotted != dotted;
