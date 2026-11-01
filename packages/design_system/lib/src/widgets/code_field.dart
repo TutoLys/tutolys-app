@@ -32,10 +32,14 @@ class TutolysCodeField extends StatefulWidget {
     this.enabled = true,
     this.hasError = false,
     this.autofocus = true,
+    this.semanticLabel = 'Code de connexion',
     super.key,
   });
 
   final int length;
+
+  /// What a screen reader calls the field.
+  final String semanticLabel;
 
   /// Permitted characters. Anything else is dropped on input.
   final String alphabet;
@@ -71,6 +75,9 @@ class _TutolysCodeFieldState extends State<TutolysCodeField> {
   }
 
   void _handleChange() {
+    // The boxes draw from the controller: redraw them here rather than
+    // relying on the parent to rebuild on every keystroke.
+    setState(() {});
     final value = _controller.text;
     widget.onChanged?.call(value);
     if (value.length == widget.length) {
@@ -84,67 +91,89 @@ class _TutolysCodeFieldState extends State<TutolysCodeField> {
   Widget build(BuildContext context) {
     final extras = context.extras;
 
-    return Semantics(
-      label: 'Code de connexion',
-      textField: true,
-      child: Stack(
-        children: [
-          // The real input, invisible but focusable and accessible.
-          Opacity(
-            opacity: 0,
-            child: SizedBox(
-              height: 1,
-              child: TextField(
-                controller: _controller,
-                focusNode: _focus,
-                autofocus: widget.autofocus,
-                enabled: widget.enabled,
-                maxLength: widget.length,
-                textCapitalization: TextCapitalization.characters,
-                keyboardType: TextInputType.text,
-                autocorrect: false,
-                enableSuggestions: false,
-                inputFormatters: [
-                  UpperCaseFormatter(),
-                  // Reject anything outside the alphabet rather than remapping
-                  // it: a confusable is an unresolvable typo, and mapping it
-                  // would widen what redeems a valid code.
-                  FilteringTextInputFormatter.allow(RegExp('[${widget.alphabet}]')),
-                  LengthLimitingTextInputFormatter(widget.length),
-                ],
-              ),
-            ),
-          ),
-          GestureDetector(
-            onTap: widget.enabled ? () => _focus.requestFocus() : null,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                // Boxes shrink to fit a narrow phone instead of overflowing.
-                final gap = context.isCompact ? Space.xs : Space.sm;
-                final available = constraints.maxWidth - gap * (widget.length - 1);
-                final boxWidth = (available / widget.length)
-                    .clamp(36.0, TutolysCodeField.maxBoxWidth);
+    // K17: a screen reader must find one enabled text field, labelled, over
+    // the whole code. The real input is invisible but laid over the boxes:
+    // it takes the taps and carries the semantics, and the drawn boxes are
+    // hidden from screen readers. `alwaysIncludeSemantics` matters: a fully
+    // transparent Opacity otherwise drops its child from the semantics
+    // tree, which left only a disabled-looking wrapper (TalkBack and
+    // VoiceOver users couldn't pair).
+    return Stack(
+      children: [
+        ExcludeSemantics(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Boxes shrink to fit a narrow phone instead of overflowing.
+              final gap = context.isCompact ? Space.xs : Space.sm;
+              final available =
+                  constraints.maxWidth - gap * (widget.length - 1);
+              final boxWidth = (available / widget.length).clamp(
+                36.0,
+                TutolysCodeField.maxBoxWidth,
+              );
 
-                return Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    for (var i = 0; i < widget.length; i++) ...[
-                      if (i > 0) SizedBox(width: gap),
-                      _CodeBox(
-                        character: i < _value.length ? _value[i] : null,
-                        isActive: _focus.hasFocus && i == _value.length,
-                        hasError: widget.hasError,
-                        width: boxWidth,
-                        extras: extras,
-                      ),
-                    ],
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  for (var i = 0; i < widget.length; i++) ...[
+                    if (i > 0) SizedBox(width: gap),
+                    _CodeBox(
+                      character: i < _value.length ? _value[i] : null,
+                      isActive: _focus.hasFocus && i == _value.length,
+                      hasError: widget.hasError,
+                      width: boxWidth,
+                      extras: extras,
+                    ),
                   ],
-                );
-              },
+                ],
+              );
+            },
+          ),
+        ),
+        Positioned.fill(
+          child: Opacity(
+            opacity: 0,
+            alwaysIncludeSemantics: true,
+            child: TextField(
+              key: const ValueKey('code-field-input'),
+              controller: _controller,
+              focusNode: _focus,
+              autofocus: widget.autofocus,
+              enabled: widget.enabled,
+              showCursor: false,
+              enableInteractiveSelection: false,
+              expands: true,
+              maxLines: null,
+              decoration: InputDecoration(
+                labelText: widget.semanticLabel,
+                border: InputBorder.none,
+                isCollapsed: true,
+              ),
+              buildCounter: (
+                _, {
+                required currentLength,
+                required isFocused,
+                maxLength,
+              }) => null,
+              maxLength: widget.length,
+              textCapitalization: TextCapitalization.characters,
+              keyboardType: TextInputType.text,
+              autocorrect: false,
+              enableSuggestions: false,
+              inputFormatters: [
+                UpperCaseFormatter(),
+                // Reject anything outside the alphabet rather than remapping
+                // it: a confusable is an unresolvable typo, and mapping it
+                // would widen what redeems a valid code.
+                FilteringTextInputFormatter.allow(
+                  RegExp('[${widget.alphabet}]'),
+                ),
+                LengthLimitingTextInputFormatter(widget.length),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -173,8 +202,8 @@ class _CodeBox extends StatelessWidget {
     final borderColour = hasError
         ? VillagePalette.of(context).retry
         : isActive
-            ? colors.primary
-            : colors.outlineVariant.withValues(alpha: 0.35);
+        ? colors.primary
+        : colors.outlineVariant.withValues(alpha: 0.35);
 
     return AnimatedContainer(
       duration: Motion.instant,
@@ -210,7 +239,9 @@ class _CodeBox extends StatelessWidget {
           style: TextStyle(
             fontSize: width * 0.52,
             fontWeight: FontWeight.w800,
-            color: hasError ? VillagePalette.of(context).retry : colors.onSurface,
+            color: hasError
+                ? VillagePalette.of(context).retry
+                : colors.onSurface,
           ),
         ),
       ),
