@@ -142,4 +142,16 @@ void main() {
       expect(kidLabelFor(both('MATH'), en), 'Read');
     });
   });
+
+  test('a French colon never starts a caption line (no-break space)', () {
+    final label = kidLabel(
+      _leaf(shortFr: 'Mots de science : matière'),
+      english: false,
+    );
+    expect(label, 'Mots de science\u00a0: matière');
+    expect(
+      frenchSpacing('« Lire » ? oui !'),
+      '«\u00a0Lire\u00a0»\u00a0? oui\u00a0!',
+    );
+  });
 }

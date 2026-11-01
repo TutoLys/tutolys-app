@@ -12,9 +12,19 @@ import 'subject_language.dart';
 /// The full statement stays where it belongs, in the parent's reports.
 String kidLabel(CachedSkillNode leaf, {required bool english}) {
   final short = english ? leaf.shortLabelEn : leaf.shortLabelFr;
-  if (short != null && short.trim().isNotEmpty) return short.trim();
-  return trimLabel(fullLabel(leaf, english: english));
+  if (short != null && short.trim().isNotEmpty) {
+    return frenchSpacing(short.trim());
+  }
+  return frenchSpacing(trimLabel(fullLabel(leaf, english: english)));
 }
+
+/// French puts a space before « : », « ; », « ! », « ? » and inside « »,
+/// and a line must never start with that mark. A no-break space keeps it on
+/// its word: at 375 px « Mots de science : matière » wrapped as
+/// « Mots de science / : matière ».
+String frenchSpacing(String text) => text
+    .replaceAllMapped(RegExp(r' ([:;!?»])'), (m) => '\u00a0${m[1]}')
+    .replaceAll('« ', '«\u00a0');
 
 /// [kidLabel] in the leaf's own subject language (ADR 0023): Français and
 /// English, ESL and FLS keep theirs whatever the app is set to; other
