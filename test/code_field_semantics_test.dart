@@ -83,4 +83,37 @@ void main() {
     );
     handle.dispose();
   });
+
+  testWidgets('one line, with Go on the keyboard; Go submits a full code', (
+    tester,
+  ) async {
+    String? completed;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: TutolysTheme.village(),
+        home: Scaffold(
+          body: TutolysCodeField(
+            length: 6,
+            alphabet: '23456789ABCDEFGHJKMNPQRSTUVWXYZ',
+            onCompleted: (v) => completed = v,
+          ),
+        ),
+      ),
+    );
+    final input = tester.widget<TextField>(
+      find.byKey(const ValueKey('code-field-input')),
+    );
+    expect(input.maxLines, 1);
+    expect(input.textInputAction, TextInputAction.go);
+
+    await tester.enterText(find.byType(TextField), 'ZF2');
+    completed = null;
+    await tester.testTextInput.receiveAction(TextInputAction.go);
+    expect(completed, isNull, reason: 'a short code is not sent');
+
+    await tester.enterText(find.byType(TextField), 'ZF23XU');
+    completed = null;
+    await tester.testTextInput.receiveAction(TextInputAction.go);
+    expect(completed, 'ZF23XU');
+  });
 }

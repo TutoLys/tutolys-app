@@ -38,3 +38,12 @@ typing fills the code. Disabled while submitting.
 
 - The pairing screen and « NIP oublié ? » (ADR 0109) get the fix together;
   both use this field.
+
+## Addendum (2026-11-01): one line, with Go
+
+ux-review saw the field announced as a textarea, so phone keyboards showed
+↵ instead of Go. The input is now one line (`maxLines: 1`) with
+`TextInputAction.go`. Six characters still submit on their own, and Go
+submits a full code (a short one is ignored). The semantics are unchanged:
+one enabled, labelled field covering the boxes. « NIP oublié ? » uses the
+same field, so it changes too.

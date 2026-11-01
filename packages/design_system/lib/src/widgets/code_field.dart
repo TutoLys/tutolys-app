@@ -142,8 +142,17 @@ class _TutolysCodeFieldState extends State<TutolysCodeField> {
               enabled: widget.enabled,
               showCursor: false,
               enableInteractiveSelection: false,
-              expands: true,
-              maxLines: null,
+              // One line, so a phone keyboard shows Go rather than ↵. Six
+              // characters still submit on their own; Go submits a full
+              // code too.
+              maxLines: 1,
+              textAlignVertical: TextAlignVertical.center,
+              textInputAction: TextInputAction.go,
+              onSubmitted: (value) {
+                if (value.length == widget.length) {
+                  widget.onCompleted?.call(value);
+                }
+              },
               decoration: InputDecoration(
                 labelText: widget.semanticLabel,
                 border: InputBorder.none,
