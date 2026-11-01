@@ -733,7 +733,8 @@ class PanelTitle extends StatelessWidget {
 
 /// One quest: Village's icon chip for its kind, title, a progress track with
 /// "3 / 5" until it is done, and the reward chip. The green check shows only
-/// once it's done: an empty circle read as a radio button to tap (AM14).
+/// once it's done, at the end of the row as on Village: an empty circle read
+/// as a radio button to tap (AM14).
 class QuestItem extends StatelessWidget {
   const QuestItem({
     super.key,
@@ -767,19 +768,6 @@ class QuestItem extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 10),
         child: Row(
           children: [
-            if (done) ...[
-              Container(
-                key: const ValueKey('quest-check-done'),
-                width: 19,
-                height: 19,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _doneGreen,
-                ),
-                child: const Icon(Icons.check, size: 11, color: Colors.white),
-              ),
-              const SizedBox(width: Space.sm),
-            ],
             Container(
               key: ValueKey('quest-chip-${kind.name}'),
               width: 36,
@@ -849,6 +837,21 @@ class QuestItem extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+            ],
+            // On the right, as on Village: on the left it pushed a done
+            // row's chip out of line with the others (AM14 verify).
+            if (done) ...[
+              const SizedBox(width: Space.sm),
+              Container(
+                key: const ValueKey('quest-check-done'),
+                width: 19,
+                height: 19,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _doneGreen,
+                ),
+                child: const Icon(Icons.check, size: 11, color: Colors.white),
               ),
             ],
           ],

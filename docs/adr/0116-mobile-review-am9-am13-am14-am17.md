@@ -59,3 +59,27 @@
   readable, but not a kid's wording.
 - The Carte on a phone loses about 90 px of path height to the pinned
   card. In exchange, nothing covers a node.
+
+## Addendum, 2026-11-01: the verify pass at 5286654
+
+- **AM17.** Phone browsers often shrink the window for the keyboard rather
+  than report an inset, so at 375×476 « Ajouter » was below the fold. A
+  window shorter than 600 px now counts as keyboard-up: the logo and title
+  step aside, and the scroll anchors to the bottom.
+- **AM9, trim.** The fallback still ended on « d’un », « d’une », « non »,
+  and on « (ajout, ». Elided articles (« d’ », « l’ », « qu’ ») now dangle
+  when what follows is a function word. More French and English function
+  words are listed. A trailing comma or colon is dropped, and so is an
+  aside whose « ( » the cut can't close.
+- **AM9, screen readers.** A node reads the skill's full statement
+  (`PathNode.spokenLabel`), and the trimmed caption is excluded, so
+  « par ordre croissant…. » is no longer read, and nothing is read twice.
+- **AM14.** The done check sits at the end of the row, as on Village, so
+  every chip stays in one column.
+- **Lost pairing after the rebuild: not the upgrade.** The pairing lives in
+  the secure store (`localStorage` on the web), which the drift upgrade and
+  Repair never touch. The app drops a pairing only after the server
+  rejects its token or a guardian signs out. The backend log shows no
+  rejected refresh, and no device request at all between the rebuild and a
+  fresh pairing two minutes later. So the browser started with empty
+  storage.

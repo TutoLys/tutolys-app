@@ -56,8 +56,7 @@ QuestBoard _board({
   Map<String, String> unlocked = const {},
 }) => QuestBoard(
   quests:
-      quests ??
-      buildDailyQuests(challenge: null, lessonsToday: 0, msToday: 0),
+      quests ?? buildDailyQuests(challenge: null, lessonsToday: 0, msToday: 0),
   weekCompleted: week,
   unlocked: unlocked,
   today: _today,
@@ -333,6 +332,18 @@ void main() {
       for (final kind in [QuestKind.exercises, QuestKind.minutes]) {
         expect(find.byKey(ValueKey('quest-chip-${kind.name}')), findsOneWidget);
       }
+      // Chips stay in one column; the check sits at the row's end.
+      final done = tester.getRect(
+        find.byKey(const ValueKey('quest-chip-exercises')),
+      );
+      final open = tester.getRect(
+        find.byKey(const ValueKey('quest-chip-minutes')),
+      );
+      expect(done.left, open.left);
+      expect(
+        tester.getRect(find.byKey(const ValueKey('quest-check-done'))).left,
+        greaterThan(done.right),
+      );
       expect(find.text('5 / 5'), findsNothing);
     });
 
@@ -559,16 +570,13 @@ void main() {
 
     group('the served shield card', () {
       final now = DateTime.now();
-      StreakFreezeDto shield({
-        int balance = 1,
-        DateTime? next,
-        bool? earned,
-      }) => StreakFreezeDto(
-        balance: balance,
-        maxBalance: 2,
-        nextGrantAt: next,
-        earnedSinceLastGrant: earned,
-      );
+      StreakFreezeDto shield({int balance = 1, DateTime? next, bool? earned}) =>
+          StreakFreezeDto(
+            balance: balance,
+            maxBalance: 2,
+            nextGrantAt: next,
+            earnedSinceLastGrant: earned,
+          );
       String up(String s) => s.toUpperCase();
 
       Future<void> show(WidgetTester tester, StreakFreezeDto f) async {
