@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:design_system/design_system.dart';
 import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
@@ -11,6 +10,7 @@ import '../widgets/idle_hand_hint.dart';
 import 'activity_assist.dart';
 import 'activity_shell.dart';
 import 'shell_strings.dart';
+import 'stop_sheet.dart';
 
 /// The shell, bound to an [ActivitySessionController].
 ///
@@ -110,74 +110,6 @@ class _LearningActivityViewState extends State<LearningActivityView> {
     listenable: widget.controller,
     builder: (context, _) => _build(context),
   );
-
-  Future<bool?> _confirmStop(BuildContext context, ShellStrings s) =>
-      showModalBottomSheet<bool>(
-        context: context,
-        showDragHandle: true,
-        builder: (context) {
-          final p = VillagePalette.of(context);
-          return SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-              child: Column(
-                key: const ValueKey('stop-sheet'),
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.pause_circle_rounded, size: 56, color: p.gold),
-                  const SizedBox(height: Space.sm),
-                  Text(
-                    s.stopTitle,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontFamily: VillageType.display,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: p.ink,
-                    ),
-                  ),
-                  const SizedBox(height: Space.xs),
-                  Text(
-                    s.stopMessage,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16, color: p.ink),
-                  ),
-                  const SizedBox(height: Space.lg),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      key: const ValueKey('stop-continue'),
-                      autofocus: true,
-                      onPressed: () => Navigator.of(context).pop(false),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: p.gold,
-                        foregroundColor: onAccentInk,
-                        shape: const StadiumBorder(),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      child: Text(
-                        s.continueLabel.toUpperCase(),
-                        style: const TextStyle(
-                          fontFamily: VillageType.display,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: Space.sm),
-                  TextButton(
-                    key: const ValueKey('stop-quit'),
-                    onPressed: () => Navigator.of(context).pop(true),
-                    style: TextButton.styleFrom(foregroundColor: p.ink),
-                    child: Text(s.stopLabel),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      );
 
   Widget _build(BuildContext context) {
     final c = widget.controller;
@@ -286,7 +218,7 @@ class _LearningActivityViewState extends State<LearningActivityView> {
             state.attempts > 0 ||
             q?.answer != null;
         if (started && !state.phase.isTerminal) {
-          final stop = await _confirmStop(context, s);
+          final stop = await showActivityStopSheet(context, s);
           if (stop != true || !mounted) return;
         }
         await c.exit();

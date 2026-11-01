@@ -46,6 +46,7 @@ class ActivityCompleteView extends StatelessWidget {
     required this.summary,
     required this.locale,
     required this.onContinue,
+    this.onNext,
     this.character,
     this.title,
     this.extraRows = const [],
@@ -54,7 +55,15 @@ class ActivityCompleteView extends StatelessWidget {
 
   final ActivitySummary summary;
   final Locale locale;
+
+  /// Back to the Carte. The only button when there's no [onNext].
   final VoidCallback onContinue;
+
+  /// The next lesson (UX review G12: the celebration was a dead end, at the
+  /// peak of motivation). When set, « Suivant » is the gold primary button
+  /// and Enter's action, and « Retour à la carte » ([onContinue]) sits
+  /// under it. Null: the host has no next lesson, and Continuer stays.
+  final VoidCallback? onNext;
   final Widget? character;
 
   /// Overrides the default title (e.g. with the child's name).
@@ -68,7 +77,9 @@ class ActivityCompleteView extends StatelessWidget {
     final still = MediaQuery.disableAnimationsOf(context);
 
     return CallbackShortcuts(
-      bindings: {const SingleActivator(LogicalKeyboardKey.enter): onContinue},
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.enter): onNext ?? onContinue,
+      },
       child: Focus(
         autofocus: true,
         child: DecoratedBox(
@@ -195,7 +206,12 @@ class ActivityCompleteView extends StatelessWidget {
                           ),
                         ),
                         child: TextButton(
-                          onPressed: onContinue,
+                          key: ValueKey(
+                            onNext == null
+                                ? 'complete-continue'
+                                : 'complete-next',
+                          ),
+                          onPressed: onNext ?? onContinue,
                           style: TextButton.styleFrom(
                             foregroundColor: const Color(0xFF241A04),
                             padding: const EdgeInsets.symmetric(vertical: 16),
@@ -204,7 +220,8 @@ class ActivityCompleteView extends StatelessWidget {
                             ),
                           ),
                           child: Text(
-                            s.continueLabel.toUpperCase(),
+                            (onNext == null ? s.continueLabel : s.nextLesson)
+                                .toUpperCase(),
                             style: const TextStyle(
                               fontFamily: VillageType.display,
                               fontWeight: FontWeight.w800,
@@ -216,6 +233,27 @@ class ActivityCompleteView extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (onNext != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: Space.md),
+                    child: TextButton.icon(
+                      key: const ValueKey('complete-back-to-map'),
+                      onPressed: onContinue,
+                      style: TextButton.styleFrom(
+                        foregroundColor: p.ink,
+                        minimumSize: const Size(48, 48),
+                      ),
+                      icon: const Icon(Icons.map_rounded),
+                      label: Text(
+                        s.backToMap,
+                        style: const TextStyle(
+                          fontFamily: VillageType.display,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),

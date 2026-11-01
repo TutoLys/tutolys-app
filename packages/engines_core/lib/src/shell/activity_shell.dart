@@ -151,7 +151,23 @@ class ActivityShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = VillagePalette.of(context);
     final s = ShellStrings.of(locale);
-    final compact = MediaQuery.sizeOf(context).width < Breakpoints.compact;
+    final size = MediaQuery.sizeOf(context);
+    final compact = size.width < Breakpoints.compact;
+    // A phone on its side (a browser tab can't be locked to portrait, app
+    // ADR 0107): the question on the left, the board on the right, each
+    // scrolling on its own, so neither is pushed off a 375 px-tall screen.
+    final landscape =
+        size.height < landscapeMaxHeight && size.width > size.height;
+    final inset = landscape
+        ? Space.md
+        : compact
+        ? Space.md
+        : Space.xxl;
+    final top = landscape
+        ? Space.sm
+        : compact
+        ? Space.lg
+        : 36.0;
     final gutter = compact ? Space.md : 28.0;
 
     // The design floats the mascot beside the content (`.mascot-hint` is
@@ -273,13 +289,42 @@ class ActivityShell extends StatelessWidget {
                             // Room under the board for the banner, so it
                             // never hides a tile (UX review G9).
                             padding: EdgeInsets.fromLTRB(
-                              compact ? Space.md : Space.xxl,
-                              compact ? Space.lg : 36,
-                              compact ? Space.md : Space.xxl,
-                              (compact ? Space.lg : 36) +
-                                  (feedback != null ? bannerRoom : 0),
+                              inset,
+                              top,
+                              inset,
+                              top + (feedback != null ? bannerRoom : 0),
                             ),
-                            child: scrollBody
+                            child: landscape && header.isNotEmpty
+                                ? Row(
+                                    key: const ValueKey('landscape-columns'),
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      Expanded(
+                                        flex: 2,
+                                        child: SingleChildScrollView(
+                                          child: Column(children: header),
+                                        ),
+                                      ),
+                                      const SizedBox(width: Space.lg),
+                                      Expanded(
+                                        flex: 3,
+                                        child: scrollBody
+                                            ? _ScrollCue(
+                                                key: ValueKey((
+                                                  'body',
+                                                  questionKey,
+                                                )),
+                                                palette: p,
+                                                label: s.moreBelow,
+                                                showCue: feedback == null,
+                                                child: body,
+                                              )
+                                            : body,
+                                      ),
+                                    ],
+                                  )
+                                : scrollBody
                                 ? _ScrollCue(
                                     key: ValueKey(('body', questionKey)),
                                     palette: p,
@@ -343,6 +388,9 @@ class ActivityShell extends StatelessWidget {
 /// say the page scrolls (UX review AM27). While there's more below, the
 /// bottom edge fades out and a round ↓ button scrolls one screen's worth.
 /// For every engine whose body scrolls, so a future one gets it too.
+/// Below this height, a wider-than-tall screen gets two columns.
+const landscapeMaxHeight = 500.0;
+
 class _ScrollCue extends StatefulWidget {
   const _ScrollCue({
     required this.palette,
