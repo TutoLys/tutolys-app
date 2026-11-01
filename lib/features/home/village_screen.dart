@@ -548,14 +548,8 @@ class _QuestPanel extends StatelessWidget {
 /// `.q-chip`: a 38px tile with the design's 145° gradients, one colour and
 /// icon per kind of quest. The design's pink/blue/purple trio, assigned by
 /// what the quest asks rather than by subject — these quests have none.
-(List<Color>, IconData) _chipFor(QuestKind kind) => (
-  switch (kind) {
-    QuestKind.challenge => const [Color(0xFFF472B6), Color(0xFFEC4899)],
-    QuestKind.exercises => const [Color(0xFF60A5FA), Color(0xFF3B82F6)],
-    QuestKind.minutes => const [Color(0xFFA78BFA), Color(0xFF8B5CF6)],
-  },
-  questIconFor(kind),
-);
+(List<Color>, IconData) _chipFor(QuestKind kind) =>
+    (questChipColors(kind), questIconFor(kind));
 
 /// `.quest-row`: chip, title over "n/m" and the track, then the status dot
 /// (green check once done, blue play otherwise) above the XP reward.

@@ -680,6 +680,7 @@ class QuestListCard extends StatelessWidget {
               if (i > 0) Divider(height: 1, thickness: 1, color: p.line),
               QuestItem(
                 key: ValueKey('quest-${items[i].key}'),
+                kind: items[i].kind,
                 title: questTitle(t, items[i]),
                 done: items[i].done,
                 current: items[i].progress,
@@ -730,8 +731,9 @@ class PanelTitle extends StatelessWidget {
   }
 }
 
-/// One quest: check circle, icon tile, title, a progress track with "3 / 5"
-/// until it is done, and the reward chip.
+/// One quest: Village's icon chip for its kind, title, a progress track with
+/// "3 / 5" until it is done, and the reward chip. The green check shows only
+/// once it's done: an empty circle read as a radio button to tap (AM14).
 class QuestItem extends StatelessWidget {
   const QuestItem({
     super.key,
@@ -739,13 +741,13 @@ class QuestItem extends StatelessWidget {
     required this.done,
     required this.current,
     required this.target,
-    this.icon = 'asset-target.webp',
+    required this.kind,
     this.xpReward,
     this.onTap,
   });
 
   final String title;
-  final String icon;
+  final QuestKind kind;
   final bool done;
   final int current;
   final int target;
@@ -765,32 +767,33 @@ class QuestItem extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 10),
         child: Row(
           children: [
-            Container(
-              key: ValueKey(done ? 'quest-check-done' : 'quest-check-open'),
-              width: 19,
-              height: 19,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: done ? _doneGreen : null,
-                border: Border.all(
-                  color: done ? _doneGreen : p.track,
-                  width: 2,
+            if (done) ...[
+              Container(
+                key: const ValueKey('quest-check-done'),
+                width: 19,
+                height: 19,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _doneGreen,
                 ),
+                child: const Icon(Icons.check, size: 11, color: Colors.white),
               ),
-              child: done
-                  ? const Icon(Icons.check, size: 11, color: Colors.white)
-                  : null,
-            ),
-            const SizedBox(width: Space.sm),
+              const SizedBox(width: Space.sm),
+            ],
             Container(
+              key: ValueKey('quest-chip-${kind.name}'),
               width: 36,
               height: 36,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: p.surface,
                 borderRadius: BorderRadius.circular(10),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: questChipColors(kind),
+                ),
               ),
-              child: Image.asset('assets/images/$icon', width: 20, height: 20),
+              child: Icon(questIconFor(kind), size: 19, color: Colors.white),
             ),
             const SizedBox(width: Space.sm),
             Expanded(

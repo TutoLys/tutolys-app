@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart' show IconData, Icons;
+import 'package:flutter/material.dart' show Color, IconData, Icons;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/api/progress_api.dart';
@@ -38,6 +38,15 @@ IconData questIconFor(QuestKind kind) => switch (kind) {
   QuestKind.challenge => Icons.bolt_rounded,
   QuestKind.exercises => Icons.task_alt_rounded,
   QuestKind.minutes => Icons.timer_outlined,
+};
+
+/// Each kind's `.q-chip` gradient (145° in the design): pink, blue,
+/// purple, assigned by what the quest asks. Village's quest rows and Quêtes
+/// draw the same chip, so a quest looks the same on both (AM14).
+List<Color> questChipColors(QuestKind kind) => switch (kind) {
+  QuestKind.challenge => const [Color(0xFFF472B6), Color(0xFFEC4899)],
+  QuestKind.exercises => const [Color(0xFF60A5FA), Color(0xFF3B82F6)],
+  QuestKind.minutes => const [Color(0xFFA78BFA), Color(0xFF8B5CF6)],
 };
 
 /// The backend's name for each kind in its `quests` list.

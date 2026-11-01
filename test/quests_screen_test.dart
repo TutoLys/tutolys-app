@@ -326,8 +326,13 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      // Only a done quest has a circle: an empty one looked tappable (AM14).
       expect(find.byKey(const ValueKey('quest-check-done')), findsOneWidget);
-      expect(find.byKey(const ValueKey('quest-check-open')), findsOneWidget);
+      expect(find.byKey(const ValueKey('quest-check-open')), findsNothing);
+      // Village's ✓ ⏱ chips (no daily challenge served here).
+      for (final kind in [QuestKind.exercises, QuestKind.minutes]) {
+        expect(find.byKey(ValueKey('quest-chip-${kind.name}')), findsOneWidget);
+      }
       expect(find.text('5 / 5'), findsNothing);
     });
 
