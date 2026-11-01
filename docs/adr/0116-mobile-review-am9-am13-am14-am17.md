@@ -115,3 +115,15 @@ Wider captions sit across the connector lines between orbs. **The connector
 now stops under each line of caption text**, like a road under a map label
 (the cut-outs are laid out with the caption's own style). A mask in the
 card's colour wouldn't work, because the sky behind the card is a gradient.
+
+## Addendum, 2026-11-01: balanced captions, blue target
+
+- **Balanced lines.** A two-line caption is laid out at the narrowest
+  width that keeps it on two lines, like CSS `text-wrap: balance`. No line
+  is left holding one short word: « Mots de science : la / matière » now
+  reads « Mots de science : / la matière », and « Les religions autour de /
+  moi » reads « Les religions / autour de moi ». The connector cut-outs use
+  the same layout. The text is unchanged.
+- **Target icon.** The design's `#i-target` is red (`#EF4444`). The
+  Decision Log keeps red out of the kid UI, so the orb's target now uses the
+  orb's own blue (`quebecBlueBright`). It was the only red in the app.

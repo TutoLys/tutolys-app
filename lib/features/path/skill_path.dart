@@ -161,6 +161,52 @@ const _captionGap = 7.0;
 TextStyle _captionStyle(_Metrics m, Color color) =>
     TextStyle(fontSize: m.capSize, fontWeight: FontWeight.w700, color: color);
 
+/// The caption laid out as the Carte draws it, and the width it is drawn
+/// at. Two lines are balanced, like CSS `text-wrap: balance`: the narrowest
+/// width that keeps the same number of lines, so no line is left holding
+/// one short word (« Mots de science : la / matière » becomes
+/// « Mots de science : / la matière »).
+(TextPainter, double) _captionLayout(
+  BuildContext context,
+  String label,
+  _Metrics m,
+) {
+  final tp = TextPainter(
+    text: TextSpan(
+      text: label,
+      style: DefaultTextStyle.of(context).style
+          .merge(_captionStyle(m, Colors.transparent)),
+    ),
+    textDirection: Directionality.of(context),
+    textAlign: TextAlign.center,
+    textScaler: MediaQuery.textScalerOf(context),
+    maxLines: 2,
+    ellipsis: '\u2026',
+  )..layout(maxWidth: m.capWidth);
+  final lines = tp.computeLineMetrics().length;
+  if (lines < 2 || tp.didExceedMaxLines) return (tp, m.capWidth);
+
+  bool fits(double w) {
+    tp.layout(maxWidth: w);
+    return !tp.didExceedMaxLines && tp.computeLineMetrics().length == lines;
+  }
+
+  var lo = m.capWidth / 2;
+  var hi = m.capWidth;
+  while (hi - lo > 0.5) {
+    final mid = (lo + hi) / 2;
+    if (fits(mid)) {
+      hi = mid;
+    } else {
+      lo = mid;
+    }
+  }
+  // Rounded up, so the Text widget's own layout lands on the same breaks.
+  final width = hi.ceilToDouble();
+  tp.layout(maxWidth: width);
+  return (tp, width);
+}
+
 /// For each connector (node i-1 → node i), whether it is drawn dotted.
 /// Solid only between two open nodes, so a line out of an hourglass or a
 /// padlock never reads as a road (K10).
@@ -336,18 +382,7 @@ class SkillPath extends StatelessWidget {
     _Metrics m,
     Offset topCentre,
   ) {
-    final tp = TextPainter(
-      text: TextSpan(
-        text: label,
-        style: DefaultTextStyle.of(context).style
-            .merge(_captionStyle(m, Colors.transparent)),
-      ),
-      textDirection: Directionality.of(context),
-      textAlign: TextAlign.center,
-      textScaler: MediaQuery.textScalerOf(context),
-      maxLines: 2,
-      ellipsis: '\u2026',
-    )..layout(maxWidth: m.capWidth);
+    final (tp, _) = _captionLayout(context, label, m);
     final lines = [
       for (final line in tp.computeLineMetrics())
         Rect.fromCenter(
@@ -513,17 +548,28 @@ class _Node extends StatelessWidget {
         const SizedBox(height: _captionGap),
         // The orb above already says it, in full: read once, not twice.
         ExcludeSemantics(
-          child: Text(
-            node.label,
-            maxLines: 2,
-            textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis,
-            // `.path-node.mastered/.active/.available .cap { color: ink }`
-            style: _captionStyle(m, locked ? p.inkMuted : p.ink),
+          child: SizedBox(
+            width: _captionWidth(context),
+            child: Text(
+              node.label,
+              maxLines: 2,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              // `.path-node.mastered/.active/.available .cap { color: ink }`
+              style: _captionStyle(m, locked ? p.inkMuted : p.ink),
+            ),
           ),
         ),
       ],
     );
+  }
+}
+
+extension on _Node {
+  double _captionWidth(BuildContext context) {
+    final (tp, width) = _captionLayout(context, node.label, metrics);
+    tp.dispose();
+    return width;
   }
 }
 
@@ -602,8 +648,14 @@ class _OrbState extends State<_Orb> with SingleTickerProviderStateMixin {
         size: m.icon,
         color: p.quebecBlueBright,
       ),
-      PathNodeState.active => _Target(size: m.activeIcon),
-      PathNodeState.available => _Target(size: m.activeIcon - 4),
+      PathNodeState.active => _Target(
+        size: m.activeIcon,
+        color: p.quebecBlueBright,
+      ),
+      PathNodeState.available => _Target(
+        size: m.activeIcon - 4,
+        color: p.quebecBlueBright,
+      ),
       PathNodeState.locked => Icon(
         Icons.lock_outline_rounded,
         size: m.icon,
@@ -812,18 +864,26 @@ class ContinueCard extends StatelessWidget {
 }
 
 /// The design's `#i-target`: a red-and-white bullseye.
+/// The design's `#i-target`, in the orb's blue rather than its `#EF4444`:
+/// the Decision Log keeps red out of the kid UI.
 class _Target extends StatelessWidget {
-  const _Target({required this.size});
+  const _Target({required this.size, required this.color});
 
   final double size;
+  final Color color;
 
   @override
-  Widget build(BuildContext context) =>
-      CustomPaint(size: Size.square(size), painter: _TargetPainter());
+  Widget build(BuildContext context) => CustomPaint(
+    key: const ValueKey('path-target'),
+    size: Size.square(size),
+    painter: _TargetPainter(color),
+  );
 }
 
 class _TargetPainter extends CustomPainter {
-  static const _red = Color(0xFFEF4444);
+  _TargetPainter(this.color);
+
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -832,14 +892,14 @@ class _TargetPainter extends CustomPainter {
     final u = size.width / 24;
     final fill = Paint();
     canvas
-      ..drawCircle(c, 9 * u, fill..color = _red)
+      ..drawCircle(c, 9 * u, fill..color = color)
       ..drawCircle(c, 6.2 * u, fill..color = Colors.white)
-      ..drawCircle(c, 3.6 * u, fill..color = _red)
+      ..drawCircle(c, 3.6 * u, fill..color = color)
       ..drawCircle(c, 1.3 * u, fill..color = Colors.white);
   }
 
   @override
-  bool shouldRepaint(_TargetPainter old) => false;
+  bool shouldRepaint(_TargetPainter old) => old.color != color;
 }
 
 /// The design's `#i-check-bold`: `M5 12l4 4 10-10`, stroke 3.

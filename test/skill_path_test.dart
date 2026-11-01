@@ -1,3 +1,5 @@
+import 'package:flutter/rendering.dart';
+import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tutolys_app/features/path/skill_path.dart';
@@ -293,5 +295,36 @@ void main() {
       // Every caption's text lies inside the cut-outs.
       expect(holes.any((h) => h.shift(path).overlaps(rect)), isTrue);
     }
+  });
+
+  // In the test font every glyph is 10 px wide, so at 110 px
+  // « ab cd ef gh ij » breaks as « ab cd ef gh / ij ». Balanced, it is
+  // « ab cd ef / gh ij »: about 80 px, two lines.
+  testWidgets('two-line captions are balanced', (tester) async {
+    const label = 'ab cd ef gh ij';
+    await tester.pumpWidget(
+      pathIn(
+        compact: true,
+        nodes: const [
+          PathNode(id: 'a', label: label, state: PathNodeState.locked),
+        ],
+      ),
+    );
+
+    final box = tester.renderObject<RenderParagraph>(find.text(label));
+    expect(box.size.width, inInclusiveRange(80, 90));
+    expect(box.size.height, 28); // two 14 px lines, not three
+  });
+
+  testWidgets('the target icon is blue, never red', (tester) async {
+    await tester.pumpWidget(pathIn(nodes: const [_available]));
+
+    final target = tester.widget<CustomPaint>(
+      find.byKey(const ValueKey('path-target')),
+    );
+    expect(
+      (target.painter! as dynamic).color,
+      VillagePalette.light.quebecBlueBright,
+    );
   });
 }
