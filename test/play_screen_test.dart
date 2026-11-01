@@ -907,6 +907,12 @@ void main() {
       await settle(tester);
       expect(find.text('Bravo !'), findsOneWidget);
       expect(find.text('+3'), findsNothing);
+
+      // K18: the celebration says « Entraînement », never « +0 XP ».
+      await tester.tap(find.text('CONTINUER'));
+      await settle(tester);
+      expect(find.byKey(const ValueKey('complete-practice')), findsOneWidget);
+      expect(find.text('+0 XP'), findsNothing);
     });
   });
 }

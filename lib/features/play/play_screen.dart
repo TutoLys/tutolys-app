@@ -462,6 +462,8 @@ class PlayScreenState extends ConsumerState<PlayScreen> {
       // A client-side estimate — `manage.py award_xp` hasn't run yet. The
       // authoritative total still comes from `ProgressState.totalXp`.
       xp: widget.practice ? 0 : estimateXp(result, replay: _replay),
+      // « Entraînement » instead of a « +0 XP » pill (K18, Engines' 8ef38ce).
+      practice: widget.practice,
     );
 
     // Home's stat tiles, the offline streak, and the map's "done" mark all
