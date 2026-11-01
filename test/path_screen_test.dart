@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tutolys_app/core/net/recovery.dart';
 import 'package:tutolys_app/core/routing/paired_router.dart';
@@ -138,12 +139,14 @@ Widget appUnder({
   LocalDatabase? db,
   ProgressState? progress,
   FakeContentApi? contentApi,
+  List<Override> overrides = const [],
 }) {
   final router = buildPairedRouter();
   addTearDown(router.dispose);
 
   return ProviderScope(
     overrides: [
+      ...overrides,
       localDatabaseProvider.overrideWithValue(db ?? LocalDatabase.memory()),
       // The inbox has no fake here and fails; recovery would then re-run
       // every reader and skew the sync counts these tests assert.

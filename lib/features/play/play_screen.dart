@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tutolys_motion/tutolys_motion.dart';
 import 'package:uuid/uuid.dart';
 
+import '../path/play_node.dart' show carteNextProvider;
 import '../progress/progress_controller.dart' show progressControllerProvider;
 import '../../data/local_db/creation_store.dart';
 import '../../data/local_db/database.dart';
@@ -29,7 +30,6 @@ import '../profile/rare_avatar_found.dart';
 import '../settings/settings_controller.dart';
 import 'engine_registry_provider.dart';
 import 'learning_platform_providers.dart';
-import 'stop_sheet.dart';
 import 'xp_estimate.dart';
 
 /// Hosts one exercise, reached by tapping an available node on the path.
@@ -49,6 +49,12 @@ import 'xp_estimate.dart';
 ///   telemetry unchanged and its reactions bridged to the director.
 /// The legacy host's width on a wide screen, the new shell's widest.
 const double legacyMaxWidth = 720;
+
+/// How a game was left, for whoever opened it.
+enum PlayExit {
+  /// « Suivant » on the celebration: play the Carte's next lesson (G12).
+  next,
+}
 
 class PlayScreen extends ConsumerStatefulWidget {
   const PlayScreen({
@@ -80,6 +86,22 @@ class PlayScreenState extends ConsumerState<PlayScreen> {
     Navigator.of(context).pop();
   }
 
+  /// « Suivant » on the celebration (G12): leave with [PlayExit.next], and
+  /// `playNode`, which opened this game from a page that stays mounted,
+  /// plays the Carte's next lesson.
+  void _next() {
+    _leaving = true;
+    Navigator.of(context).pop(PlayExit.next);
+  }
+
+  /// Whether the celebration offers « Suivant »: a real lesson (never
+  /// practice), and an open lesson on the Carte in this subject.
+  bool get _hasNext {
+    if (widget.practice) return false;
+    final next = ref.watch(carteNextProvider);
+    return next != null && next.subject == widget.node.subject;
+  }
+
   /// Asked by the route before it goes, whatever the way out (AM20): Back
   /// acts like ✕. Nothing started, finished, or already confirmed: go.
   /// Otherwise « Tu veux arrêter ? », where Continuer stays.
@@ -92,7 +114,7 @@ class PlayScreenState extends ConsumerState<PlayScreen> {
         st.attempts > 0 ||
         c.current?.answer != null;
     if (started && !st.phase.isTerminal) {
-      final stop = await showStopSheet(
+      final stop = await showActivityStopSheet(
         context,
         ShellStrings.of(Localizations.localeOf(context)),
       );
@@ -535,6 +557,7 @@ class PlayScreenState extends ConsumerState<PlayScreen> {
               ),
           ],
           onContinue: _leave,
+          onNext: _hasNext ? _next : null,
         ),
       );
     }

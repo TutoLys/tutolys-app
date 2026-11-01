@@ -11,6 +11,7 @@ import '../../data/sync/content_sync.dart' show NodeDownload;
 import '../../data/sync/window_plan.dart';
 import '../progress/progress_controller.dart';
 import '../settings/settings_controller.dart';
+import '../play/play_screen.dart' show PlayExit;
 import 'carte_model.dart';
 import 'node_lessons.dart';
 import 'path_controller.dart';
@@ -96,12 +97,20 @@ Future<void> playNode(
     if (found == null || found.isEmpty) return;
     envelope = found.first;
   }
-  await GoRouter.of(
+  final exit = await GoRouter.of(
     context,
-  ).push('/play', extra: PlayRequest(node: leaf, envelope: envelope));
+  ).push<Object?>('/play', extra: PlayRequest(node: leaf, envelope: envelope));
   // The header's XP and streak, and the map's mastery, all moved. The
   // shell keeps tabs alive, so nothing re-reads on its own.
   ref.read(progressControllerProvider.notifier).refresh();
+  // « Suivant » on the celebration (G12): the Carte's frontier, read now,
+  // after the lesson just finished has moved it.
+  if (exit == PlayExit.next && context.mounted) {
+    final next = ref.read(carteNextProvider);
+    if (next != null) {
+      await playNode(context, ref, leaf: next.leaf, lessons: next.lessons);
+    }
+  }
 }
 
 /// Downloads a leaf, with a small wait on screen; offline or failed, a
