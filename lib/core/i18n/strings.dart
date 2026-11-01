@@ -23,6 +23,10 @@ abstract class Strings {
   String get pairingSubtitle;
   String get pairingHint;
   String get pairingConnect;
+
+  /// The button when the code adds someone: a profile from « Qui joue ? »,
+  /// or a class (AM17). Pairing a second kid isn't signing in.
+  String get pairingAdd;
   String get pairingConnecting;
   String get pairingCodeInvalid;
   String get pairingOffline;
@@ -623,6 +627,9 @@ class _FrenchStrings extends Strings {
 
   @override
   String get pairingConnect => 'Se connecter';
+
+  @override
+  String get pairingAdd => 'Ajouter';
 
   @override
   String get pairingConnecting => 'Connexion…';
@@ -2031,6 +2038,9 @@ class _EnglishStrings extends Strings {
 
   @override
   String get pairingConnect => 'Connect';
+
+  @override
+  String get pairingAdd => 'Add';
 
   @override
   String get pairingConnecting => 'Connecting…';

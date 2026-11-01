@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:design_system/design_system.dart';
 
+import 'package:tutolys_app/core/i18n/strings.dart';
 import 'package:tutolys_app/core/net/recovery.dart';
 import 'package:tutolys_app/features/launch/launch_flow.dart';
 import 'package:tutolys_app/features/launch/tutolys_welcome_screen.dart';
@@ -509,6 +510,65 @@ void main() {
       final boxes = tester.getRect(find.byType(TutolysCodeField));
       expect(boxes.top, greaterThanOrEqualTo(0));
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('adding a profile: one sentence, « Ajouter », above the '
+        'keyboard at 375 px (AM17)', (tester) async {
+      tester.view.physicalSize = const Size(375, 812);
+      tester.view.devicePixelRatio = 1;
+      tester.view.viewInsets = const FakeViewPadding(bottom: 336);
+      addTearDown(tester.view.reset);
+      final container = containerWith(
+        store: FakeSessionStore(),
+        api: FakePairingApi(
+          exchangeResult: _success,
+          refreshResult: const RefreshRejected(),
+        ),
+      );
+      addTearDown(container.dispose);
+
+      // Not `appUnder`: its fixed MediaQuery would drop the keyboard inset.
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            locale: const Locale('fr', 'CA'),
+            supportedLocales: const [Locale('fr', 'CA'), Locale('en', 'CA')],
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            theme: TutolysTheme.learner(),
+            home: PairingScreen(onCancel: () {}),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(Strings.fr.addProfileHint), findsOneWidget);
+      expect(find.text(Strings.fr.pairingHint), findsNothing);
+      expect(find.text('Ajouter'), findsOneWidget);
+      expect(find.text('Se connecter'), findsNothing);
+      final button = tester.getRect(
+        find.byKey(const ValueKey('pairing-submit')),
+      );
+      expect(button.bottom, lessThanOrEqualTo(476));
+      expect(button.top, greaterThanOrEqualTo(0));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('first launch still says « Se connecter »', (tester) async {
+      final container = containerWith(
+        store: FakeSessionStore(),
+        api: FakePairingApi(
+          exchangeResult: _success,
+          refreshResult: const RefreshRejected(),
+        ),
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(appUnder(container, const PairingScreen()));
+      expect(find.text('Se connecter'), findsOneWidget);
     });
 
     testWidgets('the connect button is disabled until six characters', (

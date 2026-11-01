@@ -103,7 +103,12 @@ class _PairingScreenState extends ConsumerState<PairingScreen> {
       onSubmit: _submit,
       showTitle: !keyboard,
       title: _classMode ? s.pairingClassTitle : null,
-      hint: _classMode ? null : s.pairingHint,
+      // Adding a profile, the subtitle already says to ask a parent, so the
+      // hint would say it twice (AM17).
+      hint: _classMode || widget.onCancel != null ? null : s.pairingHint,
+      submitLabel: _classMode || widget.onCancel != null
+          ? s.pairingAdd
+          : s.pairingConnect,
       subtitle: _classMode
           ? s.pairingClassSubtitle
           : widget.onCancel == null
@@ -240,6 +245,7 @@ class _PairingForm extends StatelessWidget {
     this.subtitle,
     this.hint,
     this.footer,
+    required this.submitLabel,
   });
 
   final String alphabet;
@@ -267,6 +273,9 @@ class _PairingForm extends StatelessWidget {
 
   /// Under the button: the switch between a kid's code and a class code.
   final Widget? footer;
+
+  /// « Se connecter » on first launch, « Ajouter » when adding (AM17).
+  final String submitLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -385,7 +394,7 @@ class _PairingForm extends StatelessWidget {
                         Text(s.pairingConnecting),
                       ],
                     )
-                  : Text(s.pairingConnect),
+                  : Text(submitLabel),
             ),
             if (footer != null) ...[
               const SizedBox(height: Space.sm),
