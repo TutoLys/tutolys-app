@@ -558,6 +558,47 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('a browser that shrinks the window for its keyboard: '
+        '« Ajouter » still fits at 375×476 (AM17 verify)', (tester) async {
+      tester.view.physicalSize = const Size(375, 476);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final container = containerWith(
+        store: FakeSessionStore(),
+        api: FakePairingApi(
+          exchangeResult: _success,
+          refreshResult: const RefreshRejected(),
+        ),
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            locale: const Locale('fr', 'CA'),
+            supportedLocales: const [Locale('fr', 'CA'), Locale('en', 'CA')],
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            theme: TutolysTheme.learner(),
+            home: PairingScreen(onCancel: () {}),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final button = tester.getRect(
+        find.byKey(const ValueKey('pairing-submit')),
+      );
+      expect(button.bottom, lessThanOrEqualTo(476));
+      expect(button.top, greaterThanOrEqualTo(0));
+      expect(find.text(Strings.fr.addProfileHint), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('first launch still says « Se connecter »', (tester) async {
       final container = containerWith(
         store: FakeSessionStore(),

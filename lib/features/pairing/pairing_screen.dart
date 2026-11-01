@@ -47,6 +47,10 @@ class _PairingScreenState extends ConsumerState<PairingScreen> {
 
   bool get _isComplete => _code.length == _codeLength;
 
+  /// Below this window height the logo and title step aside, as they do for
+  /// a keyboard inset.
+  static const shortWindow = 600.0;
+
   Future<void> _submit() async {
     if (!_isComplete) return;
     final form = ref.read(pairingFormProvider.notifier);
@@ -84,7 +88,13 @@ class _PairingScreenState extends ConsumerState<PairingScreen> {
     // Read above the Scaffold, which hides the inset from its body. With
     // the keyboard up, the logo and « Salut ! » step aside so the code
     // boxes and the button stay above it (AM22).
-    final keyboard = MediaQuery.viewInsetsOf(context).bottom > 0;
+    // A phone browser often shrinks the window for its keyboard instead of
+    // reporting an inset, so a short window counts too: 375×476 hid
+    // « Ajouter » below the fold (AM17 verify).
+    final height = MediaQuery.sizeOf(context).height;
+    final keyboard =
+        MediaQuery.viewInsetsOf(context).bottom > 0 ||
+        (height > 0 && height < shortWindow);
 
     final form = _PairingForm(
       alphabet: _alphabet,
