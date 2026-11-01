@@ -208,6 +208,7 @@ List<PathSection> buildCarteSections({
                 // Content's short kid label, or the statement trimmed at
                 // a word (AM9).
                 label: kidLabel(leaf, english: englishLabels),
+                spokenLabel: fullLabel(leaf, english: englishLabels),
                 state: state,
                 masteryPct: mastery == null ? null : mastery.masteryPct / 100,
                 // Only worth showing when there is more than one lesson.

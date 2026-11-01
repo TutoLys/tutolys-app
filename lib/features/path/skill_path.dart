@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
+
 import '../../core/widgets/arrow_label.dart';
 
 import '../../core/widgets/breathing_mascot.dart';
@@ -26,6 +27,7 @@ class PathNode {
     required this.id,
     required this.label,
     required this.state,
+    this.spokenLabel,
     this.masteryPct,
     this.otherLanguage,
     this.otherLanguageLabel,
@@ -47,6 +49,10 @@ class PathNode {
   final String id;
   final String label;
   final PathNodeState state;
+
+  /// The skill's full name, for screen readers: [label] may be trimmed
+  /// with an ellipsis (AM9), which reads as « ….  » aloud. Null: [label].
+  final String? spokenLabel;
 
   /// Set when this node's lesson is in another language than the subject
   /// asked for: `'FR'` for a French lesson in an English-mode maths path.
@@ -334,7 +340,7 @@ class _Node extends StatelessWidget {
         Semantics(
           button: !locked,
           label: [
-            node.label,
+            node.spokenLabel ?? node.label,
             ?node.otherLanguageLabel,
             ?node.lessonsLabel,
             ?node.stateLabel,
@@ -431,16 +437,19 @@ class _Node extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 7),
-        Text(
-          node.label,
-          maxLines: 2,
-          textAlign: TextAlign.center,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: m.capSize,
-            fontWeight: FontWeight.w700,
-            // `.path-node.mastered/.active/.available .cap { color: ink }`
-            color: locked ? p.inkMuted : p.ink,
+        // The orb above already says it, in full: read once, not twice.
+        ExcludeSemantics(
+          child: Text(
+            node.label,
+            maxLines: 2,
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: m.capSize,
+              fontWeight: FontWeight.w700,
+              // `.path-node.mastered/.active/.available .cap { color: ink }`
+              color: locked ? p.inkMuted : p.ink,
+            ),
           ),
         ),
       ],

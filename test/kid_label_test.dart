@@ -46,6 +46,31 @@ void main() {
       expect(trimLabel('Lire, écrire et compter'), 'Lire, écrire et compter');
     });
 
+    test('the verify pass\'s four: elisions, « non », an open aside', () {
+      final cases = {
+        "dénombrer à partir d’un nombre donné": 'dénombrer à partir…',
+        "le résultat d’une addition ou d’une soustraction": 'le résultat…',
+        'des régularités non numériques': 'des régularités…',
+        'transformation (ajout, retrait, réunion)': 'transformation…',
+      };
+      cases.forEach((full, expected) {
+        final trimmed = trimLabel(full);
+        expect(trimmed, isNot(endsWith(',…')), reason: full);
+        expect(trimmed, isNot(contains('(')), reason: full);
+        for (final bad in ['d’un…', 'd’une…', 'non…', 'à…']) {
+          expect(trimmed, isNot(endsWith(bad)), reason: full);
+        }
+        expect(trimmed, expected, reason: full);
+      });
+    });
+
+    test('a content word after an elision is a fine end', () {
+      expect(
+        trimLabel("estimer l’ordre de grandeur d’un nombre"),
+        'estimer l’ordre…',
+      );
+    });
+
     test('never ends on « de », « l\' » or « the »', () {
       for (final label in [
         'Associer un nombre à une quantité de jetons',

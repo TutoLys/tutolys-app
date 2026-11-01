@@ -288,6 +288,39 @@ void main() {
     expect(find.byType(PlayScreen), findsOneWidget);
   });
 
+  testWidgets('a trimmed caption is read once, by its full name (AM9)', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    const full =
+        "par ordre croissant ou décroissant à partir d'un nombre donné";
+    await openCarte(
+      tester,
+      appUnder(
+        leaves: const [
+          CurriculumLeaf(
+            id: 'leaf-1',
+            labelFr: full,
+            labelEn: '',
+            stableKey: 'mathematique/arithmetique/b:A/o:1',
+          ),
+        ],
+        content: {'ex-1': exercise(id: 'ex-1', skillNodeId: 'leaf-1')},
+      ),
+    );
+
+    // The orb says the whole statement, never « …. ».
+    expect(
+      find.bySemanticsLabel(RegExp('^${RegExp.escape(full)}')),
+      findsOneWidget,
+    );
+    expect(find.bySemanticsLabel(RegExp(r'…\.')), findsNothing);
+    // The visible caption is drawn, but not read a second time.
+    expect(find.text('par ordre croissant…'), findsWidgets);
+    expect(find.bySemanticsLabel('par ordre croissant…'), findsNothing);
+    semantics.dispose();
+  });
+
   testWidgets('the active card shows the real mastery from /me/progress', (
     tester,
   ) async {
