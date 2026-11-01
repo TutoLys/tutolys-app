@@ -19,6 +19,7 @@ class DiscussTake {
     required this.character,
     required this.text,
     required this.cites,
+    this.audioRef,
   });
   final String id;
   final VillageCharacter character;
@@ -26,6 +27,9 @@ class DiscussTake {
 
   /// The sentence id this take rests on.
   final String cites;
+
+  /// The line read aloud, on tap only: a pre-reader can't read it.
+  final String? audioRef;
 }
 
 /// The sentence revealed once both takes are matched.
@@ -175,7 +179,13 @@ abstract final class Discuss {
         return const ParseResult.invalid('A take cites one of the sentences.');
       }
       takes.add(
-        DiscussTake(id: id, character: character, text: body, cites: cites),
+        DiscussTake(
+          id: id,
+          character: character,
+          text: body,
+          cites: cites,
+          audioRef: text((t as Map)['audio_ref']),
+        ),
       );
     }
     if (takes[0].id == takes[1].id ||
@@ -526,6 +536,12 @@ class DiscussView extends StatelessWidget {
                       character: take.character,
                       text: take.text,
                       locale: locale,
+                      onSpeak: speaker == null || take.audioRef == null
+                          ? null
+                          : () => speaker!.speak(
+                              audioRef: take.audioRef!,
+                              partId: take.id,
+                            ),
                       trailing: citeChips(take),
                     ),
                   ),

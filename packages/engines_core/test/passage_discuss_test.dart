@@ -443,6 +443,44 @@ void main() {
       c.dispose();
     });
 
+    testWidgets('a take with a clip gets a speaker, read on tap only', (
+      tester,
+    ) async {
+      tallView(tester, width: 375);
+      final said = <String>[];
+      final voiced = {
+        ...discuss,
+        'takes': [
+          for (final t in discuss['takes']! as List)
+            {...(t as Map<String, Object?>), 'audio_ref': 'take_${t['id']}'},
+        ],
+      };
+      final (c, _) = controllerFor(voiced);
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(
+        ContentSpeakerScope(speaker: _Speaker(said), child: app(c)),
+      );
+      await tester.tap(find.byKey(const ValueKey('discuss-first-peur')));
+      await settle(tester);
+      expect(said, isEmpty, reason: 'never read by itself');
+      await tester.tap(find.byKey(const ValueKey('says-speak-lea')));
+      expect(said, ['take_lea']);
+      c.dispose();
+    });
+
+    testWidgets('a take with no clip draws no speaker', (tester) async {
+      tallView(tester, width: 375);
+      final (c, _) = controllerFor(discuss);
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(
+        ContentSpeakerScope(speaker: _Speaker([]), child: app(c)),
+      );
+      await tester.tap(find.byKey(const ValueKey('discuss-first-peur')));
+      await settle(tester);
+      expect(find.byKey(const ValueKey('says-speak-lea')), findsNothing);
+      c.dispose();
+    });
+
     testWidgets('fits a phone once every step is open', (tester) async {
       tallView(tester, width: 375);
       final (c, _) = controllerFor(discuss);
@@ -458,4 +496,12 @@ void main() {
       c.dispose();
     });
   });
+}
+
+class _Speaker implements ContentSpeaker {
+  _Speaker(this.said);
+  final List<String> said;
+  @override
+  void speak({required String audioRef, required String partId}) =>
+      said.add(audioRef);
 }

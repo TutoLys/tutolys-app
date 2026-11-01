@@ -66,3 +66,13 @@ Hafid's go on 2026-10-31: "Game and app calls from the UX reviews: YES apply".
   first. Both goldens were refreshed for the 56 px pictures.
 - Still open in games.md and not mine: G12 (celebration « Suivant »), N6,
   N7 and N14 (Flutter app).
+
+## Follow-up (2026-11-01): the discussion's friends have a voice
+Backend's audio pass is done: 519 hint clips (EA1), 111 ESL/FLS word cards
+(EA2) and 5 clues (EA3). A pre-reader still couldn't read Léa's or Omar's
+line, so a take may carry an optional `audio_ref` (backend `89d4654`,
+schema only, and optional, so every existing lesson still validates).
+`CharacterSays.onSpeak` draws a 48 px speaker beside the bubble, read on tap
+only. Backend fills the field from `takes[].text` (refs `take_<id>` /
+`q<i>_take_<id>`). Tests: a take with a clip gets a speaker that plays on
+tap and never by itself; with no clip, none is drawn.

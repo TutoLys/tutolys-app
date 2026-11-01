@@ -183,6 +183,7 @@ class CharacterSays extends StatelessWidget {
     this.mood = CharacterMood.neutral,
     this.imageRef,
     this.trailing,
+    this.onSpeak,
     super.key,
   });
 
@@ -192,6 +193,10 @@ class CharacterSays extends StatelessWidget {
   final CharacterMood mood;
   final String? imageRef;
   final Widget? trailing;
+
+  /// Reads the line aloud, on tap only: a 48 px speaker beside the bubble.
+  /// Null draws none.
+  final VoidCallback? onSpeak;
 
   @override
   Widget build(BuildContext context) {
@@ -241,7 +246,35 @@ class CharacterSays extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              bubble,
+              if (onSpeak == null)
+                bubble
+              else
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: bubble),
+                    const SizedBox(width: 8),
+                    IconButton.filledTonal(
+                      key: ValueKey('says-speak-${character.key}'),
+                      onPressed: onSpeak,
+                      tooltip: locale.languageCode == 'en'
+                          ? 'Listen to ${character.name(locale)}'
+                          : 'Écouter ${character.name(locale)}',
+                      iconSize: 22,
+                      constraints: const BoxConstraints.tightFor(
+                        width: 48,
+                        height: 48,
+                      ),
+                      style: IconButton.styleFrom(
+                        backgroundColor: p.navHoverFill,
+                        foregroundColor: p.isDark
+                            ? p.quebecBlueBright
+                            : p.quebecBlue,
+                      ),
+                      icon: const Icon(Icons.volume_up_rounded),
+                    ),
+                  ],
+                ),
               // Outside the bubble's semantics: it's interactive.
               if (trailing != null) ...[const SizedBox(height: 8), trailing!],
             ],
