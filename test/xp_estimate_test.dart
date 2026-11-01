@@ -42,6 +42,22 @@ void main() {
     expect(estimateXp(lesson([q(), q(), q(), q()]), replay: true), 2);
   });
 
+  group('a credited replay never pays 0 (the +1 floor)', () {
+    test('a one-question lesson played, then replayed: [4, 1]', () {
+      expect([estimateXp(q()), estimateXp(q(), replay: true)], [4, 1]);
+      expect(questionXp(1, replay: true), 1);
+      expect(xpSoFar([q()], questions: 1, replay: true), 1);
+    });
+
+    test('a five-question replay is unchanged', () {
+      expect(estimateXp(lesson([q(), q(), q(), q(), q()]), replay: true), 2);
+    });
+
+    test('nothing solved still pays nothing', () {
+      expect(questionXp(0, replay: true), 0);
+    });
+  });
+
   test('question XP alone, as the game shows it before the celebration', () {
     expect(questionXp(3), 3);
     expect(questionXp(3, replay: true), 1);

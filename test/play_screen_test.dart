@@ -674,9 +674,10 @@ void main() {
 
     expect(find.text('Parfait !'), findsOneWidget);
     expect(
-      find.text('+0 XP'),
+      find.text('+1 XP'),
       findsOneWidget,
-      reason: 'half of 1 question, rounded down, and no lesson bonus',
+      reason: 'half of 1 question rounds to 0, so the +1 floor pays 1, and '
+          'no lesson bonus',
     );
   });
 

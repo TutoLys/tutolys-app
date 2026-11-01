@@ -15,9 +15,16 @@ const int xpLessonComplete = 2;
 const int xpPerfectLesson = 1;
 
 /// XP for [questions] solved questions. A replay of a lesson this kid has
-/// already finished earns half, rounded down over the lesson.
-int questionXp(int questions, {bool replay = false}) =>
-    replay ? (questions * xpPerQuestion) ~/ 2 : questions * xpPerQuestion;
+/// already finished earns half, rounded down over the lesson, but never 0
+/// when there was something to halve: a credited replay pays at least 1
+/// (Hafid's "+1 floor", 2026-11-01; backend `xp_rules.py`, ADR 0047
+/// addendum). A one-question replay showed "+0" and looked broken.
+int questionXp(int questions, {bool replay = false}) {
+  final full = questions * xpPerQuestion;
+  if (!replay) return full;
+  final half = full ~/ 2;
+  return half == 0 && full > 0 ? 1 : half;
+}
 
 /// The XP a completed lesson is expected to earn: its questions, plus the
 /// lesson bonuses unless it's a replay. Nothing for an abandoned run.
