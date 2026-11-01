@@ -234,4 +234,35 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('path-orb-s')));
     expect(taps, 0);
   });
+
+  // A short label may run to 32 characters. At 110 px it fits on two lines
+  // in Roboto Bold (measured; the test font can't show that), and every
+  // column keeps its caption on a 375 px screen.
+  testWidgets('phone captions are 110 px wide and stay on screen', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(375, 812);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    const label = 'Comment une histoire fonctionne';
+    await tester.pumpWidget(
+      pathIn(
+        compact: true,
+        nodes: [
+          for (var i = 0; i < 4; i++)
+            PathNode(id: 'n$i', label: label, state: PathNodeState.locked),
+        ],
+      ),
+    );
+
+    final captions = find.text(label);
+    expect(captions, findsNWidgets(4));
+    for (final e in captions.evaluate()) {
+      final box = e.renderObject! as RenderBox;
+      expect(box.constraints.maxWidth, 110);
+      final left = box.localToGlobal(Offset.zero).dx;
+      expect(left, greaterThanOrEqualTo(0));
+      expect(left + box.size.width, lessThanOrEqualTo(375));
+    }
+  });
 }

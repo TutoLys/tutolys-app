@@ -82,6 +82,12 @@ class PathNode {
 }
 
 /// The design's sizes, desktop and phone (`.m-path-card` overrides).
+///
+/// Captions are wider than the design's (78/96 px): a short label may run
+/// to 32 characters, and at 78 px « Comment une histoire fonctionne » took
+/// three lines and was cut. At 110/120 px any 32-character label fits on
+/// two lines in Roboto Bold. Only the orb is tappable, and each row holds
+/// one node, so a wider caption covers nothing.
 class _Metrics {
   const _Metrics({
     required this.maxWidth,
@@ -121,7 +127,7 @@ class _Metrics {
     orb: 60,
     row: 104,
     topPad: 16,
-    capWidth: 96,
+    capWidth: 120,
     capSize: 11,
     cardWidth: 208,
     cardTop: 68,
@@ -136,7 +142,7 @@ class _Metrics {
     orb: 50,
     row: 86,
     topPad: 10,
-    capWidth: 78,
+    capWidth: 110,
     capSize: 10,
     cardWidth: 180,
     cardTop: 58,

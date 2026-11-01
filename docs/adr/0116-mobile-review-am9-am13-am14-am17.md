@@ -98,3 +98,15 @@
   language and now uses the same rule (`kidLabelFor`). The Continuer card
   and Village's « Continuer » use the Carte node's label, so they follow
   too.
+
+## Addendum, 2026-11-01: 32-character short labels
+
+Hafid set the short-label cap to 32 characters. Measured in Flutter with
+Roboto Bold, the caption font. At the design's 78 px (phone) caption, 4 of
+the 13 labels over 26 characters took three lines and were cut, for example
+« Comment une / histoire / fonctionne » and "Describing / people and /
+things". **Captions are now 110 px wide on a phone and 120 px wider up.**
+Every one of the 13 fits on two lines there, and so does a 32-character
+worst case made of three 10-letter words. Only the orb is tappable, and a
+row holds one node, so the wider caption covers nothing. It still fits on a
+375 px screen at the 28 % and 72 % columns. The text is unchanged.
