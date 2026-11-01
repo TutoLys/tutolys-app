@@ -334,7 +334,9 @@ class CelebrationRow extends StatelessWidget {
   }
 }
 
-/// Practice's end: what this round was, with no number.
+/// Practice's end: what this round was, with no number. Plain text with a
+/// neutral icon, no outline or fill: an outlined pill with ↻ read as a
+/// « play again » button that did nothing (UX review, K18 re-check).
 class _PracticeLabel extends StatelessWidget {
   const _PracticeLabel({required this.label});
   final String label;
@@ -342,34 +344,22 @@ class _PracticeLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = VillagePalette.of(context);
-    return Container(
+    return Row(
       key: const ValueKey('complete-practice'),
-      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
-      decoration: BoxDecoration(
-        borderRadius: Radii.pillAll,
-        color: p.navHoverFill,
-        border: Border.all(color: p.quebecBlueBright, width: 2),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.replay_rounded,
-            color: p.isDark ? p.quebecBlueBright : p.quebecBlue,
-            size: 24,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.school_rounded, color: p.inkMuted, size: 22),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: TextStyle(
+            fontFamily: VillageType.display,
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: p.inkMuted,
           ),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: TextStyle(
-              fontFamily: VillageType.display,
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: p.ink,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

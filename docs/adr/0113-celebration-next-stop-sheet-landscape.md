@@ -42,7 +42,9 @@ are UX items already decided: G12, AM20 and AM21.
   « +0 XP ». It's a flag rather than a nullable `xp`, because the app
   credits `summary.xp` to an `int` and a nullable field would break its
   build until both sides moved together. The app passes
-  `practice: widget.practice`.
+  `practice: widget.practice`. After ux-review's re-check it's plain muted
+  text with a neutral 🎓 icon: an outlined pill with ↻ read as a « play
+  again » button that did nothing.
 - **AM33:** sideways, the left column leads with the question and its 🔊.
   The picture comes after it, capped at 40 % of the screen height, and the
   fox is left out (it took 70 px of a 300 px column). The left column gets

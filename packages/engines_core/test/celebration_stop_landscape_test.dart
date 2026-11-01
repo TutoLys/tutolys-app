@@ -83,6 +83,17 @@ void main() {
     expect(find.byKey(const ValueKey('complete-practice')), findsOne);
     expect(find.text('Entraînement'), findsOne);
     expect(find.textContaining('XP'), findsNothing);
+    // A label, not something that looks tappable: no ↻, no outline.
+    expect(find.byIcon(Icons.replay_rounded), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('complete-practice')),
+        matching: find.byWidgetPredicate(
+          (w) => w is Container && w.decoration != null,
+        ),
+      ),
+      findsNothing,
+    );
   });
 
   testWidgets('AM34: a big card\'s short label is 28 px and centred', (
