@@ -18,6 +18,7 @@ export 'src/bitmap_renderer.dart';
 export 'src/character_manifest.dart';
 export 'src/character_registry.dart';
 export 'src/character_stage.dart';
+export 'src/engine_moments.dart';
 export 'src/motion_recipes.dart';
 export 'src/particles.dart';
 export 'src/placeholder_renderer.dart';

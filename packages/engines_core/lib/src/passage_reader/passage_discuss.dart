@@ -274,6 +274,7 @@ abstract final class Discuss {
           return (s, const []);
         }
         final cites = {...s.cites, takeId: sentenceId};
+        final clueNow = !s.clueShown && cites.length == part.takes.length;
         return (
           s.copyWith(
             cites: cites,
@@ -284,6 +285,8 @@ abstract final class Discuss {
               'item_id': takeId,
               'bucket_id': sentenceId,
             }),
+            // The clue appearing is the moment (fix 3).
+            if (clueNow) RevealEvent('clue', itemId: part.clue.id),
           ],
         );
       case DiscussPickFinal(:final id):

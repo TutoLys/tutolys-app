@@ -56,6 +56,7 @@ class SessionState {
     this.resumeTo,
     this.questionsCompleted = 0,
     this.questionsSolved = 0,
+    this.firstTryStreak = 0,
     this.failureReason,
   });
 
@@ -84,6 +85,10 @@ class SessionState {
 
   final int questionsCompleted;
   final int questionsSolved;
+
+  /// Right on the first attempt, this many questions running. Drives the
+  /// combo ([StreakAdvanced]); a miss or a retry resets it.
+  final int firstTryStreak;
   final String? failureReason;
 
   bool get canRetry {
@@ -109,6 +114,7 @@ class SessionState {
     bool clearResumeTo = false,
     int? questionsCompleted,
     int? questionsSolved,
+    int? firstTryStreak,
     String? failureReason,
   }) => SessionState(
     phase: phase ?? this.phase,
@@ -123,6 +129,7 @@ class SessionState {
     resumeTo: clearResumeTo ? null : (resumeTo ?? this.resumeTo),
     questionsCompleted: questionsCompleted ?? this.questionsCompleted,
     questionsSolved: questionsSolved ?? this.questionsSolved,
+    firstTryStreak: firstTryStreak ?? this.firstTryStreak,
     failureReason: failureReason ?? this.failureReason,
   );
 
@@ -137,6 +144,7 @@ class SessionState {
     'resume_to': resumeTo?.name,
     'questions_completed': questionsCompleted,
     'questions_solved': questionsSolved,
+    'first_try_streak': firstTryStreak,
     'failure_reason': failureReason,
   };
 
@@ -161,6 +169,8 @@ class SessionState {
         resumeTo: phaseOf(json['resume_to']),
         questionsCompleted: json['questions_completed'] as int,
         questionsSolved: json['questions_solved'] as int,
+        // Absent from snapshots written before the combo existed.
+        firstTryStreak: json['first_try_streak'] as int? ?? 0,
         failureReason: json['failure_reason'] as String?,
       );
       if (pending != null && state.pendingAnswer == null) return null;
@@ -316,19 +326,7 @@ abstract final class ActivitySessionMachine {
         // overtaken by a resume) and must not be recorded twice.
         result.attemptNumber != s.attempts
             ? SessionStep.rejected(s)
-            : SessionStep(
-                s.copyWith(
-                  phase: SessionPhase.feedback,
-                  lastOutcome: result.outcome,
-                  clearPendingAnswer: true,
-                ),
-                [
-                  AnswerEvaluated(
-                    questionIndex: s.questionIndex,
-                    result: result,
-                  ),
-                ],
-              ),
+            : _evaluated(s, result),
 
       (
         SessionPhase.evaluating,
@@ -400,6 +398,29 @@ abstract final class ActivitySessionMachine {
 
       _ => SessionStep.rejected(s),
     };
+  }
+
+  static SessionStep _evaluated(SessionState s, EvaluationResult result) {
+    // A combo counts first tries only; an ungraded verdict (our failure)
+    // neither extends nor breaks it.
+    final streak = switch (result.outcome) {
+      Outcome.correct when s.attempts == 1 => s.firstTryStreak + 1,
+      Outcome.ungraded => s.firstTryStreak,
+      _ => 0,
+    };
+    return SessionStep(
+      s.copyWith(
+        phase: SessionPhase.feedback,
+        lastOutcome: result.outcome,
+        clearPendingAnswer: true,
+        firstTryStreak: streak,
+      ),
+      [
+        AnswerEvaluated(questionIndex: s.questionIndex, result: result),
+        if (streak >= 2 && streak > s.firstTryStreak)
+          StreakAdvanced(questionIndex: s.questionIndex, count: streak),
+      ],
+    );
   }
 
   static SessionStep _fail(SessionState s, String reason) => SessionStep(

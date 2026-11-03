@@ -350,6 +350,8 @@ class ExperimentLabEngine
           s.copyWith(runs: [...s.runs.where((r) => r != combo), combo]),
           [
             InteractionEvent('experiment_run', {'item_id': combo}),
+            // The outcome drawn is the moment (fix 3).
+            RevealEvent('outcome', itemId: combo),
           ],
         );
       case PickConclusion(:final id):

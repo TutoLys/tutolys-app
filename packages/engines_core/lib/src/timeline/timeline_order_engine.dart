@@ -527,6 +527,7 @@ class TimelineOrderEngine
                         width: _slotWidth,
                         child: IdleHandHint(
                           show: handOn == id,
+                          targetId: id,
                           child: AnswerTile(
                             key: ValueKey('timeline-item-$id'),
                             label: content.item(id).label,

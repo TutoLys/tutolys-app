@@ -157,3 +157,17 @@ abstract interface class LearningEngine<C, S, A, Ans extends AnswerValue> {
 
   Widget buildView(BuildContext context, EngineView<C, S, A> view);
 }
+
+/// An engine whose verdict *shows* something: the scale tips, the audience
+/// reacts. [LearningEngine.applyFeedback] returns state only, so an engine
+/// that has a moment to report implements this too, and the runtime emits
+/// what it returns right after the verdict. Optional: no other engine has
+/// to change.
+abstract interface class RevealsAfterFeedback<S> {
+  /// What [after] shows that [before] didn't. Usually one [RevealEvent].
+  List<RevealEvent> revealsAfterFeedback(
+    S before,
+    S after,
+    EvaluationResult result,
+  );
+}

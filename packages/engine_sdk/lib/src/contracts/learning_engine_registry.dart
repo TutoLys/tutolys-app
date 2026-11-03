@@ -5,6 +5,7 @@ import 'envelope.dart';
 import 'evaluation.dart';
 import 'learning_engine.dart';
 import 'parse_result.dart';
+import '../runtime/runtime_event.dart';
 
 /// A [LearningEngine] with its type parameters erased, so the runtime can
 /// hold engines of different content/state/action types in one registry.
@@ -18,6 +19,13 @@ abstract interface class ErasedEngine {
   Transition<Object?> reduce(Object? state, Object action);
   AnswerValue? extractAnswer(Object? state);
   Object? applyFeedback(Object? state, EvaluationResult result);
+
+  /// Empty unless the engine implements [RevealsAfterFeedback].
+  List<RevealEvent> revealsAfterFeedback(
+    Object? before,
+    Object? after,
+    EvaluationResult result,
+  );
   Map<String, Object?> snapshot(Object? state);
   Object? restore(Object? content, Map<String, Object?> snapshot);
   Widget buildView(
@@ -71,6 +79,20 @@ class _ErasedEngine<C, S, A, Ans extends AnswerValue> implements ErasedEngine {
   @override
   Object? applyFeedback(Object? state, EvaluationResult result) =>
       engine.applyFeedback(state as S, result);
+
+  @override
+  List<RevealEvent> revealsAfterFeedback(
+    Object? before,
+    Object? after,
+    EvaluationResult result,
+  ) => switch (engine) {
+    final RevealsAfterFeedback<S> e => e.revealsAfterFeedback(
+      before as S,
+      after as S,
+      result,
+    ),
+    _ => const [],
+  };
 
   @override
   Map<String, Object?> snapshot(Object? state) => engine.snapshot(state as S);

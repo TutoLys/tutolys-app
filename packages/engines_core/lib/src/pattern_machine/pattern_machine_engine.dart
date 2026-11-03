@@ -828,6 +828,7 @@ class PatternMachineEngine
                           excludeSemantics: true,
                           child: IdleHandHint(
                             show: hand,
+                            targetId: id,
                             child: _Cell(
                               key: ValueKey('pattern-choice-$id'),
                               size: 72,

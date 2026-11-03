@@ -451,6 +451,7 @@ class PairMatchBoardEngine
                 for (final l in s.leftOrder)
                   IdleHandHint(
                     show: handLeft == l,
+                    targetId: l,
                     child: AnswerTile(
                       key: ValueKey('pair-left-$l'),
                       large: true,
@@ -488,6 +489,7 @@ class PairMatchBoardEngine
                       final badge = rightBadge(r);
                       return IdleHandHint(
                         show: handRight == r,
+                        targetId: r,
                         child: AnswerTile(
                           key: ValueKey('pair-right-$r'),
                           large: true,

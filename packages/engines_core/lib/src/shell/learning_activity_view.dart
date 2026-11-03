@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:design_system/design_system.dart';
 import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
@@ -9,6 +10,8 @@ import '../widgets/idle_hand_hint.dart';
 
 import 'activity_assist.dart';
 import 'activity_shell.dart';
+import 'board_actor.dart';
+import 'idle_cue.dart';
 import 'shell_strings.dart';
 import 'stop_sheet.dart';
 
@@ -29,6 +32,7 @@ class LearningActivityView extends StatefulWidget {
     this.hintsEnabled = true,
     this.xpEarned,
     this.narrating,
+    this.boardActor,
     super.key,
   });
 
@@ -54,6 +58,10 @@ class LearningActivityView extends StatefulWidget {
   /// only the hint pauses it.
   final ValueListenable<bool>? narrating;
 
+  /// Draws a character that stands on a board (Foxy on the path planner's
+  /// grid), from the host's cast. Null: a fox that reacts to the verdicts.
+  final BoardActorBuilder? boardActor;
+
   @override
   State<LearningActivityView> createState() => _LearningActivityViewState();
 }
@@ -62,6 +70,21 @@ class _LearningActivityViewState extends State<LearningActivityView> {
   late StreamSubscription<RuntimeEvent> _sub;
   int _inARow = 0;
   bool _hintRevealed = false;
+
+  /// The idle prompt's clock (fix 2): the hint arms it, it reports the idle
+  /// moment, and the hand is drawn when the event comes back.
+  late final IdleCueController _idle = IdleCueController(
+    onIdle: (targetId, after) => widget.controller.signal(
+      IdlePrompted(
+        questionIndex: widget.controller.state.questionIndex,
+        afterMs: after.inMilliseconds,
+        targetId: targetId,
+      ),
+    ),
+  );
+
+  /// The default board actor's mood, from the verdicts.
+  final ValueNotifier<MascotMood> _boardMood = ValueNotifier(MascotMood.idle);
 
   @override
   void initState() {
@@ -85,6 +108,13 @@ class _LearningActivityViewState extends State<LearningActivityView> {
           _inARow = solved && attempts == 1 ? _inARow + 1 : 0;
         case QuestionPresented():
           _hintRevealed = false;
+          _boardMood.value = MascotMood.idle;
+        case AnswerEvaluated(:final result):
+          _boardMood.value = result.outcome == Outcome.correct
+              ? MascotMood.correct
+              : MascotMood.idle;
+        case IdlePrompted(:final targetId):
+          _idle.cue(targetId: targetId);
         case ActivityCompleted():
           // The child just pressed Continuer on the last banner; a second
           // "well done" screen would only be one more tap. A microtask, not
@@ -102,8 +132,16 @@ class _LearningActivityViewState extends State<LearningActivityView> {
   @override
   void dispose() {
     unawaited(_sub.cancel());
+    _idle.dispose();
+    _boardMood.dispose();
     super.dispose();
   }
+
+  Widget _defaultBoardActor(BuildContext context, String role, double size) =>
+      ValueListenableBuilder(
+        valueListenable: _boardMood,
+        builder: (context, mood, _) => TutolysMascot(size: size, mood: mood),
+      );
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -265,27 +303,33 @@ class _LearningActivityViewState extends State<LearningActivityView> {
           // ids (ADR 0092).
           : CurrentExercise(
               exerciseId: c.envelope.exerciseId,
-              child: HandDemoScope(
-                // The hand demo: the série's first question, or after two
-                // misses on this one (N4).
-                enabled: state.questionIndex == 0 || state.attempts >= 2,
-                child: _assist(
-                  narrow: state.attempts >= ActivityAssist.narrowAfter,
-                  // Its own context, under the scope: an engine reads
-                  // ActivityAssist from the context it's built with.
-                  child: Builder(
-                    builder: (context) => q.engine.buildView(
-                      context,
-                      content: q.content,
-                      state: q.state,
-                      dispatch: (a) {
-                        // The controller runs these in order: back to the
-                        // question, then the move.
-                        if (retrying) unawaited(c.proceed());
-                        unawaited(c.dispatch(a));
-                      },
-                      locale: widget.locale,
-                      enabled: interactive || retrying,
+              child: BoardActorScope(
+                builder: widget.boardActor ?? _defaultBoardActor,
+                child: IdleCueScope(
+                  controller: _idle,
+                  child: HandDemoScope(
+                    // The hand demo: the série's first question, or after two
+                    // misses on this one (N4).
+                    enabled: state.questionIndex == 0 || state.attempts >= 2,
+                    child: _assist(
+                      narrow: state.attempts >= ActivityAssist.narrowAfter,
+                      // Its own context, under the scope: an engine reads
+                      // ActivityAssist from the context it's built with.
+                      child: Builder(
+                        builder: (context) => q.engine.buildView(
+                          context,
+                          content: q.content,
+                          state: q.state,
+                          dispatch: (a) {
+                            // The controller runs these in order: back to the
+                            // question, then the move.
+                            if (retrying) unawaited(c.proceed());
+                            unawaited(c.dispatch(a));
+                          },
+                          locale: widget.locale,
+                          enabled: interactive || retrying,
+                        ),
+                      ),
                     ),
                   ),
                 ),

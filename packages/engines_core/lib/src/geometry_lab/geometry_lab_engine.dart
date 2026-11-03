@@ -632,6 +632,7 @@ class _Board extends StatelessWidget {
                         // The idle hand (N10): on a peg while the band is
                         // empty, showing where to start.
                         child: IdleHandHint(
+                          targetId: GeometryLabEngine.pegId((r, col)),
                           show:
                               onPeg != null &&
                               band.isEmpty &&

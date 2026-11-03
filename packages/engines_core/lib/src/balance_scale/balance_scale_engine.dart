@@ -184,7 +184,8 @@ class BalanceScaleEngine
           BalanceState,
           BalanceAction,
           SingleChoiceAnswer
-        > {
+        >,
+        RevealsAfterFeedback<BalanceState> {
   const BalanceScaleEngine();
 
   static const key = 'balance_scale';
@@ -389,6 +390,28 @@ class BalanceScaleEngine
       tried: {...s.tried, pick},
       lastWrong: pick,
     );
+  }
+
+  /// The scale tipping is the moment (plan §3.3, fix 3): to the truth once
+  /// solved, or, in balance mode, the way a wrong value tips it.
+  @override
+  List<RevealEvent> revealsAfterFeedback(
+    BalanceState before,
+    BalanceState after,
+    EvaluationResult result,
+  ) {
+    if (after.solved && !before.solved) {
+      return [RevealEvent('tip', itemId: before.selected)];
+    }
+    // Only a balance scale tips for a wrong value; a compare scale stays
+    // level until it's solved. Its choices are only ever the fixed signs
+    // (two or three of them).
+    final compare = after.order.every(const {'lt', 'gt', 'eq'}.contains);
+    final wrong = after.lastWrong;
+    if (!compare && wrong != null && wrong != before.lastWrong) {
+      return [RevealEvent('tip', itemId: wrong)];
+    }
+    return const [];
   }
 
   @override

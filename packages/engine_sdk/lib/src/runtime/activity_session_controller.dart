@@ -314,9 +314,11 @@ class ActivitySessionController extends ChangeNotifier {
       s = step.state;
       events.addAll(step.events);
       if (r.result != null) {
-        engineState = _questions[i].engine.applyFeedback(
-          engineState,
-          r.result!,
+        final before = engineState;
+        final engine = _questions[i].engine;
+        engineState = engine.applyFeedback(engineState, r.result!);
+        events.addAll(
+          engine.revealsAfterFeedback(before, engineState, r.result!),
         );
       }
     }
@@ -500,7 +502,10 @@ class ActivitySessionController extends ChangeNotifier {
     s = evaluated.state;
     events.addAll(evaluated.events);
     if (r.result != null) {
-      engineState = _questions[i].engine.applyFeedback(engineState, r.result!);
+      final before = engineState;
+      final engine = _questions[i].engine;
+      engineState = engine.applyFeedback(engineState, r.result!);
+      events.addAll(engine.revealsAfterFeedback(before, engineState, r.result!));
     }
     return (state: s, engineState: engineState, events: events);
   }
@@ -638,6 +643,19 @@ class ActivitySessionController extends ChangeNotifier {
     }
     _engineState = engineState;
     _publish(events);
+  }
+
+  /// Publish a [EventCategory.presentation] event that no learner action
+  /// produced: the shell's idle prompt. Not committed, since nothing about
+  /// it has to survive a crash, and dropped once the session has ended.
+  void signal(RuntimeEvent event) {
+    assert(
+      event.category == EventCategory.presentation,
+      'signal() is for presentation events; ${event.type} must be committed',
+    );
+    if (event.category != EventCategory.presentation) return;
+    if (_state.phase.isTerminal) return;
+    _publish([event]);
   }
 
   void _publish(List<RuntimeEvent> events) {

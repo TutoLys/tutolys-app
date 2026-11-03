@@ -65,6 +65,20 @@ void main() {
     for (final e in outbox.all) e['event_type'] as String,
   ];
 
+  test('signal publishes a presentation event and writes nothing', () async {
+    final c = build();
+    await c.start();
+    final before = outbox.all.length;
+    final seen = <RuntimeEvent>[];
+    final sub = c.events.listen(seen.add);
+    c.signal(const IdlePrompted(questionIndex: 0, afterMs: 2400));
+    await pumpEventQueue();
+    expect(seen.single, isA<IdlePrompted>());
+    expect(outbox.all.length, before, reason: 'never persisted');
+    await sub.cancel();
+    c.dispose();
+  });
+
   test(
     'a fresh start presents question 1, durably, and is interactive',
     () async {

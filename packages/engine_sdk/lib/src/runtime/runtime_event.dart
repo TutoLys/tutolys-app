@@ -11,6 +11,13 @@ enum EventCategory {
   learning,
   interaction,
   accessibility,
+
+  /// A moment for the animation and audio layers only: a combo, an idle
+  /// prompt, something an engine reveals. Never persisted: each one is
+  /// derived from learning or interaction events that already are, so
+  /// recording it would only count the same fact twice (plan
+  /// PLAN_GRADES_2_6_ENGINES §3).
+  presentation,
   runtimeDiagnostic,
   animationDiagnostic,
   syncDiagnostic;
@@ -20,13 +27,17 @@ enum EventCategory {
   /// must never pollute the learning record.
   bool get isDurable => switch (this) {
     learning || interaction || accessibility => true,
-    runtimeDiagnostic || animationDiagnostic || syncDiagnostic => false,
+    presentation ||
+    runtimeDiagnostic ||
+    animationDiagnostic ||
+    syncDiagnostic => false,
   };
 
   String get wire => switch (this) {
     learning => 'learning',
     interaction => 'interaction',
     accessibility => 'accessibility',
+    presentation => 'presentation',
     runtimeDiagnostic => 'runtime_diagnostic',
     animationDiagnostic => 'animation_diagnostic',
     syncDiagnostic => 'sync_diagnostic',
@@ -262,6 +273,71 @@ class AudioRequested extends RuntimeEvent {
     'part': part.name,
     if (partId != null) 'part_id': partId,
   };
+}
+
+// ── presentation (never persisted to telemetry) ─────────────────────────────
+
+/// Consecutive first-try right answers in a série, from the second one on.
+/// The session machine emits it, never an engine: a combo is a fact about
+/// the série, not about one board.
+class StreakAdvanced extends RuntimeEvent {
+  const StreakAdvanced({required this.questionIndex, required this.count});
+  final int questionIndex;
+
+  /// 2 or more.
+  final int count;
+
+  @override
+  EventCategory get category => EventCategory.presentation;
+  @override
+  String get type => 'streak_advanced';
+  @override
+  Map<String, Object?> get payload => {
+    'question_index': questionIndex,
+    'count': count,
+  };
+}
+
+/// Nothing touched for a while: show the child where to start. The shell's
+/// idle timer emits it; the engine only names the suggested target.
+class IdlePrompted extends RuntimeEvent {
+  const IdlePrompted({
+    required this.questionIndex,
+    required this.afterMs,
+    this.targetId,
+  });
+  final int questionIndex;
+  final int afterMs;
+
+  /// What the engine suggests tapping first, if it said.
+  final String? targetId;
+
+  @override
+  EventCategory get category => EventCategory.presentation;
+  @override
+  String get type => 'idle_prompted';
+  @override
+  Map<String, Object?> get payload => {
+    'question_index': questionIndex,
+    'after_ms': afterMs,
+    if (targetId != null) 'target_id': targetId,
+  };
+}
+
+/// Something an engine shows as a consequence: an experiment's outcome, a
+/// clue, the scale tipping, the audience reacting, the end of a walk. An
+/// [InteractionEvent] so a reducer can return it, but [presentation]: the
+/// learner didn't do it, so it stays out of telemetry.
+class RevealEvent extends InteractionEvent {
+  RevealEvent(this.what, {this.itemId})
+    : super('reveal', {'what': what, 'item_id': ?itemId});
+
+  /// What was revealed: `outcome`, `clue`, `tip`, `reaction`, `walk`…
+  final String what;
+  final String? itemId;
+
+  @override
+  EventCategory get category => EventCategory.presentation;
 }
 
 // ── diagnostics (never persisted to telemetry) ──────────────────────────────

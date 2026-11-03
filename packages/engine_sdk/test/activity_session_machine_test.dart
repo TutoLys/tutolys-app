@@ -67,6 +67,8 @@ void main() {
           'question_presented',
           'answer_submitted',
           'attempt',
+          // Two first tries running: a combo, for the animation layer.
+          'streak_advanced',
           'exercise_complete',
           'activity_completed',
         ]);
@@ -285,6 +287,71 @@ void main() {
         (step.events.single as ActivityAbandoned).reason,
         AbandonReason.staleResume,
       );
+    });
+  });
+
+  group('combo', () {
+    List<RuntimeEvent> play(List<List<Outcome>> questions) {
+      var s = _awaiting(questions: questions.length);
+      final events = <RuntimeEvent>[];
+      for (final attempts in questions) {
+        for (final (i, o) in attempts.indexed) {
+          for (final input in [
+            const Submit(_a),
+            Evaluated(_result(o, i + 1)),
+            const Continue(),
+          ]) {
+            final step = ActivitySessionMachine.reduce(s, input);
+            expect(step.accepted, isTrue, reason: '$input in ${s.phase}');
+            events.addAll(step.events);
+            s = step.state;
+          }
+        }
+        if (s.phase == SessionPhase.presenting) {
+          s = ActivitySessionMachine.reduce(s, const QuestionShown()).state;
+        }
+      }
+      return events;
+    }
+
+    List<int> combos(List<RuntimeEvent> events) => [
+      for (final e in events)
+        if (e is StreakAdvanced) e.count,
+    ];
+
+    test('counts first tries from the second one on', () {
+      const ok = [Outcome.correct];
+      expect(combos(play([ok, ok, ok])), [2, 3]);
+    });
+
+    test('a miss or a right answer after a retry starts it over', () {
+      const ok = [Outcome.correct];
+      const retried = [Outcome.incorrect, Outcome.correct];
+      expect(combos(play([ok, retried, ok, ok])), [2]);
+      expect(combos(play([ok, ok, retried, ok, ok])), [2, 2]);
+    });
+
+    test('is presentation only: never durable', () {
+      const e = StreakAdvanced(questionIndex: 1, count: 2);
+      expect(e.category, EventCategory.presentation);
+      expect(e.category.isDurable, isFalse);
+      expect(RevealEvent('outcome').category.isDurable, isFalse);
+      expect(
+        const IdlePrompted(questionIndex: 0, afterMs: 1).category.isDurable,
+        isFalse,
+      );
+    });
+
+    test('the count survives a snapshot, and old snapshots start at 0', () {
+      var s = _awaiting(questions: 3);
+      s = _run(s, [
+        const Submit(_a),
+        Evaluated(_result(Outcome.correct, 1)),
+      ]).state;
+      expect(s.firstTryStreak, 1);
+      expect(SessionState.fromJson(s.toJson())!.firstTryStreak, 1);
+      final old = s.toJson()..remove('first_try_streak');
+      expect(SessionState.fromJson(old)!.firstTryStreak, 0);
     });
   });
 

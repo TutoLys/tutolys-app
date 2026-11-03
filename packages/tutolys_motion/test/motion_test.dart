@@ -138,7 +138,44 @@ void main() {
         policy.onEvent(const AnimationDiagnostic('renderer_error')),
         isEmpty,
       );
-      expect(policy.onEvent(const InteractionEvent('tile_moved')), isEmpty);
+      expect(policy.onEvent(const InteractionEvent('mystery_move')), isEmpty);
+      expect(policy.onEvent(const InteractionEvent('item_removed')), isEmpty);
+    });
+
+    test('a select, place or connect makes the guide curious', () {
+      for (final type in ['option_selected', 'tile_moved', 'pair_connected']) {
+        final cues = policy.onEvent(InteractionEvent(type));
+        expect(cues.single.reaction, Reaction.curious, reason: type);
+        expect(cues.single.priority, CuePriority.interaction, reason: type);
+      }
+    });
+
+    test('a reveal, a combo and an idle prompt each have a cue', () {
+      expect(
+        policy.onEvent(RevealEvent('outcome')).single.reaction,
+        Reaction.curious,
+      );
+      final combo = policy
+          .onEvent(const StreakAdvanced(questionIndex: 2, count: 3))
+          .single;
+      expect(combo.role, ActorRole.companion);
+      expect(combo.reaction, Reaction.celebrating);
+      expect(
+        policy
+            .onEvent(const IdlePrompted(questionIndex: 0, afterMs: 2400))
+            .single
+            .reaction,
+        Reaction.explaining,
+      );
+    });
+
+    test('every moment has a wire name, and every name one moment', () {
+      expect(
+        interactionMoments.values.toSet(),
+        EngineMoment.values.toSet(),
+      );
+      expect(momentOf('reveal'), EngineMoment.reveal);
+      expect(momentOf('nope'), isNull);
     });
   });
 

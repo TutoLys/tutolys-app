@@ -1,5 +1,6 @@
 import 'package:engine_sdk/engine_sdk.dart';
 
+import 'engine_moments.dart';
 import 'reaction.dart';
 
 /// Maps runtime events to character cues. Pure.
@@ -105,6 +106,56 @@ class DefaultReactionPolicy implements ReactionPolicy {
         priority: CuePriority.critical,
       ),
     ],
+    // A combo: the companion joins in, on top of the guide's own
+    // celebration of the answer.
+    StreakAdvanced() => const [
+      ReactionCue(
+        role: ActorRole.companion,
+        reaction: Reaction.celebrating,
+        priority: CuePriority.decorative,
+        hold: Duration(milliseconds: 1200),
+      ),
+    ],
+    // Nothing touched for a while: the guide shows the way.
+    IdlePrompted() => const [
+      ReactionCue(
+        role: ActorRole.guide,
+        reaction: Reaction.explaining,
+        priority: CuePriority.interaction,
+        hold: Duration(milliseconds: 1500),
+      ),
+    ],
+    InteractionEvent(:final type) => switch (momentOf(type)) {
+      EngineMoment.select ||
+      EngineMoment.place ||
+      EngineMoment.connect => const [
+        ReactionCue(
+          role: ActorRole.guide,
+          reaction: Reaction.curious,
+          priority: CuePriority.interaction,
+          hold: Duration(milliseconds: 600),
+        ),
+      ],
+      EngineMoment.run => const [
+        ReactionCue(
+          role: ActorRole.guide,
+          reaction: Reaction.thinking,
+          priority: CuePriority.interaction,
+          hold: Duration(milliseconds: 900),
+        ),
+      ],
+      EngineMoment.reveal => const [
+        ReactionCue(
+          role: ActorRole.guide,
+          reaction: Reaction.curious,
+          priority: CuePriority.interaction,
+          hold: Duration(milliseconds: 900),
+        ),
+      ],
+      // Taking something back, a timeout, or a name nobody registered:
+      // nothing for a character to react to.
+      EngineMoment.remove || EngineMoment.timeout || null => const [],
+    },
     _ => const [],
   };
 }

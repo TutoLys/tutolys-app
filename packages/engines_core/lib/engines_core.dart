@@ -9,6 +9,8 @@ export 'src/mcq_engine.dart';
 export 'src/pair_match_engine.dart';
 export 'src/speed_tap_engine.dart';
 export 'src/shell/activity_shell.dart';
+export 'src/shell/board_actor.dart';
+export 'src/shell/idle_cue.dart' show IdleCueController, IdleCueScope, IdleHand;
 export 'src/shell/learning_activity_view.dart';
 export 'src/shell/legacy_engine_host.dart';
 export 'src/shell/shell_strings.dart';

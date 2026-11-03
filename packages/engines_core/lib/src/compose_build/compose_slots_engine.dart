@@ -417,6 +417,7 @@ class ComposeSlotsEngine
                         width: 120,
                         child: IdleHandHint(
                           show: handOn == id,
+                          targetId: id,
                           child: AnswerTile(
                             key: ValueKey('compose-tile-$id'),
                             large: true,

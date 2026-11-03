@@ -5,6 +5,7 @@ import 'package:engine_sdk/engine_sdk.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../shell/board_actor.dart';
 import '../widgets/answer_tile.dart';
 
 typedef Cell = (int row, int col);
@@ -161,7 +162,8 @@ class RemovePathMove extends PathAction {
 /// no single answer to author. Parse checks one exists.
 class PathPlannerEngine
     implements
-        LearningEngine<PathContent, PathState, PathAction, OrderingAnswer> {
+        LearningEngine<PathContent, PathState, PathAction, OrderingAnswer>,
+        RevealsAfterFeedback<PathState> {
   const PathPlannerEngine();
 
   static const key = 'path_planner';
@@ -392,6 +394,18 @@ class PathPlannerEngine
       s.program.isEmpty || s.solved ? null : OrderingAnswer(s.program);
 
   @override
+  /// The walk ending is the moment (fix 3): at the goal, or where it
+  /// stopped.
+  @override
+  List<RevealEvent> revealsAfterFeedback(
+    PathState before,
+    PathState after,
+    EvaluationResult result,
+  ) => after.revealed
+      ? [RevealEvent('walk', itemId: after.solved ? 'goal' : 'stopped')]
+      : const [];
+
+  @override
   PathState applyFeedback(PathState s, EvaluationResult result) {
     if (result.outcome == Outcome.ungraded) return s;
     // The route stays, so the child can fix it rather than start over.
@@ -569,12 +583,12 @@ class _PathView extends StatelessWidget {
                     top: at.$1 * cell + cell * 0.1,
                     width: cell * 0.8,
                     height: cell * 0.8,
-                    child: ExcludeSemantics(
-                      child: TutolysMascot(
-                        key: const ValueKey('path-foxy'),
-                        size: cell * 0.8,
-                        mood: s.solved ? MascotMood.correct : MascotMood.idle,
-                      ),
+                    // Where Foxy stands is the board's; who Foxy is, and
+                    // how Foxy reacts, is the host's (BoardActor).
+                    child: BoardActor(
+                      key: const ValueKey('path-foxy'),
+                      role: 'walker',
+                      size: cell * 0.8,
                     ),
                   ),
                 ],

@@ -225,7 +225,8 @@ void main() {
       );
       s = engine.reduce(s, const SetVariable(1, 'soleil')).state;
       final t = engine.reduce(s, const RunExperiment());
-      expect(t.events.single.type, 'experiment_run');
+      expect(t.events.map((e) => e.type), ['experiment_run', 'reveal']);
+      expect(t.events.last.category, EventCategory.presentation);
       s = t.state;
       expect(s.shown, 'un_peu|soleil');
       expect(s.readyToConclude, isTrue);

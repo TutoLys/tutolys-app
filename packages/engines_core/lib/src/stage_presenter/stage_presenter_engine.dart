@@ -203,7 +203,8 @@ class PickStageOption extends StageAction {
 /// **Proxy evidence**: planned choices, not a performance.
 class StagePresenterEngine
     implements
-        LearningEngine<StageContent, StageState, StageAction, BlanksAnswer> {
+        LearningEngine<StageContent, StageState, StageAction, BlanksAnswer>,
+        RevealsAfterFeedback<StageState> {
   const StagePresenterEngine();
 
   static const key = 'stage_presenter';
@@ -520,6 +521,17 @@ class StagePresenterEngine
         return correct.contains(value) ? StageReaction.happy : wrong;
     }
   }
+
+  @override
+  /// The audience reacting after a check is the moment (fix 3).
+  @override
+  List<RevealEvent> revealsAfterFeedback(
+    StageState before,
+    StageState after,
+    EvaluationResult result,
+  ) => after.checked && after.reactions.isNotEmpty
+      ? [RevealEvent('reaction')]
+      : const [];
 
   @override
   StageState applyFeedback(StageState s, EvaluationResult result) {
