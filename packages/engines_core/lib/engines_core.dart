@@ -50,4 +50,5 @@ export 'src/stage_presenter/stage_presenter_engine.dart';
 export 'src/my_gallery/my_gallery_engine.dart';
 export 'src/phrase_lab/phrase_lab_engine.dart';
 export 'src/proofread/proofread_engine.dart';
+export 'src/column_calc/column_calc_engine.dart';
 export 'src/widgets/creations.dart';

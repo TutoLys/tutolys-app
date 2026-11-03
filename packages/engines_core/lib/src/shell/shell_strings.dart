@@ -87,6 +87,23 @@ class ShellStrings {
       'Ça se répète ! Compte combien de formes il faut dans ton motif.',
       'It repeats! Count how many shapes your pattern needs.',
     ),
+    // column_calc's named slips (ADR 0121): a nudge, never the answer.
+    'math.add.no_regroup' => _t(
+      'Regarde les retenues : 10 unités font une dizaine.',
+      'Check your carries: 10 ones make a ten.',
+    ),
+    'math.sub.smaller_from_larger' => _t(
+      'Dans chaque colonne, on enlève le chiffre du bas à celui du haut.',
+      'In each column, take the bottom digit from the top one.',
+    ),
+    'math.mul.partial_not_shifted' => _t(
+      'La deuxième ligne compte des dizaines : écris d’abord un 0.',
+      'The second line counts tens: write a 0 first.',
+    ),
+    'math.div.remainder_too_big' => _t(
+      'Ton reste est trop grand : il doit être plus petit que le diviseur.',
+      'Your remainder is too big: it must be smaller than the divisor.',
+    ),
     'vary' => _t(
       'Change aussi les formes ou les couleurs dans ton motif.',
       'Change the shapes or colours inside your pattern too.',
