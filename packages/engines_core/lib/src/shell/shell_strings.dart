@@ -100,6 +100,10 @@ class ShellStrings {
       'La deuxième ligne compte des dizaines : écris d’abord un 0.',
       'The second line counts tens: write a 0 first.',
     ),
+    'math.place_value.not_exchanged' => _t(
+      'Le nombre est juste ! Fais les échanges : 10 blocs font 1 bloc de plus.',
+      'The number is right! Now trade: 10 blocks make 1 bigger block.',
+    ),
     'math.div.remainder_too_big' => _t(
       'Ton reste est trop grand : il doit être plus petit que le diviseur.',
       'Your remainder is too big: it must be smaller than the divisor.',
