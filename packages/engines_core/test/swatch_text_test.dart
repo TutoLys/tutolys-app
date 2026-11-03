@@ -41,6 +41,27 @@ void main() {
       expect(find.bySemanticsLabel('▭ △ ◇'), findsOneWidget);
     });
 
+    testWidgets('dice, the tally and ≠ are painted; 卌 alone is a picture', (
+      tester,
+    ) async {
+      await tester.pumpWidget(host(const SwatchText('⚀ ⚅ 卌 3 ≠ 4')));
+      expect(
+        tester
+            .widgetList<SwatchMark>(find.byType(SwatchMark))
+            .map((m) => m.swatch.shape),
+        [
+          SwatchShape.die1,
+          SwatchShape.die6,
+          SwatchShape.tallyFive,
+          SwatchShape.notEqual,
+        ],
+      );
+      expect(isPictureOnly('卌'), isTrue);
+      expect(isPictureOnly('⚂ ⚃'), isTrue);
+      expect(isPictureOnly('3 ≠ 4'), isFalse);
+      expect(isPictureOnly('卌 chat'), isFalse);
+    });
+
     testWidgets('every figure paints', (tester) async {
       final figures = String.fromCharCodes(
         swatches.entries
