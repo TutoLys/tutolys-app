@@ -27,12 +27,14 @@ Map<String, Object?> leagueJson({
     'outcome': 'promoted',
     'xp': 94,
   },
-  String? weekEnd,
+  String? weekEnd = '2026-11-09T00:00:00-05:00',
+  int? xpLastWeek = 94,
 }) => {
   'division': division,
   'week_start': '2026-11-02',
   'week_end': ?weekEnd,
   'xp_this_week': xp,
+  'xp_last_week': ?xpLastWeek,
   'promote_at_xp': promoteAt,
   'xp_to_promote': toPromote,
   'keep_at_xp': keepAt,
@@ -50,7 +52,8 @@ LeagueDto league({
     'outcome': 'held',
     'xp': 94,
   },
-  String? weekEnd,
+  String? weekEnd = '2026-11-09T00:00:00-05:00',
+  int? xpLastWeek = 94,
 }) => LeagueDto.fromJson(
   leagueJson(
     division: division,
@@ -59,6 +62,7 @@ LeagueDto league({
     toPromote: toPromote,
     lastWeek: lastWeek,
     weekEnd: weekEnd,
+    xpLastWeek: xpLastWeek,
   ),
 );
 
@@ -150,9 +154,29 @@ void main() {
       expect((ahead as EffortAheadOfLastWeek).xp, 26);
     });
 
+    test('measured against the calendar week before, not the last week '
+        'judged', () {
+      // Judged weeks ago at 10 XP; last calendar week was 150.
+      final l = league(
+        xp: 120,
+        xpLastWeek: 150,
+        lastWeek: const {
+          'week_start': '2026-10-05',
+          'division': 'silver',
+          'outcome': 'held',
+          'xp': 10,
+        },
+      );
+      expect(effortLine(l, null), isA<EffortKeepGoing>());
+      expect(
+        effortLine(league(xp: 120, xpLastWeek: 100), null),
+        isA<EffortAheadOfLastWeek>(),
+      );
+    });
+
     test('first week, or nothing yet: a fresh start', () {
       expect(
-        effortLine(league(lastWeek: null, xp: 15), null),
+        effortLine(league(lastWeek: null, xpLastWeek: null, xp: 15), null),
         isA<EffortKeepGoing>(),
       );
       expect(effortLine(league(xp: 0), null), isA<EffortFreshStart>());
@@ -220,15 +244,14 @@ void main() {
   });
 
   group('week end', () {
-    test('falls back to week_start + 7 days', () {
+    test('counts Québec days to the served week_end', () {
       expect(leagueDaysLeft(league(), now: wednesday), 5);
       // Sunday evening in Québec.
       expect(leagueDaysLeft(league(), now: DateTime.utc(2026, 11, 9, 1)), 1);
     });
 
-    test('reads week_end when served', () {
-      final l = league(weekEnd: '2026-11-09T00:00:00-05:00');
-      expect(leagueDaysLeft(l, now: wednesday), 5);
+    test('no week_end, no countdown', () {
+      expect(leagueDaysLeft(league(weekEnd: null), now: wednesday), isNull);
     });
   });
 
@@ -271,15 +294,24 @@ void main() {
       );
       expect(facts.single.factKey, 'league:2026-10-26');
       expect(facts.single.type, 'league_promoted');
-      // The job writes it Monday morning, after the week it judged.
-      final served = NotificationDto(
-        id: 's',
-        type: 'league_promoted',
-        message: 'Bravo ! Tu passes en Or.',
-        createdAt: DateTime.utc(2026, 11, 2, 11),
-        isRead: false,
-      );
+      // Matched on the served key, never derived from created_at: this one
+      // was written just after midnight on a Monday.
+      final served = NotificationDto.fromJson({
+        'id': 's',
+        'type': 'league_promoted',
+        'message': 'Bravo ! Tu passes en Or.',
+        'dedupe_key': 'league:2026-10-26',
+        'created_at': '2026-11-02T05:01:00Z',
+        'is_read': false,
+      });
       expect(serverFactKeys(served), {'league:2026-10-26'});
+      // Without the key there is nothing to guess from.
+      final keyless = NotificationDto.fromJson({
+        'id': 's2',
+        'type': 'league_promoted',
+        'created_at': '2026-11-02T05:01:00Z',
+      });
+      expect(serverFactKeys(keyless), isEmpty);
     });
 
     test('the bell words it in the reader\'s language', () {

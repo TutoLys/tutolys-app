@@ -10,6 +10,7 @@ class NotificationDto {
     required this.isRead,
     this.params = const {},
     this.local = false,
+    this.dedupeKey,
   });
 
   factory NotificationDto.fromJson(Map<String, Object?> json) {
@@ -21,6 +22,7 @@ class NotificationDto {
           DateTime.tryParse(json['created_at'] as String? ?? '')?.toLocal() ??
           DateTime.now(),
       isRead: json['is_read'] as bool? ?? json['read_at'] != null,
+      dedupeKey: json['dedupe_key'] as String?,
     );
   }
 
@@ -40,6 +42,11 @@ class NotificationDto {
   /// Written on this device rather than served.
   final bool local;
 
+  /// The backend's fact key (`league:2026-11-02`), the same string the
+  /// app's own notifications use, so the two dedupe exactly. Null from an
+  /// older backend, or on a local one.
+  final String? dedupeKey;
+
   NotificationDto read() => NotificationDto(
     id: id,
     type: type,
@@ -48,6 +55,7 @@ class NotificationDto {
     isRead: true,
     params: params,
     local: local,
+    dedupeKey: dedupeKey,
   );
 }
 

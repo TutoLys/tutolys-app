@@ -79,6 +79,7 @@ Widget appUnder({
   ProgressApi? progressApi,
   QuestBoard? board,
   VoidCallback? onSwitchProfile,
+  VoidCallback? onOpenProgress,
   double sidebar = 0,
 }) {
   return ProviderScope(
@@ -118,7 +119,10 @@ Widget appUnder({
               children: [
                 SizedBox(width: sidebar),
                 Expanded(
-                  child: ProfileScreen(onSwitchProfile: onSwitchProfile),
+                  child: ProfileScreen(
+                    onSwitchProfile: onSwitchProfile,
+                    onOpenProgress: onOpenProgress,
+                  ),
                 ),
               ],
             ),
@@ -479,6 +483,48 @@ void main() {
 
     expect(find.text(Strings.fr.progressLevel(2)), findsOneWidget);
     expect(find.text('135 ${Strings.fr.profileTotalXp}'), findsOneWidget);
+  });
+
+  testWidgets('the league chip names the league, never the percentile, and '
+      'opens Progrès', (tester) async {
+    var opened = 0;
+    final progressApi = _FakeProgressApi()
+      ..result = ProgressFetched(
+        ProgressSnapshot.fromJson(const {
+          'masteries': [],
+          'league': {
+            'division': 'gold',
+            'week_start': '2026-11-02',
+            'week_end': '2026-11-09T00:00:00-05:00',
+            'xp_this_week': 62,
+            'xp_last_week': 40,
+            'promote_at_xp': 160,
+            'xp_to_promote': 98,
+            'keep_at_xp': 45,
+            'last_week': null,
+          },
+          'effort_percentile': {
+            'percentile': 78,
+            'grade': 3,
+            'week_start': '2026-11-02',
+          },
+        }),
+      );
+    await tester.pumpWidget(
+      appUnder(progressApi: progressApi, onOpenProgress: () => opened++),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ligue Or'), findsOneWidget);
+    expect(find.textContaining('%'), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('profile-league')));
+    expect(opened, 1);
+  });
+
+  testWidgets('no league chip before a backend serves one', (tester) async {
+    await tester.pumpWidget(appUnder());
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('profile-league')), findsNothing);
   });
 
   testWidgets('the hero shows the kid\'s avatar, never the mascot', (

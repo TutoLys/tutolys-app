@@ -65,3 +65,23 @@
 - The medal is drawn, not illustrated (a coloured disc with a medal icon).
   Bronze is a warm brown, and Diamant uses the design's blue. A test checks
   that no medal is red.
+
+## Addendum, 2026-11-03: the final contract (backend `8fca71a`)
+
+- **`week_end` is served and used.** The `week_start` + 7 fallback is gone.
+  A payload without it, from an older backend or cache, shows no
+  countdown.
+- **Self-progress reads `xp_last_week`,** the calendar week before this
+  one. It never reads `last_week.xp`, which is the last week *judged* and
+  can be weeks old. A test pins the two apart.
+- **The bell matches the served `dedupe_key` exactly.**
+  `NotificationDto` now reads it, and any served key wins. Nothing is
+  derived from `created_at` for a league notice, since a notice written
+  just after midnight on a Monday would land in the wrong week.
+- **`last_week.outcome == promoted` is state, true all week.** It is never
+  enough on its own. `LeagueCelebrations` is what makes the celebration
+  fire once per kid and week, and the fact key does the same for the bell.
+- **Profil gets the league chip from the approved plan.** It sits under the
+  name: a small medal and « Ligue Or ». Tapping it opens Progrès. It never
+  shows the percentile, and it is hidden until a backend serves a league.
+  The first commit left it out by mistake.

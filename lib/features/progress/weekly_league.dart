@@ -71,8 +71,10 @@ EffortLine effortLine(LeagueDto league, EffortPercentileDto? percentile) {
     return EffortPercentile(percentile.percentile, percentile.grade);
   }
   final xp = league.xpThisWeek;
-  final last = league.lastWeek;
-  if (last != null && xp > last.xp) return EffortAheadOfLastWeek(xp - last.xp);
+  // The calendar week before, never `last_week.xp` (the last week judged,
+  // possibly weeks old).
+  final last = league.xpLastWeek;
+  if (last != null && xp > last) return EffortAheadOfLastWeek(xp - last);
   if (xp > 0) return EffortKeepGoing(xp);
   return const EffortFreshStart();
 }
@@ -87,15 +89,12 @@ String effortText(Strings t, EffortLine line) => switch (line) {
   EffortFreshStart() => t.effortFreshStart,
 };
 
-/// Whole Québec days until the week ends: 1 on Sunday, 7 on Monday.
-int leagueDaysLeft(LeagueDto league, {DateTime? now}) {
-  final DateTime end;
-  if (league.weekEnd case final e?) {
-    end = quebecToday(e);
-  } else {
-    final s = DateTime.parse(league.weekStart);
-    end = DateTime(s.year, s.month, s.day + 7);
-  }
+/// Whole Québec days until the week ends: 1 on Sunday, 7 on Monday. Null
+/// when the backend didn't say when it ends.
+int? leagueDaysLeft(LeagueDto league, {DateTime? now}) {
+  final weekEnd = league.weekEnd;
+  if (weekEnd == null) return null;
+  final end = quebecToday(weekEnd);
   final today = quebecToday(now);
   // Calendar days, counted in UTC so a DST change can't make one 23 hours.
   final days = DateTime.utc(
@@ -108,7 +107,9 @@ int leagueDaysLeft(LeagueDto league, {DateTime? now}) {
 
 /// A promotion worth celebrating: last week moved the kid up. Placement,
 /// holding and demotion are never announced (ADR 0207: a seven-year-old is
-/// not told they dropped).
+/// not told they dropped). This is state, true all week: what makes the
+/// celebration fire once is `LeagueCelebrations`, and the bell's once is
+/// the fact key.
 typedef LeaguePromotion = ({String weekStart, LeagueDivision division});
 
 LeaguePromotion? promotionOf(LeagueDto? league) {

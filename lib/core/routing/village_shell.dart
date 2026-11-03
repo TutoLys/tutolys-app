@@ -127,6 +127,8 @@ class _VillageShellState extends ConsumerState<VillageShell> {
         ProfileScreen(
           onSwitchProfile:
               ref.read(sessionControllerProvider.notifier).chooseProfile,
+          // The league chip opens Progrès, where the week's card is.
+          onOpenProgress: () => _open(3),
         ),
         SettingsScreen(
           onOpenHelp: () => _open(_helpIndex),

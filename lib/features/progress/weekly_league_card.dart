@@ -155,11 +155,13 @@ class WeeklyLeagueView extends StatelessWidget {
             key: const ValueKey('weekly-league-effort'),
             style: TextStyle(fontSize: 12.5, color: p.ink),
           ),
-          const SizedBox(height: 4),
-          Text(
-            t.leagueDaysLeft(leagueDaysLeft(league, now: now)),
-            style: TextStyle(fontSize: 11.5, color: p.inkMuted),
-          ),
+          if (leagueDaysLeft(league, now: now) case final days?) ...[
+            const SizedBox(height: 4),
+            Text(
+              t.leagueDaysLeft(days),
+              style: TextStyle(fontSize: 11.5, color: p.inkMuted),
+            ),
+          ],
         ],
       ),
     );

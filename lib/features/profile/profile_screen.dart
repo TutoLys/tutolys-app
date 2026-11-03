@@ -1,5 +1,7 @@
 import 'package:design_system/design_system.dart';
+
 import '../../core/time/quebec_day.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -13,6 +15,8 @@ import '../path/programme.dart';
 import '../home/village_scene.dart';
 import '../pairing/pairing_controller.dart';
 import '../progress/progress_controller.dart';
+import '../progress/weekly_league.dart';
+import '../progress/weekly_league_card.dart' show LeagueMedal;
 import '../quests/quest_board.dart';
 import '../quests/quests_screen.dart' show achievementAsset, achievementName;
 import 'avatar_picker.dart';
@@ -39,10 +43,13 @@ import 'avatars.dart';
 /// total, streak, badge count, and the per-subject bars — the same local
 /// join the Village uses. The mastered-skills count lives on Progrès.
 class ProfileScreen extends ConsumerWidget {
-  const ProfileScreen({this.onSwitchProfile, super.key});
+  const ProfileScreen({this.onSwitchProfile, this.onOpenProgress, super.key});
 
   /// Opens "Qui joue ?". Null hides the button (no shell, as in tests).
   final VoidCallback? onSwitchProfile;
+
+  /// Opens Progrès, from the league chip (app ADR 0117).
+  final VoidCallback? onOpenProgress;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -71,6 +78,13 @@ class ProfileScreen extends ConsumerWidget {
               title: (board?.has(Achievement.streak7) ?? false)
                   ? t.flameKeeperTitle
                   : null,
+              // The league only, never the percentile: Profil is what a
+              // sibling sees on « Qui joue ? » (app ADR 0117).
+              league: switch (progress.league) {
+                final l? => divisionOf(l.division),
+                null => null,
+              },
+              onOpenProgress: onOpenProgress,
               stats: [
                 _HeroStat(
                   asset: 'asset-xpstar.webp',
@@ -201,6 +215,8 @@ class _HeroCard extends StatelessWidget {
     required this.palette,
     this.onSwitchProfile,
     this.title,
+    this.league,
+    this.onOpenProgress,
   });
 
   final String name;
@@ -215,6 +231,10 @@ class _HeroCard extends StatelessWidget {
 
   /// An earned title ("Gardien de la flamme"), or null.
   final String? title;
+
+  /// The kid's league, or null before a backend serves one.
+  final LeagueDivision? league;
+  final VoidCallback? onOpenProgress;
 
   @override
   Widget build(BuildContext context) {
@@ -289,6 +309,14 @@ class _HeroCard extends StatelessWidget {
                         color: p.ink,
                       ),
                     ),
+                  ),
+                ],
+                if (league != null) ...[
+                  const SizedBox(height: 6),
+                  _LeagueChip(
+                    division: league!,
+                    onTap: onOpenProgress,
+                    palette: p,
                   ),
                 ],
                 if (onSwitchProfile != null) ...[
@@ -702,6 +730,56 @@ class _RecentActivity extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// A small chip under the name: the kid's league, opening Progrès.
+class _LeagueChip extends StatelessWidget {
+  const _LeagueChip({
+    required this.division,
+    required this.onTap,
+    required this.palette,
+  });
+
+  final LeagueDivision division;
+  final VoidCallback? onTap;
+  final VillagePalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.s;
+    final p = palette;
+    return Material(
+      key: const ValueKey('profile-league'),
+      color: p.navActiveFill,
+      shape: const StadiumBorder(),
+      child: InkWell(
+        customBorder: const StadiumBorder(),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(4, 3, 10, 3),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              LeagueMedal(
+                color: medalColor(division, p.gold, p.quebecBlueBright),
+                size: 20,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                t.leagueName(divisionName(t, division)),
+                style: TextStyle(
+                  fontFamily: VillageType.display,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  color: p.ink,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

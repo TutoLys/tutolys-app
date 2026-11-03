@@ -143,9 +143,10 @@ class StreakFreezeDto {
   };
 }
 
-/// One finished league week (`league.last_week`, backend ADR 0207).
+/// The last league week judged (`league.last_week`, backend ADR 0207).
 /// [division] is the division the week left the kid in; [outcome] is
-/// `placed`, `promoted`, `held` or `demoted`.
+/// `placed`, `promoted`, `held` or `demoted`. It's state, not an event: it
+/// stays `promoted` all the next week.
 class LeagueWeekDto {
   const LeagueWeekDto({
     required this.weekStart,
@@ -187,6 +188,7 @@ class LeagueDto {
     required this.weekStart,
     required this.xpThisWeek,
     this.weekEnd,
+    this.xpLastWeek,
     this.promoteAtXp,
     this.xpToPromote,
     this.keepAtXp,
@@ -201,6 +203,7 @@ class LeagueDto {
       weekStart: json['week_start'] as String,
       weekEnd: end == null ? null : DateTime.tryParse(end),
       xpThisWeek: json['xp_this_week'] as int,
+      xpLastWeek: json['xp_last_week'] as int?,
       promoteAtXp: json['promote_at_xp'] as int?,
       xpToPromote: json['xp_to_promote'] as int?,
       keepAtXp: json['keep_at_xp'] as int?,
@@ -214,11 +217,16 @@ class LeagueDto {
   /// `yyyy-mm-dd`, the Monday of this Québec week.
   final String weekStart;
 
-  /// The instant the week ends (next Monday 00:00 in Montréal). Null from a
-  /// backend that doesn't send it yet; then [weekStart] + 7 days.
+  /// The instant the week ends (next Monday 00:00 in Montréal). Null only
+  /// from a backend older than its contract; then no countdown is shown.
   final DateTime? weekEnd;
 
   final int xpThisWeek;
+
+  /// XP in the calendar week before this one, for the self-progress line.
+  /// Not [lastWeek]'s `xp`: that's the last week *judged*, which can be
+  /// weeks old for a kid the scheduler didn't see in between.
+  final int? xpLastWeek;
   final int? promoteAtXp;
   final int? xpToPromote;
   final int? keepAtXp;
@@ -231,6 +239,7 @@ class LeagueDto {
     'week_start': weekStart,
     'week_end': weekEnd?.toUtc().toIso8601String(),
     'xp_this_week': xpThisWeek,
+    'xp_last_week': xpLastWeek,
     'promote_at_xp': promoteAtXp,
     'xp_to_promote': xpToPromote,
     'keep_at_xp': keepAtXp,
