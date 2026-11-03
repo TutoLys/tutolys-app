@@ -15,10 +15,82 @@ void main() {
     home: Scaffold(body: Center(child: child)),
   );
 
-  List<Color> painted(WidgetTester tester) => [
+  List<Color?> painted(WidgetTester tester) => [
     for (final m in tester.widgetList<SwatchMark>(find.byType(SwatchMark)))
       m.swatch.color,
   ];
+
+  group('plane figures need no font', () {
+    testWidgets('▭ △ ◇ are painted, in the text\'s own colour', (tester) async {
+      await tester.pumpWidget(
+        host(
+          const SwatchText(
+            '▭ △ ◇',
+            style: TextStyle(color: Color(0xFF123456), fontSize: 20),
+          ),
+        ),
+      );
+      final marks = tester.widgetList<SwatchMark>(find.byType(SwatchMark));
+      expect(marks.map((m) => m.swatch.shape), [
+        SwatchShape.rectangle,
+        SwatchShape.triangle,
+        SwatchShape.rhombus,
+      ]);
+      expect(marks.every((m) => m.swatch.outline), isTrue);
+      expect(marks.every((m) => m.ink == const Color(0xFF123456)), isTrue);
+      expect(find.bySemanticsLabel('▭ △ ◇'), findsOneWidget);
+    });
+
+    testWidgets('every figure paints', (tester) async {
+      final figures = String.fromCharCodes(
+        swatches.entries
+            .where((e) => e.value.color == null)
+            .expand((e) => [e.key, 0x20]),
+      );
+      await tester.pumpWidget(host(SwatchText(figures)));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      expect(
+        tester.widgetList(find.byType(SwatchMark)).length,
+        swatches.values.where((s) => s.color == null).length,
+      );
+    });
+
+    test(
+      'every geometric glyph the content uses is painted or in the font',
+      () {
+        final content = Directory('../../../tutolys-backend/content');
+        if (!content.existsSync()) return;
+        bool geometric(int c) =>
+            (c >= 0x25A0 && c <= 0x25FF) ||
+            (c >= 0x2B12 && c <= 0x2B2F) ||
+            (c >= 0x2BC0 && c <= 0x2BC8) ||
+            c == 0x23E2;
+        final inFont = {
+          for (final l in File(
+            'fonts/TutolysEmoji.codepoints',
+          ).readAsLinesSync())
+            if (l.trim().isNotEmpty) int.parse(l.trim(), radix: 16),
+        };
+        final missing = <String>{};
+        for (final f in content.listSync(recursive: true).whereType<File>()) {
+          if (!f.path.endsWith('.json')) continue;
+          for (final c in f.readAsStringSync().runes) {
+            if (geometric(c) &&
+                !swatches.containsKey(c) &&
+                !inFont.contains(c)) {
+              missing.add(String.fromCharCode(c));
+            }
+          }
+        }
+        expect(
+          missing,
+          isEmpty,
+          reason: 'add these to swatches, or rebuild the font',
+        );
+      },
+    );
+  });
 
   testWidgets('a colour square is painted in its own colour', (tester) async {
     await tester.pumpWidget(host(const SwatchText('🟦')));
