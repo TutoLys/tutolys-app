@@ -44,6 +44,7 @@ class VillageHeader extends StatelessWidget {
     required this.stats,
     this.avatarKey = '',
     this.onIdentity,
+    this.identityKey,
     this.identityLabel = '',
     this.compact = false,
     this.onSettings,
@@ -65,9 +66,11 @@ class VillageHeader extends StatelessWidget {
   /// the kid, never the mascot.
   final String avatarKey;
 
-  /// Tapping the avatar and name: Profil for one kid, "Qui joue ?" for
-  /// several. Null makes them inert.
+  /// Tapping the avatar and name: the profile menu. Null makes them inert.
   final VoidCallback? onIdentity;
+
+  /// On the avatar and name, so the menu can open against them.
+  final Key? identityKey;
 
   /// The identity button's tooltip and screen-reader name.
   final String identityLabel;
@@ -163,10 +166,11 @@ class VillageHeader extends StatelessWidget {
                   onTap: onIdentity,
                   label: identityLabel,
                   child: Row(
+                    key: identityKey,
                     children: [
                       KidAvatar(avatarKey: avatarKey, size: avatar),
                       const SizedBox(width: Space.sm),
-                      Expanded(
+                      Flexible(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -197,6 +201,14 @@ class VillageHeader extends StatelessWidget {
                           ],
                         ),
                       ),
+                      // A phone's header has no room to spare for it.
+                      if (onIdentity != null &&
+                          box.maxWidth >= Breakpoints.compact)
+                        Icon(
+                          Icons.expand_more_rounded,
+                          size: 20,
+                          color: p.inkMuted,
+                        ),
                     ],
                   ),
                 ),

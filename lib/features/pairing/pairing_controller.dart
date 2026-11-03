@@ -32,7 +32,7 @@ enum ProfileStage {
   none,
 
   /// "Qui joue ?": on launch when several kids share this device, and
-  /// whenever a kid opens it ("Ce n'est pas moi", "Changer de profil").
+  /// whenever the app must ask who's there (ADR 0123).
   choosing,
 
   /// The pairing-code screen, adding another kid to this device.
@@ -500,11 +500,19 @@ class SessionController extends Notifier<SessionState> {
     state = state.copyWith(stage: ProfileStage.choosing, confirmEveryone: true);
   }
 
-  /// Open the pairing-code screen to add another kid.
-  void addProfile() {
+  /// Open the pairing-code screen to add another kid. [fromApp]: from the
+  /// profile menu, so backing out returns to the app, not to "Qui joue ?".
+  void addProfile({bool fromApp = false}) {
     if (state.status != SessionStatus.paired) return;
+    _addingFromApp = fromApp;
     state = state.copyWith(stage: ProfileStage.adding);
   }
+
+  bool _addingFromApp = false;
+
+  /// Backs out of the pairing-code screen, to wherever it was opened from.
+  void cancelAdding() =>
+      _addingFromApp ? closeProfileStage() : chooseProfile();
 
   /// Back to the app, as the current kid.
   void closeProfileStage() {

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:design_system/design_system.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -153,10 +154,14 @@ ProviderContainer _container(
   return c;
 }
 
-Widget _app(ProviderContainer c) => UncontrolledProviderScope(
+Widget _app(
+  ProviderContainer c, {
+  Size size = const Size(1280, 900),
+  bool still = true,
+}) => UncontrolledProviderScope(
   container: c,
   child: MediaQuery(
-    data: const MediaQueryData(size: Size(1280, 900), disableAnimations: true),
+    data: MediaQueryData(size: size, disableAnimations: still),
     child: MaterialApp(
       locale: const Locale('fr', 'CA'),
       supportedLocales: const [Locale('fr', 'CA'), Locale('en', 'CA')],
@@ -388,5 +393,241 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('passcode-offer')), findsNothing);
     expect(c.read(sessionControllerProvider).kid!.id, 'k3');
+  });
+
+  group('the profile menu (ADR 0123)', () {
+    final menu = find.byKey(const ValueKey('profile-menu'));
+    final identity = find.byKey(const ValueKey('header-identity'));
+
+    /// In the Village as Yelhan, with [kids] on the device.
+    Future<ProviderContainer> inTheVillage(
+      WidgetTester tester, {
+      List<(String, String)> kids = const [('k1', 'Yelhan'), ('k2', 'Léa')],
+      _PasscodeApi? passcodes,
+      Size size = const Size(1280, 900),
+    }) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final c = _container(
+        await _storeWith(kids),
+        _Api(),
+        passcodes: passcodes,
+      );
+      await tester.pumpWidget(_app(c, size: size));
+      await _toWelcome(tester);
+      await tester.tap(
+        kids.length > 1
+            ? find.byKey(const ValueKey('who-kid-k1'))
+            : find.text(fr.welcomePlay),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(VillageShell), findsOneWidget);
+      return c;
+    }
+
+    testWidgets('the avatar opens it in place, not "Qui joue ?"', (
+      tester,
+    ) async {
+      final c = await inTheVillage(tester);
+      await tester.tap(identity);
+      await tester.pumpAndSettle();
+
+      expect(menu, findsOneWidget);
+      expect(find.text(fr.whoIsPlaying), findsNothing);
+      expect(c.read(sessionControllerProvider).stage, ProfileStage.none);
+      // Every kid with their grade, and the current one marked.
+      expect(
+        find.descendant(of: menu, matching: find.text('Yelhan')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: menu, matching: find.text('Léa')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: menu, matching: find.text(fr.gradeLabel(1))),
+        findsNWidgets(2),
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('profile-menu-kid-k1')),
+          matching: find.byKey(const ValueKey('profile-menu-current')),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('profile-menu-add')), findsOneWidget);
+      // It hangs under the header's avatar.
+      final card = tester.getTopLeft(menu);
+      final anchor = tester.getBottomLeft(identity);
+      expect(card.dy, greaterThanOrEqualTo(anchor.dy - 8));
+      expect((card.dx - anchor.dx).abs(), lessThan(24));
+    });
+
+    testWidgets('one tap plays as the other kid, on their token', (
+      tester,
+    ) async {
+      final c = await inTheVillage(tester);
+      await tester.tap(identity);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('profile-menu-kid-k2')));
+      await tester.pumpAndSettle();
+
+      expect(menu, findsNothing);
+      expect(c.read(sessionControllerProvider).kid!.id, 'k2');
+      expect(c.read(sessionControllerProvider).accessToken, 'access-tok-k2');
+      expect(find.byType(VillageShell), findsOneWidget);
+    });
+
+    testWidgets('tapping the kid already playing just closes it', (
+      tester,
+    ) async {
+      final c = await inTheVillage(tester);
+      await tester.tap(identity);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('profile-menu-kid-k1')));
+      await tester.pumpAndSettle();
+      expect(menu, findsNothing);
+      expect(c.read(sessionControllerProvider).kid!.id, 'k1');
+    });
+
+    testWidgets('a kid with a passcode taps it first, as from the picker', (
+      tester,
+    ) async {
+      final c = await inTheVillage(
+        tester,
+        passcodes: _PasscodeApi()..leaHasOne = true,
+      );
+      await tester.tap(identity);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('profile-menu-kid-k2')));
+      await tester.pumpAndSettle();
+      expect(find.byType(PasscodeEntryScreen), findsOneWidget);
+      expect(c.read(sessionControllerProvider).kid!.id, 'k1');
+
+      for (final i in [0, 5, 6]) {
+        await tester.tap(find.byKey(ValueKey('passcode-picture-$i')));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+      expect(c.read(sessionControllerProvider).kid!.id, 'k2');
+      expect(c.read(sessionControllerProvider).accessToken, 'verified-k2');
+    });
+
+    testWidgets('with one kid it still opens, and offers a second', (
+      tester,
+    ) async {
+      await inTheVillage(tester, kids: const [('k1', 'Yelhan')]);
+      await tester.tap(identity);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('profile-menu-kid-k1')), findsOneWidget);
+      expect(find.byKey(const ValueKey('profile-menu-add')), findsOneWidget);
+    });
+
+    testWidgets('"Ajouter un profil" pairs, and backing out returns here', (
+      tester,
+    ) async {
+      final c = await inTheVillage(tester);
+      await tester.tap(identity);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('profile-menu-add')));
+      await tester.pumpAndSettle();
+      expect(find.byType(PairingScreen), findsOneWidget);
+      expect(c.read(sessionControllerProvider).stage, ProfileStage.adding);
+
+      c.read(sessionControllerProvider.notifier).cancelAdding();
+      await tester.pumpAndSettle();
+      expect(find.byType(VillageShell), findsOneWidget);
+      expect(find.text(fr.whoIsPlaying), findsNothing);
+    });
+
+    testWidgets('from launch, backing out of adding is still "Qui joue ?"', (
+      tester,
+    ) async {
+      final c = _container(
+        await _storeWith([('k1', 'Yelhan'), ('k2', 'Léa')]),
+        _Api(),
+      );
+      await tester.pumpWidget(_app(c));
+      await _toWelcome(tester);
+      await tester.tap(find.byKey(const ValueKey('who-add')));
+      await tester.pumpAndSettle();
+      c.read(sessionControllerProvider.notifier).cancelAdding();
+      await tester.pumpAndSettle();
+      expect(find.text(fr.whoIsPlaying), findsOneWidget);
+    });
+
+    testWidgets('Esc and a tap outside close it, switching nobody', (
+      tester,
+    ) async {
+      final c = await inTheVillage(tester);
+      await tester.tap(identity);
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(menu, findsNothing);
+
+      await tester.tap(identity);
+      await tester.pumpAndSettle();
+      await tester.tapAt(const Offset(1200, 800));
+      await tester.pumpAndSettle();
+      expect(menu, findsNothing);
+      expect(c.read(sessionControllerProvider).kid!.id, 'k1');
+    });
+
+    testWidgets('the keyboard walks it: arrow down, then Enter', (
+      tester,
+    ) async {
+      final c = await inTheVillage(tester);
+      await tester.tap(identity);
+      await tester.pumpAndSettle();
+      // Focus starts on the kid playing, the first row here.
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(c.read(sessionControllerProvider).kid!.id, 'k2');
+    });
+
+    /// How far the card has grown.
+    double scale(WidgetTester tester) => tester
+        .widget<ScaleTransition>(
+          find.ancestor(of: menu, matching: find.byType(ScaleTransition)).first,
+        )
+        .scale
+        .value;
+
+    testWidgets('reduced motion: there at once, at full size', (tester) async {
+      await inTheVillage(tester);
+      await tester.tap(identity);
+      await tester.pump();
+      await tester.pump();
+      expect(scale(tester), 1);
+    });
+
+    testWidgets('with motion: it grows in', (tester) async {
+      final c = await inTheVillage(tester);
+      // Motion back on only now: the launch flow never settles with it.
+      await tester.pumpWidget(_app(c, still: false));
+      await tester.tap(identity);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 40));
+      expect(scale(tester), lessThan(1));
+      await tester.pump(const Duration(seconds: 1));
+      expect(scale(tester), 1);
+    });
+
+    testWidgets('on a phone it is a bottom sheet that fits', (tester) async {
+      await inTheVillage(
+        tester,
+        size: const Size(360, 640),
+        kids: const [('k1', 'Yelhan'), ('k2', 'Léa'), ('k3', 'Noé')],
+      );
+      await tester.tap(identity);
+      await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsOneWidget);
+      expect(find.byKey(const ValueKey('profile-menu-add')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
   });
 }

@@ -20,6 +20,7 @@ import '../../features/settings/settings_screen.dart';
 import '../i18n/strings.dart';
 import '../widgets/kid_avatar.dart';
 import '../../features/pairing/pairing_controller.dart';
+import '../../features/pairing/profile_menu.dart';
 import 'village_header.dart';
 import 'village_nav.dart';
 import '../../features/audio/music_director.dart';
@@ -98,6 +99,19 @@ class _VillageShellState extends ConsumerState<VillageShell> {
 
   void _open(int index) => context.go('/${VillageShell.pages[index]}');
 
+  final _identityKey = GlobalKey();
+
+  /// Opens under the header's avatar, from there and from Profil's button.
+  void _openProfileMenu() {
+    final box = _identityKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    showProfileMenu(
+      context,
+      ref,
+      anchor: box.localToGlobal(Offset.zero) & box.size,
+    );
+  }
+
   /// `IndexedStack`, not a rebuilt child per tab: switching must not
   /// re-trigger each screen's one-shot `build()` load — Home's and Path's
   /// controllers fetch once and expect to stay mounted.
@@ -125,8 +139,7 @@ class _VillageShellState extends ConsumerState<VillageShell> {
           },
         ),
         ProfileScreen(
-          onSwitchProfile:
-              ref.read(sessionControllerProvider.notifier).chooseProfile,
+          onSwitchProfile: _openProfileMenu,
           // The league chip opens Progrès, where the week's card is.
           onOpenProgress: () => _open(3),
         ),
@@ -180,7 +193,6 @@ class _VillageShellState extends ConsumerState<VillageShell> {
   /// not navigation destinations — nothing in the nav selects them — but
   /// they are pages, and routing them through the same stack keeps one
   /// mechanism rather than bolting a second one on for two screens.
-  static const _profilIndex = 4;
   static const _settingsIndex = 5;
   static const _helpIndex = 6;
   static const _aboutIndex = 7;
@@ -189,7 +201,6 @@ class _VillageShellState extends ConsumerState<VillageShell> {
   Widget build(BuildContext context) {
     final t = context.s;
     final session = ref.watch(sessionControllerProvider);
-    final sessionNotifier = ref.read(sessionControllerProvider.notifier);
     final kid = session.kid;
     final progress = ref.watch(progressControllerProvider);
     final unread = ref.watch(
@@ -222,12 +233,11 @@ class _VillageShellState extends ConsumerState<VillageShell> {
                   ? ''
                   : t.gradeLabel(kid!.gradeLevel),
               avatarKey: ref.watch(selectedAvatarKeyProvider),
-              // One kid: their Profil. Several: "Qui joue ?", always one
-              // tap away, so a sibling can hand the device over.
-              onIdentity: session.hasSeveralKids
-                  ? sessionNotifier.chooseProfile
-                  : () => _open(_profilIndex),
-              identityLabel: session.hasSeveralKids ? t.notMe : t.navProfil,
+              // The profile menu, always one tap away, so a sibling can
+              // hand the device over.
+              identityKey: _identityKey,
+              onIdentity: _openProfileMenu,
+              identityLabel: t.switchProfile,
               compact: MediaQuery.sizeOf(context).width < Breakpoints.medium,
               // Phones only: same threshold as VillageNavShell's switch to
               // the bottom bar, which has no Réglages tab.

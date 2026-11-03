@@ -255,7 +255,7 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
                 key: const ValueKey('add-profile'),
                 onCancel: ref
                     .read(sessionControllerProvider.notifier)
-                    .chooseProfile,
+                    .cancelAdding,
               ),
             // Paired, but no seat right now: ask a parent, keep the pairing
             // (ADR 0037, revision 2026-10-28).

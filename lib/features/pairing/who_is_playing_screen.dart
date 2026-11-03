@@ -41,9 +41,11 @@ final kidAvatarKeyProvider = FutureProvider.family<String, String>((
 /// tablet every kid needs a passcode, and the class's name sits under the
 /// title.
 ///
-/// Opened from the header or Profil, where "Retour" goes back to the app as
-/// the same kid. On launch with several kids, the welcome screen is the
-/// picker instead (ADR 0024), so a cold start never names one of them.
+/// The header and Profil open the profile menu instead (ADR 0123). This
+/// screen is for when the app must ask, and for backing out of "Ajouter un
+/// profil" from launch, where "Retour" goes back to the app as the same kid.
+/// On launch with several kids, the welcome screen is the picker instead
+/// (ADR 0024), so a cold start never names one of them.
 class WhoIsPlayingScreen extends ConsumerWidget {
   const WhoIsPlayingScreen({super.key});
 
@@ -126,7 +128,7 @@ class WhoIsPlayingScreen extends ConsumerWidget {
                                     kid.id == session.kid?.id &&
                                             !session.mustConfirm
                                         ? controller.closeProfileStage()
-                                        : _enter(context, ref, kid),
+                                        : enterAs(context, ref, kid),
                               ),
                             // Not on a class tablet: the school decides who
                             // is on it, and a child must not be able to pair
@@ -149,14 +151,15 @@ class WhoIsPlayingScreen extends ConsumerWidget {
 }
 
 /// Plays as [kid] once their passcode, if they have one, says it's them.
-Future<void> _enter(BuildContext context, WidgetRef ref, PairedKid kid) async {
+/// The one way to switch kid, from this screen and from the profile menu.
+Future<void> enterAs(BuildContext context, WidgetRef ref, PairedKid kid) async {
   final ok = await confirmItsMe(
     context,
     ref,
     kid,
     classroom: ref.read(sessionControllerProvider).isClassroom,
   );
-  if (ok == null) return;
+  if (ok == null || !context.mounted) return;
   await ref
       .read(sessionControllerProvider.notifier)
       .switchTo(kid.id, accessToken: ok.accessToken, expiresIn: ok.expiresIn);
