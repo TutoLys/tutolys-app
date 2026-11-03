@@ -23,6 +23,13 @@ class NotificationDto {
           DateTime.now(),
       isRead: json['is_read'] as bool? ?? json['read_at'] != null,
       dedupeKey: json['dedupe_key'] as String?,
+      // The backend's `context` (`{"xp": 122, "division": "silver"}` on a
+      // league promotion, `{}` elsewhere): the same facts a local one keeps
+      // in params, so the app words both alike.
+      params: switch (json['context']) {
+        final Map<String, Object?> c => Map.unmodifiable(c),
+        _ => const {},
+      },
     );
   }
 
@@ -36,7 +43,8 @@ class NotificationDto {
   final DateTime createdAt;
   final bool isRead;
 
-  /// What the app's own wording needs, for one it wrote itself (ADR 0097).
+  /// What the app's own wording needs: params for one it wrote itself
+  /// (ADR 0097), the served `context` for one from the backend.
   final Map<String, Object?> params;
 
   /// Written on this device rather than served.

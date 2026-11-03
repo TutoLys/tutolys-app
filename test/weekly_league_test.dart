@@ -337,6 +337,19 @@ void main() {
         isRead: false,
       );
       expect(notificationText(Strings.en, served), 'You moved up a league!');
+      final withContext = NotificationDto.fromJson({
+        'id': 's3',
+        'type': 'league_promoted',
+        'message': 'Bravo ! Tu passes en Argent.',
+        'dedupe_key': 'league:2026-10-26',
+        'context': {'xp': 122, 'division': 'silver'},
+        'created_at': '2026-11-02T11:00:00Z',
+        'is_read': false,
+      });
+      expect(notificationText(Strings.fr, withContext),
+          'Tu passes en ligue Argent !');
+      expect(notificationText(Strings.en, withContext),
+          "You're up to the Silver league!");
     });
 
     test('the celebration claims each promotion once', () async {

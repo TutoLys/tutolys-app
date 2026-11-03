@@ -85,3 +85,10 @@
   name: a small medal and « Ligue Or ». Tapping it opens Progrès. It never
   shows the percentile, and it is hidden until a backend serves a league.
   The first commit left it out by mistake.
+- **Backend `a7c4bcf` serves `context` on every notification,** for
+  example `{"xp": 122, "division": "silver"}` on a promotion and `{}`
+  elsewhere. `NotificationDto` reads it into `params`, the same place a
+  local notification keeps its facts. A served promotion therefore names
+  its league in the reader's language: « Tu passes en ligue Argent ! » or
+  "You're up to the Silver league!". Without a division, the bell keeps the
+  general line.

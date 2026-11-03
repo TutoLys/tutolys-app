@@ -202,8 +202,8 @@ String notificationText(Strings t, NotificationDto n) => switch (n.type) {
   'streak_freeze_spent' => t.notificationStreakFreeze,
   'streak_freeze_refunded' => t.notificationStreakFreezeRefunded,
   'tutoring_session_soon' => t.notificationTutoringSession(n.message),
-  // The backend's own promotion carries no division (only a French
-  // message), so it gets the general line, in the reader's language.
+  // The division comes from a local fact's params or the served context;
+  // an older backend's notice has neither and gets the general line.
   'league_promoted' => switch (n.params['division']) {
     final String d => t.leaguePromoted(divisionName(t, divisionOf(d))),
     _ => t.notificationLeaguePromotedGeneric,
