@@ -212,6 +212,7 @@ abstract class Strings {
   String leagueGoalReached(String next);
   String get leagueTop;
   String leagueWeekXp(int xp);
+  String leagueXp(int xp);
   String leagueDaysLeft(int days);
   String effortPercentile(int percentile, int grade);
   String effortAheadOfLastWeek(int xp);
@@ -1030,6 +1031,8 @@ class _FrenchStrings extends Strings {
   String get leagueTop => 'Tu es au sommet, continue comme ça !';
   @override
   String leagueWeekXp(int xp) => '$xp XP cette semaine';
+  @override
+  String leagueXp(int xp) => '$xp XP';
   @override
   String leagueDaysLeft(int days) => days <= 1
       ? 'Nouvelle semaine demain'
@@ -2474,6 +2477,8 @@ class _EnglishStrings extends Strings {
   String get leagueTop => "You're at the top, keep it up!";
   @override
   String leagueWeekXp(int xp) => '$xp XP this week';
+  @override
+  String leagueXp(int xp) => '$xp XP';
   @override
   String leagueDaysLeft(int days) =>
       days <= 1 ? 'New week tomorrow' : 'New week in $days days';

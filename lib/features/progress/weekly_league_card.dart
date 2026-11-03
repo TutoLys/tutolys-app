@@ -119,12 +119,18 @@ class WeeklyLeagueView extends StatelessWidget {
                   ],
                 ),
               ),
-              Text(
-                t.leagueWeekXp(league.xpThisWeek),
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12.5,
-                  color: p.inkMuted,
+              // The effort line says "this week" already; here, the number.
+              Semantics(
+                label: t.leagueWeekXp(league.xpThisWeek),
+                child: ExcludeSemantics(
+                  child: Text(
+                    t.leagueXp(league.xpThisWeek),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                      color: p.ink,
+                    ),
+                  ),
                 ),
               ),
             ],
