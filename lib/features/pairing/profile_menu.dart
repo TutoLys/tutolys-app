@@ -341,30 +341,33 @@ class _Row extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = VillagePalette.of(context);
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: label,
-      excludeSemantics: true,
-      child: Material(
-        color: selected ? p.navActiveFill : Colors.transparent,
-        borderRadius: VillageMetrics.mdAll,
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          key: rowKey,
-          autofocus: autofocus,
-          hoverColor: p.navHoverFill,
-          focusColor: p.navHoverFill,
-          onTap: onTap,
-          child: ConstrainedBox(
-            // A six-year-old's finger.
-            constraints: const BoxConstraints(minHeight: 60),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: Space.xs,
-                vertical: Space.xs,
+    return MergeSemantics(
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: label,
+        child: Material(
+          color: selected ? p.navActiveFill : Colors.transparent,
+          borderRadius: VillageMetrics.mdAll,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            key: rowKey,
+            autofocus: autofocus,
+            hoverColor: p.navHoverFill,
+            focusColor: p.navHoverFill,
+            onTap: onTap,
+            child: ExcludeSemantics(
+              child: ConstrainedBox(
+                // A six-year-old's finger.
+                constraints: const BoxConstraints(minHeight: 60),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: Space.xs,
+                    vertical: Space.xs,
+                  ),
+                  child: child,
+                ),
               ),
-              child: child,
             ),
           ),
         ),

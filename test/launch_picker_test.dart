@@ -464,6 +464,25 @@ void main() {
       expect((card.dx - anchor.dx).abs(), lessThan(24));
     });
 
+    testWidgets('a screen reader can pick a row', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await inTheVillage(tester);
+      await tester.tap(identity);
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSemantics(find.byKey(const ValueKey('profile-menu-kid-k2'))),
+        matchesSemantics(
+          isButton: true,
+          hasSelectedState: true,
+          isFocusable: true,
+          hasTapAction: true,
+          hasFocusAction: true,
+          label: 'Léa, ${fr.gradeLabel(1)}',
+        ),
+      );
+      semantics.dispose();
+    });
+
     testWidgets('one tap plays as the other kid, on their token', (
       tester,
     ) async {
