@@ -132,6 +132,33 @@ const _passageEnvelope = <String, Object?>{
   },
 };
 
+/// A `path_planner` lesson: Foxy walks the grid (app ADR 0118).
+const _pathEnvelope = <String, Object?>{
+  'exercise_id': '3d2c1b0a-9f8e-4d7c-8b6a-5f4e3d2c1b0a',
+  'version': 1,
+  'engine_key': 'path_planner',
+  'engine_min_version': 1,
+  'skill_node_id': 'ad24bcba-93d0-5b4e-ab56-ec76e3409a53',
+  'subject': 'SOC',
+  'grade': 1,
+  'rank': 0,
+  'prompt': {'text': 'Le chemin de Foxy'},
+  'config': {
+    'questions': [
+      {
+        'prompt': {'text': 'Aide Foxy à aller au drapeau.'},
+        'config': {
+          'rows': 3,
+          'cols': 4,
+          'start': {'row': 1, 'col': 0},
+          'goal': {'row': 1, 'col': 3},
+          'max_moves': 6,
+        },
+      },
+    ],
+  },
+};
+
 void main() {
   late LocalDatabase db;
   late _SilentAudio audio;
@@ -347,6 +374,37 @@ void main() {
       );
     },
   );
+
+  testWidgets('path_planner: Foxy on the grid is the director\'s guide, '
+      'and the lesson still plays', (tester) async {
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(app(_pathEnvelope));
+    await tester.tap(find.text('open'));
+    await settle(tester);
+
+    final foxy = find.byKey(const ValueKey('path-foxy'));
+    expect(foxy, findsOne);
+    expect(
+      find.descendant(of: foxy, matching: find.byType(CharacterStage)),
+      findsOne,
+    );
+
+    for (var i = 0; i < 3; i++) {
+      await tester.tap(find.byKey(const ValueKey('path-move-right')));
+      await settle(tester);
+    }
+    await tester.tap(find.text('VALIDER'));
+    await settle(tester);
+    expect(find.text('Bravo !'), findsOneWidget);
+    expect(
+      (await outbox())
+          .where((e) => e['event_type'] == 'attempt')
+          .map((e) => e['is_correct']),
+      [true],
+    );
+  });
 
   testWidgets(
     'a real mcq exercise plays on the new runtime: listen, wrong, retry, right, done',

@@ -601,6 +601,14 @@ class PlayScreenState extends ConsumerState<PlayScreen> {
                 controller: c,
                 locale: locale,
                 character: stage,
+                // Foxy on a board (the path planner's grid) is the same
+                // guide the director drives, so it reacts like the header
+                // fox (ADR 0118).
+                boardActor: (context, role, size) => CharacterStage(
+                  director: _director,
+                  registry: ref.read(characterRegistryProvider),
+                  size: size,
+                ),
                 onDone: _onRuntimeDone,
                 // Practice credits nothing, so it shows no XP (N14).
                 xpEarned: widget.practice ? null : _runtimeXp,
