@@ -397,7 +397,6 @@ void _text(
 }
 
 const _pencil = Color(0xFFF08A24);
-const _liquid = Color(0xFFE5484D);
 
 class _RulerPainter extends CustomPainter {
   _RulerPainter(this.c, this.p);
@@ -569,15 +568,14 @@ class _ThermometerPainter extends CustomPainter {
       ..color = p.ink.withValues(alpha: 0.6)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
+    // The design's blue: red never appears in a lesson (Hafid's ruling).
+    final liquid = Paint()..color = p.quebecBlueBright;
     canvas
       ..drawRRect(tube, Paint()..color = p.surface)
-      ..drawCircle(bulb, 24, Paint()..color = _liquid)
+      ..drawCircle(bulb, 24, liquid)
       ..drawRRect(tube, edge)
       ..drawCircle(bulb, 24, edge)
-      ..drawRect(
-        Rect.fromLTRB(cx - 6, y(c.value), cx + 6, bulb.dy),
-        Paint()..color = _liquid,
-      );
+      ..drawRect(Rect.fromLTRB(cx - 6, y(c.value), cx + 6, bulb.dy), liquid);
     final labelEvery = c.step <= 1 ? 5 : 10;
     for (var v = c.min; v <= c.max; v += c.step) {
       final big = v % labelEvery == 0 || v == c.min || v == c.max;

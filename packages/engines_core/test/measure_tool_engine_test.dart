@@ -231,6 +231,23 @@ void main() {
       }
     }
 
+    testWidgets('the thermometer\'s liquid is the design\'s blue, never red', (
+      tester,
+    ) async {
+      final (c, _) = controllerFor(thermometer);
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(app(c));
+      final thermometerPaint = find.descendant(
+        of: find.byKey(const ValueKey('measure-instrument')),
+        matching: find.byType(CustomPaint),
+      );
+      expect(
+        tester.renderObject(thermometerPaint.first),
+        paints..circle(color: VillageColors.quebecBlueBright),
+      );
+      c.dispose();
+    });
+
     testWidgets('AM25: three answers share one row at 375', (tester) async {
       tester.view.physicalSize = const Size(375, 812);
       tester.view.devicePixelRatio = 1;
