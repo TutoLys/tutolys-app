@@ -14,6 +14,18 @@ class PathSection {
   /// Null for leaves whose strand no known area claims.
   final String? title;
   final List<PathNode> nodes;
+
+  /// Names this section whatever the language: its first leaf.
+  String get key => nodes.isEmpty ? '' : nodes.first.id;
+
+  /// Nodes the kid has finished.
+  int get finishedCount => nodes
+      .where(
+        (n) =>
+            n.state == PathNodeState.completed ||
+            n.state == PathNodeState.mastered,
+      )
+      .length;
 }
 
 /// A learning area's leaves, in curriculum order.

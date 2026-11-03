@@ -91,6 +91,12 @@ abstract class Strings {
 
   // --- path --------------------------------------------------------------
   String get pathTitle;
+
+  /// A Carte section's header (ADR 0124).
+  String carteSectionProgress(int done, int total) => '$done/$total';
+
+  /// [carteSectionProgress], for a screen reader.
+  String carteSectionSpoken(int done, int total);
   String get pathEmpty;
 
   /// The Carte has nothing to show because nothing could be downloaded.
@@ -781,6 +787,10 @@ class _FrenchStrings extends Strings {
 
   @override
   String get pathTitle => 'Mon parcours';
+
+  @override
+  String carteSectionSpoken(int done, int total) =>
+      '$done ${done < 2 ? 'étape finie' : 'étapes finies'} sur $total';
 
   @override
   String get pathEmpty => "Il n'y a pas encore d'activités. Reviens bientôt !";
@@ -2234,6 +2244,10 @@ class _EnglishStrings extends Strings {
 
   @override
   String get pathTitle => 'My path';
+
+  @override
+  String carteSectionSpoken(int done, int total) =>
+      '$done of $total steps done';
 
   @override
   String get pathEmpty => "There are no activities yet. Come back soon!";

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:design_system/design_system.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/widgets/arrow_label.dart';
@@ -241,10 +242,15 @@ class SkillPath extends StatelessWidget {
     this.focusNodeId,
     this.focusKey,
     this.inlineCard = true,
+    this.revealedTo,
     super.key,
   });
 
   final List<PathNode> nodes;
+
+  /// How far down the path is showing while its section rolls up: an orb
+  /// shrinks as that edge reaches it (ADR 0124). Null: no section around it.
+  final ValueListenable<double>? revealedTo;
 
   /// Draw the « Continuer » card under the active orb. False on a phone,
   /// where the Carte pins it above the tab bar instead: hung under the orb,
@@ -266,20 +272,38 @@ class SkillPath extends StatelessWidget {
   /// `left: 50% / 28% / 50% / 72%`, repeating.
   static const _columns = <double>[0.5, 0.28, 0.5, 0.72];
 
+  /// Where each node starts, then where the path ends.
+  static List<double> _rows(List<PathNode> nodes, _Metrics m, bool inlineCard) {
+    final rows = <double>[m.topPad];
+    for (final node in nodes) {
+      rows.add(
+        rows.last +
+            (node.state == PathNodeState.active && inlineCard
+                ? m.activeRow
+                : m.row),
+      );
+    }
+    return rows;
+  }
+
+  /// How tall [nodes] draw.
+  static double heightOf(
+    List<PathNode> nodes, {
+    required bool compact,
+    required bool inlineCard,
+  }) => _rows(
+    nodes,
+    compact ? _Metrics.compact : _Metrics.wide,
+    inlineCard,
+  ).last;
+
   @override
   Widget build(BuildContext context) {
     final p = VillagePalette.of(context);
     final m = compact ? _Metrics.compact : _Metrics.wide;
 
-    final tops = <double>[];
-    var y = m.topPad;
-    for (final node in nodes) {
-      tops.add(y);
-      y += node.state == PathNodeState.active && inlineCard
-          ? m.activeRow
-          : m.row;
-    }
-    final height = y;
+    final tops = _rows(nodes, m, inlineCard);
+    final height = tops.last;
 
     return Center(
       child: ConstrainedBox(
@@ -330,13 +354,17 @@ class SkillPath extends StatelessWidget {
                       width: m.capWidth,
                       child: KeyedSubtree(
                         key: nodes[i].id == focusNodeId ? focusKey : null,
-                        child: _Node(
-                          node: nodes[i],
-                          metrics: m,
-                          palette: p,
-                          onTap: isOpenState(nodes[i].state)
-                              ? () => onTapNode?.call(nodes[i])
-                              : null,
+                        child: _tucked(
+                          tops[i],
+                          m,
+                          _Node(
+                            node: nodes[i],
+                            metrics: m,
+                            palette: p,
+                            onTap: isOpenState(nodes[i].state)
+                                ? () => onTapNode?.call(nodes[i])
+                                : null,
+                          ),
                         ),
                       ),
                     ),
@@ -367,6 +395,23 @@ class SkillPath extends StatelessWidget {
             },
           ),
         ),
+      ),
+    );
+  }
+
+  /// [child], shrinking into its place as [revealedTo] rolls up to [top].
+  Widget _tucked(double top, _Metrics m, Widget child) {
+    final edge = revealedTo;
+    if (edge == null) return child;
+    return ValueListenableBuilder<double>(
+      valueListenable: edge,
+      child: child,
+      builder: (_, y, child) => Transform.scale(
+        scale: Curves.easeOutBack.transform(
+          ((y - top) / m.row).clamp(0.0, 1.0),
+        ),
+        alignment: Alignment.topCenter,
+        child: child,
       ),
     );
   }

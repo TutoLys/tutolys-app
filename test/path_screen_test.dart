@@ -1,6 +1,7 @@
 import 'package:design_system/design_system.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -14,8 +15,11 @@ import 'package:tutolys_app/data/local_db/node_progress_local.dart';
 import 'package:tutolys_app/data/local_db/session_store.dart';
 import 'package:tutolys_app/data/sync/content_hash.dart';
 import 'package:tutolys_app/features/pairing/pairing_controller.dart';
+import 'package:tutolys_app/features/path/carte_section.dart';
+import 'package:tutolys_app/features/path/learning_areas.dart';
 import 'package:tutolys_app/features/path/path_controller.dart';
 import 'package:tutolys_app/features/path/path_screen.dart';
+import 'package:tutolys_app/features/path/section_fold.dart';
 import 'package:tutolys_app/data/api/progress_api.dart';
 import 'package:tutolys_app/features/play/play_screen.dart';
 import 'package:tutolys_app/features/progress/progress_controller.dart';
@@ -281,6 +285,8 @@ void main() {
     final path = tester.getRect(find.byKey(const ValueKey('carte-path')));
     expect(tester.getRect(bar).top, greaterThanOrEqualTo(path.bottom));
     // Content's short label under the orb, not the trimmed statement.
+    await tester.tap(find.byKey(const ValueKey('carte-section-leaf-2')));
+    await tester.pumpAndSettle();
     expect(find.text('Ranger les nombres'), findsOneWidget);
 
     await tester.tap(find.text('Continuer'));
@@ -686,7 +692,12 @@ void main() {
           );
           expect(strandTitle(tester), 'Arithmétique');
 
-          // Down into the second area.
+          // Down into the second area, which starts closed.
+          final geometrie = find.byKey(const ValueKey('carte-section-g1'));
+          await tester.ensureVisible(geometrie);
+          await tester.pumpAndSettle();
+          await tester.tap(geometrie);
+          await tester.pumpAndSettle();
           await tester.dragUntilVisible(
             find.byKey(const ValueKey('path-orb-g6')),
             find.byKey(const ValueKey('carte-path')),
@@ -823,5 +834,234 @@ void main() {
     );
     expect(find.text('Niv. 3'), findsOneWidget);
     expect(find.text('120 XP'), findsOneWidget);
+  });
+
+  group('sections roll up (ADR 0124)', () {
+    CurriculumLeaf leaf(String id, String strand, int n) => CurriculumLeaf(
+      id: id,
+      labelFr: 'Étape $id',
+      labelEn: '',
+      stableKey: 'mathematique/$strand/b:A/o:$n',
+    );
+
+    final leaves = [
+      for (var i = 1; i <= 4; i++)
+        leaf('a$i', 'sens-et-ecriture-des-nombres', i),
+      for (var i = 1; i <= 3; i++) leaf('g$i', 'geometrie', i),
+      for (var i = 1; i <= 2; i++) leaf('m$i', 'mesure', i),
+    ];
+    final content = {
+      for (final l in leaves)
+        'e-${l.id}': exercise(id: 'e-${l.id}', skillNodeId: l.id),
+    };
+    Finder header(String key) => find.byKey(ValueKey('carte-section-$key'));
+    Finder orb(String id) => find.byKey(ValueKey('path-orb-$id'));
+
+    setUp(() {
+      final view = TestWidgetsFlutterBinding.instance.platformDispatcher.implicitView!;
+      view.physicalSize = const Size(1280, 1800);
+      view.devicePixelRatio = 1;
+      addTearDown(view.reset);
+    });
+
+    testWidgets('only the next lesson\'s section starts open', (tester) async {
+      await openCarte(tester, appUnder(leaves: leaves, content: content));
+      expect(orb('a1'), findsOneWidget);
+      expect(orb('g1'), findsNothing);
+      expect(orb('m1'), findsNothing);
+      for (final key in ['a1', 'g1', 'm1']) {
+        expect(header(key), findsOneWidget);
+      }
+      expect(
+        tester.widget<Text>(find.byKey(const ValueKey('carte-section-count-g1'))).data,
+        '0/3',
+      );
+    });
+
+    testWidgets('it follows the kid: done with one, the next is open', (
+      tester,
+    ) async {
+      await openCarte(
+        tester,
+        appUnder(
+          leaves: leaves,
+          content: content,
+          masteries: [
+            for (var i = 1; i <= 4; i++)
+              SkillMasteryDto(
+                skillNodeId: 'a$i',
+                masteryPct: 95,
+                isMastered: true,
+              ),
+          ],
+        ),
+      );
+      expect(orb('g1'), findsOneWidget);
+      expect(orb('a1'), findsNothing);
+      expect(
+        tester.widget<Text>(find.byKey(const ValueKey('carte-section-count-a1'))).data,
+        '4/4',
+      );
+    });
+
+    testWidgets('a tap opens and closes, and an opened orb plays', (
+      tester,
+    ) async {
+      await openCarte(tester, appUnder(leaves: leaves, content: content));
+      await tester.tap(header('g1'));
+      await tester.pumpAndSettle();
+      expect(orb('g1'), findsOneWidget);
+      // The other section the kid didn't touch stays as it was.
+      expect(orb('a1'), findsOneWidget);
+
+      await tester.tap(header('a1'));
+      await tester.pumpAndSettle();
+      expect(orb('a1'), findsNothing);
+      expect(find.byType(CarteSection), findsNWidgets(3));
+
+      await tester.tap(header('a1'));
+      await tester.pumpAndSettle();
+      await tester.tap(orb('a1'));
+      await tester.pumpAndSettle();
+      expect(find.byType(PlayScreen), findsOneWidget);
+    });
+
+    testWidgets('the kid\'s choice survives leaving and coming back', (
+      tester,
+    ) async {
+      final db = LocalDatabase.memory();
+      addTearDown(db.close);
+      await openCarte(
+        tester,
+        appUnder(leaves: leaves, content: content, db: db),
+      );
+      await tester.tap(header('a1'));
+      await tester.tap(header('m1'));
+      await tester.pumpAndSettle();
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+      await openCarte(
+        tester,
+        appUnder(leaves: leaves, content: content, db: db),
+      );
+      expect(orb('a1'), findsNothing);
+      expect(orb('m1'), findsOneWidget);
+    });
+
+    test('each kid keeps their own choices', () async {
+      final db = LocalDatabase.memory();
+      addTearDown(db.close);
+      await SectionFoldStore(db, kidId: 'k1').write({'a1': false});
+      expect(await SectionFoldStore(db, kidId: 'k1').read(), {'a1': false});
+      expect(await SectionFoldStore(db, kidId: 'k2').read(), isEmpty);
+    });
+
+    testWidgets('a section the kid closed reopens when a finished lesson '
+        'moves the next one into it', (tester) async {
+      final db = LocalDatabase.memory();
+      addTearDown(db.close);
+      await SectionFoldStore(db, kidId: 'k1').write({'g1': false});
+      await openCarte(
+        tester,
+        appUnder(
+          leaves: [leaf('a1', 'sens-et-ecriture-des-nombres', 1), ...leaves.skip(4)],
+          content: content,
+          db: db,
+        ),
+      );
+      expect(orb('g1'), findsNothing);
+
+      await tester.runAsync(
+        () => NodeProgressLocal(
+          db,
+          kidId: 'k1',
+        ).recordCompleted('a1', perfect: true, exerciseId: 'e-a1'),
+      );
+      ProviderScope.containerOf(
+        tester.element(find.byType(PathScreen)),
+      ).invalidate(nodeProgressProvider);
+      await tester.pumpAndSettle();
+      expect(orb('g1'), findsOneWidget);
+    });
+
+    testWidgets('a closed section is out of the tab order, its header in', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await openCarte(tester, appUnder(leaves: leaves, content: content));
+      expect(
+        tester.getSemantics(header('g1')),
+        matchesSemantics(
+          isButton: true,
+          hasExpandedState: true,
+          isExpanded: false,
+          isFocusable: true,
+          hasTapAction: true,
+          hasFocusAction: true,
+          label: 'Géométrie, 0 étape finie sur 3',
+        ),
+      );
+      semantics.dispose();
+
+      // Tab reaches a header, and Enter opens it.
+      for (var i = 0; i < 40; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+        final focused = FocusManager.instance.primaryFocus?.context;
+        if (focused != null &&
+            find
+                .descendant(
+                  of: header('g1'),
+                  matching: find.byElementPredicate((e) => e == focused),
+                  matchRoot: true,
+                )
+                .evaluate()
+                .isNotEmpty) {
+          break;
+        }
+      }
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(orb('g1'), findsOneWidget);
+    });
+
+    testWidgets('one section: no header, as before', (tester) async {
+      await openCarte(
+        tester,
+        appUnder(leaves: leaves.take(4).toList(), content: content),
+      );
+      expect(find.byType(CarteSection), findsNothing);
+      expect(orb('a4'), findsOneWidget);
+    });
+
+    testWidgets('a long subject on a phone: short, and nothing overflows', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(360, 700);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final strands = learningAreas['MATH']!.expand((a) => a.strands).toList();
+      final many = [
+        for (final (i, strand) in strands.indexed)
+          for (var j = 1; j <= 12; j++) leaf('s$i-$j', strand, j),
+      ];
+      await openCarte(
+        tester,
+        appUnder(
+          leaves: many,
+          content: {
+            for (final l in many)
+              'e-${l.id}': exercise(id: 'e-${l.id}', skillNodeId: l.id),
+          },
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.byType(CarteSection), findsWidgets);
+      // Twelve orbs in one section, the rest folded away.
+      expect(find.byKey(const ValueKey('carte-section-fox')), findsNothing);
+      expect(find.byKey(const ValueKey('path-orb-s0-12')), findsOneWidget);
+      expect(tester.getSize(header('s0-1')).height, greaterThanOrEqualTo(48));
+    });
   });
 }

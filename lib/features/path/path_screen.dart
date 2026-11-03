@@ -4,6 +4,7 @@ import '../../data/local_db/database.dart' show CachedSkillNode;
 import 'review.dart';
 
 import 'package:design_system/design_system.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,9 +16,11 @@ import '../pairing/pairing_controller.dart';
 import '../assignments/assignments_controller.dart';
 import '../progress/progress_controller.dart';
 import 'carte_model.dart';
+import 'carte_section.dart';
 import 'node_lessons.dart';
 import 'path_controller.dart';
 import 'play_node.dart';
+import 'section_fold.dart';
 import 'kid_label.dart';
 import 'skill_path.dart';
 import 'subject_pills.dart';
@@ -32,6 +35,9 @@ import 'subject_pills.dart';
 /// It always opens on where the kid is: on showing the tab, switching
 /// subject, or coming back from a game, it scrolls the frontier node (the
 /// fox and the Continuer card) to the middle of the screen.
+///
+/// Each section rolls up behind its header (ADR 0124). The one holding the
+/// next lesson starts open and the rest closed, until the kid says otherwise.
 ///
 /// The pills and the current strand's title are pinned above the path,
 /// like a frozen header row: only the path scrolls, so switching subject
@@ -58,6 +64,11 @@ class _PathScreenState extends ConsumerState<PathScreen> {
   /// then too (K10).
   String? _focusId;
   bool _topUpdateQueued = false;
+
+  /// The section holding the next lesson, and whether a finished lesson
+  /// may be about to move it: only that reopens a section the kid closed.
+  String? _nextSection;
+  bool _lessonFinished = false;
 
   @override
   void didChangeDependencies() {
@@ -90,6 +101,34 @@ class _PathScreenState extends ConsumerState<PathScreen> {
         target,
         alignment: 0.5,
         duration: still ? Duration.zero : Motion.normal,
+        curve: Motion.enter,
+      ).then((_) => _queueTopUpdate());
+    });
+  }
+
+  /// A section finished rolling. Opened, it comes into view: to the next
+  /// lesson if that's in it, otherwise just far enough that a kid who
+  /// tapped a header low on the screen sees what unrolled.
+  void _sectionSettled(int index, {required bool open, required bool next}) {
+    _queueTopUpdate();
+    if (!open) return;
+    if (next) {
+      _scrollToFocus();
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || index >= _sectionKeys.length) return;
+      final target = _sectionKeys[index].currentContext;
+      final box = target?.findRenderObject();
+      if (target == null || box is! RenderBox) return;
+      final height = MediaQuery.sizeOf(context).height;
+      if (box.localToGlobal(Offset.zero).dy < height / 2) return;
+      Scrollable.ensureVisible(
+        target,
+        alignment: 0.1,
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : Motion.normal,
         curve: Motion.enter,
       ).then((_) => _queueTopUpdate());
     });
@@ -130,12 +169,16 @@ class _PathScreenState extends ConsumerState<PathScreen> {
     final t = context.s;
     ref.listen(pathControllerProvider, (prev, next) {
       final loaded = prev?.loading == true && !next.loading;
-      if (prev?.subject != next.subject) _topSection = 0;
+      if (prev?.subject != next.subject) {
+        _topSection = 0;
+        _lessonFinished = false;
+      }
       if (loaded || prev?.subject != next.subject) _scrollToFocus();
     });
     // A finished lesson moves the frontier.
-    ref.listen(nodeProgressProvider, (_, next) {
+    ref.listen(nodeProgressProvider, (prev, next) {
       if (next.hasValue) _scrollToFocus();
+      if (prev?.hasValue == true && next.hasValue) _lessonFinished = true;
     });
 
     final showPath = !state.loading && state.leaves.isNotEmpty;
@@ -160,6 +203,16 @@ class _PathScreenState extends ConsumerState<PathScreen> {
     final focusId = focusNodeIdOf(sections);
     if (focusId != null && focusId != _focusId) _scrollToFocus();
     _focusId = focusId;
+    final nextSection = nextSectionKey(sections);
+    if (nextSection != _nextSection) {
+      if (_lessonFinished && nextSection != null) {
+        _lessonFinished = false;
+        Future.microtask(
+          () => ref.read(sectionFoldsProvider.notifier).forget(nextSection),
+        );
+      }
+      if (nextSection != null) _nextSection = nextSection;
+    }
     while (_sectionKeys.length < sections.length) {
       _sectionKeys.add(GlobalKey(debugLabel: 'carte-section'));
     }
@@ -292,6 +345,7 @@ class _PathScreenState extends ConsumerState<PathScreen> {
                               compact: compact,
                               focusKey: _focusKey,
                               onReturned: _scrollToFocus,
+                              onSettled: _sectionSettled,
                             ),
                         ],
                       ],
@@ -541,6 +595,7 @@ class _Sections extends ConsumerWidget {
     required this.compact,
     required this.focusKey,
     required this.onReturned,
+    required this.onSettled,
   });
 
   final PathState state;
@@ -556,11 +611,49 @@ class _Sections extends ConsumerWidget {
   /// Called once the kid is back from a game.
   final VoidCallback onReturned;
 
+  /// A section stopped rolling: which one, and how it ended.
+  final void Function(int index, {required bool open, required bool next})
+  onSettled;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final p = VillagePalette.of(context);
     final t = context.s;
     final focusNodeId = focusNodeIdOf(sections);
+    final folds = ref.watch(sectionFoldsProvider).value ?? const {};
+    final nextKey = nextSectionKey(sections);
+
+    SkillPath path(
+      PathSection section, [
+      ValueListenable<double>? revealedTo,
+    ]) => SkillPath(
+      nodes: section.nodes,
+      compact: compact,
+      inlineCard: !compact,
+      continueLabel: t.villageContinueCta,
+      statusLabel: (node) => continueStatus(t, node),
+      focusNodeId: focusNodeId,
+      focusKey: focusKey,
+      revealedTo: revealedTo,
+      onTapNode: (node) => _play(context, ref, node, lessons[node.id]),
+    );
+
+    if (sections.length > 1) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final (i, section) in sections.indexed)
+            KeyedSubtree(
+              key: sectionKeys[i],
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: Space.sm),
+                child: _foldable(ref, t, i, section, folds, nextKey, path),
+              ),
+            ),
+          const SizedBox(height: Space.lg),
+        ],
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -570,16 +663,6 @@ class _Sections extends ConsumerWidget {
             key: sectionKeys[i],
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // The first title is the pinned header's; later ones mark
-              // where the next area starts, and take over the header once
-              // they reach it.
-              if (i > 0) ...[
-                _Breadcrumb(
-                  subject: state.subject,
-                  title: section.title ?? t.pathTitle,
-                ),
-                const SizedBox(height: 18),
-              ],
               // `.path-card`
               DecoratedBox(
                 decoration: BoxDecoration(
@@ -593,23 +676,44 @@ class _Sections extends ConsumerWidget {
                   padding: compact
                       ? const EdgeInsets.fromLTRB(6, 6, 6, 22)
                       : const EdgeInsets.fromLTRB(10, 10, 10, 30),
-                  child: SkillPath(
-                    nodes: section.nodes,
-                    compact: compact,
-                    inlineCard: !compact,
-                    continueLabel: t.villageContinueCta,
-                    statusLabel: (node) => continueStatus(t, node),
-                    focusNodeId: focusNodeId,
-                    focusKey: focusKey,
-                    onTapNode: (node) =>
-                        _play(context, ref, node, lessons[node.id]),
-                  ),
+                  child: path(section),
                 ),
               ),
               const SizedBox(height: Space.xl),
             ],
           ),
       ],
+    );
+  }
+
+  Widget _foldable(
+    WidgetRef ref,
+    Strings t,
+    int index,
+    PathSection section,
+    Map<String, bool> folds,
+    String? nextKey,
+    SkillPath Function(PathSection, [ValueListenable<double>?]) path,
+  ) {
+    final open = isSectionOpen(section, folds: folds, nextKey: nextKey);
+    final holdsNext = section.key == nextKey;
+    return CarteSection(
+      key: ValueKey(section.key),
+      section: section,
+      title: section.title ?? t.pathTitle,
+      open: open,
+      holdsNext: holdsNext,
+      compact: compact,
+      pathHeight: SkillPath.heightOf(
+        section.nodes,
+        compact: compact,
+        inlineCard: !compact,
+      ),
+      onToggle: () => ref
+          .read(sectionFoldsProvider.notifier)
+          .set(section.key, open: !open),
+      onSettled: (open) => onSettled(index, open: open, next: holdsNext),
+      path: (revealedTo) => path(section, revealedTo),
     );
   }
 
