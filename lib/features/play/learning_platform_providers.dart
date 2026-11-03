@@ -44,6 +44,7 @@ final learningEngineRegistryProvider = Provider<LearningEngineRegistry>(
     eraseEngine(const StagePresenterEngine()),
     eraseEngine(const MyGalleryEngine()),
     eraseEngine(const PhraseLabEngine()),
+    eraseEngine(const ProofreadEngine()),
   ]),
 );
 
@@ -75,6 +76,7 @@ final evaluatorRegistryProvider = Provider<EvaluatorRegistry>(
     StagePresenterEvaluator(),
     MyGalleryEvaluator(),
     PhraseLabEvaluator(),
+    ProofreadEvaluator(),
   ]),
 );
 
