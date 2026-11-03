@@ -36,13 +36,21 @@ void main() {
       [xp, streak],
     );
     expect(
-      visibleStats(all, maxWidth: 50, compact: true, phone: true),
+      visibleStats(all, maxWidth: 60, compact: true, phone: true),
       [xp, streak],
+    );
+    expect(
+      visibleStats(all, maxWidth: 50, compact: true, phone: true),
+      [xp],
+    );
+    expect(
+      visibleStats(all, maxWidth: 0, compact: true, phone: true),
+      isEmpty,
       reason: 'a phone keeps two at full size; the name gives way',
     );
   });
 
-  for (final width in [375.0, 768.0, 1024.0, 1950.0]) {
+  for (final width in [320.0, 375.0, 768.0, 1024.0, 1950.0]) {
     testWidgets('at $width px: no shrunk text, nothing overflows', (
       tester,
     ) async {
@@ -84,14 +92,22 @@ void main() {
       if (width < 600) {
         expect(
           find.descendant(of: header, matching: find.text('4')),
-          findsOneWidget,
-          reason: 'the streak stays beside XP',
+          width < 334 ? findsNothing : findsOneWidget,
+          reason: 'the streak stays beside XP, room allowing',
         );
         expect(
           find.descendant(of: header, matching: find.textContaining('Niv')),
           findsNothing,
           reason: 'a phone shows XP and the streak only',
         );
+      }
+      if (width == 320) {
+        // The gear's pages add a ← to the same row: the pills give way.
+        await tester.tap(find.byKey(const ValueKey('header-settings')));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect(find.byKey(const ValueKey('header-back')), findsOneWidget);
+        expect(xp, findsNothing);
       }
     });
   }

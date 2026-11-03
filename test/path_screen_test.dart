@@ -1038,7 +1038,7 @@ void main() {
     testWidgets('a long subject on a phone: short, and nothing overflows', (
       tester,
     ) async {
-      tester.view.physicalSize = const Size(360, 700);
+      tester.view.physicalSize = const Size(320, 700);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
       final strands = learningAreas['MATH']!.expand((a) => a.strands).toList();

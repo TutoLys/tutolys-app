@@ -275,6 +275,10 @@ class VillageHeader extends StatelessWidget {
   }
 }
 
+/// A phone's second pill needs this much of the pills' budget, which a
+/// 334px screen has.
+const _phoneSecondPill = 60.0;
+
 /// The pills a header [maxWidth] wide can show at full size, in their
 /// original order (K1). Each is budgeted generously; a phone shows two at
 /// most.
@@ -285,9 +289,14 @@ List<HeaderStat> visibleStats(
   required bool phone,
 }) {
   final budget = compact ? 92.0 : 120.0;
-  // A phone always has room for two at full size (the name gives way);
-  // more would push it to nothing.
-  var fit = phone ? 2 : (maxWidth / budget).floor();
+  // A phone has room for two at full size, as the name gives way, and more
+  // would push it to nothing. The narrowest phones keep one, and none
+  // beside a ←: two left the avatar itself no room.
+  var fit = !phone
+      ? (maxWidth / budget).floor()
+      : maxWidth >= _phoneSecondPill
+      ? 2
+      : (maxWidth > 0 ? 1 : 0);
   if (fit >= stats.length) return stats;
   if (fit <= 0) return const [];
   final keep = ([

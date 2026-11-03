@@ -45,3 +45,11 @@
 - Tests that reach an orb outside the next lesson's section now open that
   section first.
 - Orb tap targets are unchanged once a section is open.
+
+## Addendum, 2026-11-03: the header below 334 px
+
+Testing this at 320 px found an overflow in the header, on every page: a
+phone always kept two pills, which left the avatar no room. A phone now
+keeps two only when the pills' budget allows it, so one below 334 px, or
+below about 386 px beside the gear pages' ←, and none beside a ← below
+about 326 px. XP goes last. The pills themselves are never scaled (K1).
