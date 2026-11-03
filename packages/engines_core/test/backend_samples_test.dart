@@ -24,6 +24,7 @@ const _samples = {
   'samples/fr_feedback_studio.json': FeedbackStudioEngine(),
   'samples/en_stage_presenter.json': StagePresenterEngine(),
   'samples/fr_my_gallery.json': MyGalleryEngine(),
+  'samples/fr_phrase_lab.json': PhraseLabEngine(),
   // The one timed série (backend ADR 0092).
   'pfeq_grade1_math/77_defi_compte_vite.json': TimedChoiceEngine(),
   'pfeq_grade1_math_en/77_defi_compte_vite_en.json': TimedChoiceEngine(),
