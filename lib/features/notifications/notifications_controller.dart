@@ -129,8 +129,17 @@ Set<String> serverFactKeys(NotificationDto n) {
       'daily_quest:${day(quebecNow(n.createdAt))}',
       'daily_quest:${day(n.createdAt.toUtc())}',
     },
+    // Written by the weekly job after the week it judges has ended, so the
+    // judged week is the one before the Québec week it was written in.
+    'league_promoted' => {'league:${day(_judgedMonday(n.createdAt))}'},
     _ => const {},
   };
+}
+
+/// The Monday of the Québec week before [createdAt]'s.
+DateTime _judgedMonday(DateTime createdAt) {
+  final d = quebecToday(createdAt);
+  return DateTime(d.year, d.month, d.day - (d.weekday - 1) - 7);
 }
 
 /// [mergeInboxes]'s answer.

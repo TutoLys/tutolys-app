@@ -1,3 +1,4 @@
+import '../progress/weekly_league.dart';
 import '../quests/quest_board.dart';
 
 /// One thing worth a notification, keyed by its fact (ADR 0097).
@@ -16,6 +17,10 @@ abstract final class LocalNotificationType {
   static const achievement = 'achievement_earned';
   static const streak = 'streak_milestone';
   static const level = 'level_reached';
+
+  /// The backend's own type (ADR 0207), so its promotion and the app's
+  /// dedupe on `league:<week_start>`.
+  static const league = 'league_promoted';
 }
 
 /// The facts behind what just changed on the quest board: quests newly
@@ -24,7 +29,7 @@ abstract final class LocalNotificationType {
 ///
 /// Fact keys follow the backend's `<kind>:<identity>` format:
 /// `daily_quest:<day>` (the backend's own), `quest:<day>:<kind>`,
-/// `achievement:<key>`, `level:g<grade>:<n>`.
+/// `achievement:<key>`, `level:g<grade>:<n>`, `league:<week_start>`.
 List<NotificationFact> notificationFacts({
   required String day,
   Iterable<String> newQuests = const [],
@@ -32,6 +37,7 @@ List<NotificationFact> notificationFacts({
   Map<String, int> questTargets = const {},
   int? levelReached,
   int? grade,
+  LeaguePromotion? promotion,
 }) => [
   for (final q in newQuests)
     if (q == QuestKind.challenge.name)
@@ -65,5 +71,11 @@ List<NotificationFact> notificationFacts({
       factKey: 'level:g$grade:$levelReached',
       type: LocalNotificationType.level,
       params: {'level': levelReached},
+    ),
+  if (promotion != null)
+    (
+      factKey: leagueFactKey(promotion.weekStart),
+      type: LocalNotificationType.league,
+      params: {'division': promotion.division.name},
     ),
 ];

@@ -7,6 +7,7 @@ import '../../data/api/notifications_api.dart';
 import '../quests/quest_board.dart'
     show Achievement, exercisesQuestTarget, minutesQuestTarget;
 import '../quests/quests_screen.dart' show achievementName;
+import '../progress/weekly_league.dart';
 import 'notifications_controller.dart';
 
 /// Opens the inbox from the header bell.
@@ -201,6 +202,12 @@ String notificationText(Strings t, NotificationDto n) => switch (n.type) {
   'streak_freeze_spent' => t.notificationStreakFreeze,
   'streak_freeze_refunded' => t.notificationStreakFreezeRefunded,
   'tutoring_session_soon' => t.notificationTutoringSession(n.message),
+  // The backend's own promotion carries no division (only a French
+  // message), so it gets the general line, in the reader's language.
+  'league_promoted' => switch (n.params['division']) {
+    final String d => t.leaguePromoted(divisionName(t, divisionOf(d))),
+    _ => t.notificationLeaguePromotedGeneric,
+  },
   _ => n.message,
 };
 
@@ -224,6 +231,7 @@ Achievement? _achievement(String? key) {
       'streak_freeze_spent' ||
       'streak_freeze_refunded' => ('asset-flame.webp', p.navActiveFill),
       'tutoring_session_soon' => ('asset-mascot-welcome.webp', p.goldPale),
+      'league_promoted' => ('asset-badge.webp', p.goldPale),
       _ => ('asset-bell.webp', p.track),
     };
 

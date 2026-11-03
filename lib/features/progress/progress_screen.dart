@@ -10,6 +10,7 @@ import '../path/path_controller.dart';
 import '../path/subject_pills.dart';
 import 'local_progress.dart';
 import 'progress_controller.dart';
+import 'weekly_league_card.dart';
 import 'progress_model.dart';
 
 /// A subject's leaves at the kid's own grade, synced first when online.
@@ -73,7 +74,9 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
               children: [
                 // No level/streak/badge cards: Profil's strip has them, and
                 // the header shows them too. Progrès is per-subject detail
-                // (AM13).
+                // (AM13). The week's league is the one cross-subject card
+                // (app ADR 0117).
+                const WeeklyLeagueCard(),
                 SubjectPills(
                   selected: _subject,
                   compact: compact,

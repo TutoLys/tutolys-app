@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/local_db/local_inbox.dart';
 import '../pairing/pairing_controller.dart';
+import '../progress/weekly_league.dart';
 import 'local_facts.dart';
 
 /// The playing kid's own inbox on this device (ADR 0097).
@@ -24,6 +25,7 @@ Future<int> writeLocalNotifications(
   Map<String, int> questTargets = const {},
   int? level,
   int? grade,
+  LeaguePromotion? promotion,
 }) async {
   int? levelReached;
   if (level != null && grade != null) {
@@ -39,6 +41,7 @@ Future<int> writeLocalNotifications(
     questTargets: questTargets,
     levelReached: levelReached,
     grade: grade,
+    promotion: promotion,
   )) {
     if (await inbox.add(fact.factKey, fact.type, params: fact.params)) {
       added++;

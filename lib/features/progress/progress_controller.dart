@@ -32,6 +32,8 @@ class ProgressState {
     this.skillsTotal,
     this.levelProgress,
     this.stale = false,
+    this.league,
+    this.effortPercentile,
   });
 
   final int? currentStreakDays;
@@ -87,6 +89,13 @@ class ProgressState {
   /// saw (`ProgressCache`), never zeros. At most a subtle hint.
   final bool stale;
 
+  /// The personal league (backend ADR 0207). Null until a read from a
+  /// backend that serves it.
+  final LeagueDto? league;
+
+  /// Null means "show the kid's own progress instead" (ADR 0207).
+  final EffortPercentileDto? effortPercentile;
+
   ProgressState withTotalXp(int xp) => ProgressState(
     currentStreakDays: currentStreakDays,
     masteredCount: masteredCount,
@@ -105,6 +114,8 @@ class ProgressState {
     skillsTotal: skillsTotal,
     levelProgress: levelProgress,
     stale: stale,
+    league: league,
+    effortPercentile: effortPercentile,
   );
 
   ProgressState withLevel(GradeLevel? g) => ProgressState(
@@ -125,6 +136,8 @@ class ProgressState {
     skillsTotal: g?.total,
     levelProgress: g?.progress,
     stale: stale,
+    league: league,
+    effortPercentile: effortPercentile,
   );
 }
 
@@ -231,6 +244,11 @@ class ProgressController extends Notifier<ProgressState> {
               kidId: ref.read(activeKidIdProvider) ?? unpairedKidId,
             ).reconcile(shown.totalXp),
             masteries: shown.masteries,
+            league: shown.league,
+            // Only a fresh read: never a cached claim about other kids.
+            effortPercentile: result is ProgressFetched
+                ? shown.effortPercentile
+                : null,
           );
     _server = shown;
     await _applyLevel();

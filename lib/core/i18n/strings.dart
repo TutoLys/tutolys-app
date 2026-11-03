@@ -200,6 +200,25 @@ abstract class Strings {
   String get notificationStreakChest;
   String get notificationStreakGuardian;
   String notificationLevel(int level);
+
+  // Personal league and effort line (ADR 0207 backend, app ADR 0117).
+  String get leagueCardTitle;
+  String get leagueBronze;
+  String get leagueSilver;
+  String get leagueGold;
+  String get leagueDiamond;
+  String leagueName(String division);
+  String leagueToNext(int xp, String next);
+  String leagueGoalReached(String next);
+  String get leagueTop;
+  String leagueWeekXp(int xp);
+  String leagueDaysLeft(int days);
+  String effortPercentile(int percentile, int grade);
+  String effortAheadOfLastWeek(int xp);
+  String effortKeepGoing(int xp);
+  String get effortFreshStart;
+  String leaguePromoted(String division);
+  String get notificationLeaguePromotedGeneric;
   String get pinGateConfirmSignOut;
 
   // --- removing a kid from the device (ADR 0037) ----------------------------
@@ -989,6 +1008,47 @@ class _FrenchStrings extends Strings {
   @override
   String notificationLevel(int level) =>
       'Bravo, tu montes au niveau $level de ton année !';
+
+  @override
+  String get leagueCardTitle => 'Cette semaine';
+  @override
+  String get leagueBronze => 'Bronze';
+  @override
+  String get leagueSilver => 'Argent';
+  @override
+  String get leagueGold => 'Or';
+  @override
+  String get leagueDiamond => 'Diamant';
+  @override
+  String leagueName(String division) => 'Ligue $division';
+  @override
+  String leagueToNext(int xp, String next) => 'Encore $xp XP pour $next';
+  @override
+  String leagueGoalReached(String next) =>
+      'Objectif atteint : tu passes en $next lundi !';
+  @override
+  String get leagueTop => 'Tu es au sommet, continue comme ça !';
+  @override
+  String leagueWeekXp(int xp) => '$xp XP cette semaine';
+  @override
+  String leagueDaysLeft(int days) => days <= 1
+      ? 'Nouvelle semaine demain'
+      : 'Nouvelle semaine dans $days jours';
+  @override
+  String effortPercentile(int percentile, int grade) =>
+      "Plus d'XP que $percentile % des élèves de ${gradeLabel(grade)} "
+      'qui ont joué cette semaine';
+  @override
+  String effortAheadOfLastWeek(int xp) =>
+      '+$xp XP de plus que la semaine passée';
+  @override
+  String effortKeepGoing(int xp) => '$xp XP cette semaine, continue !';
+  @override
+  String get effortFreshStart => 'Nouvelle semaine, nouveau départ !';
+  @override
+  String leaguePromoted(String division) => 'Tu passes en ligue $division !';
+  @override
+  String get notificationLeaguePromotedGeneric => 'Tu montes de ligue !';
 
   @override
   String get pinGateConfirmSignOut => 'Déconnecter';
@@ -2392,6 +2452,46 @@ class _EnglishStrings extends Strings {
   @override
   String notificationLevel(int level) =>
       'Well done, you are moving up to level $level of your year!';
+
+  @override
+  String get leagueCardTitle => 'This week';
+  @override
+  String get leagueBronze => 'Bronze';
+  @override
+  String get leagueSilver => 'Silver';
+  @override
+  String get leagueGold => 'Gold';
+  @override
+  String get leagueDiamond => 'Diamond';
+  @override
+  String leagueName(String division) => '$division league';
+  @override
+  String leagueToNext(int xp, String next) => '$xp more XP for $next';
+  @override
+  String leagueGoalReached(String next) =>
+      'Goal reached: you move up to $next on Monday!';
+  @override
+  String get leagueTop => "You're at the top, keep it up!";
+  @override
+  String leagueWeekXp(int xp) => '$xp XP this week';
+  @override
+  String leagueDaysLeft(int days) =>
+      days <= 1 ? 'New week tomorrow' : 'New week in $days days';
+  @override
+  String effortPercentile(int percentile, int grade) =>
+      'More XP than $percentile% of ${gradeLabel(grade)} students '
+      'who played this week';
+  @override
+  String effortAheadOfLastWeek(int xp) => '+$xp XP more than last week';
+  @override
+  String effortKeepGoing(int xp) => '$xp XP this week, keep going!';
+  @override
+  String get effortFreshStart => 'New week, fresh start!';
+  @override
+  String leaguePromoted(String division) =>
+      "You're up to the $division league!";
+  @override
+  String get notificationLeaguePromotedGeneric => 'You moved up a league!';
 
   @override
   String get pinGateConfirmSignOut => 'Sign out';

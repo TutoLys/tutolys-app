@@ -25,6 +25,8 @@ import '../audio/app_sounds.dart';
 import '../audio/music_director.dart';
 import '../pairing/pairing_controller.dart';
 import '../path/path_controller.dart' show contentInUseProvider;
+import '../progress/league_promoted.dart';
+import '../progress/weekly_league.dart';
 import '../profile/avatars.dart';
 import '../profile/rare_avatar_found.dart';
 import '../settings/settings_controller.dart';
@@ -150,6 +152,9 @@ class PlayScreenState extends ConsumerState<PlayScreen> {
 
   /// A rare avatar this lesson revealed, shown on the celebration.
   String? _rareAvatarKey;
+
+  /// A league promotion not yet celebrated, shown once (app ADR 0117).
+  LeagueDivision? _promotedTo;
 
   // Legacy path.
   TelemetryClient? _telemetry;
@@ -493,6 +498,17 @@ class PlayScreenState extends ConsumerState<PlayScreen> {
           )
           .then((_) => ref.invalidate(nodeProgressProvider)),
     );
+    // Last week's promotion, the first time a celebration can show it.
+    if (promotionOf(ref.read(progressControllerProvider).league)
+        case final promotion?) {
+      unawaited(
+        LeagueCelebrations(db, kidId: _kidId).claim(promotion).then((isNew) {
+          if (isNew && mounted) {
+            setState(() => _promotedTo = promotion.division);
+          }
+        }),
+      );
+    }
     // A perfect lesson may reveal a rare avatar (ADR 0050).
     if (summary.perfect && lessonId != null) {
       unawaited(
@@ -548,6 +564,8 @@ class PlayScreenState extends ConsumerState<PlayScreen> {
             size: 150,
           ),
           extraRows: [
+            if (_promotedTo case final division?)
+              LeaguePromotedRow(division: division),
             if (_rareAvatarKey case final key?) RareAvatarFound(avatarKey: key),
             for (final row
                 in ref.watch(celebrationRowsProvider).value ?? const [])

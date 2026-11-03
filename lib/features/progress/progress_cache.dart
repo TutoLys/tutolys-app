@@ -92,5 +92,9 @@ ProgressSnapshot mergeWithCached(
     level: hasLevel ? fresh.level : cached.level,
     skillsCompleted: hasLevel ? fresh.skillsCompleted : cached.skillsCompleted,
     skillsTotal: hasLevel ? fresh.skillsTotal : cached.skillsTotal,
+    league: fresh.league ?? cached.league,
+    // Never from the cache: a percentile is about one week's cohort, and a
+    // stale one is a claim about other children nobody re-checked.
+    effortPercentile: fresh.effortPercentile,
   );
 }

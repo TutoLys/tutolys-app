@@ -8,6 +8,7 @@ import '../home/subject_progress.dart';
 import '../pairing/pairing_controller.dart';
 import '../path/programme.dart';
 import '../progress/progress_controller.dart';
+import '../progress/weekly_league.dart';
 import '../notifications/local_notifications.dart';
 import '../notifications/notifications_controller.dart';
 import 'quests_model.dart';
@@ -316,6 +317,7 @@ final questBoardProvider = FutureProvider<QuestBoard>((ref) async {
     newUnlocks: unlocked.keys.toSet().difference(unlockedBefore),
     level: progress.level,
     grade: ref.read(sessionControllerProvider).kid?.gradeLevel,
+    promotion: promotionOf(progress.league),
   );
   // The bell shows it now, not at its next poll.
   if (added > 0) {

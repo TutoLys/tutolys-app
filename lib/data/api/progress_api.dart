@@ -143,6 +143,130 @@ class StreakFreezeDto {
   };
 }
 
+/// One finished league week (`league.last_week`, backend ADR 0207).
+/// [division] is the division the week left the kid in; [outcome] is
+/// `placed`, `promoted`, `held` or `demoted`.
+class LeagueWeekDto {
+  const LeagueWeekDto({
+    required this.weekStart,
+    required this.division,
+    required this.outcome,
+    required this.xp,
+  });
+
+  factory LeagueWeekDto.fromJson(Map<String, Object?> json) => LeagueWeekDto(
+    weekStart: json['week_start'] as String,
+    division: json['division'] as String,
+    outcome: json['outcome'] as String,
+    xp: json['xp'] as int,
+  );
+
+  /// `yyyy-mm-dd`, the Monday of that Québec week.
+  final String weekStart;
+  final String division;
+  final String outcome;
+  final int xp;
+
+  Map<String, Object?> toJson() => {
+    'week_start': weekStart,
+    'division': division,
+    'outcome': outcome,
+    'xp': xp,
+  };
+}
+
+/// The kid's personal league (`league`, backend ADR 0207): a weekly goal
+/// against their own XP, never against other children. Never null on a
+/// backend that serves it.
+///
+/// Null means "doesn't exist here", never zero: [promoteAtXp] and
+/// [xpToPromote] at `diamond`, [keepAtXp] at `bronze`.
+class LeagueDto {
+  const LeagueDto({
+    required this.division,
+    required this.weekStart,
+    required this.xpThisWeek,
+    this.weekEnd,
+    this.promoteAtXp,
+    this.xpToPromote,
+    this.keepAtXp,
+    this.lastWeek,
+  });
+
+  factory LeagueDto.fromJson(Map<String, Object?> json) {
+    final last = json['last_week'] as Map<String, Object?>?;
+    final end = json['week_end'] as String?;
+    return LeagueDto(
+      division: json['division'] as String,
+      weekStart: json['week_start'] as String,
+      weekEnd: end == null ? null : DateTime.tryParse(end),
+      xpThisWeek: json['xp_this_week'] as int,
+      promoteAtXp: json['promote_at_xp'] as int?,
+      xpToPromote: json['xp_to_promote'] as int?,
+      keepAtXp: json['keep_at_xp'] as int?,
+      lastWeek: last == null ? null : LeagueWeekDto.fromJson(last),
+    );
+  }
+
+  /// `bronze`, `silver`, `gold` or `diamond`; the app owns the names.
+  final String division;
+
+  /// `yyyy-mm-dd`, the Monday of this Québec week.
+  final String weekStart;
+
+  /// The instant the week ends (next Monday 00:00 in Montréal). Null from a
+  /// backend that doesn't send it yet; then [weekStart] + 7 days.
+  final DateTime? weekEnd;
+
+  final int xpThisWeek;
+  final int? promoteAtXp;
+  final int? xpToPromote;
+  final int? keepAtXp;
+
+  /// Null until the kid's first week has been judged.
+  final LeagueWeekDto? lastWeek;
+
+  Map<String, Object?> toJson() => {
+    'division': division,
+    'week_start': weekStart,
+    'week_end': weekEnd?.toUtc().toIso8601String(),
+    'xp_this_week': xpThisWeek,
+    'promote_at_xp': promoteAtXp,
+    'xp_to_promote': xpToPromote,
+    'keep_at_xp': keepAtXp,
+    'last_week': lastWeek?.toJson(),
+  };
+}
+
+/// The anonymous effort percentile (`effort_percentile`, backend ADR 0207):
+/// more weekly XP than [percentile] % of the kids of [grade] **who played
+/// that week**. On the device it is only ever served at or above the median;
+/// null means "show the kid's own progress instead".
+class EffortPercentileDto {
+  const EffortPercentileDto({
+    required this.percentile,
+    required this.grade,
+    required this.weekStart,
+  });
+
+  factory EffortPercentileDto.fromJson(Map<String, Object?> json) =>
+      EffortPercentileDto(
+        percentile: json['percentile'] as int,
+        grade: json['grade'] as int,
+        weekStart: json['week_start'] as String,
+      );
+
+  final int percentile;
+  final int grade;
+  final String weekStart;
+
+  Map<String, Object?> toJson() => {
+    'percentile': percentile,
+    'grade': grade,
+    'week_start': weekStart,
+  };
+}
+
 /// `GET /api/v1/me/progress`'s full body — mastery per skill, the kid's
 /// current streak-with-freeze, their spendable freeze balance, and
 /// today's daily-challenge progress, all read live from telemetry on the
@@ -159,12 +283,16 @@ class ProgressSnapshot {
     this.level,
     this.skillsCompleted,
     this.skillsTotal,
+    this.league,
+    this.effortPercentile,
   });
 
   factory ProgressSnapshot.fromJson(Map<String, Object?> json) {
     final dailyQuestJson = json['daily_quest'] as Map<String, Object?>?;
     final freezeJson = json['streak_freeze'] as Map<String, Object?>?;
     final questsJson = json['quests'] as List?;
+    final leagueJson = json['league'] as Map<String, Object?>?;
+    final effortJson = json['effort_percentile'] as Map<String, Object?>?;
     return ProgressSnapshot(
       masteries: ((json['masteries'] as List?) ?? const [])
           .cast<Map<String, Object?>>()
@@ -193,6 +321,10 @@ class ProgressSnapshot {
       level: json['skills_total'] == null ? null : json['level'] as int?,
       skillsCompleted: json['skills_completed'] as int?,
       skillsTotal: json['skills_total'] as int?,
+      league: leagueJson == null ? null : LeagueDto.fromJson(leagueJson),
+      effortPercentile: effortJson == null
+          ? null
+          : EffortPercentileDto.fromJson(effortJson),
     );
   }
 
@@ -232,6 +364,12 @@ class ProgressSnapshot {
   final int? skillsCompleted;
   final int? skillsTotal;
 
+  /// Null only from a backend older than ADR 0207.
+  final LeagueDto? league;
+
+  /// Null whenever there's nothing kind and true to say (ADR 0207).
+  final EffortPercentileDto? effortPercentile;
+
   int get masteredCount => masteries.where((m) => m.isMastered).length;
 
   /// The same shape [ProgressSnapshot.fromJson] reads, for the device's
@@ -247,6 +385,8 @@ class ProgressSnapshot {
     'level': level,
     'skills_completed': skillsCompleted,
     'skills_total': skillsTotal,
+    'league': league?.toJson(),
+    'effort_percentile': effortPercentile?.toJson(),
   };
 }
 
