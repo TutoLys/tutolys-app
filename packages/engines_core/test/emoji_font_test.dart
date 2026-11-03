@@ -71,6 +71,11 @@ void main() {
     );
   });
 
+  test('⚜️ is always in the bundled font, used or not', () {
+    final cps = File('fonts/TutolysEmoji.codepoints').readAsLinesSync();
+    expect(cps, containsAll(['269C', 'FE0F']));
+  });
+
   test('every emoji the content uses is in the bundled font', () {
     final inFont = {
       for (final l in File('fonts/TutolysEmoji.codepoints').readAsLinesSync())

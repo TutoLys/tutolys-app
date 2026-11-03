@@ -31,6 +31,9 @@ for f in content.rglob('*.json'):
 # Joiners, variation selectors and keycap parts: the sequences
 # the content writes need them even when they never stand alone.
 cps |= {0x200D, 0xFE0F, 0x20E3}
+# Always in, used or not: ⚜️ is TutoLys's Québec symbol (never the maple
+# leaf), so lessons can reach for it before the first one does.
+cps |= {0x269C} & set(cmap)
 cps = sorted(c for c in cps if c in cmap or c in (0x200D, 0xFE0F, 0x20E3))
 
 out = here / 'TutolysEmoji.ttf'
