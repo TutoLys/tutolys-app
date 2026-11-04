@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:design_system/design_system.dart';
 import 'package:engine_sdk/engine_sdk.dart';
 import 'package:engines_core/engines_core.dart';
@@ -189,10 +191,7 @@ void main() {
         }),
         contains('same when'),
       );
-      expect(
-        reason({...water, 'scene': 'volcano'}),
-        contains('plant, water or mix'),
-      );
+      expect(reason({...water, 'scene': 'volcano'}), contains('circuit'));
       final badLook = [
         ...(water['outcomes']! as List).take(2),
         {
@@ -206,6 +205,87 @@ void main() {
       expect(reason({...plant, 'min_runs': 5}), contains('min_runs'));
       final noScene = Map.of(water)..remove('scene');
       expect(reason(noScene), contains('look needs a scene'));
+    });
+  });
+
+  group('machine scenes', () {
+    Map<String, Object?> sceneConfig(String scene, List<String> looks) => {
+      'scene': scene,
+      'variables': [
+        {
+          'id': 'v',
+          'label': 'V',
+          'values': [
+            {'id': 'a', 'label': 'A'},
+            {'id': 'b', 'label': 'B'},
+          ],
+        },
+      ],
+      'outcomes': [
+        {
+          'when': {'v': 'a'},
+          'label': 'Résultat A',
+          'look': looks.first,
+        },
+        {
+          'when': {'v': 'b'},
+          'label': 'Résultat B',
+          'look': looks.last,
+        },
+      ],
+      'options': [
+        {'id': 'x', 'label': 'X'},
+        {'id': 'y', 'label': 'Y'},
+      ],
+      'correct': 'x',
+    };
+
+    test('need engine version 2, so an older app asks for an update', () {
+      expect(const ExperimentLabEngine().descriptor.version, 2);
+    });
+
+    test('a scene refuses another scene\'s look', () {
+      expect(
+        reason(sceneConfig('circuit', ['lit', 'near_lifted'])),
+        contains('look for circuit'),
+      );
+    });
+
+    // Every look of every scene, at a phone's width and a desktop's, in both
+    // themes: a painter that throws would blank the result card mid-lesson.
+    for (final scene in ExperimentScene.values) {
+      testWidgets('${scene.name}: every look draws', (tester) async {
+        final looks = experimentLooks[scene]!.toList();
+        for (final look in looks) {
+          for (final palette in [VillagePalette.light, VillagePalette.dark]) {
+            for (final width in [150.0, 320.0]) {
+              final recorder = ui.PictureRecorder();
+              experimentScenePainter(
+                scene,
+                look,
+                palette,
+              ).paint(Canvas(recorder), Size(width, 150));
+              recorder.endRecording().dispose();
+            }
+          }
+        }
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('a run draws the scene and says the result in words', (
+      tester,
+    ) async {
+      final config = sceneConfig('circuit', ['lit_gap', 'dark_gap']);
+      const engine = ExperimentLabEngine();
+      final content = parsed(config);
+      expect(content.scene, ExperimentScene.circuit);
+      final t = engine.reduce(
+        engine.initialize(content, const EngineSeed(1)),
+        const RunExperiment(),
+      );
+      expect(t.events.whereType<RevealEvent>(), hasLength(1));
+      expect(content.outcomes[t.state.shown]!.look, 'lit_gap');
     });
   });
 

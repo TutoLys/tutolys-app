@@ -17,6 +17,7 @@ const _samples = {
   'samples/math_fraction_slice.json': FractionSliceEngine(),
   'samples/math_geometry_lab.json': GeometryLabEngine(),
   'samples/sci_experiment_lab.json': ExperimentLabEngine(),
+  'samples/sci_experiment_lab_machines.json': ExperimentLabEngine(),
   'samples/math_counters_board.json': CountersBoardEngine(),
   'samples/sci_sky_model.json': SkyModelEngine(),
   'samples/fr_passage_discuss.json': PassageReaderEngine(),

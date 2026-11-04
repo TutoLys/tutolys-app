@@ -6,9 +6,10 @@ import 'package:flutter/material.dart';
 
 import '../widgets/answer_tile.dart';
 import '../widgets/pick_one.dart';
+import 'machine_scenes.dart';
 
 /// A scene the engine draws itself, so the science lessons need no art.
-enum ExperimentScene { plant, water, mix }
+enum ExperimentScene { plant, water, mix, lever, ramp, pulley, magnet, circuit }
 
 /// What each scene can show. A lesson without a scene uses `image_ref`
 /// pictures (or just the outcome's words).
@@ -16,6 +17,46 @@ const experimentLooks = {
   ExperimentScene.plant: {'dry', 'small', 'healthy', 'drowned'},
   ExperimentScene.water: {'ice', 'liquid', 'steam'},
   ExperimentScene.mix: {'dissolved', 'settled', 'floating'},
+  ExperimentScene.lever: {
+    'near_lifted',
+    'near_stuck',
+    'middle_lifted',
+    'middle_stuck',
+    'middle_level',
+    'far_lifted',
+    'far_stuck',
+  },
+  ExperimentScene.ramp: {
+    'low_stays',
+    'low_short',
+    'low_far',
+    'high_stays',
+    'high_short',
+    'high_far',
+  },
+  ExperimentScene.pulley: {
+    'none_lifted',
+    'none_stuck',
+    'one_lifted',
+    'one_stuck',
+    'two_lifted',
+    'two_stuck',
+  },
+  ExperimentScene.magnet: {
+    'stuck',
+    'pulled',
+    'still_near',
+    'still_far',
+    'repelled',
+  },
+  ExperimentScene.circuit: {
+    'lit',
+    'lit_gap',
+    'dark_gap',
+    'open',
+    'open_gap',
+    'open_block',
+  },
 };
 
 class ExperimentValue {
@@ -165,7 +206,8 @@ class ExperimentLabEngine
   @override
   EngineDescriptor get descriptor => const EngineDescriptor(
     key: key,
-    version: 1,
+    // 2: the lever, ramp, pulley, magnet and circuit scenes (ADR 0125).
+    version: 2,
     submitMode: SubmitMode.explicit,
     // Every control is a spoken button, and each result is spoken in
     // words, so the drawing is never the only way to see what happened.
@@ -202,7 +244,9 @@ class ExperimentLabEngine
         ? null
         : ExperimentScene.values.asNameMap()[rawScene];
     if (rawScene != null && scene == null) {
-      return const ParseResult.invalid('scene is plant, water or mix.');
+      return ParseResult.invalid(
+        'scene is one of ${ExperimentScene.values.map((s) => s.name).join(', ')}.',
+      );
     }
 
     final rawVars = config['variables'];
@@ -631,7 +675,15 @@ class ExperimentLabEngine
   }
 }
 
-/// The three built-in scenes. Plain shapes, readable at a glance; each
+/// The painter for one look, public so a test can draw every look.
+@visibleForTesting
+CustomPainter experimentScenePainter(
+  ExperimentScene scene,
+  String look,
+  VillagePalette p,
+) => _ScenePainter(scene, look, p);
+
+/// The built-in scenes. Plain shapes, readable at a glance; each
 /// look differs by more than colour.
 class _ScenePainter extends CustomPainter {
   _ScenePainter(this.scene, this.look, this.p);
@@ -802,6 +854,16 @@ class _ScenePainter extends CustomPainter {
           );
         }
         canvas.drawPath(glass, edge);
+      case ExperimentScene.lever:
+        paintLever(canvas, size, look, p);
+      case ExperimentScene.ramp:
+        paintRamp(canvas, size, look, p);
+      case ExperimentScene.pulley:
+        paintPulley(canvas, size, look, p);
+      case ExperimentScene.magnet:
+        paintMagnet(canvas, size, look, p);
+      case ExperimentScene.circuit:
+        paintCircuit(canvas, size, look, p);
     }
   }
 
