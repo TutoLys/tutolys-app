@@ -282,4 +282,78 @@ void main() {
     expect(tester.takeException(), isNull);
     c.dispose();
   });
+
+  group('the separator follows the lesson, not the app', () {
+    Future<void> show(
+      WidgetTester tester, {
+      required Locale app,
+      required String lesson,
+    }) async {
+      tester.view.physicalSize = const Size(900, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final c = ActivitySessionController(
+        envelope: QuestionEnvelope.parse({
+          'exercise_id': '6f1a4a18-7a3b-4c1e-9f51-6d2a1b2c3d4e',
+          'version': 1,
+          'content_hash': 'h',
+          'engine_key': 'column_calc',
+          'engine_min_version': 1,
+          'skill_node_id': 'ad24bcba-93d0-5b4e-ab56-ec76e3409a53',
+          'subject': 'MATH',
+          'grade': 3,
+          'rank': 0,
+          'locale': lesson,
+          'prompt': {'text': 'Add.'},
+          'config': {
+            'op': 'add',
+            'operands': ['2,4', '1,3'],
+          },
+        }).valueOrNull!,
+        kidId: 'kid',
+        engines: LearningEngineRegistry([eraseEngine(engine)]),
+        evaluators: EvaluatorRegistry(const [evaluator]),
+        store: InMemoryActivitySessionStore(InMemoryEventOutbox()),
+        appVersion: '0.2.0',
+        seed: 3,
+      );
+      addTearDown(c.dispose);
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: TutolysTheme.village(),
+          home: Scaffold(
+            body: LearningActivityView(
+              controller: c,
+              locale: app,
+              onDone: () {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+    }
+
+    testWidgets('an English lesson draws a point', (tester) async {
+      await show(tester, app: const Locale('en'), lesson: 'en-CA');
+      expect(find.text('.'), findsWidgets);
+      expect(find.text(','), findsNothing);
+    });
+
+    testWidgets('a French lesson in an English app keeps its comma', (
+      tester,
+    ) async {
+      await show(tester, app: const Locale('en'), lesson: 'fr-CA');
+      expect(find.text(','), findsWidgets);
+      expect(find.text('.'), findsNothing);
+    });
+
+    testWidgets('an English lesson in a French app keeps its point', (
+      tester,
+    ) async {
+      await show(tester, app: fr, lesson: 'en-CA');
+      expect(find.text('.'), findsWidgets);
+      expect(find.text(','), findsNothing);
+    });
+  });
 }

@@ -582,7 +582,11 @@ class _ColumnBoard extends StatelessWidget {
       );
     }
 
-    /// A line of [width] columns, right-aligned, with the decimal comma.
+    // Agrees with the prompt, so the lesson's language, not the app's. Config
+    // always stores the comma.
+    final separator = view.contentLocale.languageCode == 'fr' ? ',' : '.';
+
+    /// A line of [width] columns, right-aligned, with the decimal separator.
     Widget line(List<Widget> rightToLeft, {Widget? lead}) {
       final cells = <Widget>[];
       for (var i = c.columns - 1; i >= 0; i--) {
@@ -595,7 +599,11 @@ class _ColumnBoard extends StatelessWidget {
           cells.add(
             SizedBox(
               width: 12,
-              child: Text(',', style: digitStyle, textAlign: TextAlign.center),
+              child: Text(
+                separator,
+                style: digitStyle,
+                textAlign: TextAlign.center,
+              ),
             ),
           );
         }
