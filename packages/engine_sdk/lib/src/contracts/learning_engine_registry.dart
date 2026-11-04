@@ -35,7 +35,6 @@ abstract interface class ErasedEngine {
     required void Function(Object action) dispatch,
     required Locale locale,
     required bool enabled,
-    Locale? contentLocale,
   });
 }
 
@@ -110,7 +109,6 @@ class _ErasedEngine<C, S, A, Ans extends AnswerValue> implements ErasedEngine {
     required void Function(Object action) dispatch,
     required Locale locale,
     required bool enabled,
-    Locale? contentLocale,
   }) => engine.buildView(
     context,
     EngineView<C, S, A>(
@@ -119,7 +117,6 @@ class _ErasedEngine<C, S, A, Ans extends AnswerValue> implements ErasedEngine {
       dispatch: (a) => dispatch(a as Object),
       locale: locale,
       enabled: enabled,
-      contentLocale: contentLocale,
     ),
   );
 }

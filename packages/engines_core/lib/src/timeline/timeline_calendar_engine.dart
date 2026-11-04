@@ -89,7 +89,6 @@ class TimelineCalendarEngine
         dispatch: view.dispatch,
         locale: view.locale,
         enabled: view.enabled,
-        contentLocale: view.contentLocale,
       ),
     ),
     final c => _order.buildView(
@@ -100,7 +99,6 @@ class TimelineCalendarEngine
         dispatch: view.dispatch,
         locale: view.locale,
         enabled: view.enabled,
-        contentLocale: view.contentLocale,
       ),
     ),
   };

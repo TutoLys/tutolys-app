@@ -102,20 +102,12 @@ class EngineView<C, S, A> {
     required this.dispatch,
     required this.locale,
     required this.enabled,
-    Locale? contentLocale,
-  }) : contentLocale = contentLocale ?? locale;
+  });
 
   final C content;
   final S state;
   final void Function(A action) dispatch;
-
-  /// The app's language: what the board's own words follow.
   final Locale locale;
-
-  /// The lesson's language, which can differ: an English app serves the
-  /// French lesson until an English one exists (app ADR 0023). Anything
-  /// that must agree with the prompt follows this, not [locale].
-  final Locale contentLocale;
 
   /// False while evaluating or showing feedback, so a second tap cannot
   /// race the first answer.

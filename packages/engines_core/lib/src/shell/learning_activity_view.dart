@@ -328,9 +328,6 @@ class _LearningActivityViewState extends State<LearningActivityView> {
                           },
                           locale: widget.locale,
                           enabled: interactive || retrying,
-                          contentLocale: Locale(
-                            c.envelope.locale.split(RegExp('[-_]')).first,
-                          ),
                         ),
                       ),
                     ),
