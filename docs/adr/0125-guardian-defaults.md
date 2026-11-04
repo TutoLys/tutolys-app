@@ -58,3 +58,12 @@
 - The defaults reach the settings a moment after the first frame on a
   launch. They don't hold the splash: a slow read must not delay the app
   for three settings that aren't the theme or language.
+
+## Addendum, 2026-11-03: the minutes quest pays on the child's target (backend `9683a7c`)
+
+Decision 5's gap is closed. `/me/progress` now serves the child's own target
+in the `minutes` quest, and the grant uses it, so the two agree and the XP
+chip shows with no app change. The chip rule stays: it still covers a stale
+cached payload, or a `defaults` block that arrived before the next progress
+read. The target is read from `/me/progress` on the device, never from a
+portal response, which keeps the standard target on purpose.
