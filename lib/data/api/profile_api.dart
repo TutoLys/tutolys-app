@@ -1,10 +1,15 @@
 import 'package:dio/dio.dart';
 
 import '../../features/profile/avatars.dart' show KidSex;
+import '../local_db/kid_defaults.dart';
 
 /// What `GET /me/profile` says about the paired kid.
 class RemoteProfile {
-  const RemoteProfile({required this.avatarKey, required this.sex});
+  const RemoteProfile({
+    required this.avatarKey,
+    required this.sex,
+    this.defaults,
+  });
 
   /// `''` when unset.
   final String avatarKey;
@@ -12,6 +17,11 @@ class RemoteProfile {
   /// Set by an adult in the portal, read-only here. A backend that
   /// doesn't send it yet reads as [KidSex.unspecified].
   final KidSex sex;
+
+  /// What a guardian's answers set (backend ADR 0220). Null from a backend
+  /// that doesn't send the block, which says nothing either way; `{}` means
+  /// nothing is set.
+  final KidDefaults? defaults;
 }
 
 /// The kid's earned avatars as the backend keeps them (backend ADR 0064).
@@ -49,6 +59,10 @@ class ProfileApi {
       return RemoteProfile(
         avatarKey: data['avatar_key'] as String? ?? '',
         sex: KidSex.parse(data['sex'] as String?),
+        defaults: switch (data['defaults']) {
+          final Map<String, Object?> block => KidDefaults.fromJson(block),
+          _ => null,
+        },
       );
     } on DioException {
       return null;

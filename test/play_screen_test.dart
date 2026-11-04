@@ -13,6 +13,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tutolys_app/core/routing/paired_router.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
 import 'package:tutolys_app/data/local_db/home_stats.dart';
+import 'package:tutolys_app/data/local_db/kid_defaults.dart';
 import 'package:tutolys_app/data/local_db/node_progress_local.dart';
 import 'package:tutolys_app/features/pairing/pairing_controller.dart';
 import 'package:tutolys_app/features/play/learning_platform_providers.dart';
@@ -859,6 +860,121 @@ void main() {
       expect(find.text('Pompon dort sur le lit.'), findsOneWidget);
       expect(find.byKey(const ValueKey('passage-speak-1')), findsNothing);
       expect(find.byKey(const ValueKey('passage-speak-2')), findsNothing);
+    });
+  });
+
+  group('what a guardian\'s answers change in a lesson (ADR 0125)', () {
+    Future<void> serve(WidgetTester tester, KidDefaults defaults) => tester
+        .runAsync(() => KidDefaultsStore(db, kidId: 'kid-lea').adopt(defaults));
+
+    Future<void> open(WidgetTester tester, Map<String, Object?> e) async {
+      await tester.pumpWidget(app(e));
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await settle(tester);
+    }
+
+    Future<void> finish(WidgetTester tester) async {
+      await tester.tap(find.text('12'));
+      await settle(tester);
+      await tester.tap(find.text('VALIDER'));
+      await settle(tester);
+      await tester.tap(find.text('CONTINUER'));
+      await settle(tester);
+      await tester.pumpAndSettle();
+      await settle(tester);
+    }
+
+    List<AudioRequest> narrated() => [
+      for (final r in audio.requests)
+        if (r.channel == AudioChannel.narration) r,
+    ];
+
+    testWidgets('« Pas encore » reads the question when it appears', (
+      tester,
+    ) async {
+      await serve(tester, const KidDefaults(autoReadPrompts: true));
+      await open(tester, _mcqEnvelope);
+
+      expect(narrated(), hasLength(1));
+      expect((narrated().single.source as PrerecordedAudio).ref, 'audio');
+      expect(
+        find.byTooltip('Écouter la question'),
+        findsOneWidget,
+        reason: 'the speaker stays',
+      );
+    });
+
+    testWidgets('any other answer leaves it on tap', (tester) async {
+      await serve(tester, const KidDefaults(autoReadPrompts: false));
+      await open(tester, _mcqEnvelope);
+      expect(narrated(), isEmpty);
+    });
+
+    testWidgets('Réglages\' read-aloud off still wins', (tester) async {
+      await serve(tester, const KidDefaults(autoReadPrompts: true));
+      await tester.runAsync(
+        () => AppSettingsStore(
+          db,
+          kidId: 'kid-lea',
+        ).write(const AppSettings(readAloud: false)),
+      );
+      await open(tester, _mcqEnvelope);
+      expect(narrated(), isEmpty);
+    });
+
+    testWidgets('a prompt that may never be spoken stays silent', (
+      tester,
+    ) async {
+      await serve(tester, const KidDefaults(autoReadPrompts: true));
+      await open(tester, {
+        ..._mcqEnvelope,
+        'speech_policy': const {'prompt': 'never'},
+      });
+      expect(narrated(), isEmpty);
+    });
+
+    Future<void> playedToday(WidgetTester tester, int minutes) =>
+        tester.runAsync(
+          () => HomeStats(db, kidId: 'kid-lea').recordExerciseCompleted(
+            elapsedMs: minutes * 60000,
+            exerciseId: 'earlier',
+          ),
+        );
+
+    final pause = find.byKey(const ValueKey('pause-line'));
+
+    testWidgets('past the session length, the celebration offers a pause', (
+      tester,
+    ) async {
+      await serve(tester, const KidDefaults(sessionMinutes: 5));
+      await playedToday(tester, 6);
+      await open(tester, _mcqEnvelope);
+      await finish(tester);
+
+      expect(pause, findsOneWidget);
+      expect(find.textContaining('Une pause ?'), findsOneWidget);
+      expect(
+        find.text('RETOUR À LA CARTE').evaluate().length +
+            find.text('CONTINUER').evaluate().length,
+        greaterThan(0),
+        reason: 'it blocks nothing',
+      );
+    });
+
+    testWidgets('before it, nothing', (tester) async {
+      await serve(tester, const KidDefaults(sessionMinutes: 15));
+      await playedToday(tester, 6);
+      await open(tester, _mcqEnvelope);
+      await finish(tester);
+      expect(pause, findsNothing);
+    });
+
+    testWidgets('without an answer, never', (tester) async {
+      await playedToday(tester, 60);
+      await open(tester, _mcqEnvelope);
+      await finish(tester);
+      expect(pause, findsNothing);
     });
   });
 

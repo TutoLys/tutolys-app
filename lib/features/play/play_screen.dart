@@ -32,6 +32,7 @@ import '../profile/rare_avatar_found.dart';
 import '../settings/settings_controller.dart';
 import 'engine_registry_provider.dart';
 import 'learning_platform_providers.dart';
+import 'pause_line.dart';
 import 'xp_estimate.dart';
 
 /// Hosts one exercise, reached by tapping an available node on the path.
@@ -152,6 +153,9 @@ class PlayScreenState extends ConsumerState<PlayScreen> {
 
   /// A rare avatar this lesson revealed, shown on the celebration.
   String? _rareAvatarKey;
+
+  /// Whether the celebration suggests a pause (ADR 0125).
+  bool _pauseOffered = false;
 
   /// A league promotion not yet celebrated, shown once (app ADR 0117).
   LeagueDivision? _promotedTo;
@@ -287,7 +291,7 @@ class PlayScreenState extends ConsumerState<PlayScreen> {
       case QuestionPresented(:final questionIndex):
         final c = _controller!;
         final plan = _planFor(c, questionIndex);
-        if (plan != null && plan.autoPlays(SpeechPart.prompt)) _speak(c, plan);
+        if (plan != null && _readsItself(plan)) _speak(c, plan);
       case QuestionCompleted(:final attempts, :final solved):
         _questionResults.add(
           ExerciseResult(
@@ -300,6 +304,16 @@ class PlayScreenState extends ConsumerState<PlayScreen> {
       case _:
     }
   }
+
+  /// Whether this question is read without a tap: the content asks for it,
+  /// or a guardian said this child doesn't read alone yet (Hafid's D1, the
+  /// one exception to reading on tap). Réglages' read-aloud off still wins,
+  /// and so does a prompt that may never be spoken, as in a reading test.
+  bool _readsItself(SpeechPlan plan) =>
+      plan.autoPlays(SpeechPart.prompt) ||
+      (ref.read(kidDefaultsProvider).autoReadPrompts == true &&
+          plan.readAloudEnabled &&
+          plan.canSpeak(SpeechPart.prompt));
 
   SpeechPlan? _planFor(ActivitySessionController c, int index) {
     if (index >= c.envelope.questions.length) return null;
@@ -480,9 +494,15 @@ class PlayScreenState extends ConsumerState<PlayScreen> {
       _celebrate(summary);
       return;
     }
-    HomeStats(db, kidId: _kidId).recordExerciseCompleted(
-      elapsedMs: result.elapsedMs,
-      exerciseId: lessonId,
+    final stats = HomeStats(db, kidId: _kidId);
+    unawaited(
+      _offerPause(
+        stats,
+        stats.recordExerciseCompleted(
+          elapsedMs: result.elapsedMs,
+          exerciseId: lessonId,
+        ),
+      ),
     );
     StreakLocal(db, kidId: _kidId).recordPlayedToday();
     unawaited(
@@ -524,6 +544,18 @@ class PlayScreenState extends ConsumerState<PlayScreen> {
     }
 
     _celebrate(summary);
+  }
+
+  /// Past the session length a guardian set, today's play time earns the
+  /// celebration one soft line. It adds a line and takes nothing away.
+  Future<void> _offerPause(HomeStats stats, Future<void> recorded) async {
+    await recorded;
+    final minutes = ref.read(kidDefaultsProvider).sessionMinutes;
+    if (minutes == null) return;
+    final today = await stats.today();
+    if (mounted && today.msPlayed >= minutes * Duration.millisecondsPerMinute) {
+      setState(() => _pauseOffered = true);
+    }
   }
 
   /// The fox's victory and the celebration screen.
@@ -575,6 +607,7 @@ class PlayScreenState extends ConsumerState<PlayScreen> {
                 value: row.value,
                 max: row.max,
               ),
+            if (_pauseOffered) const PauseLine(),
           ],
           onContinue: _leave,
           onNext: _hasNext ? _next : null,

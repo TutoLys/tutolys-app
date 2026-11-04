@@ -5,7 +5,9 @@ import 'package:tutolys_app/core/i18n/strings.dart';
 import 'package:tutolys_app/data/api/content_api.dart';
 import 'package:tutolys_app/data/api/curriculum_api.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
+import 'package:tutolys_app/data/local_db/kid_defaults.dart';
 import 'package:tutolys_app/data/local_db/session_store.dart';
+import 'package:tutolys_app/data/local_db/streak_local.dart';
 import 'package:tutolys_app/data/sync/content_hash.dart';
 import 'package:tutolys_app/features/pairing/pairing_controller.dart';
 import 'package:tutolys_app/features/path/path_controller.dart';
@@ -155,6 +157,56 @@ void main() {
     // has been disposed") rather than a clean no-op.
     await pumpEventQueue();
     container.dispose();
+  });
+
+  group('the subject a guardian chose to start on (backend ADR 0220)', () {
+    Future<void> serve(String subject) async {
+      await KidDefaultsStore(
+        container.read(localDatabaseProvider),
+        kidId: 'k1',
+      ).adopt(KidDefaults(firstSubject: subject));
+      container.invalidate(storedKidDefaultsProvider);
+      await pumpEventQueue();
+    }
+
+    String opened() => container.read(pathControllerProvider).subject;
+
+    setUp(() {
+      container = build();
+      container.listen(pathControllerProvider, (_, _) {});
+    });
+
+    test('a kid who has not played opens on it', () async {
+      await pumpEventQueue();
+      expect(opened(), defaultPathSubject);
+      await serve('FR');
+      expect(opened(), 'FR');
+    });
+
+    test(
+      'a kid who played here does not, whatever the server still says',
+      () async {
+        await StreakLocal(
+          container.read(localDatabaseProvider),
+          kidId: 'k1',
+        ).recordPlayedToday();
+        await serve('FR');
+        expect(opened(), defaultPathSubject);
+      },
+    );
+
+    test('a subject the kid picked is left alone', () async {
+      await container
+          .read(pathControllerProvider.notifier)
+          .selectSubject('SCI');
+      await serve('FR');
+      expect(opened(), 'SCI');
+    });
+
+    test('a subject outside the programme is ignored', () async {
+      await serve('NOPE');
+      expect(opened(), defaultPathSubject);
+    });
   });
 
   test('an available leaf is one with a synced exercise', () async {

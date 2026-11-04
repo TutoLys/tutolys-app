@@ -42,6 +42,7 @@ Future<List<CelebrationRowData>> questCelebrationRows(Ref ref) async {
     lessonsToday: stats.lessonsCompleted,
     msToday: stats.msPlayed,
     served: progress.questDefinitions,
+    sessionMinutes: ref.read(kidDefaultsProvider).sessionMinutes,
   );
 
   return [

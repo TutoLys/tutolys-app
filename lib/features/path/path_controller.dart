@@ -10,6 +10,7 @@ import '../../data/sync/curriculum_sync.dart';
 import '../../data/sync/content_in_use.dart';
 import '../../data/sync/lesson_key.dart';
 import '../../data/local_db/node_progress_local.dart';
+import '../../data/local_db/streak_local.dart';
 import '../home/subject_progress.dart' show subjectsWithoutLessonsProvider;
 import '../progress/progress_controller.dart';
 import 'offline_window.dart';
@@ -161,6 +162,13 @@ class PathController extends Notifier<PathState> {
     // reasoning as `SessionController.build`'s own `restore()` deferral).
     // The screen shows a loading state until `_load` finishes.
     Future.microtask(_load);
+    _kidPicked = false;
+    // A guardian's opening subject can arrive after this, from the store or
+    // from the first profile read.
+    Future.microtask(_openOnFirstSubject);
+    ref.listen(kidDefaultsProvider.select((d) => d.firstSubject), (_, _) {
+      _openOnFirstSubject();
+    });
     // A language change is a new manifest (backend ADR 0026): re-sync, or a
     // kid stays on whichever language they first synced. Only when it
     // changes what this subject asks for — Français and English don't
@@ -184,6 +192,27 @@ class PathController extends Notifier<PathState> {
       }
     });
     return const PathState();
+  }
+
+  /// The kid went to a subject themselves: nothing moves them after that.
+  bool _kidPicked = false;
+
+  /// Opens on the subject a guardian chose, until the kid has played
+  /// (backend ADR 0220). The server stops sending it at the first mastery
+  /// row, which lags a lesson played here, so this device's own record of
+  /// play counts too.
+  Future<void> _openOnFirstSubject() async {
+    if (!ref.mounted) return;
+    final first = ref.read(kidDefaultsProvider).firstSubject;
+    final kidId = ref.read(activeKidIdProvider);
+    if (first == null || kidId == null) return;
+    if (_kidPicked || first == state.subject) return;
+    if (!ref.read(programmeSubjectsProvider).contains(first)) return;
+    final local = StreakLocal(ref.read(localDatabaseProvider), kidId: kidId);
+    final played = await local.playedDays();
+    if (played.isNotEmpty || !ref.mounted || _kidPicked) return;
+    if (ref.read(activeKidIdProvider) != kidId) return;
+    _show(first);
   }
 
   static Locale _localeOf(bool english) =>
@@ -455,7 +484,7 @@ class PathController extends Notifier<PathState> {
           if (ref.read(sessionControllerProvider).kid?.id != kidId) return;
           final subjects = programme.subjects;
           if (!subjects.contains(state.subject)) {
-            selectSubject(
+            _show(
               subjects.contains(defaultPathSubject)
                   ? defaultPathSubject
                   : subjects.first,
@@ -499,6 +528,11 @@ class PathController extends Notifier<PathState> {
 
   /// Switches the Carte to another subject and loads it.
   Future<void> selectSubject(String subject) {
+    _kidPicked = true;
+    return _show(subject);
+  }
+
+  Future<void> _show(String subject) {
     // Tapping the subject already shown re-syncs it if it's stale, rather
     // than doing nothing: it's the obvious "show me the latest" gesture.
     if (subject == state.subject) {

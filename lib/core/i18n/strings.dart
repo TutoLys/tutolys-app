@@ -493,6 +493,10 @@ abstract class Strings {
   // --- quêtes: the full board (app ADR 0015, revised) ------------------------
   String questExercisesTitle(int target);
   String questMinutesTitle(int target);
+
+  /// After a finished lesson, past the session length a guardian set. One
+  /// soft line, never blocking (Hafid's D2, 2026-11-03).
+  String get pauseSuggestion;
   String questRewardXp(int xp);
 
   /// "N quêtes t'attendent" — the fox's line while quests are open.
@@ -1714,6 +1718,9 @@ class _FrenchStrings extends Strings {
 
   @override
   String questMinutesTitle(int target) => 'Joue $target minutes';
+
+  @override
+  String get pauseSuggestion => 'Une pause ? Tu as bien travaillé.';
 
   @override
   String questRewardXp(int xp) => '+$xp XP';
@@ -3157,6 +3164,9 @@ class _EnglishStrings extends Strings {
 
   @override
   String questMinutesTitle(int target) => 'Play for $target minutes';
+
+  @override
+  String get pauseSuggestion => 'Time for a break? You worked well.';
 
   @override
   String questRewardXp(int xp) => '+$xp XP';

@@ -10,12 +10,14 @@ import 'package:tutolys_app/core/i18n/strings.dart';
 import 'package:tutolys_app/data/api/profile_api.dart';
 import 'package:tutolys_app/data/api/progress_api.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
+import 'package:tutolys_app/data/local_db/kid_defaults.dart';
 import 'package:tutolys_app/data/local_db/session_store.dart';
 import 'package:tutolys_app/features/pairing/pairing_controller.dart';
 import 'package:tutolys_app/features/profile/avatar_picker.dart';
 import 'package:tutolys_app/features/profile/avatars.dart';
 import 'package:tutolys_app/features/progress/progress_controller.dart';
 import 'package:tutolys_app/features/quests/quest_board.dart';
+import 'package:tutolys_app/features/settings/settings_controller.dart';
 
 class _FixedSession extends SessionController {
   @override
@@ -45,15 +47,16 @@ class _FakeProgressApi extends ProgressApi {
 }
 
 class _FakeProfileApi extends ProfileApi {
-  _FakeProfileApi({this.remote, this.sex = KidSex.unspecified})
+  _FakeProfileApi({this.remote, this.sex = KidSex.unspecified, this.defaults})
     : super(dio: Dio());
   final String? remote;
   KidSex sex;
+  KidDefaults? defaults;
   final saved = <String>[];
 
   @override
   Future<RemoteProfile?> fetchProfile({required String accessToken}) async =>
-      RemoteProfile(avatarKey: remote ?? '', sex: sex);
+      RemoteProfile(avatarKey: remote ?? '', sex: sex, defaults: defaults);
 
   /// The backend's copy, merged like ADR 0064: a union, first drop wins.
   final serverUnlocked = <String>{};
@@ -424,6 +427,40 @@ void main() {
   });
 
   group('AvatarController', () {
+    test(
+      'the profile read brings the guardian\'s defaults (ADR 0125)',
+      () async {
+        final db = LocalDatabase.memory();
+        addTearDown(db.close);
+        final api = _FakeProfileApi(
+          defaults: const KidDefaults(sessionMinutes: 5, music: false),
+        );
+        final c = _container(db: db, profileApi: api);
+        addTearDown(c.dispose);
+        c.listen(settingsControllerProvider, (_, _) {});
+
+        await _settle(c);
+        await pumpEventQueue();
+        expect(c.read(kidDefaultsProvider).sessionMinutes, 5);
+        expect(c.read(settingsControllerProvider).music, isFalse);
+
+        // Offline says nothing: what's held stays.
+        api.defaults = null;
+        c.invalidate(avatarControllerProvider);
+        await _settle(c);
+        await pumpEventQueue();
+        expect(c.read(kidDefaultsProvider).sessionMinutes, 5);
+
+        // The guardian cleared the answers.
+        api.defaults = KidDefaults.none;
+        c.invalidate(avatarControllerProvider);
+        await _settle(c);
+        await pumpEventQueue();
+        expect(c.read(kidDefaultsProvider).sessionMinutes, isNull);
+        expect(c.read(settingsControllerProvider).music, isTrue);
+      },
+    );
+
     test(
       'starts on the default, adopting the backend\'s key if it has one',
       () async {

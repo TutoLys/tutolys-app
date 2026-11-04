@@ -32,9 +32,9 @@ void main() {
     });
 
     test('an unwritten store reads defaults rather than failing', () async {
-      expect(
-        () => AppSettingsStore(db, kidId: 'never-written').read(),
-        returnsNormally,
+      await expectLater(
+        AppSettingsStore(db, kidId: 'never-written').read(),
+        completes,
       );
     });
   });

@@ -9,6 +9,7 @@ import '../pairing/pairing_controller.dart';
 import '../path/programme.dart';
 import '../progress/progress_controller.dart';
 import '../progress/weekly_league.dart';
+import '../settings/settings_controller.dart';
 import '../notifications/local_notifications.dart';
 import '../notifications/notifications_controller.dart';
 import 'quests_model.dart';
@@ -88,13 +89,19 @@ List<DailyQuestItem> buildDailyQuests({
   required int lessonsToday,
   required int msToday,
   List<QuestDefinitionDto>? served,
+  // A guardian's session length (backend ADR 0220). It wins over the served
+  // target, but the backend pays on its own target, so a chip shows only
+  // where the two agree (ADR 0125): no promise nobody keeps.
+  int? sessionMinutes,
 }) {
   final byKind = {for (final d in served ?? const []) d.kind: d};
   QuestDefinitionDto? def(QuestKind k) => byKind[_servedKind[k]];
   final minutes = msToday ~/ 60000;
   final lessonsTarget =
       def(QuestKind.exercises)?.target ?? exercisesQuestTarget;
-  final minutesTarget = def(QuestKind.minutes)?.target ?? minutesQuestTarget;
+  final servedMinutes = def(QuestKind.minutes);
+  final minutesTarget =
+      sessionMinutes ?? servedMinutes?.target ?? minutesQuestTarget;
   return [
     if (challenge != null)
       DailyQuestItem(
@@ -116,7 +123,9 @@ List<DailyQuestItem> buildDailyQuests({
       target: minutesTarget,
       progress: minutes.clamp(0, minutesTarget),
       done: minutes >= minutesTarget,
-      xpReward: def(QuestKind.minutes)?.xp,
+      xpReward: minutesTarget == servedMinutes?.target
+          ? servedMinutes?.xp
+          : null,
     ),
   ];
 }
@@ -274,6 +283,9 @@ final questBoardProvider = FutureProvider<QuestBoard>((ref) async {
     lessonsToday: stats.lessonsCompleted,
     msToday: stats.msPlayed,
     served: progress.questDefinitions,
+    sessionMinutes: ref.watch(
+      kidDefaultsProvider.select((d) => d.sessionMinutes),
+    ),
   );
   final doneBefore = (await log.completedByDay())[day] ?? const <String>{};
   final unlockedBefore = (await log.unlocked()).keys.toSet();

@@ -1,6 +1,10 @@
 import 'package:drift/drift.dart';
 
 import 'database.dart';
+import 'kid_defaults.dart';
+
+/// The settings a guardian's answers can start off (backend ADR 0220).
+enum DefaultableSetting { music, soundEffects, reduceMotion }
 
 /// Everything Réglages owns, as one immutable value.
 ///
@@ -21,6 +25,7 @@ class AppSettings {
     this.reminderMinutes = 17 * 60,
     this.remindersOnSince,
     this.flameReminders = false,
+    this.chosen = const {},
   });
 
   final bool darkTheme;
@@ -57,6 +62,10 @@ class AppSettings {
   /// (ADR 0053). Like [dailyReminders], turned on behind the guardian PIN.
   final bool flameReminders;
 
+  /// What the family set on this device. Anything else still follows the
+  /// guardian's defaults ([applyKidDefaults]).
+  final Set<DefaultableSetting> chosen;
+
   AppSettings copyWith({
     bool? darkTheme,
     int? volume,
@@ -69,6 +78,7 @@ class AppSettings {
     int? reminderMinutes,
     DateTime? remindersOnSince,
     bool? flameReminders,
+    Set<DefaultableSetting>? chosen,
   }) {
     return AppSettings(
       darkTheme: darkTheme ?? this.darkTheme,
@@ -82,8 +92,52 @@ class AppSettings {
       reminderMinutes: reminderMinutes ?? this.reminderMinutes,
       remindersOnSince: remindersOnSince ?? this.remindersOnSince,
       flameReminders: flameReminders ?? this.flameReminders,
+      chosen: chosen ?? this.chosen,
     );
   }
+}
+
+/// What the family set on the device, else [defaults], else the app's own
+/// default. Pure, and safe to run again on its own result: a setting nobody
+/// chose is recomputed each time, so a default the guardian removes lets go.
+AppSettings applyKidDefaults(AppSettings settings, KidDefaults defaults) {
+  const app = AppSettings();
+  bool pick(
+    DefaultableSetting key,
+    bool device,
+    bool? guardian,
+    bool fallback,
+  ) => settings.chosen.contains(key) ? device : guardian ?? fallback;
+  final music = pick(
+    DefaultableSetting.music,
+    settings.music,
+    defaults.music,
+    app.music,
+  );
+  final soundEffects = pick(
+    DefaultableSetting.soundEffects,
+    settings.soundEffects,
+    defaults.soundEffects,
+    app.soundEffects,
+  );
+  final reduceMotion = pick(
+    DefaultableSetting.reduceMotion,
+    settings.reduceMotion,
+    defaults.reduceMotion,
+    app.reduceMotion,
+  );
+  // The same value back when nothing moved: most kids have no defaults, and
+  // a new instance would notify everything watching the settings.
+  if (music == settings.music &&
+      soundEffects == settings.soundEffects &&
+      reduceMotion == settings.reduceMotion) {
+    return settings;
+  }
+  return settings.copyWith(
+    music: music,
+    soundEffects: soundEffects,
+    reduceMotion: reduceMotion,
+  );
 }
 
 /// Reads and writes [AppSettings] against the kid-scoped `app_state` table.
@@ -121,6 +175,35 @@ class AppSettingsStore {
   // Replaces `quest_notifications` ("Nouvelles quêtes"), which defaulted to
   // on and did nothing; Hafid made it "Ma flamme" (2026-10-28).
   static const _flameReminders = '${_prefix}flame_reminders';
+  // Present once a stored key can be trusted to be a choice. Before it,
+  // changing the volume saved every setting, so a stored "music on" proved
+  // nothing (ADR 0125).
+  static const _choicesOnly = '${_prefix}choices_only';
+
+  static const _defaultableKeys = {
+    _music: DefaultableSetting.music,
+    _sfx: DefaultableSetting.soundEffects,
+    _reduceMotion: DefaultableSetting.reduceMotion,
+  };
+
+  /// Drops the stored values that only repeat the app's default, the ones
+  /// the old whole-value write left behind. A value that differs from the
+  /// default can only be someone's choice, so it stays.
+  Future<void> _keepOnlyChoices(Map<String, String> byKey) async {
+    const app = AppSettings();
+    final repeated = {
+      _music: '${app.music}',
+      _sfx: '${app.soundEffects}',
+      _reduceMotion: '${app.reduceMotion}',
+    }..removeWhere((key, value) => byKey[key] != value);
+    await db.transaction(() async {
+      await (db.delete(
+        db.appStateTable,
+      )..where((t) => t.kidId.equals(kidId) & t.key.isIn(repeated.keys))).go();
+      await _put({_choicesOnly: 'true'}, DateTime.now());
+    });
+    byKey.removeWhere((key, _) => repeated.containsKey(key));
+  }
 
   Future<AppSettings> read() async {
     final rows = await (db.select(db.appStateTable)
@@ -128,6 +211,7 @@ class AppSettingsStore {
           ..where((t) => t.key.like('$_prefix%')))
         .get();
     final byKey = {for (final row in rows) row.key: row.value};
+    if (!byKey.containsKey(_choicesOnly)) await _keepOnlyChoices(byKey);
 
     bool flag(String key, bool fallback) =>
         byKey.containsKey(key) ? byKey[key] == 'true' : fallback;
@@ -147,17 +231,35 @@ class AppSettingsStore {
           defaults.reminderMinutes,
       remindersOnSince: DateTime.tryParse(byKey[_remindersOnSince] ?? ''),
       flameReminders: flag(_flameReminders, defaults.flameReminders),
+      chosen: {
+        for (final MapEntry(:key, :value) in _defaultableKeys.entries)
+          if (byKey.containsKey(key)) value,
+      },
     );
   }
 
-  /// Writes the whole value in one batch.
+  /// Writes the whole value in one batch, every field as a choice.
+  Future<void> write(AppSettings settings, {DateTime? now}) =>
+      _put(_values(settings), now ?? DateTime.now());
+
+  /// Writes only what differs between [before] and [after], in one batch.
   ///
-  /// Whole-value rather than per-key: a kid dragging the volume slider emits
-  /// a change per frame, and nine tiny transactions per drag is how a cheap
-  /// tablet starts to stutter.
-  Future<void> write(AppSettings settings, {DateTime? now}) async {
-    final stamp = now ?? DateTime.now();
-    final values = <String, String>{
+  /// A key is stored only once it's a choice: saving the volume must not
+  /// freeze a music setting that still follows the guardian's defaults.
+  Future<void> writeChanges(
+    AppSettings before,
+    AppSettings after, {
+    DateTime? now,
+  }) {
+    final old = _values(before);
+    return _put(
+      _values(after)..removeWhere((key, value) => old[key] == value),
+      now ?? DateTime.now(),
+    );
+  }
+
+  Map<String, String> _values(AppSettings settings) {
+    return <String, String>{
       _theme: '${settings.darkTheme}',
       _volume: '${settings.volume}',
       _music: '${settings.music}',
@@ -171,9 +273,11 @@ class AppSettingsStore {
         _remindersOnSince: since.toIso8601String().substring(0, 10),
       _flameReminders: '${settings.flameReminders}',
     };
+  }
 
+  Future<void> _put(Map<String, String> values, DateTime stamp) async {
     await db.batch((batch) {
-      for (final entry in values.entries) {
+      for (final entry in {...values, _choicesOnly: 'true'}.entries) {
         batch.insert(
           db.appStateTable,
           AppStateTableCompanion.insert(

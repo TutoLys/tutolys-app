@@ -4,8 +4,10 @@ import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/api/profile_api.dart';
+import '../../data/local_db/kid_defaults.dart';
 import '../../data/local_db/database.dart';
 import '../pairing/pairing_controller.dart';
+import '../settings/settings_controller.dart';
 import '../progress/local_progress.dart';
 import '../progress/progress_controller.dart';
 import '../quests/quest_board.dart';
@@ -743,6 +745,7 @@ class AvatarController extends AsyncNotifier<AvatarState> {
     // Read on every build, not only the first: an adult can set the sex
     // in the portal long after pairing. Offline keeps the cached value.
     final remote = await _remote();
+    await _adoptDefaults(remote?.defaults);
     var sex = await store.sex();
     if (remote?.sex case final reported? when reported != sex) {
       sex = reported;
@@ -791,6 +794,16 @@ class AvatarController extends AsyncNotifier<AvatarState> {
     if (remote == null) return local;
     await store.mergeDrops(remote.drops);
     return store.recordUnlocked(remote.unlocked);
+  }
+
+  /// Holds what the same read says a guardian set (backend ADR 0220). Not
+  /// if the kid changed during the fetch: the store bound here is the old
+  /// kid's, and the answer may be the new one's.
+  Future<void> _adoptDefaults(KidDefaults? served) async {
+    if (served == null || !ref.mounted) return;
+    if (await ref.read(kidDefaultsStoreProvider).adopt(served) && ref.mounted) {
+      ref.invalidate(storedKidDefaultsProvider);
+    }
   }
 
   Future<RemoteProfile?> _remote() async {

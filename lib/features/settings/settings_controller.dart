@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/diagnostics/boot_log.dart';
 import '../../data/local_db/app_settings.dart';
+import '../../data/local_db/kid_defaults.dart';
 import '../pairing/pairing_controller.dart';
 
 final appSettingsStoreProvider = Provider<AppSettingsStore>((ref) {
@@ -10,6 +11,25 @@ final appSettingsStoreProvider = Provider<AppSettingsStore>((ref) {
     kidId: ref.watch(activeKidIdProvider) ?? unpairedKidId,
   );
 });
+
+final kidDefaultsStoreProvider = Provider<KidDefaultsStore>((ref) {
+  return KidDefaultsStore(
+    ref.watch(localDatabaseProvider),
+    kidId: ref.watch(activeKidIdProvider) ?? unpairedKidId,
+  );
+});
+
+/// The active kid's held defaults, re-read when a profile fetch changes them
+/// (`AvatarController`).
+final storedKidDefaultsProvider = FutureProvider<KidDefaults>(
+  (ref) => ref.watch(kidDefaultsStoreProvider).read(),
+  retry: (_, _) => null,
+);
+
+/// The active kid's defaults; none until read, or if the read fails.
+final kidDefaultsProvider = Provider<KidDefaults>(
+  (ref) => ref.watch(storedKidDefaultsProvider).value ?? KidDefaults.none,
+);
 
 /// The active kid's settings as stored, read once per kid.
 ///
@@ -59,12 +79,31 @@ class SettingsController extends Notifier<AppSettings> {
     // Rebuilds only when the stored value is (re)read — on boot and when
     // the kid changes — never after a write, so a change made here is never
     // reverted by a stale read. Defaults stand in while the splash is up.
-    return ref.watch(storedSettingsProvider).value ?? const AppSettings();
+    //
+    // A guardian's defaults arrive later and change only what the family
+    // never set, so they land on the live value, not on a re-read.
+    ref.listen(kidDefaultsProvider, (_, next) {
+      state = applyKidDefaults(state, next);
+    });
+    return applyKidDefaults(
+      ref.watch(storedSettingsProvider).value ?? const AppSettings(),
+      ref.read(kidDefaultsProvider),
+    );
   }
 
   Future<void> _apply(AppSettings next) async {
-    state = next;
-    await ref.read(appSettingsStoreProvider).write(next);
+    final before = state;
+    state = next.copyWith(
+      chosen: {
+        ...before.chosen,
+        if (next.music != before.music) DefaultableSetting.music,
+        if (next.soundEffects != before.soundEffects)
+          DefaultableSetting.soundEffects,
+        if (next.reduceMotion != before.reduceMotion)
+          DefaultableSetting.reduceMotion,
+      },
+    );
+    await ref.read(appSettingsStoreProvider).writeChanges(before, next);
   }
 
   Future<void> setDarkTheme(bool value) =>
