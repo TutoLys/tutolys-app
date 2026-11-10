@@ -9,7 +9,7 @@
 // The listener is installed when this module is imported, before the scene
 // is built, so an `init` sent early is buffered rather than lost.
 export const BRIDGE_VERSION = 1;
-export const SCENE_VERSION = 'village3d-2026.11.10.13';
+export const SCENE_VERSION = 'village3d-2026.11.10.14';
 
 const params = new URLSearchParams(location.search);
 export const embedded = params.get('embed') === '1';

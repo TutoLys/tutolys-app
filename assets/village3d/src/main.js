@@ -566,11 +566,13 @@ function frame() {
   // not the clamped dt). A pause restarts the window, so a scene the host
   // pauses at once never reports a false low reading (found live by the app,
   // 2026-11-10).
+  // It skips the first second (shader warm-up), and starts over whenever the
+  // quality steps down, so it measures the village the child will get.
   if (!perfSent) {
     const tNow = performance.now();
-    if (perfSeg.last != null) { perfSeg.t += (tNow - perfSeg.last) / 1000; perfSeg.n++; }
+    if (perfSeg.last != null) { const d = (tNow - perfSeg.last) / 1000; if ((perfSeg.warm = (perfSeg.warm || 0) + d) > 1) { perfSeg.t += d; perfSeg.n++; } }
     perfSeg.last = tNow;
-    if (perfSeg.t >= 4) { perfSent = true; bridge.send('perf', { ...statsNow(), fps: Math.round((perfSeg.n / perfSeg.t) * 10) / 10, window: Math.round(perfSeg.t * 10) / 10 }); }
+    if (perfSeg.t >= 4) { stage.perf.fast = false; perfSent = true; bridge.send('perf', { ...statsNow(), fps: Math.round((perfSeg.n / perfSeg.t) * 10) / 10, window: Math.round(perfSeg.t * 10) / 10 }); }
   }
   if (!debugEl.hidden) {
     const i = renderer.info.render;
@@ -598,6 +600,13 @@ weather.set(state.weather, state.season);
 if (init) applyHost(init);
 autoWeather();
 weather.state.mix = { ...weather.state.mix, ...(await import('./weather.js')).WEATHER[state.weather] };
+// Compile every shader before the first frame, so the child's first seconds
+// (and `perf`) don't stall on compilation. Optional: older drivers just skip it.
+try { await renderer.compileAsync?.(scene, camera); } catch { /* compiled on first draw instead */ }
+// Until `perf` is posted, step quality down quickly (pixel ratio, shadows):
+// a device that can run a lighter village keeps 3D.
+stage.perf.fast = true;
+{ const prev = stage.perf.onLevel; stage.perf.onLevel = (l) => { prev?.(l); if (!perfSent) perfSeg = { t: 0, n: 0, last: null }; }; }
 rafId = requestAnimationFrame(() => {
   // The first frame is drawn even if the host paused us already, so
   // `ready` always follows a real frame.
@@ -669,7 +678,7 @@ window.village = {
   stats: () => ({ fps: fpsShown, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, quality: stage.perf.level, pixelRatio: renderer.getPixelRatio(), frames: framesDrawn, running }),
   buildingScreen: (id) => { const b = byId.get(id); if (!b) return null; const v = new THREE.Vector3(); b.hit.getWorldPosition(v); v.project(camera); const r = renderer.domElement.getBoundingClientRect(); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; },
   state, labels: { PHASE_FR, SEASON_FR, WEATHER_FR },
-  _debug: { scene, camera, renderer, controls },
+  _debug: { scene, camera, renderer, controls, stage },
   models: models.report,
   buildings: buildings.map((b) => b.id),
 };

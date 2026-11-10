@@ -1,8 +1,8 @@
 {
- "version": "village3d-2026.11.10.13",
+ "version": "village3d-2026.11.10.14",
  "bridge": 1,
  "entry": "village.html?embed=1",
- "totalBytes": 6397434,
+ "totalBytes": 6399792,
  "files": {
   "assets/fonts/Baloo2-Bold.ttf": {
    "bytes": 44808,
@@ -170,11 +170,11 @@
   },
   "src/bridge.js": {
    "bytes": 3171,
-   "sha256": "c284efe32482802aeab6e6326c4dab26ad56629a8b222d943a5ab2aecea8ae25"
+   "sha256": "e581347126118219295001512e2c3ea593e8e11999f0ba2b9c5fb2dd8356b20d"
   },
   "src/buildings.js": {
-   "bytes": 80078,
-   "sha256": "0ec6b5f0d4c188459c4641792c71d050da8a7f46c9aa61efca29580a56576e9f"
+   "bytes": 81528,
+   "sha256": "e3c76840d38bb645cbfd918372b828d44dc688b9c51df1c6408eaf61d4841868"
   },
   "src/data.js": {
    "bytes": 3765,
@@ -193,8 +193,8 @@
    "sha256": "07ea292c094ac0ddb1b8bfc2a1866cc87db34ecadcbb24933ca019e3b928ab9a"
   },
   "src/main.js": {
-   "bytes": 34680,
-   "sha256": "0ac394732db0a0a86b85c8c3dfaf172377b03ed746620565771c3daf4c752081"
+   "bytes": 35477,
+   "sha256": "c0103c62935bec5ccda0ad3f6164db44576ca3c8f9aeee4be568d0583d66c3ed"
   },
   "src/models.js": {
    "bytes": 2967,
@@ -213,8 +213,8 @@
    "sha256": "b140039fef39eaa0ea7c2bae0e91d6d0c5a87091fa2cb23cffc73e7c492d6cbe"
   },
   "src/scene.js": {
-   "bytes": 8966,
-   "sha256": "83937942f9c9f42edcec07539dd32653d3cc84b64df9bec2d78b141a7567f99c"
+   "bytes": 9077,
+   "sha256": "554dbdad5c62ab73d67d89e200ddcbc4b9347f2412035e694c1345e2d7fa9154"
   },
   "src/shapes.js": {
    "bytes": 21886,

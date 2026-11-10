@@ -169,11 +169,9 @@ export function createStage(container) {
   function applyLevel() {
     const dpr = window.devicePixelRatio || 1;
     renderer.setPixelRatio(perf.level === 2 ? Math.min(dpr, 2) : perf.level === 1 ? Math.min(dpr, 1.5) : Math.min(dpr, 1));
-    const type = perf.level === 0 ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
-    if (renderer.shadowMap.type !== type) {
-      renderer.shadowMap.type = type;
-      scene.traverse((o) => { if (o.material) [].concat(o.material).forEach((m) => { m.needsUpdate = true; }); }); // recompile, or the change does nothing
-    }
+    // One shadow filter at every level: switching it recompiles every shader,
+    // a multi-second stall on a weak device, right when quality steps down.
+    // Levels differ by pixel ratio and shadow-map size (and update rate) only.
     perf.onLevel?.(perf.level);
     resize();
   }
@@ -181,11 +179,14 @@ export function createStage(container) {
   function trackPerf(dt) {
     perf.samples.push(dt);
     if (perf.samples.length > 40) perf.samples.shift();
-    const avg = perf.samples.reduce((a, b) => a + b, 0) / perf.samples.length;
+    const win = perf.fast ? perf.samples.slice(-20) : perf.samples;
+    const avg = win.reduce((a, b) => a + b, 0) / win.length;
     perf.fps = 1 / Math.max(avg, 1e-4);
-    if (perf.samples.length === 40 && perf.fps < 45 && perf.level > 0) {
+    // `fast` (start-up, until `perf` is posted): judge on 20 frames and 0.4 s.
+    const need = perf.fast ? 20 : 40, hold = perf.fast ? 0.4 : 1.5;
+    if (perf.samples.length >= need && perf.fps < 45 && perf.level > 0) {
       perf.low += dt;
-      if (perf.low > 1.5) { perf.level -= 1; perf.low = 0; perf.samples.length = 0; applyLevel(); }
+      if (perf.low > hold) { perf.level -= 1; perf.low = 0; perf.samples.length = 0; applyLevel(); }
     } else perf.low = 0;
   }
 

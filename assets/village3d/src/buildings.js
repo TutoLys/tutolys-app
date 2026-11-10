@@ -500,7 +500,6 @@ const KEEP_OWN = new Set(['grass', 'bloom', 'window', 'snow', 'bush']);
 const _plain = new Map();
 function plainFinish(m) {
   if (!m.isMeshStandardMaterial || m.map || m.transparent || m.vertexColors || KEEP_OWN.has(m.name)) return null;
-  if (m.isMeshPhysicalMaterial) return null; // a delivered model's clearcoat or transmission stays its own
   if (m.emissive && m.emissive.getHex() !== 0) return null;
   if (m.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile) return null;
   const key = `plain|${m.metalness.toFixed(2)}|${m.roughness.toFixed(2)}|${m.side}`;
@@ -1130,11 +1129,33 @@ function softenBush(geo) {
   return shadeVertices(g, { low: 1, high: 1, under: 0.3 });
 }
 
+// Delivered models use glTF's physical materials (clearcoat, and on Science's
+// flask, transmission). three.js renders the whole scene a second time each
+// frame for any transmissive surface: that one flask cost ~14 ms of a 25 ms
+// frame (2026-11-10, the app's 3D→2D fallback on .13). Every physical
+// material becomes a standard one with the same colour, maps and finish;
+// transmissive glass becomes plain transparent glass. Shapes don't change.
+const _std = new Map();
+function standardOf(m) {
+  if (!m?.isMeshPhysicalMaterial) return m;
+  if (_std.has(m.uuid)) return _std.get(m.uuid);
+  const n = new THREE.MeshStandardMaterial({
+    name: m.name, color: m.color, map: m.map, roughness: m.clearcoat > 0 ? Math.min(m.roughness, 0.5) * 0.85 + 0.05 : m.roughness,
+    metalness: m.metalness, roughnessMap: m.roughnessMap, metalnessMap: m.metalnessMap, normalMap: m.normalMap,
+    emissive: m.emissive, emissiveMap: m.emissiveMap, emissiveIntensity: m.emissiveIntensity, aoMap: m.aoMap,
+    side: m.side, vertexColors: m.vertexColors, transparent: m.transparent, opacity: m.opacity, alphaTest: m.alphaTest,
+  });
+  if (m.transmission > 0) { n.transparent = true; n.opacity = Math.min(n.opacity, 1 - 0.55 * m.transmission); n.depthWrite = false; n.roughness = Math.min(n.roughness, 0.15); n.envMapIntensity = 1.4; }
+  _std.set(m.uuid, n);
+  return n;
+}
+
 export function adoptModel(model, spot) {
   const art = model;
   art.traverse((o) => {
     if (!o.isMesh) return;
     o.castShadow = true; o.receiveShadow = true;
+    o.material = Array.isArray(o.material) ? o.material.map(standardOf) : standardOf(o.material);
     const name = o.material?.name;
     if (name && M[name] && name !== 'bloom') o.material = M[name];
     else if (name === 'bush') { o.material = bushMat; o.geometry = softenBush(o.geometry); }
@@ -1176,6 +1197,7 @@ export function adoptProp(model) {
     if (/^spin/.test(o.name)) spinners.push(o);
     if (!o.isMesh) return;
     o.castShadow = true; o.receiveShadow = true;
+    o.material = Array.isArray(o.material) ? o.material.map(standardOf) : standardOf(o.material);
     const name = o.material?.name;
     if (name && M[name] && name !== 'bloom') o.material = M[name];
   });
