@@ -1,0 +1,179 @@
+{
+ "file": "bldg-math.glb",
+ "bytes": 503688,
+ "triangles": 10564,
+ "meshes": 72,
+ "nodes": 103,
+ "materials": [
+  "bloom",
+  "bush",
+  "door",
+  "globe_blue",
+  "gold",
+  "goldBright",
+  "grass",
+  "iron",
+  "paint_blue",
+  "paint_green",
+  "paint_lens",
+  "paint_navy",
+  "paint_red",
+  "paint_white",
+  "paint_yellow",
+  "paper",
+  "slate",
+  "snow",
+  "stone",
+  "stoneDark",
+  "stoneShade",
+  "window",
+  "wood"
+ ],
+ "duplicate_node_names": [],
+ "units": "metres, Y up, door faces +Z",
+ "angles": "radians",
+ "joints": [
+  {
+   "name": "dividers_open",
+   "node": "dividers_open",
+   "type": "revolute",
+   "axis_local": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "pivot": [
+    2.75,
+    1.75,
+    0.7
+   ],
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "value": 0.0,
+   "lower": -0.3491,
+   "upper": 0.2094,
+   "drive_node": "drive_dividers_open"
+  },
+  {
+   "name": "armillary_spin",
+   "node": "armillary_spin",
+   "type": "continuous",
+   "axis_local": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "pivot": [
+    0.0,
+    5.87,
+    0.0
+   ],
+   "axis": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "value": 0.0,
+   "spin_node": "spin_armillary",
+   "spin_speed": 0.35
+  },
+  {
+   "name": "door_hinge_L",
+   "node": "door_hinge_L",
+   "type": "revolute",
+   "axis_local": [
+    0.0,
+    -1.0,
+    0.0
+   ],
+   "pivot": [
+    -0.5,
+    0.45,
+    1.535
+   ],
+   "axis": [
+    0.0,
+    -1.0,
+    0.0
+   ],
+   "value": 0.0,
+   "lower": 0.0,
+   "upper": 1.8326,
+   "drive_node": "drive_door_hinge_L"
+  },
+  {
+   "name": "door_hinge_R",
+   "node": "door_hinge_R",
+   "type": "revolute",
+   "axis_local": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "pivot": [
+    0.5,
+    0.45,
+    1.535
+   ],
+   "axis": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "value": 0.0,
+   "lower": 0.0,
+   "upper": 1.8326,
+   "drive_node": "drive_door_hinge_R"
+  },
+  {
+   "name": "gem_spin",
+   "node": "gem_spin",
+   "type": "continuous",
+   "axis_local": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "pivot": [
+    1.25,
+    0.2,
+    2.6
+   ],
+   "axis": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "value": 0.0,
+   "spin_node": "spin_gem",
+   "spin_speed": 0.3
+  },
+  {
+   "name": "scope_pitch",
+   "node": "scope_pitch",
+   "type": "revolute",
+   "axis_local": [
+    0.9063078165054321,
+    0.0,
+    -0.4226182997226715
+   ],
+   "pivot": [
+    2.05,
+    3.67,
+    -0.3
+   ],
+   "axis": [
+    1.0,
+    0.0,
+    0.0
+   ],
+   "value": 0.0,
+   "lower": -0.4363,
+   "upper": 0.4363,
+   "drive_node": "drive_scope_pitch"
+  }
+ ]
+}

@@ -1,8 +1,8 @@
 {
- "version": "village3d-2026.11.10.8",
+ "version": "village3d-2026.11.10.11",
  "bridge": 1,
  "entry": "village.html?embed=1",
- "totalBytes": 7818632,
+ "totalBytes": 7486239,
  "files": {
   "assets/fonts/Baloo2-Bold.ttf": {
    "bytes": 44808,
@@ -81,12 +81,20 @@
    "sha256": "5b149da8130d4c1a76ab811a1ce587a34fefffb2d87e49112e78a6a79fea0a00"
   },
   "assets/models/bldg-math.glb": {
-   "bytes": 672368,
-   "sha256": "23b163cdc8ef99db8feac2bb428897a91c305dc850fa40a33862d530793a7618"
+   "bytes": 503688,
+   "sha256": "de95f09ed79611bae1834c1453dee960a4c399ad5ae649a9484ea37e7a31bfd5"
+  },
+  "assets/models/bldg-math.joints.json": {
+   "bytes": 2461,
+   "sha256": "fb5afc70e63d3bb38bf53177906366a0c7a3c0abf730a2c96d23e74024877eaf"
   },
   "assets/models/bldg-science.glb": {
-   "bytes": 842712,
-   "sha256": "39765606bb0370f97389e932e064f1aea6f9580c0d1d0c3dc02bd51a0a88b3b7"
+   "bytes": 669760,
+   "sha256": "4a8d7a7b192614a6015ea9c78b22a333964c04a545cad449c43ba0b701d679cd"
+  },
+  "assets/models/bldg-science.joints.json": {
+   "bytes": 4053,
+   "sha256": "07938f35a650d655158705ed12345211fd5d9e1f45ad72b5ee117f35feea99f2"
   },
   "assets/models/bldg-univers-social.glb": {
    "bytes": 762488,
@@ -101,12 +109,12 @@
    "sha256": "c397c07acef91cdb3142207965f01aa5f12a2c6c9ac3f42816f6c2c064f311d3"
   },
   "src/bridge.js": {
-   "bytes": 3170,
-   "sha256": "d0a1e4bc5b0c0981839fa597c82d6dece2a565155fbc54ca526c70d99c6e0aad"
+   "bytes": 3171,
+   "sha256": "975da33a67f1f6fbe6a60b01aec784c3a12c8da4bc0f2f11857160ee68abac40"
   },
   "src/buildings.js": {
-   "bytes": 75978,
-   "sha256": "3789dda01a532f6563a2e5f14669a2277b8ec143dc2bb6077895a67ff97490b3"
+   "bytes": 77732,
+   "sha256": "f011e72f6c2c96d1a3021bb1028b21885408fb4a96ed65c1f01abc34f9876551"
   },
   "src/data.js": {
    "bytes": 3268,
@@ -129,8 +137,8 @@
    "sha256": "0e6ae083550161218bcb555543020d8210a0019a4ae72cc440741f084d5d24fe"
   },
   "src/models.js": {
-   "bytes": 1642,
-   "sha256": "533f8c7f22320b59fe1a74e18ef5cdb7a541907dd26e53e6d27872c17e91d4c7"
+   "bytes": 2470,
+   "sha256": "6d0a29883c1ac8787e080434d4a103c8bfbd1b32176fce263da8fabd890ee1f4"
   },
   "src/palette.js": {
    "bytes": 2202,
@@ -141,8 +149,8 @@
    "sha256": "b140039fef39eaa0ea7c2bae0e91d6d0c5a87091fa2cb23cffc73e7c492d6cbe"
   },
   "src/scene.js": {
-   "bytes": 8186,
-   "sha256": "3a16dde6eb7b61bb624dc75ad04c1dffe2f3ba216d8d0174604c1034e11b3c41"
+   "bytes": 8328,
+   "sha256": "80c5c12dceef91021f43fa5492215799acb97544ee9a4146f613cbbbf628de29"
   },
   "src/shapes.js": {
    "bytes": 21886,

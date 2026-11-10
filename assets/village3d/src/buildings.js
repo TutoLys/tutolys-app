@@ -1197,6 +1197,24 @@ export function createBuilding(spot, index, model = null) {
 
   const spinners = [];
   holder.traverse((o) => { if (/^spin/.test(o.name)) spinners.push(o); });
+  // Revolute joints from the model's joints.json (sand3d): each drives an
+  // identity node about its local axis within its limits. A door opens while
+  // the building is hovered, selected or tapped; a scope, dish or arm sweeps
+  // slowly. Other joints keep their rest value.
+  const joints = [];
+  // A door only opens onto a real interior: until the model carries an
+  // `interior*` node, door joints stay shut (Hafid, 2026-11-10).
+  let hasInterior = false;
+  art.traverse((o) => { if (/^interior/i.test(o.name)) hasInterior = true; });
+  for (const j of (model?.userData.joints || [])) {
+    if (j.type !== 'revolute' || !j.drive_node) continue;
+    const node = art.getObjectByName(j.drive_node);
+    if (!node) continue;
+    if (/door|gate|hatch/.test(j.name) && !hasInterior) continue;
+    const role = /door|gate|hatch/.test(j.name) ? 'door' : /scope|dish|pan|pitch|arm|crane|vane|divider|compass/.test(j.name) ? 'sweep' : null;
+    if (!role) continue;
+    joints.push({ node, role, axis: new THREE.Vector3(...j.axis_local).normalize(), lower: j.lower, upper: j.upper, rest: j.value ?? 0, angle: j.value ?? 0, phase: joints.length * 1.7 });
+  }
 
   root.position.set(spot.x, spot.y - 0.05, spot.z);
   root.scale.setScalar(spot.small ? 0.9 : 1.08);
@@ -1204,7 +1222,7 @@ export function createBuilding(spot, index, model = null) {
   ring.castShadow = halo.castShadow = beam.castShadow = false;
 
   return {
-    id: spot.id, spot, root, art: holder, model: art, ring, ringMat, haloMat, beamMat, hit, snow, spinners,
+    id: spot.id, spot, root, art: holder, model: art, ring, ringMat, haloMat, beamMat, hit, snow, spinners, joints,
     height: h * (spot.small ? 0.9 : 1.08),
     clock,
     state: { hover: 0, sel: 0, hoverT: 0, selT: 0, press: 0 },
@@ -1228,6 +1246,18 @@ export function updateBuilding(b, dt, t, motion) {
   b.haloMat.opacity = Math.max(s.hover * 0.35, s.sel * 0.6);
   b.beamMat.uniforms.uOpacity.value = s.sel;
   for (const sp of b.spinners) sp.rotation.y += dt * (sp.userData.spinSpeed ?? 0.35) * (motion ? 1 : 0); // per-spinner speed (glTF extras)
+  for (const j of b.joints) {
+    let want = j.rest;
+    if (j.role === 'door') {
+      const open = s.hoverT > 0 || s.selT > 0 || s.press > 0.05;
+      want = open ? Math.min(j.upper, 1.25) : Math.max(j.lower, 0);
+    } else if (motion) { // a slow look-around; with reduced motion it rests
+      const k01 = 0.5 + 0.5 * Math.sin(t * 0.22 + j.phase);
+      want = THREE.MathUtils.lerp(j.lower * 0.8, j.upper * 0.8, k01);
+    }
+    j.angle = motion ? THREE.MathUtils.damp(j.angle, want, j.role === 'door' ? 5 : 2, dt) : want;
+    j.node.quaternion.setFromAxisAngle(j.axis, j.angle);
+  }
   if (b.clock) {
     const now = new Date();
     let hr, mn; b.clock.traverse((o) => { if (/^hour/.test(o.name)) hr = o; if (/^minute/.test(o.name)) mn = o; });

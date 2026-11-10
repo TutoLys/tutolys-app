@@ -1,0 +1,298 @@
+{
+ "file": "bldg-science.glb",
+ "bytes": 669760,
+ "triangles": 14822,
+ "meshes": 74,
+ "nodes": 120,
+ "materials": [
+  "bloom",
+  "bush",
+  "door",
+  "glass_flask",
+  "globe_blue",
+  "gold",
+  "goldBright",
+  "grass",
+  "iron",
+  "liquid",
+  "paint_blue",
+  "paint_electron",
+  "paint_electronhalo",
+  "paint_lens",
+  "paint_navy",
+  "paint_nucleusglow",
+  "paint_panel",
+  "paint_red",
+  "paint_slit",
+  "paint_white",
+  "slate",
+  "snow",
+  "stone",
+  "stoneDark",
+  "stoneShade",
+  "window",
+  "wood",
+  "woodDark"
+ ],
+ "duplicate_node_names": [],
+ "units": "metres, Y up, door faces +Z",
+ "angles": "radians",
+ "joints": [
+  {
+   "name": "dish_pan",
+   "node": "dish_pan",
+   "type": "revolute",
+   "axis_local": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "pivot": [
+    2.05,
+    2.7,
+    -0.35
+   ],
+   "axis": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "value": 0.0,
+   "lower": -1.2217,
+   "upper": 1.2217,
+   "drive_node": "drive_dish_pan"
+  },
+  {
+   "name": "electron_0_spin",
+   "node": "electron_0_spin",
+   "type": "continuous",
+   "axis_local": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "pivot": [
+    0.0,
+    6.02,
+    0.0
+   ],
+   "axis": [
+    0.2106,
+    0.9397,
+    0.2695
+   ],
+   "value": 0.0,
+   "spin_node": "spin_electron_0",
+   "spin_speed": 1.6
+  },
+  {
+   "name": "electron_1_spin",
+   "node": "electron_1_spin",
+   "type": "continuous",
+   "axis_local": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "pivot": [
+    0.0,
+    6.02,
+    0.0
+   ],
+   "axis": [
+    0.3689,
+    0.1736,
+    -0.9131
+   ],
+   "value": 0.0,
+   "spin_node": "spin_electron_1",
+   "spin_speed": 2.05
+  },
+  {
+   "name": "electron_2_spin",
+   "node": "electron_2_spin",
+   "type": "continuous",
+   "axis_local": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "pivot": [
+    0.0,
+    6.02,
+    0.0
+   ],
+   "axis": [
+    -0.9752,
+    0.1736,
+    0.1371
+   ],
+   "value": 0.0,
+   "spin_node": "spin_electron_2",
+   "spin_speed": 2.5
+  },
+  {
+   "name": "atom_spin",
+   "node": "atom_spin",
+   "type": "continuous",
+   "axis_local": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "pivot": [
+    0.0,
+    6.02,
+    0.0
+   ],
+   "axis": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "value": 0.0,
+   "spin_node": "spin_atom",
+   "spin_speed": 0.18
+  },
+  {
+   "name": "scope_pitch",
+   "node": "scope_pitch",
+   "type": "revolute",
+   "axis_local": [
+    1.0,
+    0.0,
+    0.0
+   ],
+   "pivot": [
+    -0.1539,
+    3.55,
+    -0.197
+   ],
+   "axis": [
+    0.788,
+    0.0,
+    -0.6157
+   ],
+   "value": 0.0,
+   "lower": -0.384,
+   "upper": 0.4538,
+   "drive_node": "drive_scope_pitch"
+  },
+  {
+   "name": "dome_turn",
+   "node": "dome_turn",
+   "type": "continuous",
+   "axis_local": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "pivot": [
+    0.0,
+    3.2,
+    0.0
+   ],
+   "axis": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "value": 0.6632251157578453,
+   "spin_node": "spin_dome",
+   "spin_speed": 0.05
+  },
+  {
+   "name": "cog_spin",
+   "node": "cog_spin",
+   "type": "continuous",
+   "axis_local": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "pivot": [
+    -1.55,
+    2.12,
+    1.32
+   ],
+   "axis": [
+    0.0,
+    0.5299,
+    0.848
+   ],
+   "value": 0.0,
+   "spin_node": "spin_cog",
+   "spin_speed": 0.5
+  },
+  {
+   "name": "door_hinge",
+   "node": "door_hinge",
+   "type": "revolute",
+   "axis_local": [
+    0.0,
+    -1.0,
+    0.0
+   ],
+   "pivot": [
+    -0.46,
+    0.45,
+    1.535
+   ],
+   "axis": [
+    0.0,
+    -1.0,
+    0.0
+   ],
+   "value": 0.0,
+   "lower": 0.0,
+   "upper": 1.8326,
+   "drive_node": "drive_door_hinge"
+  },
+  {
+   "name": "orrery_spin",
+   "node": "orrery_spin",
+   "type": "continuous",
+   "axis_local": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "pivot": [
+    1.95,
+    0.82,
+    1.95
+   ],
+   "axis": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "value": 0.0,
+   "spin_node": "spin_orrery",
+   "spin_speed": 0.35
+  },
+  {
+   "name": "mill_spin",
+   "node": "mill_spin",
+   "type": "continuous",
+   "axis_local": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "pivot": [
+    -2.15,
+    4.35,
+    0.02
+   ],
+   "axis": [
+    0.0,
+    -0.0,
+    1.0
+   ],
+   "value": 0.0,
+   "spin_node": "spin_mill",
+   "spin_speed": 1.6
+  }
+ ]
+}
