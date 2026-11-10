@@ -423,6 +423,19 @@ void main() {
       expect(channel.types.last, 'resume');
     });
 
+    testWidgets('focus moving into the scene does not pause it', (
+      tester,
+    ) async {
+      await tester.pumpWidget(host());
+      channel.boot();
+      await tester.pump();
+      // A tap into the iframe blurs the page: Flutter web says inactive.
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      await tester.pump();
+      expect(channel.types, isNot(contains('pause')));
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    });
+
     testWidgets('a dialog over the Village pauses the scene', (tester) async {
       await tester.pumpWidget(host());
       channel.boot();

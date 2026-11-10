@@ -86,7 +86,15 @@ class _VillageSceneHostState extends ConsumerState<VillageSceneHost> {
     super.initState();
     _lifecycle = AppLifecycleListener(
       onStateChange: (state) {
-        _foreground = state == AppLifecycleState.resumed;
+        // Not `inactive`: on web a tap into the scene's iframe takes focus
+        // from the page, which Flutter reports as inactive. Pausing then
+        // froze the village under the child's finger.
+        _foreground = switch (state) {
+          AppLifecycleState.resumed || AppLifecycleState.inactive => true,
+          AppLifecycleState.hidden ||
+          AppLifecycleState.paused ||
+          AppLifecycleState.detached => false,
+        };
         _syncPaused();
       },
     );
