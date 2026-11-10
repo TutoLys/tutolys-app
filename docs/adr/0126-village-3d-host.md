@@ -137,3 +137,124 @@ are in `Platforms/qa/out/village3d-2026-11-10/` (git-ignored).
 - `hasLessons: false` (ESL/FLS with no lessons yet) has no scene state. Those
   buildings show as live with their progress, where the 2D village says
   « Bientôt ».
+
+## Ruling, second (Hafid, 2026-11-10): 3D everywhere
+
+"Whenever the app is ready, implement the 3d village everywhere." This
+supersedes "2D for now".
+
+- **`village3dDefaultOn` is true** (6975361). A kid who never touched the
+  toggle gets the 3D village wherever the device can run it. The toggle
+  stays, and so do the fallbacks: no WebGL, no answer in 20 s, or a frame
+  rate under 40 fps confirmed twice (below).
+- **Phones** (below 900 px) get the scene too:
+  - order: « Continuer » first (A6), then the scene, then the quests;
+  - the scene is portrait (1.45 × its width, at most two thirds of the
+    screen), as the scene's phone camera is framed;
+  - the fox's bubble carries the greeting, the pills carry the progress;
+  - a still placeholder holds the place while it loads, with no spinner
+    under reduced motion;
+  - if the scene fails, today's 2D phone layout returns.
+- **Signposts** (bundle `village3d-2026.11.10.3`) are strings. The FR and
+  ESL buildings keep their own language, like their lessons (ADR 0023).
+  CCQ's sign follows the app.
+
+## Bugs found live and fixed
+
+- **A tap into the scene paused it** (11e8e7c). On web, focus moving into
+  the iframe blurs the page, which Flutter reports as `inactive`. Only
+  `hidden`, `paused` and `detached` count as background now.
+- **Dialogs over the scene couldn't be clicked, and didn't pause it**
+  (c1e0247). The iframe took every click over its box, including the
+  parent-NIP dialog's. That dialog sits on the root navigator, out of
+  `ModalRoute.of`'s sight from the nested router. Fixed two ways:
+  - `RootCoverObserver` on the root navigator;
+  - the iframe takes pointer input only when the scene is ready and
+    nothing covers it. While the scene loads, taps reach the 2D village
+    drawn over it.
+- **One false frame rate dropped the scene** (5f94fbf). A scene that loaded
+  under a dialog reported `perf` with `fps: 0`. A low `perf` now only raises
+  doubt: after 3 s of unbroken running the host sends `getStats`, and only
+  that reply can fall back. This was reported to village-3d.
+- **Phone pills piled up** in a near-square box (4c6327a): the scene is now
+  portrait.
+
+## Linux: option (a), staged
+
+`packages/village_webview_linux` (147d747) wraps `webview_all_linux` 1.5.0.
+
+**Review of the plugin's 1.5.0 source:**
+- MIT licence. About 10.5 k lines of Dart and C++ against WebKitGTK 4.1.
+- No `system`, `popen`, `g_spawn`, `exec` or `Process` anywhere.
+- No hard-coded outside hosts and no telemetry.
+- Its own resource server binds `InternetAddress.loopbackIPv4:0`.
+- Developer tools open only on an explicit `openDevTools` call.
+- `loadFlutterAsset` normalises the path and refuses one that leaves
+  `flutter_assets`.
+- The uploader is still unverified, so the version is pinned exactly
+  (`1.5.0`, not `^`).
+
+**How the package works:**
+- The bundle is served by its own `VillageAssetServer`, because WebKit
+  won't load ES modules from `file://`. It binds 127.0.0.1 on a random port
+  and puts every path under a 128-bit token. It answers GET and HEAD only,
+  and no path or symlink can escape the bundle. Five VM tests cover this.
+- Messages go out through the `VillageHost` JavaScript channel and come in
+  through `window.villageReceive`, with the payload double-JSON-encoded.
+- Navigation is locked to the loopback origin.
+- The GTK view draws above Flutter (`drawsAboveFlutter`). While a dialog,
+  sheet or page covers the Village, the host takes it off screen and shows
+  the 2D village in its place.
+
+**Why it isn't wired in yet:** the plugin's CMake has
+`pkg_check_modules(WEBKIT REQUIRED webkit2gtk-4.1)`. Adding it to the app
+before the headers exist would break `flutter build linux`. Until then,
+Linux builds and runs with the 2D village; at 147d747 it reaches
+`session_restore ok`.
+
+**Switch steps, once Hafid has run**
+`sudo apt install libwebkit2gtk-4.1-dev libsoup-3.0-dev`:
+1. In the app's `pubspec.yaml`, add `village_webview_linux: path:
+   packages/village_webview_linux`, and add `linux` to the `village3d`
+   asset entries' `platforms` (this adds 7.45 MB to the Linux bundle).
+2. Make `village_channel_io.dart` return an adapter: on
+   `Platform.isLinux`, `villageScenePlatform` is true, `messages`, `send`
+   and `dispose` forward to `LinuxVillageView`, `buildView()` is
+   `view.build()`, `drawsAboveFlutter` is true, and `setInteractive` does
+   nothing (the view is lifted instead).
+3. Run `flutter build linux`, and check live that loading, ready, a tap,
+   pause and the lift under a dialog all work.
+
+## Live verification, second pass (2026-11-10, :8080 at 5f94fbf / 4c6327a)
+
+Headless Chromium on the real GPU (ANGLE Vulkan), fresh QA kids, real
+mastery. Screenshots are in `Platforms/qa/out/village3d-2026-11-10/`.
+- **Desktop default** (`web-default-3d-desktop.png`): a freshly paired kid
+  gets the 3D village with an untouched toggle.
+- **The parent-NIP dialog at first pairing**
+  (`web-dialog-over-3d-paused.png`): the scene paused at 7 frames, and the
+  iframe's `pointer-events` was `none`. « Plus tard » dismissed the dialog.
+  The scene resumed and was interactive again; its `perf: 0` was rechecked
+  at 60 fps and it stayed 3D.
+- **Phone, 390 × 844, touch** (`web-phone-3d.png`,
+  `web-phone-tap-to-carte.png`): portrait scene at 60 fps (quality 1, DPR
+  1.5). All seven pills carry real figures. A touch tap on Science opened
+  the Carte on Science et techno.
+- **Size:** the web build is 74.5 MB, with the bundle at 7.6 MB (+7.8 MB
+  over the 2D build). The bundle is fetched only once Village opens with
+  3D. Linux is +0 until the switch, then +7.45 MB.
+
+## Known gaps
+
+- **Scene side (sent to village-3d):**
+  - on a phone the pills stack in the sky above the island, not by their
+    buildings;
+  - the pills are 34 px tall in the app's iframe, where the scene says 40
+    on touch;
+  - `perf` is measured across a pause;
+  - `hasLessons: false` has no pill state.
+- The built-in pane can't exercise the 3D path (WebGL off), and its input
+  stops after the SharedWorker workaround. The no-WebGL fallback was proven
+  with `--disable-3d-apis` instead.
+- **No Linux screenshot.** GNOME Wayland blocks grabs, and Flutter's own
+  screenshot isn't supported under Impeller.
