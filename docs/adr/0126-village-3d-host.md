@@ -258,3 +258,33 @@ mastery. Screenshots are in `Platforms/qa/out/village3d-2026-11-10/`.
   with `--disable-3d-apis` instead.
 - **No Linux screenshot.** GNOME Wayland blocks grabs, and Flutter's own
   screenshot isn't supported under Impeller.
+
+## Real weather, daytime light, « leçons bientôt » (b96a9a5, bundle .6)
+
+- **Weather** (Hafid: "we need to follow the real weather"):
+  - The app reads `GET /api/v1/me/weather` with the device token. The
+    backend picks a coarse region and never uses the kid's location.
+  - It asks when the Village comes on screen, at most once every 10 min,
+    then every 30 min while it stays there. It asks only where the 3D scene
+    shows, and never while the Village is hidden.
+  - The last observation is kept per kid in `app_state`, so it holds
+    offline. A 204, 404, offline answer or malformed body changes nothing.
+  - The scene gets it as `weather` and judges freshness itself (3 h). A
+    missing or stale observation gives a calm sky for the season.
+  - On 2026-11-10 the endpoint still 404s on the dev-stack, so the scene
+    shows a calm sky. Backend will say when it's live.
+- **Daytime only**: live light is held between 7:00 and 20:00 by the scene
+  (Hafid's choice).
+- **`soon`**: each building says whether it has lessons yet. Its pill says
+  « Bientôt », and the building still opens its Carte. 25 strings go over
+  in FR and EN.
+
+**Live, final pass** (:8080 at b96a9a5; `final-*.png` in
+`Platforms/qa/out/village3d-2026-11-10/`):
+- **Desktop**: 3D by default at 62 fps. Pills carry figures and French aria
+  labels. The scene pauses on Quêtes and resumes on the Village. Tapping
+  Mathématiques opens the Carte on Mathématiques.
+- **Phone, 390 px touch**: 60 fps. The pills sit by their buildings,
+  40 px tall. A tap on Français sent `open`.
+- **Open on the scene side**: the fox's bubble receives the greeting but
+  stays `is-hidden`.
