@@ -24,6 +24,10 @@ dependencies:
     path: packages/engines_core
   tutolys_motion:
     path: packages/tutolys_motion
+  # The 3D village on Linux (ADR 0126). Needs libwebkit2gtk-4.1-dev and
+  # libsoup-3.0-dev on the build machine.
+  village_webview_linux:
+    path: packages/village_webview_linux
 
   flutter_riverpod: ^3.0.3      # state
   go_router: ^17.2.1            # routing
@@ -52,6 +56,10 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  # On-device checks: the Linux 3D village through the real WebKitGTK view
+  # (ADR 0126), where widget tests can't reach.
+  integration_test:
+    sdk: flutter
   flutter_lints: ^6.0.0
   drift_dev: ^2.35.1
   build_runner: ^2.7.1
@@ -74,30 +82,30 @@ flutter:
     - assets/sounds/sfx/
     - assets/sounds/songs/
     # The 3D village's bundle (ADR 0126), copied by tool/sync_village3d.sh
-    # from codex/village-3d/dist. Web only: Linux has no 3D path, so it
-    # doesn't carry the 7.45 MB. Folders aren't recursive; keep in step.
+    # from codex/village-3d/dist. Web and Linux (served to its WebView over
+    # loopback); not mobile yet. Folders aren't recursive; keep in step.
     - path: assets/village3d/
-      platforms: [web]
+      platforms: [web, linux]
     - path: assets/village3d/assets/fonts/
-      platforms: [web]
+      platforms: [web, linux]
     - path: assets/village3d/assets/img/
-      platforms: [web]
+      platforms: [web, linux]
     - path: assets/village3d/assets/models/
-      platforms: [web]
+      platforms: [web, linux]
     - path: assets/village3d/src/
-      platforms: [web]
+      platforms: [web, linux]
     - path: assets/village3d/styles/
-      platforms: [web]
+      platforms: [web, linux]
     - path: assets/village3d/vendor/three-0.170.0/
-      platforms: [web]
+      platforms: [web, linux]
     - path: assets/village3d/vendor/three-0.170.0/addons/
-      platforms: [web]
+      platforms: [web, linux]
     - path: assets/village3d/vendor/three-0.170.0/addons/controls/
-      platforms: [web]
+      platforms: [web, linux]
     - path: assets/village3d/vendor/three-0.170.0/addons/loaders/
-      platforms: [web]
+      platforms: [web, linux]
     - path: assets/village3d/vendor/three-0.170.0/addons/utils/
-      platforms: [web]
+      platforms: [web, linux]
 
 # `dart run flutter_launcher_icons` regenerates web/icons/*.png from these.
 # Scoped to web only: Linux desktop has no Flutter-tooling icon pipeline (its

@@ -95,6 +95,16 @@ class LinuxVillageView {
     );
   }
 
+  /// Runs [javaScript] in the scene and returns its result: for the
+  /// on-device integration test only (reading the scene's frame counter,
+  /// clicking a pill inside WebKit, where Flutter's gestures can't reach).
+  @visibleForTesting
+  Future<Object?> evaluate(String javaScript) async {
+    final controller = _ready.value;
+    if (controller == null) return null;
+    return controller.runJavaScriptReturningResult(javaScript);
+  }
+
   Widget build() => ValueListenableBuilder<LinuxWebViewController?>(
     valueListenable: _ready,
     builder: (context, controller, _) => controller == null

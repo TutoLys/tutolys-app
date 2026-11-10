@@ -288,3 +288,34 @@ mastery. Screenshots are in `Platforms/qa/out/village3d-2026-11-10/`.
   40 px tall. A tap on Français sent `open`.
 - **Open on the scene side**: the fox's bubble receives the greeting but
   stays `is-hidden`.
+
+## Linux switched on (2026-11-10, after Hafid's apt install)
+
+WebKitGTK 2.52.6 and libsoup 3.6.6 headers are present. The three switch
+steps are done:
+1. `village_webview_linux` is in the app's pubspec. The `village3d` asset
+   entries are `[web, linux]`, so the Linux bundle carries the 7.45 MB.
+2. `village_channel_io.dart` hosts the scene on Linux. Its adapter draws
+   above Flutter, so the host lifts it under dialogs; `setInteractive` does
+   nothing. It stays off under `flutter test`, because the VM runs on Linux
+   but has no WebView plugin.
+3. `flutter build linux --profile` builds; `libwebview_all_linux_plugin.so`
+   and `assets/village3d/` are in the bundle.
+
+**Live** (`integration_test/village3d_linux_test.dart`, `flutter test
+integration_test/village3d_linux_test.dart -d linux`): the real WebKitGTK
+view, the real loopback server and the bundled scene, driven through
+`VillageSceneHost`. It passes.
+- The scene sends `loading`, `ready`, then `perf`, at 56.8 fps.
+- The pills carry the figures sent (62/100, 2/100, « À découvrir »).
+- A click on the Mathématiques pill inside WebKit reaches `onOpen('MATH')`.
+- A hidden tab pauses it: frames held at 270, `running` false. It resumes
+  when shown again.
+- A dialog lifts the native view off screen (the 2D village stands in) and
+  pauses it. When the dialog closes, the view returns, running, with no
+  `unavailable`.
+
+Flutter's gestures can't reach inside a native WebView, so the click and
+the frame counter go through `LinuxVillageView.evaluate`, which is
+`@visibleForTesting`. A screenshot of the real app needs Hafid's Print
+Screen, because this desktop blocks programmatic grabs.
