@@ -9,11 +9,13 @@ import { blob, shadeVertices } from './shapes.js';
 import { softDotTexture, mulberry } from './textures.js';
 
 export const WEATHER = {
-  clear: { cloud: 0.0, clouds: 7, dark: 0, rain: 0, snow: 0, wind: 0.3 },
-  clouds: { cloud: 0.5, clouds: 18, dark: 0.25, rain: 0, snow: 0, wind: 0.45 },
-  rain: { cloud: 0.75, clouds: 20, dark: 0.55, rain: 0.6, snow: 0, wind: 0.6 },
-  snow: { cloud: 0.6, clouds: 18, dark: 0.3, rain: 0, snow: 1, wind: 0.35 },
-  storm: { cloud: 1.0, clouds: 22, dark: 0.85, rain: 1, snow: 0, wind: 1.0 },
+  clear: { cloud: 0.0, clouds: 7, dark: 0, rain: 0, snow: 0, wind: 0.3, mist: 0 },
+  clouds: { cloud: 0.5, clouds: 18, dark: 0.25, rain: 0, snow: 0, wind: 0.45, mist: 0 },
+  rain: { cloud: 0.75, clouds: 20, dark: 0.55, rain: 0.6, snow: 0, wind: 0.6, mist: 0.15 },
+  snow: { cloud: 0.6, clouds: 18, dark: 0.3, rain: 0, snow: 1, wind: 0.35, mist: 0.1 },
+  storm: { cloud: 1.0, clouds: 22, dark: 0.85, rain: 1, snow: 0, wind: 1.0, mist: 0.1 },
+  // Fog: a soft white veil that the scene fog pulls in close (atmosphere.js).
+  fog: { cloud: 0.55, clouds: 10, dark: 0.15, rain: 0, snow: 0, wind: 0.12, mist: 1 },
 };
 
 const BOX = { w: 56, h: 34, d: 46, top: 26 };

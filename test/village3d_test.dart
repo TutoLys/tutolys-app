@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tutolys_app/core/i18n/strings.dart';
 import 'package:tutolys_app/core/routing/root_cover_observer.dart';
+import 'package:tutolys_app/data/api/weather_api.dart';
 import 'package:tutolys_app/data/local_db/app_settings.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
 import 'package:tutolys_app/features/home/subject_progress.dart';
@@ -74,16 +75,15 @@ class _Settings extends SettingsController {
 
 final _buildings = villageBuildings(Strings.fr);
 
-VillageSceneState _state({String? greeting = 'Bonjour !'}) =>
-    VillageSceneState(
-      buildings: _buildings,
-      lang: 'fr',
-      signTitle: 'Village des Lys',
-      signSubtitle: '1re année',
-      greeting: greeting,
-      reduced: false,
-      strings: village3dStrings(Strings.fr),
-    );
+VillageSceneState _state({String? greeting = 'Bonjour !'}) => VillageSceneState(
+  buildings: _buildings,
+  lang: 'fr',
+  signTitle: 'Village des Lys',
+  signSubtitle: '1re année',
+  greeting: greeting,
+  reduced: false,
+  strings: village3dStrings(Strings.fr),
+);
 
 const _fallbackKey = ValueKey('fallback-2d');
 final _fallback = find.byKey(_fallbackKey);
@@ -110,13 +110,13 @@ void main() {
       settingsControllerProvider.overrideWith(
         () => _Settings(AppSettings(village3d: setting)),
       ),
-      villageSceneChannelFactoryProvider.overrideWithValue(
-        ({required String title}) {
-          if (!platform) return null;
-          made++;
-          return channel;
-        },
-      ),
+      villageSceneChannelFactoryProvider.overrideWithValue(({
+        required String title,
+      }) {
+        if (!platform) return null;
+        made++;
+        return channel;
+      }),
     ],
     child: MaterialApp(
       home: Visibility(
@@ -171,39 +171,95 @@ void main() {
       }
     });
 
-    test('init carries the app words, real progress and null as unmeasured',
-        () {
-      final state = VillageSceneState(
-        buildings: [
-          _buildings.first.withProgress(0.4),
-          _buildings[1].withProgress(null),
-        ],
-        lang: 'en',
-        signTitle: Strings.en.villageSignTitle,
+    test(
+      'init carries the app words, real progress and null as unmeasured',
+      () {
+        final state = VillageSceneState(
+          buildings: [
+            _buildings.first.withProgress(0.4),
+            _buildings[1].withProgress(null),
+          ],
+          lang: 'en',
+          signTitle: Strings.en.villageSignTitle,
+          signSubtitle: '',
+          greeting: null,
+          reduced: true,
+          strings: village3dStrings(Strings.en),
+        );
+        final init = HostMessage.init(state);
+        expect(init['v'], 1);
+        expect(init['type'], 'init');
+        expect(init['lang'], 'en');
+        expect(init['reduced'], isTrue);
+        final sent = init['buildings']! as List;
+        expect((sent[0] as Map)['id'], 'MATH');
+        expect((sent[0] as Map)['progress'], 0.4);
+        expect((sent[1] as Map)['progress'], isNull);
+        expect(
+          init['strings'],
+          containsPair('pill.new', Strings.en.pathNotStarted),
+        );
+        expect((init['sign']! as Map)['title'], 'Lys Village');
+        expect(init['insets'], {'top': 0});
+        expect((sent[0] as Map).keys, {
+          'id',
+          'label',
+          'progress',
+          'live',
+          'soon',
+        });
+        expect((sent[0] as Map)['soon'], isFalse);
+        final noLessons = HostMessage.init(
+          VillageSceneState(
+            buildings: [_buildings.first.withProgress(null, hasLessons: false)],
+            lang: 'fr',
+            signTitle: '',
+            signSubtitle: '',
+            greeting: null,
+            reduced: false,
+            strings: const {},
+          ),
+        );
+        final soon = (noLessons['buildings']! as List).first as Map;
+        expect(soon['soon'], isTrue);
+        expect(soon['live'], isTrue, reason: 'still opens its Carte');
+      },
+    );
+
+    test('the real weather goes over; none clears it', () {
+      const snow = VillageWeather(
+        condition: 'snow',
+        observedAt: '2026-11-10T11:00:00Z',
+        tempC: -4.5,
+        isDay: true,
+      );
+      final withWeather = VillageSceneState(
+        buildings: const [],
+        lang: 'fr',
+        signTitle: '',
         signSubtitle: '',
         greeting: null,
-        reduced: true,
-        strings: village3dStrings(Strings.en),
+        reduced: false,
+        strings: const {},
+        weather: snow,
       );
-      final init = HostMessage.init(state);
-      expect(init['v'], 1);
-      expect(init['type'], 'init');
-      expect(init['lang'], 'en');
-      expect(init['reduced'], isTrue);
-      final sent = init['buildings']! as List;
-      expect((sent[0] as Map)['id'], 'MATH');
-      expect((sent[0] as Map)['progress'], 0.4);
-      expect((sent[1] as Map)['progress'], isNull);
-      expect(
-        init['strings'],
-        containsPair('pill.new', Strings.en.pathNotStarted),
+      expect(HostMessage.update(withWeather)['weather'], snow.toJson());
+      final none = HostMessage.update(
+        VillageSceneState(
+          buildings: const [],
+          lang: 'fr',
+          signTitle: '',
+          signSubtitle: '',
+          greeting: null,
+          reduced: false,
+          strings: const {},
+        ),
       );
-      expect((init['sign']! as Map)['title'], 'Lys Village');
-      expect(init['insets'], {'top': 0});
-      expect((sent[0] as Map).keys, {'id', 'label', 'progress', 'live'});
+      expect(none.containsKey('weather'), isTrue);
+      expect(none['weather'], isNull);
     });
 
-    test('all 23 scene strings are sent, in each language', () {
+    test('all 25 scene strings are sent, in each language', () {
       for (final t in [Strings.fr, Strings.en]) {
         final strings = village3dStrings(t);
         expect(strings.keys.toSet(), village3dStringKeys);
@@ -230,19 +286,21 @@ void main() {
       expect(container.read(villageScenePlatformProvider), isFalse);
     });
 
-    test('an untouched toggle is not stored, so the swap reaches the kid',
-        () async {
-      final db = LocalDatabase.memory();
-      addTearDown(db.close);
-      final store = AppSettingsStore(db, kidId: 'k');
-      const before = AppSettings();
-      await store.writeChanges(before, before.copyWith(volume: 40));
-      final rows = await db.select(db.appStateTable).get();
-      expect(rows.map((r) => r.key), isNot(contains('settings.village_3d')));
+    test(
+      'an untouched toggle is not stored, so the swap reaches the kid',
+      () async {
+        final db = LocalDatabase.memory();
+        addTearDown(db.close);
+        final store = AppSettingsStore(db, kidId: 'k');
+        const before = AppSettings();
+        await store.writeChanges(before, before.copyWith(volume: 40));
+        final rows = await db.select(db.appStateTable).get();
+        expect(rows.map((r) => r.key), isNot(contains('settings.village_3d')));
 
-      await store.writeChanges(before, before.copyWith(village3d: true));
-      expect((await store.read()).village3d, isTrue);
-    });
+        await store.writeChanges(before, before.copyWith(village3d: true));
+        expect((await store.read()).village3d, isTrue);
+      },
+    );
 
     testWidgets('no scene on this platform: the 2D village', (tester) async {
       await tester.pumpWidget(host(platform: false));
@@ -358,9 +416,9 @@ void main() {
       channel.boot();
       await tester.pump();
       final element = tester.element(find.byType(VillageSceneHost));
-      await ProviderScope.containerOf(
-        element,
-      ).read(settingsControllerProvider.notifier).setVillage3d(false);
+      await ProviderScope.containerOf(element)
+          .read(settingsControllerProvider.notifier)
+          .setVillage3d(false);
       await tester.pump();
       expect(_fallback, findsOneWidget);
       expect(channel.disposed, isTrue);
@@ -488,9 +546,7 @@ void main() {
       expect(channel.interactive, isTrue);
     });
 
-    testWidgets('a dialog on the root navigator pauses it too', (
-      tester,
-    ) async {
+    testWidgets('a dialog on the root navigator pauses it too', (tester) async {
       // The app's shape: the Village inside a nested navigator, dialogs on
       // the root one, which only the observer sees.
       await tester.pumpWidget(
@@ -536,8 +592,9 @@ void main() {
       expect(channel.interactive, isTrue);
     });
 
-    testWidgets('a loading scene takes no taps: the 2D village over it does',
-        (tester) async {
+    testWidgets('a loading scene takes no taps: the 2D village over it does', (
+      tester,
+    ) async {
       await tester.pumpWidget(host());
       expect(channel.interactive, isFalse);
       channel.boot();

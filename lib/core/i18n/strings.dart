@@ -429,6 +429,7 @@ abstract class Strings {
   String get village3dPillAriaNew;
   String get village3dPillAriaProgress;
   String get village3dPillAriaLocked;
+  String get village3dPillAriaSoon;
   String get village3dCamAria;
   String get village3dCamIn;
   String get village3dCamOut;
@@ -1600,6 +1601,9 @@ class _FrenchStrings extends Strings {
 
   @override
   String get village3dPillAriaLocked => '{label}, bientôt disponible';
+
+  @override
+  String get village3dPillAriaSoon => '{label}, leçons bientôt';
 
   @override
   String get village3dCamAria => 'Caméra';
@@ -3118,6 +3122,9 @@ class _EnglishStrings extends Strings {
 
   @override
   String get village3dPillAriaLocked => '{label}, coming soon';
+
+  @override
+  String get village3dPillAriaSoon => '{label}, lessons coming soon';
 
   @override
   String get village3dCamAria => 'Camera';

@@ -24,7 +24,7 @@ export function hourLabel(h) {
 }
 export const PHASE_FR = { night: 'Nuit', dawn: 'Aube', day: 'Jour', sunset: 'Coucher du soleil', dusk: 'Crépuscule' };
 export const SEASON_FR = { spring: 'Printemps', summer: 'Été', autumn: 'Automne', winter: 'Hiver' };
-export const WEATHER_FR = { clear: 'Dégagé', clouds: 'Nuageux', rain: 'Pluie', snow: 'Neige', storm: 'Orage' };
+export const WEATHER_FR = { clear: 'Dégagé', clouds: 'Nuageux', rain: 'Pluie', snow: 'Neige', storm: 'Orage', fog: 'Brouillard' };
 
 export function createUI({ buildings, strings = DEFAULT_STRINGS, onHover, onSelect, onCamera, onTime, onAuto, onNow, onSeason, onWeather, onReduced, onCta }) {
   let S = makeStrings(strings);
@@ -125,11 +125,12 @@ export function createUI({ buildings, strings = DEFAULT_STRINGS, onHover, onSele
     if (foxHead) {
       foxHead.project(camera);
       const bubble = $('#fox-bubble');
+      const bubbleShown = bubble.textContent && !bubble.classList.contains('is-hidden');
       const bx = (foxHead.x * 0.5 + 0.5) * w, by = (-foxHead.y * 0.5 + 0.5) * h;
       bubble.style.left = `${bx.toFixed(1)}px`;
       bubble.style.top = `${by.toFixed(1)}px`;
       const bw = bubble.offsetWidth, bh = bubble.offsetHeight;
-      items.push({ fixed: true, x: bx, y: by - bh / 2, z: -2, pw: bw, ph: bh, dy: 0 });
+      if (bubbleShown) items.push({ fixed: true, x: bx, y: by - bh / 2, z: -2, pw: bw, ph: bh, dy: 0 });
     }
     // Nearest labels keep their place; farther ones step up out of the way.
     items.sort((a, b) => a.z - b.z);
@@ -235,10 +236,22 @@ export function createUI({ buildings, strings = DEFAULT_STRINGS, onHover, onSele
 
   // --- fox bubble ---
   const bubble = $('#fox-bubble');
+  // Embedded in a small box, the bubble covers the middle buildings and
+  // pushes their pills away, so it says its line, then steps aside after a
+  // few seconds (pills return to their buildings). Tapping the fox brings it
+  // back.
+  const shyMq = window.matchMedia('(max-width: 480px), (max-height: 560px)');
+  let shyTimer;
+  function showBubble() {
+    clearTimeout(shyTimer);
+    bubble.classList.remove('is-hidden');
+    if (document.documentElement.dataset.embed === '1' && shyMq.matches) shyTimer = setTimeout(() => bubble.classList.add('is-hidden'), 6000);
+  }
   function say(text) {
     if (bubble.textContent === text) return;
     bubble.textContent = text;
     bubble.classList.remove('pop'); void bubble.offsetWidth; bubble.classList.add('pop');
+    showBubble();
   }
 
   // --- toast ---
@@ -291,7 +304,7 @@ export function createUI({ buildings, strings = DEFAULT_STRINGS, onHover, onSele
   const nowBtn = $('#now'); if (nowBtn && onNow) nowBtn.addEventListener('click', () => onNow());
 
   return {
-    placeLabels, setPillState, showInfo, hideInfo, say, toast, syncControls, pills,
+    placeLabels, setPillState, showInfo, hideInfo, say, showBubble, toast, syncControls, pills,
     /** New host strings: re-render everything the scene writes. */
     setStrings(over) { S = makeStrings(over); applyStrings(); for (const b of buildings) renderPill(pills.get(b.id), b.spot); },
     refreshPill(id) { const b = buildings.find((x) => x.id === id); if (b) renderPill(pills.get(id), b.spot); },

@@ -1,8 +1,8 @@
 {
- "version": "village3d-2026.11.10.3",
+ "version": "village3d-2026.11.10.6",
  "bridge": 1,
  "entry": "village.html?embed=1",
- "totalBytes": 7810846,
+ "totalBytes": 7818376,
  "files": {
   "assets/fonts/Baloo2-Bold.ttf": {
    "bytes": 44808,
@@ -97,12 +97,12 @@
    "sha256": "1596351b4cdd89c793a6a250dfd27da2f2ac697c8cfd6d9b36852ff744239e25"
   },
   "src/atmosphere.js": {
-   "bytes": 8969,
-   "sha256": "158f7cef864f98c593d7282c46695e23768a0a6bca1ed5e8487eed26d8bd7a44"
+   "bytes": 9571,
+   "sha256": "c397c07acef91cdb3142207965f01aa5f12a2c6c9ac3f42816f6c2c064f311d3"
   },
   "src/bridge.js": {
    "bytes": 3170,
-   "sha256": "14bf66f88b0b4ddda0af7901b9d240a9a609cc6ca356ff3b1d2bb5f6c1e89e6d"
+   "sha256": "c69ceb301fe8f5bf4113996db8bf37a049734f3c8a9283276f7f31a0b48f655c"
   },
   "src/buildings.js": {
    "bytes": 75978,
@@ -125,8 +125,8 @@
    "sha256": "07ea292c094ac0ddb1b8bfc2a1866cc87db34ecadcbb24933ca019e3b928ab9a"
   },
   "src/main.js": {
-   "bytes": 28146,
-   "sha256": "5bf45b4d64ddab6bb464de6211fda372c33e949c5ae67bc9f1c4ae7b9176ea0f"
+   "bytes": 31033,
+   "sha256": "c8c535d738bb89cda9be13b47b53b1f5113e9f7be8f2fbe1a603cac2ba0fd333"
   },
   "src/models.js": {
    "bytes": 1642,
@@ -136,9 +136,13 @@
    "bytes": 2202,
    "sha256": "3000a19ecb2c82cff702acaa32c1709aa059cc9329cab3fa2b43dbe6a40cd8cd"
   },
+  "src/realweather.js": {
+   "bytes": 2445,
+   "sha256": "b140039fef39eaa0ea7c2bae0e91d6d0c5a87091fa2cb23cffc73e7c492d6cbe"
+  },
   "src/scene.js": {
-   "bytes": 8125,
-   "sha256": "18b083dd04fc77d2e3bf37c8d782f0f4268182b63e8821a5bc677168b31cbfe5"
+   "bytes": 8186,
+   "sha256": "3a16dde6eb7b61bb624dc75ad04c1dffe2f3ba216d8d0174604c1034e11b3c41"
   },
   "src/shapes.js": {
    "bytes": 21886,
@@ -153,16 +157,16 @@
    "sha256": "d2d97c03a9f7e67724f567e07718cdc5350367359084a2ede8089d3bdfdf159b"
   },
   "src/ui.js": {
-   "bytes": 16559,
-   "sha256": "028ed0c4dbdf9c25bf0d5bdbb05e6aadc533392ad8aefe33ab022b10746c94d2"
+   "bytes": 17289,
+   "sha256": "783cacba00653f432b6aaff5b35d199cc1e3e0e83007794eaa600c5545fca19f"
   },
   "src/weather.js": {
-   "bytes": 17526,
-   "sha256": "fc5380d94623e640811fae7d8478562c49b7dc2f2870b14ee33a8343e2a58038"
+   "bytes": 17744,
+   "sha256": "d9b882bba7ace8fa4d31e4eee5486af5a4f5bcedbe9c2d7cdb7dba938c9e25cf"
   },
   "styles/village.css": {
-   "bytes": 29560,
-   "sha256": "7acb7891470a68de873595ef2208923568c6b89ba51b65c2ddf6dbcea86e1e7c"
+   "bytes": 30049,
+   "sha256": "722416ddd3403e89b901497207ced8768339e65e4937a01fb204a56c3d55c860"
   },
   "vendor/three-0.170.0/LICENSE": {
    "bytes": 1081,
@@ -189,8 +193,8 @@
    "sha256": "08fd7545d13d2c7fb65ab691530a802dafefd638596501854f267d0fb13c39e7"
   },
   "village.html": {
-   "bytes": 8843,
-   "sha256": "9fae76db36b2846f6130b72104cb6fe4550bca6c697844de7cbfbbdc2de266a0"
+   "bytes": 8941,
+   "sha256": "c577bd0083e704decbc9ab2f73c5a60a21dd2737ada0e7b9ccd3e6d1c19246c8"
   }
  }
 }

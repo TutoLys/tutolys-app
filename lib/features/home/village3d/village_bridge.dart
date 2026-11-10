@@ -1,3 +1,4 @@
+import '../../../data/api/weather_api.dart';
 import '../village_scene.dart' show VillageBuilding;
 
 /// The JSON contract between the app and the embedded 3D village (ADR 0126,
@@ -19,6 +20,7 @@ class VillageSceneState {
     required this.greeting,
     required this.reduced,
     required this.strings,
+    this.weather,
   });
 
   final List<VillageBuilding> buildings;
@@ -39,6 +41,10 @@ class VillageSceneState {
   /// Every other word the scene shows, keyed as BRIDGE.md lists them.
   final Map<String, String> strings;
 
+  /// The real weather, as last served (BRIDGE.md "Real weather"). Null
+  /// clears it: the scene shows a calm sky for the season.
+  final VillageWeather? weather;
+
   Map<String, Object?> toJson() => {
     'buildings': [
       for (final b in buildings)
@@ -48,6 +54,10 @@ class VillageSceneState {
           // null is « À découvrir », never 0 (the 2D pill's own rule).
           'progress': b.measured ? b.progress : null,
           'live': b.live,
+          // No lessons yet at this grade (ESL, FLS today, ADR 0101): still
+          // tappable, its Carte says lessons are coming; the pill says
+          // « Bientôt » instead of a figure. Proposed to village-3d.
+          'soon': !b.hasLessons,
         },
     ],
     'lang': lang,
@@ -57,6 +67,7 @@ class VillageSceneState {
     'insets': {'top': 0},
     'reduced': reduced,
     'strings': strings,
+    'weather': weather?.toJson(),
   };
 
   @override

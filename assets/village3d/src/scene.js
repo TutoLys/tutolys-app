@@ -134,7 +134,7 @@ export function createStage(container) {
     // Phones in portrait are width-bound (the island is 50 wide, 38 deep):
     // frame the buildings, not the rim, and look a little more from above
     // so the island fills more of the tall screen.
-    const phone = a < 0.62;
+    const phone = a < 0.62 || (w <= 480 && a < 1); // incl. the app's 342×496 phone box
     // Fit the island to the screen, whatever its shape: the distance at which
     // the island's width (and its height, seen at this tilt) fits the view.
     HOME.polar = phone ? (a < 0.5 ? 0.6 : 0.68) : a < 0.8 ? 0.78 : a < 1.25 ? 0.9 : 1.0;

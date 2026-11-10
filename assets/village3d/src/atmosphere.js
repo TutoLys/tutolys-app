@@ -116,7 +116,7 @@ export function createAtmosphere(scene, renderer) {
 
   const state = { hour: 10, cloud: 0, flash: 0, water: new THREE.Color(1, 1, 1), night: 0, phase: 'day' };
 
-  function update(hour, cloud, flash = 0, dark = 0) {
+  function update(hour, cloud, flash = 0, dark = 0, mist = 0, camDist = 80) {
     state.hour = hour; state.cloud = cloud; state.flash = flash;
     const k = sample(hour);
     const grey = (c, amt) => { const l = c.r * 0.3 + c.g * 0.59 + c.b * 0.11; return c.lerp(new THREE.Color(l, l * 1.02, l * 1.08).multiplyScalar(0.92), amt); };
@@ -152,6 +152,15 @@ export function createAtmosphere(scene, renderer) {
     scene.fog.color.copy(fogCol);
     scene.fog.near = THREE.MathUtils.lerp(95, 45, cloud);
     scene.fog.far = THREE.MathUtils.lerp(280, 150, cloud);
+    // Fog weather: a pale veil measured from the camera, so it reads the
+    // same on a phone (closer camera) as on a desktop. The island's middle
+    // stays readable; its far side and the sky beyond fade out.
+    if (mist > 0.001) {
+      const l = fogCol.r * 0.3 + fogCol.g * 0.59 + fogCol.b * 0.11;
+      scene.fog.color.lerp(new THREE.Color(l, l * 1.01, l * 1.04).multiplyScalar(1.12), mist * 0.75);
+      scene.fog.near = THREE.MathUtils.lerp(scene.fog.near, camDist * 0.5, mist);
+      scene.fog.far = THREE.MathUtils.lerp(scene.fog.far, camDist * 1.55, mist);
+    }
 
     starMat.uniforms.uOpacity.value = Math.max(0, k.night - 0.25) * (1 - cloud * 0.95) * 1.2;
     moon.position.copy(moonDir).multiplyScalar(420);

@@ -127,6 +127,13 @@ img { display: block; }
   :root[data-embed="1"] .fox-bubble { max-width: 150px; font-size: 12px; padding: 6px 10px; }
 }
 @media (pointer: coarse) { .scene-pill { min-height: 40px; } }
+:root[data-touch="1"] .scene-pill { min-height: 40px; }
+/* Embedded in a narrow box: the figure goes under the name, so a pill is as
+   narrow as its longest line and stays near its building. */
+@media (max-width: 480px) {
+  :root[data-embed="1"] .scene-pill { flex-direction: column; align-items: center; justify-content: center; gap: 0; padding: 3px 11px; line-height: 1.15; }
+  :root[data-embed="1"] .scene-pill .sp-num, :root[data-embed="1"] .scene-pill .sp-new { font-size: 10px; }
+}
 .scene-pill.is-locked { opacity: 0.62; cursor: default; filter: grayscale(0.85); }
 [hidden] { display: none !important; }
 .scene-pill {

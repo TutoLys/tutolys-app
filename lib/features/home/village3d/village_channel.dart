@@ -32,8 +32,9 @@ abstract class VillageSceneChannel {
 }
 
 /// Makes a channel, or null where this platform can't host the scene.
-typedef VillageSceneChannelFactory =
-    VillageSceneChannel? Function({required String title});
+typedef VillageSceneChannelFactory = VillageSceneChannel? Function({
+  required String title,
+});
 
 /// Overridden in tests with a fake. The VM test runner has no scene, so the
 /// default there is null and every existing village test keeps the 2D one.

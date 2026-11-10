@@ -4,6 +4,7 @@
 import * as bridge from './bridge.js';
 import * as THREE from 'three';
 import { quebecNow, quebecSeason } from './strings.js';
+import { kindFor, isFresh, calmFor, KINDS } from './realweather.js';
 import { createStage, HOME } from './scene.js';
 import { buildIsland, applySeason, updateIsland, buildingSpots, plazaY, pathCurves, heightAt } from './island.js';
 import { createBuilding, updateBuilding, setWinter, buildingMaterials, plinthGreen, relabelSigns } from './buildings.js';
@@ -24,6 +25,9 @@ const store = embedded ? { get: (k, d) => d, set() {} } : {
 };
 const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
 if (embedded) document.documentElement.dataset.embed = '1';
+// Touch screens get bigger targets. `pointer: coarse` isn't reported inside
+// some iframes and emulators, so a touch point count counts too.
+if (navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches) document.documentElement.dataset.touch = '1';
 window.addEventListener('error', (e) => bridge.send('error', { message: String(e.message || e.error || 'error').slice(0, 300) }));
 window.addEventListener('unhandledrejection', (e) => bridge.send('error', { message: String(e.reason?.message || e.reason || 'rejection').slice(0, 300) }));
 const num = (v, d) => (v == null || v === '' || Number.isNaN(parseFloat(v)) ? d : parseFloat(v));
@@ -33,15 +37,27 @@ const num = (v, d) => (v == null || v === '' || Number.isNaN(parseFloat(v)) ? d 
 // bridge) can set either, and "Maintenant" / `setTime{hour:null}` returns
 // to live. Weather is always manual.
 const now = () => quebecNow(params.get('now'));
+const nowMs = () => Date.now();
+// Live time is daytime only (Hafid, 2026-11-10): before 7:00 the village
+// shows 7:00 light, after 20:00 it shows 20:00 light, so a child opening the
+// app before school never meets a dark, murky village. Night is still there
+// when the child picks it by hand (or the host sends `setTime`).
+const LIVE_DAY = [7, 20];
+const liveHour = () => Math.min(LIVE_DAY[1], Math.max(LIVE_DAY[0], now().hour));
 const fixedHour = params.has('t') ? num(params.get('t'), 10.5) : store.get('hour', null);
 const fixedSeason = params.get('season') || store.get('season', null);
 const state = {
-  hour: fixedHour ?? now().hour,
+  hour: fixedHour ?? liveHour(),
   hourLive: fixedHour == null,
   hourTarget: null,
   season: fixedSeason || quebecSeason(now().month),
   seasonLive: !fixedSeason,
-  weather: params.get('weather') || store.get('weather', 'clear'),
+  // Weather follows the real observation the host sends (`weather` in
+  // init/update); without a fresh one, a calm sky for the season. A hand
+  // pick (Ambiance, or the host's setWeather) holds for the visit.
+  weather: params.get('weather') || store.get('weather', null) || 'clear',
+  weatherMode: params.get('weather') || store.get('weather', null) ? 'manual' : 'auto',
+  hostWeather: null,
   reducedPref: params.has('reduced') ? params.get('reduced') === '1' : store.get('reduced', null),
   auto: params.get('auto') === '1',
   selected: null,
@@ -257,6 +273,7 @@ function sayDefault() {
   let line = `Salut ${LEARNER.name} ! Choisis un bâtiment.`;
   if (w === 'storm') line = 'Quel orage ! On reste au chaud et on apprend ?';
   else if (w === 'rain') line = 'Il pleut… parfait pour lire !';
+  else if (w === 'fog') line = 'Quel brouillard ! Reste près de moi.';
   else if (w === 'snow' || state.season === 'winter') line = 'Brr ! Il fait froid au village.';
   else if (ph === 'night') line = 'Bonne nuit, petit génie !';
   else if (ph === 'dawn') line = `Bon matin ${LEARNER.name} !`;
@@ -268,8 +285,24 @@ function goLive() {
   const n = now();
   state.hourLive = true; state.seasonLive = true; state.auto = false;
   store.set('hour', null); store.set('season', null);
-  if (reduced()) { state.hour = n.hour; state.hourTarget = null; } else state.hourTarget = n.hour;
+  const h = liveHour();
+  if (reduced()) { state.hour = h; state.hourTarget = null; } else state.hourTarget = h;
   setSeason(quebecSeason(n.month), { live: true });
+  state.weatherMode = 'auto'; store.set('weather', null); autoWeather();
+}
+/** In auto mode: the host's observation if it's fresh, else calm for the season. */
+function autoWeather() {
+  if (state.weatherMode === 'manual') return;
+  const o = state.hostWeather;
+  const kind = o && isFresh(o.observed_at, nowMs()) ? kindFor(o.condition, o.temp_c) : null;
+  showWeather(kind || calmFor(state.season), kind ? 'live' : 'calm');
+}
+function showWeather(w, source) {
+  state.weatherSource = source;
+  if (state.weather === w) return;
+  state.weather = w;
+  weather.set(w, state.season);
+  sayDefault();
 }
 function setSeason(s, { live = false } = {}) {
   if (!['spring', 'summer', 'autumn', 'winter'].includes(s)) return;
@@ -280,13 +313,15 @@ function setSeason(s, { live = false } = {}) {
   plinthGreen.grass.color.setHex({ spring: 0xa2d894, summer: 0x8fcc82, autumn: 0xc2c983, winter: 0xf4f8ff }[s]);
   plinthGreen.bushMat.color.setHex(s === 'winter' ? 0xe6eef8 : s === 'autumn' ? 0xc9a043 : s === 'spring' ? 0x7cc576 : 0x5fb85a);
   weather.set(state.weather, s);
+  if (state.weatherMode !== 'manual') autoWeather(); // calm depends on the season
   sayDefault();
 }
+/** A hand pick (holds for the visit); 'live' or null returns to the real weather. */
 function setWeather(w) {
-  if (!['clear', 'clouds', 'rain', 'snow', 'storm'].includes(w)) return;
-  state.weather = w; store.set('weather', w);
-  weather.set(w, state.season);
-  sayDefault();
+  if (w == null || w === 'live') { state.weatherMode = 'auto'; store.set('weather', null); autoWeather(); return; }
+  if (!KINDS.includes(w)) return;
+  state.weatherMode = 'manual'; store.set('weather', w);
+  showWeather(w, 'manual');
 }
 
 function camera_(cmd) {
@@ -341,7 +376,7 @@ el.addEventListener('pointerup', (e) => {
 
 function foxTap() {
   if (!reduced()) foxCtl.hop();
-  if (embedded) { bridge.send('mascot'); return; }
+  if (embedded) { ui.showBubble(); bridge.send('mascot'); return; }
   const lines = ['Hihi ! Ça chatouille !', 'Prêt pour une quête ?', '⚜ Vive le Village des Lys !', 'Tu es super !'];
   ui.say(lines[Math.floor(Math.random() * lines.length)]);
 }
@@ -371,6 +406,7 @@ if (params.get('debug') === '1') debugEl.hidden = false;
 
 // The loop runs only while `running`: `pause` (tab hidden, app backgrounded)
 // stops requesting frames entirely, `resume` restarts them.
+let perfSent = false; let perfSeg = { t: 0, n: 0, last: null };
 let running = true; let disposed = false; let rafId = null; let framesDrawn = 0; let liveCheck = 0;
 function frame() {
   rafId = null;
@@ -382,8 +418,9 @@ function frame() {
   if (liveCheck <= 0 && (state.hourLive || state.seasonLive)) {
     liveCheck = 20;
     const n = now();
-    if (state.hourLive && !state.auto && state.hourTarget == null) state.hour = n.hour;
+    if (state.hourLive && !state.auto && state.hourTarget == null) state.hour = liveHour();
     if (state.seasonLive && quebecSeason(n.month) !== state.season) setSeason(quebecSeason(n.month), { live: true });
+    autoWeather(); // an observation older than 3 h falls back to calm
   }
   const motion = reduced() ? 0 : 1;
   U.uTime.value += dt * motion;
@@ -398,7 +435,7 @@ function frame() {
   }
 
   const flash = weather.update(dt, t, { light, night: atmo.state.night, motion, pixel: renderer.getPixelRatio() });
-  atmo.update(state.hour, weather.state.mix.cloud, flash, weather.state.mix.dark);
+  atmo.update(state.hour, weather.state.mix.cloud, flash, weather.state.mix.dark, weather.state.mix.mist, camera.position.distanceTo(controls.target));
   const night = atmo.state.night;
   light.setRGB(1, 1, 1).lerp(nightTint, night).multiplyScalar(1 - weather.state.mix.cloud * 0.22);
   if (atmo.state.phase === 'sunset' || atmo.state.phase === 'dawn') light.lerp(new THREE.Color(1, 0.86, 0.75), 0.4);
@@ -468,34 +505,41 @@ function frame() {
   }
   frames++; fpsAcc += dt;
   if (fpsAcc > 0.5) { fpsShown = frames / fpsAcc; frames = 0; fpsAcc = 0; }
+  // One `perf` reading, taken over 4 s of *unbroken* running (wall clock,
+  // not the clamped dt). A pause restarts the window, so a scene the host
+  // pauses at once never reports a false low reading (found live by the app,
+  // 2026-11-10).
+  if (!perfSent) {
+    const tNow = performance.now();
+    if (perfSeg.last != null) { perfSeg.t += (tNow - perfSeg.last) / 1000; perfSeg.n++; }
+    perfSeg.last = tNow;
+    if (perfSeg.t >= 4) { perfSent = true; bridge.send('perf', { ...statsNow(), fps: Math.round((perfSeg.n / perfSeg.t) * 10) / 10, window: Math.round(perfSeg.t * 10) / 10 }); }
+  }
   if (!debugEl.hidden) {
     const i = renderer.info.render;
     debugEl.textContent = `${fpsShown.toFixed(0)} i/s · ${i.calls} appels · ${(i.triangles / 1000).toFixed(0)} k triangles · ${hourLabel(state.hour)} · qualité ${stage.perf.level}`;
   }
   rafId = requestAnimationFrame(frame);
 }
-function pause() { running = false; if (rafId != null) { cancelAnimationFrame(rafId); rafId = null; } }
-function resume() { if (running || disposed) return; running = true; clock.getDelta(); rafId = requestAnimationFrame(frame); }
+function pause() { perfSeg = { t: 0, n: 0, last: null }; running = false; if (rafId != null) { cancelAnimationFrame(rafId); rafId = null; } }
+function resume() {
+  if (running || disposed) return;
+  running = true; clock.getDelta();
+  perfSeg = { t: 0, n: 0, last: null }; frames = 0; fpsAcc = 0; // no stale reading across a pause
+  rafId = requestAnimationFrame(frame);
+}
 
 // ---------- start ----------
 setSeason(state.season, { live: state.seasonLive });
-setWeather(state.weather);
+weather.set(state.weather, state.season);
 if (init) applyHost(init);
+autoWeather();
 weather.state.mix = { ...weather.state.mix, ...(await import('./weather.js')).WEATHER[state.weather] };
 rafId = requestAnimationFrame(() => {
   // The first frame is drawn even if the host paused us already, so
   // `ready` always follows a real frame.
   const was = running; running = true; frame(); if (!was) pause();
   bridge.send('ready', { version: bridge.SCENE_VERSION, bridge: bridge.BRIDGE_VERSION, buildings: buildings.map((b) => b.id) });
-  // One performance reading once the scene has settled; the app falls back
-  // to the 2D village if it's too slow. Measured on running frames only.
-  const perfAt = performance.now();
-  const perfTimer = setInterval(() => {
-    if (!running) return;
-    if (performance.now() - perfAt < 4000) return;
-    clearInterval(perfTimer);
-    bridge.send('perf', statsNow());
-  }, 250);
   setTimeout(() => document.getElementById('loading').classList.add('is-done'), 150);
   setTimeout(() => document.getElementById('hint').classList.add('is-faded'), 9000);
 });
@@ -503,7 +547,7 @@ const pre = params.get('select');
 if (pre && byId.has(pre)) setTimeout(() => select(pre), 50);
 
 function statsNow() {
-  return { fps: Math.round(fpsShown * 10) / 10, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, quality: stage.perf.level, pixelRatio: renderer.getPixelRatio() };
+  return { weather: state.weather, weatherSource: state.weatherSource, fps: Math.round(fpsShown * 10) / 10, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, quality: stage.perf.level, pixelRatio: renderer.getPixelRatio() };
 }
 
 // Host fields shared by `init` and `update`.
@@ -520,6 +564,7 @@ function applyHost(m) {
     }
   }
   if (m.greeting !== undefined) { greeting.text = m.greeting; sayDefault(); }
+  if (m.weather !== undefined) { state.hostWeather = m.weather && typeof m.weather === 'object' ? m.weather : null; autoWeather(); }
   if (typeof m.reduced === 'boolean') state.reducedPref = m.reduced;
   if (m.lang) document.documentElement.lang = m.lang;
   if (m.insets && Number.isFinite(m.insets.top)) ui.setInsetTop(m.insets.top);
@@ -548,7 +593,7 @@ bridge.on({
   },
   setSeason: (m) => { if (m.season == null || m.season === 'live') { const n = now(); state.seasonLive = true; setSeason(quebecSeason(n.month), { live: true }); } else setSeason(m.season); },
   setWeather: (m) => setWeather(m.weather),
-  getStats: () => bridge.send('stats', statsNow()),
+  getStats: (m) => bridge.send('stats', { ...statsNow(), ...(m.id !== undefined ? { id: m.id } : {}) }),
   dispose: () => dispose(),
 });
 

@@ -15,6 +15,7 @@ import 'village_scene.dart';
 import 'village3d/village_bridge.dart';
 import 'village3d/village_scene_host.dart';
 import 'village3d/village_strings.dart';
+import 'village3d/village_weather.dart';
 import '../audio/app_sounds.dart' show mascotSongFor;
 import '../audio/music_director.dart';
 import '../quests/quest_board.dart';
@@ -144,6 +145,7 @@ class VillageScreen extends ConsumerWidget {
                   greeting: greeting,
                   reduced: MediaQuery.disableAnimationsOf(context),
                   strings: village3dStrings(t),
+                  weather: ref.watch(villageWeatherProvider),
                 );
                 void openCode(String code) {
                   for (final b in buildings) {
@@ -172,11 +174,13 @@ class VillageScreen extends ConsumerWidget {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(24),
-                          child: VillageSceneHost(
-                            state: sceneState(),
-                            onOpen: openCode,
-                            onMascot: sing,
-                            fallback: const _PhoneSceneLoading(),
+                          child: VillageWeatherPoller(
+                            child: VillageSceneHost(
+                              state: sceneState(),
+                              onOpen: openCode,
+                              onMascot: sing,
+                              fallback: const _PhoneSceneLoading(),
+                            ),
                           ),
                         ),
                       ),
@@ -227,17 +231,22 @@ class VillageScreen extends ConsumerWidget {
                 final scene = LayoutBuilder(
                   builder: (context, box) => SizedBox(
                     height: _sceneHeight(box.maxWidth),
-                    child: VillageSceneHost(
-                      state: sceneState(),
-                      onOpen: openCode,
-                      onMascot: sing,
-                      fallback: VillageScene(
-                        buildings: buildings,
-                        signTitle: t.villageSignTitle,
-                        signSubtitle: signSubtitle,
-                        greeting: greeting,
-                        onTapBuilding: (b) => openBuilding(b),
-                        onTapMascot: sing,
+                    // The weather is asked only where the 3D scene can
+                    // show it.
+                    child: VillageWeatherPoller(
+                      enabled: ref.watch(village3dActiveProvider),
+                      child: VillageSceneHost(
+                        state: sceneState(),
+                        onOpen: openCode,
+                        onMascot: sing,
+                        fallback: VillageScene(
+                          buildings: buildings,
+                          signTitle: t.villageSignTitle,
+                          signSubtitle: signSubtitle,
+                          greeting: greeting,
+                          onTapBuilding: (b) => openBuilding(b),
+                          onTapMascot: sing,
+                        ),
                       ),
                     ),
                   ),
