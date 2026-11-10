@@ -27,7 +27,9 @@ class _WebVillageChannel implements VillageSceneChannel {
       ..border = '0'
       ..width = '100%'
       ..height = '100%'
-      ..display = 'block';
+      ..display = 'block'
+      // Until it's ready the 2D village covers it, and takes the taps.
+      ..pointerEvents = 'none';
     ui_web.platformViewRegistry.registerViewFactory(
       _viewType,
       (int _) => _iframe,
@@ -63,6 +65,11 @@ class _WebVillageChannel implements VillageSceneChannel {
 
   @override
   Widget buildView() => HtmlElementView(viewType: _viewType);
+
+  @override
+  void setInteractive(bool on) {
+    _iframe.style.pointerEvents = on ? 'auto' : 'none';
+  }
 
   /// Flutter web composites its own layers above the iframe.
   @override

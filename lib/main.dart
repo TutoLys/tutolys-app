@@ -26,6 +26,7 @@ import 'features/play/learning_platform_providers.dart'
     show celebrationRowsProvider;
 import 'features/quests/quest_celebration.dart';
 import 'features/settings/settings_controller.dart';
+import 'core/routing/root_cover_observer.dart';
 
 void main() {
   // Every uncaught error reaches the console and the on-device log
@@ -216,6 +217,8 @@ class _RootNavigator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Navigator(
+      // Tells the 3D village when a dialog covers it (ADR 0126).
+      observers: [rootCoverObserver],
       onGenerateRoute: (_) =>
           MaterialPageRoute<void>(builder: (_) => const AppShell()),
     );

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/routing/root_cover_observer.dart';
 import '../../settings/settings_controller.dart';
 import 'village_bridge.dart';
 import 'village_channel.dart';
@@ -81,9 +82,17 @@ class _VillageSceneHostState extends ConsumerState<VillageSceneHost> {
 
   bool get _paused => !_foreground || !_visible || _covered;
 
+  /// What the scene was last told about input.
+  bool? _sentInteractive;
+
+  void _onRootCover() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
+    rootCoverObserver.covered.addListener(_onRootCover);
     _lifecycle = AppLifecycleListener(
       onStateChange: (state) {
         // Not `inactive`: on web a tap into the scene's iframe takes focus
@@ -123,6 +132,7 @@ class _VillageSceneHostState extends ConsumerState<VillageSceneHost> {
   }
 
   void _stop() {
+    _sentInteractive = null;
     _channel?.send(HostMessage.dispose);
     _timeout?.cancel();
     _timeout = null;
@@ -186,6 +196,7 @@ class _VillageSceneHostState extends ConsumerState<VillageSceneHost> {
 
   @override
   void dispose() {
+    rootCoverObserver.covered.removeListener(_onRootCover);
     _lifecycle?.dispose();
     _stop();
     super.dispose();
@@ -213,11 +224,18 @@ class _VillageSceneHostState extends ConsumerState<VillageSceneHost> {
     // dialog, sheet or pushed page: pause. Both lookups rebuild this widget
     // when they change.
     _visible = Visibility.of(context);
-    _covered = !(ModalRoute.of(context)?.isCurrent ?? true);
+    _covered =
+        !(ModalRoute.of(context)?.isCurrent ?? true) ||
+        rootCoverObserver.covered.value;
     _syncPaused();
     // A native layer would draw over the dialog: take it off screen and let
     // the 2D village stand in until the dialog closes.
     final lifted = _covered && channel.drawsAboveFlutter;
+    final interactive = _phase == _Phase.ready && !_covered;
+    if (_sentInteractive != interactive) {
+      _sentInteractive = interactive;
+      channel.setInteractive(interactive);
+    }
 
     return Stack(
       fit: StackFit.expand,

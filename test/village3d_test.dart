@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tutolys_app/core/i18n/strings.dart';
+import 'package:tutolys_app/core/routing/root_cover_observer.dart';
 import 'package:tutolys_app/data/local_db/app_settings.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
 import 'package:tutolys_app/features/home/subject_progress.dart';
@@ -54,6 +55,11 @@ class FakeChannel implements VillageSceneChannel {
 
   @override
   var drawsAboveFlutter = false;
+
+  bool? interactive;
+
+  @override
+  void setInteractive(bool on) => interactive = on;
 }
 
 class _Settings extends SettingsController {
@@ -446,10 +452,69 @@ void main() {
       await tester.pumpAndSettle();
       expect(channel.types.last, 'pause');
       expect(_view, findsOneWidget, reason: 'web draws dialogs above it');
+      expect(channel.interactive, isFalse, reason: 'the dialog takes taps');
 
       Navigator.of(context).pop();
       await tester.pumpAndSettle();
       expect(channel.types.last, 'resume');
+      expect(channel.interactive, isTrue);
+    });
+
+    testWidgets('a dialog on the root navigator pauses it too', (
+      tester,
+    ) async {
+      // The app's shape: the Village inside a nested navigator, dialogs on
+      // the root one, which only the observer sees.
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            settingsControllerProvider.overrideWith(
+              () => _Settings(const AppSettings()),
+            ),
+            villageSceneChannelFactoryProvider.overrideWithValue(
+              ({required String title}) => channel,
+            ),
+          ],
+          child: MaterialApp(
+            navigatorObservers: [rootCoverObserver],
+            home: Navigator(
+              onGenerateRoute: (_) => MaterialPageRoute<void>(
+                builder: (_) => VillageSceneHost(
+                  state: _state(),
+                  fallback: const SizedBox.expand(key: _fallbackKey),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      channel.boot();
+      await tester.pump();
+      expect(channel.interactive, isTrue);
+
+      final context = tester.element(find.byType(VillageSceneHost));
+      showDialog<void>(
+        context: context,
+        useRootNavigator: true,
+        builder: (_) => const Text('NIP'),
+      );
+      await tester.pumpAndSettle();
+      expect(channel.types.last, 'pause');
+      expect(channel.interactive, isFalse);
+
+      Navigator.of(context, rootNavigator: true).pop();
+      await tester.pumpAndSettle();
+      expect(channel.types.last, 'resume');
+      expect(channel.interactive, isTrue);
+    });
+
+    testWidgets('a loading scene takes no taps: the 2D village over it does',
+        (tester) async {
+      await tester.pumpWidget(host());
+      expect(channel.interactive, isFalse);
+      channel.boot();
+      await tester.pump();
+      expect(channel.interactive, isTrue);
     });
 
     testWidgets('a native view is taken off screen under a dialog', (

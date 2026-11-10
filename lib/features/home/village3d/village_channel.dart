@@ -17,6 +17,12 @@ abstract class VillageSceneChannel {
 
   Widget buildView();
 
+  /// Whether the scene takes pointer input. Off while it loads under the
+  /// 2D village and while anything covers it: on web an iframe takes every
+  /// click over its box, including one meant for a Flutter dialog drawn on
+  /// top of it.
+  void setInteractive(bool on);
+
   /// True where the view is a native layer drawn above Flutter (Linux's
   /// GTK WebView): a dialog opened over it would sit underneath, so the
   /// host takes the view off screen while anything covers the Village.
