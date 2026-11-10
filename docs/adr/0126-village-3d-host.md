@@ -84,3 +84,56 @@ app when the 3D is ready!!"
   host is tested on the VM (`test/village3d_test.dart`).
 - `village3dBundled` stays false until a bundle that speaks the bridge is in
   the assets.
+
+## Bundle and size (2026-11-10)
+
+- `village3d-2026.11.10` from village-3d's `dist/`: 47 files, 7.45 MB, every
+  file checked against `MANIFEST.json`'s sha256. The sync script skips
+  comment lines in its CDN check, because three.js documents CDN usage in
+  comments.
+- **Web build: +7.8 MB on disk** (`build/web-preview` 66.6 → 74.5 MB). The
+  first load is unchanged. Flutter web fetches assets on demand, and the
+  iframe only loads them when the toggle is on, so a kid on the 2D default
+  downloads none of it.
+- **Linux: +0.** The assets are declared `platforms: [web]`. The profile
+  bundle has no `assets/village3d/`.
+
+## Live verification (2026-11-10)
+
+All of this ran against the dev-stack on :8080 (profile build of 5de3c8c),
+with a QA kid seeded with 12 real mastery rows in MATH and FR. Screenshots
+are in `Platforms/qa/out/village3d-2026-11-10/` (git-ignored).
+
+- **The 3D path** ran in headless Chromium on the machine's real GPU (ANGLE
+  Vulkan, AMD Radeon), with the toggle on.
+  - The scene sent `loading`, `ready`, then `perf`, at 60 fps.
+  - Its pills carried the real figures: Mathématiques 12/100, Français 2/100,
+    the rest « À découvrir ».
+  - Tapping the Science pill sent `open`, and the app opened the Carte on
+    Science et techno.
+  - Switching to Quêtes paused the scene: its frame counter stayed at 663 and
+    `running` was false. Coming back resumed it.
+  - In English, `<html lang>` was `en`, and the stage, every pill and every
+    camera button read in English.
+- **The fallback** ran in the same Chromium with `--disable-3d-apis`, toggle
+  on. The scene sent `loading` then `unavailable:webgl`, the iframe was
+  removed, and the 2D village showed. The built-in pane (WebGL off) loads the
+  app, but its input stopped responding after the SharedWorker workaround, so
+  this run stands in for it.
+- **The default**: a freshly paired kid in the WebGL Chromium got the 2D
+  village, with no iframe.
+- **Linux**: the profile build runs; its boot log reaches `session_restore
+  ok`. No screenshot could be taken: GNOME Wayland blocks XWayland grabs, and
+  Flutter's screenshot under Impeller isn't supported. Its 2D-only behaviour
+  holds by construction: the io channel factory returns null, and the host
+  test covers a null channel.
+
+## Known gaps on the scene side (sent to village-3d)
+
+- At the app's scene size (about 845 × 505), the pills show names only, not
+  the progress figure, and they crowd.
+- The fox's bubble covers the pills in the middle.
+- Three signposts are painted in French (BRIDGE.md).
+- `hasLessons: false` (ESL/FLS with no lessons yet) has no scene state. Those
+  buildings show as live with their progress, where the 2D village says
+  « Bientôt ».
