@@ -82,9 +82,11 @@ void main() {
     expect(find.byType(VillageScreen), findsOneWidget);
     expect(find.byType(PlayScreen), findsNothing);
     // IndexedStack keeps every tab built — selection means Village's own
-    // content is actually hit-testable, not just present in the tree. The
-    // recommend bar is the marker: it belongs to Village and nothing else.
-    expect(find.text('ACTIVITÉ RECOMMANDÉE'), findsOneWidget);
+    // content is actually hit-testable, not just present in the tree.
+    expect(
+      find.byKey(const ValueKey('village-body')).hitTestable(),
+      findsOneWidget,
+    );
   });
 
   testWidgets('pushing /play with a node shows that node on the play screen', (
@@ -161,8 +163,9 @@ void main() {
       }
     });
 
-    testWidgets('switching pages changes the URL, and keeps the pages alive',
-        (tester) async {
+    testWidgets('switching pages changes the URL, and keeps the pages alive', (
+      tester,
+    ) async {
       final router = buildPairedRouter();
       addTearDown(router.dispose);
       await tester.pumpWidget(appUnder(router));
@@ -174,9 +177,13 @@ void main() {
 
       expect(router.state.uri.path, '/progres');
       expect(shownIndex(tester), VillageShell.pages.indexOf('progres'));
-      expect(tester.state(find.byType(VillageShell)), same(shell),
-          reason: 'one shell for every page: rebuilding it per URL would '
-              're-fire every page\'s load');
+      expect(
+        tester.state(find.byType(VillageShell)),
+        same(shell),
+        reason:
+            'one shell for every page: rebuilding it per URL would '
+            're-fire every page\'s load',
+      );
     });
 
     testWidgets('a nav tap goes through the URL', (tester) async {
@@ -204,12 +211,16 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(router.state.uri.path, '/village');
-        expect(find.text('ACTIVITÉ RECOMMANDÉE'), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('village-body')).hitTestable(),
+          findsOneWidget,
+        );
       });
     }
 
-    testWidgets('a refresh during a game goes to the Carte, not a crash',
-        (tester) async {
+    testWidgets('a refresh during a game goes to the Carte, not a crash', (
+      tester,
+    ) async {
       // The play request lives only in memory, so a reload has none.
       final router = GoRouter(
         initialLocation: '/play',
@@ -226,8 +237,9 @@ void main() {
   });
 
   group('launch location (a browser refresh)', () {
-    testWidgets('the page in the URL at launch is the first page shown',
-        (tester) async {
+    testWidgets('the page in the URL at launch is the first page shown', (
+      tester,
+    ) async {
       rememberLaunchLocation(Uri.parse('http://127.0.0.1:8080/#/progres'));
       final router = buildPairedRouter();
       addTearDown(router.dispose);
@@ -237,8 +249,9 @@ void main() {
       expect(router.state.uri.path, '/progres');
     });
 
-    testWidgets('it is used once: a re-pair starts at the Village',
-        (tester) async {
+    testWidgets('it is used once: a re-pair starts at the Village', (
+      tester,
+    ) async {
       rememberLaunchLocation(Uri.parse('http://127.0.0.1:8080/#/progres'));
       buildPairedRouter().dispose();
 

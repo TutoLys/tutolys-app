@@ -719,46 +719,44 @@ void main() {
   });
 
   group('a phone', () {
-    Widget phone({required bool platform}) => ProviderScope(
-      overrides: [
-        localDatabaseProvider.overrideWithValue(LocalDatabase.memory()),
-        questBoardProvider.overrideWith(
-          (ref) async => QuestBoard(
-            quests: const [],
-            weekCompleted: 0,
-            unlocked: const {},
-            today: DateTime(2026, 11, 10),
+    Widget phone({required bool platform, Size size = const Size(390, 844)}) =>
+        ProviderScope(
+          overrides: [
+            localDatabaseProvider.overrideWithValue(LocalDatabase.memory()),
+            questBoardProvider.overrideWith(
+              (ref) async => QuestBoard(
+                quests: const [],
+                weekCompleted: 0,
+                unlocked: const {},
+                today: DateTime(2026, 11, 10),
+              ),
+            ),
+            subjectProgressProvider.overrideWith(
+              (ref) async => const {'MATH': 0.62},
+            ),
+            villageScenePlatformProvider.overrideWithValue(platform),
+            villageSceneChannelFactoryProvider.overrideWithValue(
+              ({required String title}) => platform ? channel : null,
+            ),
+            settingsControllerProvider.overrideWith(
+              () => _Settings(const AppSettings()),
+            ),
+          ],
+          child: MaterialApp(
+            theme: TutolysTheme.village(),
+            locale: const Locale('fr', 'CA'),
+            supportedLocales: const [Locale('fr', 'CA'), Locale('en', 'CA')],
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            home: MediaQuery(
+              data: MediaQueryData(size: size, disableAnimations: true),
+              child: Scaffold(body: VillageScreen(onOpenSubject: (_) {})),
+            ),
           ),
-        ),
-        subjectProgressProvider.overrideWith(
-          (ref) async => const {'MATH': 0.62},
-        ),
-        villageScenePlatformProvider.overrideWithValue(platform),
-        villageSceneChannelFactoryProvider.overrideWithValue(
-          ({required String title}) => platform ? channel : null,
-        ),
-        settingsControllerProvider.overrideWith(
-          () => _Settings(const AppSettings()),
-        ),
-      ],
-      child: MaterialApp(
-        theme: TutolysTheme.village(),
-        locale: const Locale('fr', 'CA'),
-        supportedLocales: const [Locale('fr', 'CA'), Locale('en', 'CA')],
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        home: MediaQuery(
-          data: const MediaQueryData(
-            size: Size(390, 844),
-            disableAnimations: true,
-          ),
-          child: Scaffold(body: VillageScreen(onOpenSubject: (_) {})),
-        ),
-      ),
-    );
+        );
 
     void phoneSize(WidgetTester tester) {
       tester.view.physicalSize = const Size(390, 844);
@@ -766,10 +764,10 @@ void main() {
       addTearDown(tester.view.reset);
     }
 
-    final scene = find.byKey(const ValueKey('village-phone-3d'));
+    final scene = find.byKey(const ValueKey('village-scene-box'));
     final loading = find.byKey(const ValueKey('village-phone-3d-loading'));
 
-    testWidgets('gets the 3D scene in place of the subject strip', (
+    testWidgets('the 3D scene fills the screen; quests open in a sheet', (
       tester,
     ) async {
       phoneSize(tester);
@@ -778,16 +776,23 @@ void main() {
       expect(scene, findsOneWidget);
       expect(find.byType(SubjectStrip), findsNothing);
       expect(loading, findsOneWidget);
+      // Hafid: no recommended-activity band, the village takes the space.
+      expect(find.byKey(const ValueKey('recommend-title')), findsNothing);
 
       channel.boot();
       await tester.pump();
       expect(loading, findsNothing);
       expect(_view, findsOneWidget);
-      // Continuer comes first, above the scene.
-      expect(
-        tester.getTopLeft(find.byKey(const ValueKey('recommend-title'))).dy,
-        lessThan(tester.getTopLeft(scene).dy),
-      );
+      // Down to the bottom: only the quests row sits under the scene.
+      final button = find.byKey(const ValueKey('village-quests-button'));
+      final sceneBottom = tester.getBottomLeft(scene).dy;
+      expect(tester.getTopLeft(button).dy, greaterThan(sceneBottom));
+      expect(sceneBottom, greaterThan(844 * 0.7));
+
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(find.text(Strings.fr.villageQuestsTitle), findsWidgets);
+      expect(channel.types.last, 'pause', reason: 'the sheet covers it');
     });
 
     testWidgets('falls back to the 2D phone layout when the scene fails', (
@@ -801,6 +806,39 @@ void main() {
       expect(scene, findsNothing);
       expect(find.byType(SubjectStrip), findsOneWidget);
     });
+
+    for (final (size, beside) in [
+      (const Size(1650, 950), true),
+      (const Size(1024, 768), false),
+      (const Size(820, 1180), false),
+    ]) {
+      testWidgets('at $size the village fills down to the bottom', (
+        tester,
+      ) async {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await tester.pumpWidget(phone(platform: true, size: size));
+        await tester.pump();
+        channel.boot();
+        await tester.pump();
+
+        final box = tester.getRect(scene);
+        expect(box.bottom, greaterThan(size.height - 120));
+        final panel = find.byKey(const ValueKey('village-quest-panel'));
+        final button = find.byKey(const ValueKey('village-quests-button'));
+        if (beside) {
+          expect(panel, findsOneWidget);
+          expect(button, findsNothing);
+          expect(tester.getRect(panel).height, closeTo(box.height, 1));
+          expect(box.width, greaterThan(size.width - 300 - 100));
+        } else {
+          expect(button, findsOneWidget);
+          expect(box.width, greaterThan(size.width - 60));
+        }
+        expect(tester.takeException(), isNull);
+      });
+    }
 
     testWidgets('keeps the 2D phone layout where no scene can run', (
       tester,

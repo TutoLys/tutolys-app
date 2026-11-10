@@ -507,29 +507,6 @@ void main() {
 
     // A2 (UX review): the Village's gold Continuer now starts an activity,
     // but only ever the frontier's, never one past it.
-    testWidgets('the Village plays the frontier, never past it', (
-      tester,
-    ) async {
-      final db = await tester.runAsync(seeded);
-      await tester.pumpWidget(
-        appUnder(
-          leaves: leaves,
-          content: content,
-          masteries: masteries,
-          db: db,
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      final cta = find.byKey(const ValueKey('recommend-continue'));
-      await tester.ensureVisible(cta);
-      await tester.pumpAndSettle();
-      await tester.tap(cta);
-      await tester.pumpAndSettle();
-      final play = tester.widget<PlayScreen>(find.byType(PlayScreen));
-      expect(play.node.id, 'a');
-      expect(play.envelope['exercise_id'], 'a-1');
-    });
   });
 
   group('the Carte opens on where the kid is', () {
@@ -858,7 +835,8 @@ void main() {
     Finder orb(String id) => find.byKey(ValueKey('path-orb-$id'));
 
     setUp(() {
-      final view = TestWidgetsFlutterBinding.instance.platformDispatcher.implicitView!;
+      final view =
+          TestWidgetsFlutterBinding.instance.platformDispatcher.implicitView!;
       view.physicalSize = const Size(1280, 1800);
       view.devicePixelRatio = 1;
       addTearDown(view.reset);
@@ -873,7 +851,9 @@ void main() {
         expect(header(key), findsOneWidget);
       }
       expect(
-        tester.widget<Text>(find.byKey(const ValueKey('carte-section-count-g1'))).data,
+        tester
+            .widget<Text>(find.byKey(const ValueKey('carte-section-count-g1')))
+            .data,
         '0/3',
       );
     });
@@ -899,7 +879,9 @@ void main() {
       expect(orb('g1'), findsOneWidget);
       expect(orb('a1'), findsNothing);
       expect(
-        tester.widget<Text>(find.byKey(const ValueKey('carte-section-count-a1'))).data,
+        tester
+            .widget<Text>(find.byKey(const ValueKey('carte-section-count-a1')))
+            .data,
         '4/4',
       );
     });
@@ -965,7 +947,10 @@ void main() {
       await openCarte(
         tester,
         appUnder(
-          leaves: [leaf('a1', 'sens-et-ecriture-des-nombres', 1), ...leaves.skip(4)],
+          leaves: [
+            leaf('a1', 'sens-et-ecriture-des-nombres', 1),
+            ...leaves.skip(4),
+          ],
           content: content,
           db: db,
         ),
@@ -978,9 +963,8 @@ void main() {
           kidId: 'k1',
         ).recordCompleted('a1', perfect: true, exerciseId: 'e-a1'),
       );
-      ProviderScope.containerOf(
-        tester.element(find.byType(PathScreen)),
-      ).invalidate(nodeProgressProvider);
+      ProviderScope.containerOf(tester.element(find.byType(PathScreen)))
+          .invalidate(nodeProgressProvider);
       await tester.pumpAndSettle();
       expect(orb('g1'), findsOneWidget);
     });

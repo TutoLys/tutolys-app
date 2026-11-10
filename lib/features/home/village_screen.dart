@@ -1,10 +1,6 @@
-import 'dart:math' show max;
-
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../../core/widgets/arrow_label.dart';
 
 import '../../core/i18n/strings.dart';
 
@@ -21,10 +17,7 @@ import '../audio/music_director.dart';
 import '../quests/quest_board.dart';
 import '../quests/quests_screen.dart' show QuestListPending, questTitle;
 import '../gallery/village_gallery.dart';
-import '../path/play_node.dart';
 import '../path/programme.dart';
-import '../path/subject_pills.dart'
-    show subjectArt, subjectArtFallback, subjectLabel;
 
 /// Village — the learner's home.
 ///
@@ -65,22 +58,7 @@ class VillageScreen extends ConsumerWidget {
     final board = boardAsync.value;
     final boardFailed = board == null && boardAsync.hasError;
     void retryBoard() => ref.invalidate(questBoardProvider);
-    // Per-subject mastery, joined locally from the per-skill figures the
-    // backend already sends plus the cached curriculum's own subject per
-    // node — no extra endpoint, and it works offline.
     final t = context.s;
-    final next = ref.watch(carteNextProvider);
-    Widget recommend({required bool fullWidth}) => _RecommendBar(
-      fullWidth: fullWidth,
-      next: next,
-      // A2: the gold button starts the frontier's activity, as the
-      // design's `js-start-exercise` does. With nothing open yet it
-      // still leads to the Carte.
-      onContinue: next == null
-          ? onOpenPath
-          : () =>
-                playNode(context, ref, leaf: next.leaf, lessons: next.lessons),
-    );
     // A subject opens on the Carte; the gallery opens on the kid's own
     // shelf (ADR 0098).
     void openBuilding(VillageBuilding b) {
@@ -91,6 +69,9 @@ class VillageScreen extends ConsumerWidget {
       }
     }
 
+    // Per-subject mastery, joined locally from the per-skill figures the
+    // backend already sends plus the cached curriculum's own subject per
+    // node — no extra endpoint, and it works offline.
     final bySubject =
         ref.watch(subjectProgressProvider).value ?? <String, double>{};
     final withoutLessons =
@@ -101,43 +82,80 @@ class VillageScreen extends ConsumerWidget {
         .toggleSong(
           mascotSongFor(Localizations.localeOf(context).languageCode),
         );
+    final buildings = [
+      for (final b in villageBuildings(
+        t,
+        subjects: ref.watch(programmeSubjectsProvider),
+      ))
+        b.withProgress(
+          bySubject[b.subject],
+          hasLessons: !withoutLessons.contains(b.subject),
+        ),
+    ];
+    final signSubtitle = kid?.gradeLevel == null
+        ? ''
+        : t.gradeLabel(kid!.gradeLevel);
+    final greeting = _greetingFor(t, kid?.displayName, board);
+    void openCode(String code) {
+      for (final b in buildings) {
+        if (b.subject == code) return openBuilding(b);
+      }
+    }
 
+    final active3d = ref.watch(village3dActiveProvider);
+    Widget questPanel({bool fill = false, Key? key}) => _QuestPanel(
+      key: key,
+      quests: board?.quests,
+      failed: boardFailed,
+      onRetry: retryBoard,
+      onOpenPath: onOpenPath,
+      onOpenQuests: onOpenQuests,
+      fillHeight: fill,
+    );
+
+    // Hafid, 2026-11-10: "It should take the whole screen … give the 3d the
+    // full space". No recommended-activity band: the header, the nav and
+    // the quests stay, and the village fills everything else, down to the
+    // bottom of the window, at every size (ADR 0126).
     return SafeArea(
-      child: SingleChildScrollView(
-        padding: EdgeInsets.all(Space.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // No greeting row here: the shell's header already carries the
-            // name and the stat pills, and two of them on one screen was
-            // the duplication Hafid's screenshot showed.
-            // `grid-template-columns: 1fr 300px` above the mobile
-            // breakpoint; the panel drops under the scene below it.
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final buildings = [
-                  for (final b in villageBuildings(
-                    t,
-                    subjects: ref.watch(programmeSubjectsProvider),
-                  ))
-                    b.withProgress(
-                      bySubject[b.subject],
-                      hasLessons: !withoutLessons.contains(b.subject),
-                    ),
-                ];
+      key: const ValueKey('village-body'),
+      child: LayoutBuilder(
+        builder: (context, box) {
+          // The breakpoints measure the content inside the page padding,
+          // as they always have (AM11).
+          final inner = box.maxWidth - 2 * Space.lg;
+          final phone = inner < _sceneMinWidth;
 
-                // Below the phone breakpoint the design does not shrink the
-                // village — it replaces it. The scene positions buildings at
-                // fixed fractions of a wide canvas, so on ~390px they
-                // overlap, their pills collide and the whole thing clips.
-                // AM11: and below 900px too. At 768 the scene drew at 0.62
-                // and its labels read at ~7px; the phone layout is legible
-                // and puts « Continuer » first.
-                final signSubtitle = kid?.gradeLevel == null
-                    ? ''
-                    : t.gradeLabel(kid!.gradeLevel);
-                final greeting = _greetingFor(t, kid?.displayName, board);
-                VillageSceneState sceneState() => VillageSceneState(
+          // A phone without the 3D scene: the 2D village doesn't fit a
+          // phone (AM11), so it keeps its phone layout, scrolling.
+          if (phone && !active3d) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(Space.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _MobileGreeting(text: greeting, onTapMascot: sing),
+                  const SizedBox(height: Space.md),
+                  SubjectStrip(
+                    buildings: buildings,
+                    title: t.villageYourSubjects,
+                    onTapBuilding: openBuilding,
+                  ),
+                  const SizedBox(height: Space.md),
+                  questPanel(),
+                ],
+              ),
+            );
+          }
+
+          final scene = ClipRRect(
+            key: const ValueKey('village-scene-box'),
+            borderRadius: BorderRadius.circular(24),
+            // The weather is asked only where the 3D scene can show it.
+            child: VillageWeatherPoller(
+              enabled: active3d,
+              child: VillageSceneHost(
+                state: VillageSceneState(
                   buildings: buildings,
                   lang: Localizations.localeOf(context).languageCode,
                   signTitle: t.villageSignTitle,
@@ -146,176 +164,83 @@ class VillageScreen extends ConsumerWidget {
                   reduced: MediaQuery.disableAnimationsOf(context),
                   strings: village3dStrings(t),
                   weather: ref.watch(villageWeatherProvider),
-                );
-                void openCode(String code) {
-                  for (final b in buildings) {
-                    if (b.subject == code) return openBuilding(b);
-                  }
-                }
-
-                // A phone with the 3D village (ADR 0126): « Continuer »
-                // first (A6), then the scene, whose fox bubble carries the
-                // greeting and whose pills carry each subject's progress,
-                // then the quests. Until the scene is ready a calm
-                // placeholder holds its place; if it fails, the provider
-                // turns false and the 2D phone layout below takes over.
-                if (constraints.maxWidth < _sceneMinWidth &&
-                    ref.watch(village3dActiveProvider)) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      recommend(fullWidth: true),
-                      const SizedBox(height: Space.md),
-                      SizedBox(
-                        key: const ValueKey('village-phone-3d'),
-                        height: _phoneSceneHeight(
-                          constraints.maxWidth,
-                          MediaQuery.sizeOf(context).height,
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(24),
-                          child: VillageWeatherPoller(
-                            child: VillageSceneHost(
-                              state: sceneState(),
-                              onOpen: openCode,
-                              onMascot: sing,
-                              fallback: const _PhoneSceneLoading(),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: Space.md),
-                      _QuestPanel(
-                        quests: board?.quests,
-                        failed: boardFailed,
-                        onRetry: retryBoard,
-                        onOpenPath: onOpenPath,
-                        onOpenQuests: onOpenQuests,
-                      ),
-                    ],
-                  );
-                }
-
-                if (constraints.maxWidth < _sceneMinWidth) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _MobileGreeting(
-                        text: _greetingFor(t, kid?.displayName, board),
+                ),
+                onOpen: openCode,
+                onMascot: sing,
+                // The 2D village stands in while the 3D one loads, and for
+                // good where it can't run: it fills the same box. On a
+                // phone it doesn't fit, so a calm placeholder holds the
+                // place until the scene is ready.
+                fallback: phone
+                    ? const _PhoneSceneLoading()
+                    : VillageScene(
+                        buildings: buildings,
+                        signTitle: t.villageSignTitle,
+                        signSubtitle: signSubtitle,
+                        greeting: greeting,
+                        onTapBuilding: openBuilding,
                         onTapMascot: sing,
                       ),
-                      // A6: the one action that matters comes first on a
-                      // phone, its button full width.
-                      const SizedBox(height: Space.md),
-                      recommend(fullWidth: true),
-                      const SizedBox(height: Space.md),
-                      SubjectStrip(
-                        buildings: buildings,
-                        title: t.villageYourSubjects,
-                        onTapBuilding: (b) => openBuilding(b),
-                      ),
-                      const SizedBox(height: Space.md),
-                      _QuestPanel(
-                        quests: board?.quests,
-                        failed: boardFailed,
-                        onRetry: retryBoard,
-                        onOpenPath: onOpenPath,
-                        onOpenQuests: onOpenQuests,
-                      ),
-                    ],
-                  );
-                }
+              ),
+            ),
+          );
+          final gap = phone ? Space.md : Space.lg;
 
-                // The 3D village where the device can run it, the 2D one
-                // as its fallback and while it loads (ADR 0126).
-                final scene = LayoutBuilder(
-                  builder: (context, box) => SizedBox(
-                    height: _sceneHeight(box.maxWidth),
-                    // The weather is asked only where the 3D scene can
-                    // show it.
-                    child: VillageWeatherPoller(
-                      enabled: ref.watch(village3dActiveProvider),
-                      child: VillageSceneHost(
-                        state: sceneState(),
-                        onOpen: openCode,
-                        onMascot: sing,
-                        fallback: VillageScene(
-                          buildings: buildings,
-                          signTitle: t.villageSignTitle,
-                          signSubtitle: signSubtitle,
-                          greeting: greeting,
-                          onTapBuilding: (b) => openBuilding(b),
-                          onTapMascot: sing,
+          // Wide: the quests beside the village, at its full height.
+          if (inner >= _sideBySideMinWidth) {
+            return Padding(
+              padding: EdgeInsets.all(gap),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(child: scene),
+                  SizedBox(width: gap),
+                  SizedBox(
+                    width: _panelWidth,
+                    child: questPanel(
+                      fill: true,
+                      key: const ValueKey('village-quest-panel'),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          // Tablet and phone: the village fills; the quests open in a
+          // sheet from a slim row under it. Under it, not over it: on web
+          // the scene's iframe takes every tap in its box, and on Linux
+          // its view draws above Flutter.
+          return Padding(
+            padding: EdgeInsets.all(gap),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: scene),
+                SizedBox(height: phone ? Space.sm : Space.md),
+                _QuestsButton(
+                  board: board,
+                  onTap: () => showModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    showDragHandle: true,
+                    builder: (context) => SafeArea(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          Space.md,
+                          0,
+                          Space.md,
+                          Space.md,
                         ),
+                        child: questPanel(),
                       ),
                     ),
                   ),
-                );
-                final panel = _QuestPanel(
-                  quests: board?.quests,
-                  failed: boardFailed,
-                  onRetry: retryBoard,
-                  onOpenPath: onOpenPath,
-                  onOpenQuests: onOpenQuests,
-                );
-
-                // Side by side only while the scene keeps ~760px of its own
-                // (plus the 300px panel and the gap); below that six buildings
-                // and their pills crowd, so the panel moves underneath.
-                // Wider than a phone, the recommend bar sits under the
-                // scene and its panel, as the design draws it.
-                // « Continuer » comes first at every width (AM11), as it
-                // does on a phone.
-                if (constraints.maxWidth < _sideBySideMinWidth) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      recommend(fullWidth: false),
-                      const SizedBox(height: Space.lg),
-                      scene,
-                      const SizedBox(height: Space.md),
-                      panel,
-                    ],
-                  );
-                }
-                // Beside the scene the panel is exactly the scene's height,
-                // top and bottom edges aligned; more rows than fit scroll
-                // inside it.
-                final sceneWidth =
-                    constraints.maxWidth - _panelWidth - Space.lg;
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    recommend(fullWidth: false),
-                    const SizedBox(height: Space.lg),
-                    SizedBox(
-                      height: _sceneHeight(sceneWidth),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(child: scene),
-                          const SizedBox(width: Space.lg),
-                          SizedBox(
-                            width: _panelWidth,
-                            child: _QuestPanel(
-                              key: const ValueKey('village-quest-panel'),
-                              quests: board?.quests,
-                              failed: boardFailed,
-                              onRetry: retryBoard,
-                              onOpenPath: onOpenPath,
-                              onOpenQuests: onOpenQuests,
-                              fillHeight: true,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                );
-              },
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -330,14 +255,6 @@ const double _sceneMinWidth = 900;
 
 /// The design's `grid-template-columns: 1fr 300px`.
 const double _panelWidth = 300;
-
-/// The phone scene: portrait, as the scene's phone camera is framed for
-/// (village-3d, 360–430 px portrait), so the buildings and their pills have
-/// room. Never more than two thirds of the screen, so the page above and
-/// below it can still be scrolled with a thumb, since a drag on the scene
-/// turns the camera.
-double _phoneSceneHeight(double width, double screenHeight) =>
-    (width * 1.45).clamp(360.0, max(360.0, screenHeight * 0.66));
 
 /// Holds the phone scene's place while it loads: the sky-to-grass ground
 /// of the village, with nothing pretending to be data.
@@ -361,10 +278,6 @@ class _PhoneSceneLoading extends StatelessWidget {
   );
 }
 
-/// Height follows width: the design's 580px at full size, never so short
-/// that the buildings crowd together vertically.
-double _sceneHeight(double width) => (width * 0.6).clamp(400.0, 580.0);
-
 /// What the fox says. Built from the real open-quest count when there is one,
 /// so it is never a line of flavour text pretending to know something.
 String _greetingFor(Strings t, String? name, QuestBoard? board) {
@@ -376,158 +289,58 @@ String _greetingFor(Strings t, String? name, QuestBoard? board) {
   return '$hello $line';
 }
 
-/// The navy band: the Carte's frontier node, named with its subject's
-/// building, area and skill (A2). With nothing open yet it says "Continue
-/// ton parcours" and leads to the Carte.
-class _RecommendBar extends StatelessWidget {
-  const _RecommendBar({this.next, this.onContinue, this.fullWidth = false});
+/// Below the village on tablets and phones: today's quests, one tap from a
+/// sheet, with the same count the header pill shows.
+class _QuestsButton extends StatelessWidget {
+  const _QuestsButton({required this.board, required this.onTap});
 
-  final CarteNext? next;
-  final VoidCallback? onContinue;
-
-  /// A phone (A6): the button goes under the text, full width, the
-  /// prototype's `.recommend .recommend-btn { width:100% }`.
-  final bool fullWidth;
+  final QuestBoard? board;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final p = VillagePalette.of(context);
-    final info = <Widget>[
-      if (next case final next?) ...[
-        Image.asset(
-          'assets/images/${subjectArt[next.subject] ?? subjectArtFallback}',
-          key: const ValueKey('recommend-building'),
-          width: 52,
-          height: 52,
-          fit: BoxFit.contain,
-        ),
-        const SizedBox(width: 14),
-      ],
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              context.s.villageRecommendedLabel,
-              style: TextStyle(
-                fontSize: 11,
-                letterSpacing: 0.66,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFFBFD3FF),
-              ),
-            ),
-            SizedBox(height: 3),
-            Text(
-              switch (next) {
-                // AM16: on a phone the building beside it already names the
-                // subject, so the line keeps its room for the area.
-                final next? when fullWidth && next.areaTitle != null =>
-                  next.areaTitle!,
-                final next? => [
-                  subjectLabel(context.s, next.subject),
-                  ?next.areaTitle,
-                ].join(' · '),
-                null => context.s.villageContinuePath,
-              },
-              key: const ValueKey('recommend-title'),
-              maxLines: fullWidth ? 2 : 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontFamily: VillageType.display,
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
-                color: Colors.white,
-              ),
-            ),
-            if (next case final next?)
-              Text(
-                next.label,
-                key: const ValueKey('recommend-skill'),
-                maxLines: fullWidth ? 2 : 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFFBFD3FF),
+    final quests = board?.quests;
+    final done = quests?.where((q) => q.done).length;
+    return Material(
+      color: p.surface,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        key: const ValueKey('village-quests-button'),
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Image.asset('assets/images/asset-target.webp', width: 26),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  context.s.villageQuestsTitle,
+                  style: TextStyle(
+                    fontFamily: VillageType.display,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    color: p.ink,
+                  ),
                 ),
               ),
-          ],
-        ),
-      ),
-    ];
-    final Widget button = Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(999),
-      child: InkWell(
-        key: const ValueKey('recommend-continue'),
-        onTap: onContinue,
-        borderRadius: BorderRadius.circular(999),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [p.goldLight, p.gold],
-            ),
-            borderRadius: BorderRadius.circular(999),
-            boxShadow: [
-              BoxShadow(
-                color: p.gold.withValues(alpha: 0.35),
-                blurRadius: 18,
-                offset: Offset(0, 8),
-              ),
+              if (quests != null && done != null)
+                Text(
+                  '$done/${quests.length}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    color: p.inkMuted,
+                  ),
+                ),
+              const SizedBox(width: 6),
+              Icon(Icons.keyboard_arrow_up_rounded, color: p.inkMuted),
             ],
           ),
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 22, vertical: 11),
-            child: fullWidth
-                ? Center(
-                    child: ArrowLabel(
-                      context.s.villageContinueCta,
-                      style: TextStyle(
-                        fontFamily: VillageType.display,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                        color: Color(0xFF241A04),
-                      ),
-                    ),
-                  )
-                : ArrowLabel(
-                    context.s.villageContinueCta,
-                    style: TextStyle(
-                      fontFamily: VillageType.display,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13.5,
-                      color: Color(0xFF241A04),
-                    ),
-                  ),
-          ),
         ),
       ),
-    );
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 22, vertical: 18),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [p.quebecBlue, Color(0xFF16285E)],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(color: p.shadow, blurRadius: 40, offset: Offset(0, 16)),
-        ],
-      ),
-      child: fullWidth
-          ? Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(children: info),
-                const SizedBox(height: 14),
-                button,
-              ],
-            )
-          : Row(children: [...info, button]),
     );
   }
 }
