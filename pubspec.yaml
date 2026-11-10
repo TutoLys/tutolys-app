@@ -92,6 +92,8 @@ flutter:
       platforms: [web, linux]
     - path: assets/village3d/assets/models/
       platforms: [web, linux]
+    - path: assets/village3d/assets/models/props/
+      platforms: [web, linux]
     - path: assets/village3d/src/
       platforms: [web, linux]
     - path: assets/village3d/styles/

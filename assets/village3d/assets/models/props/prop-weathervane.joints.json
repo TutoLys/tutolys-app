@@ -1,0 +1,40 @@
+{
+ "file": "prop-weathervane.glb",
+ "bytes": 11112,
+ "triangles": 144,
+ "meshes": 3,
+ "nodes": 8,
+ "materials": [
+  "gold",
+  "goldBright",
+  "iron"
+ ],
+ "duplicate_node_names": [],
+ "units": "metres, Y up, door faces +Z",
+ "angles": "radians",
+ "joints": [
+  {
+   "name": "vane_spin",
+   "node": "vane_spin",
+   "type": "continuous",
+   "axis_local": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "pivot": [
+    0.0,
+    1.6,
+    0.0
+   ],
+   "axis": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "value": 0.0,
+   "spin_node": "spin_vane",
+   "spin_speed": 0.25
+  }
+ ]
+}

@@ -1,0 +1,131 @@
+{
+ "file": "bldg-univers-social.glb",
+ "bytes": 440300,
+ "triangles": 9434,
+ "meshes": 51,
+ "nodes": 75,
+ "materials": [
+  "bloom",
+  "bush",
+  "door",
+  "globe_blue",
+  "gold",
+  "goldBright",
+  "grass",
+  "iron",
+  "paint_green",
+  "paint_navy",
+  "paint_red",
+  "paint_room",
+  "paint_white",
+  "paper",
+  "slate",
+  "snow",
+  "stone",
+  "stoneDark",
+  "stoneShade",
+  "window",
+  "wood",
+  "woodDark"
+ ],
+ "duplicate_node_names": [],
+ "units": "metres, Y up, door faces +Z",
+ "angles": "radians",
+ "joints": [
+  {
+   "name": "globe_spin",
+   "node": "globe_spin",
+   "type": "continuous",
+   "axis_local": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "pivot": [
+    0.0,
+    5.76,
+    0.0
+   ],
+   "axis": [
+    0.3987,
+    0.9171,
+    0.0
+   ],
+   "value": 0.0,
+   "spin_node": "spin_globe",
+   "spin_speed": 0.3
+  },
+  {
+   "name": "door_hinge_L",
+   "node": "door_hinge_L",
+   "type": "revolute",
+   "axis_local": [
+    0.0,
+    -1.0,
+    0.0
+   ],
+   "pivot": [
+    -0.5,
+    0.45,
+    1.535
+   ],
+   "axis": [
+    0.0,
+    -1.0,
+    0.0
+   ],
+   "value": 0.0,
+   "lower": 0.0,
+   "upper": 1.8326,
+   "drive_node": "drive_door_hinge_L"
+  },
+  {
+   "name": "door_hinge_R",
+   "node": "door_hinge_R",
+   "type": "revolute",
+   "axis_local": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "pivot": [
+    0.5,
+    0.45,
+    1.535
+   ],
+   "axis": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "value": 0.0,
+   "lower": 0.0,
+   "upper": 1.8326,
+   "drive_node": "drive_door_hinge_R"
+  },
+  {
+   "name": "needle_pan",
+   "node": "needle_pan",
+   "type": "revolute",
+   "axis_local": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "pivot": [
+    0.0,
+    3.22,
+    1.75
+   ],
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "value": 0.0,
+   "lower": -0.6109,
+   "upper": 0.6109,
+   "drive_node": "drive_needle_pan"
+  }
+ ]
+}

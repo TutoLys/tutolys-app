@@ -154,6 +154,10 @@ sealed class SceneEvent {
         final num fps => SceneStats(fps.toDouble()),
         _ => const SceneIgnored(),
       },
+      'opening' => switch (raw['id']) {
+        final String id when id.isNotEmpty => SceneOpening(id),
+        _ => const SceneIgnored(),
+      },
       'open' => switch (raw['id']) {
         final String id when id.isNotEmpty => SceneOpen(id),
         _ => const SceneIgnored(),
@@ -199,7 +203,16 @@ final class SceneStats extends SceneEvent {
   final double fps;
 }
 
-/// A building (or its pill) was tapped.
+/// A building was tapped and the scene's portal has started (scene
+/// `.12`+). `open` follows when the gold fills the box; nothing navigates
+/// yet. `ms` isn't kept: the host waits for `open`, never times it.
+final class SceneOpening extends SceneEvent {
+  const SceneOpening(this.id);
+  final String id;
+}
+
+/// The portal filled the box with gold (or, before scene `.12`, a building
+/// was tapped): navigate now.
 final class SceneOpen extends SceneEvent {
   const SceneOpen(this.id);
   final String id;

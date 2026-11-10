@@ -1,8 +1,8 @@
 {
- "version": "village3d-2026.11.10.11",
+ "version": "village3d-2026.11.10.12",
  "bridge": 1,
  "entry": "village.html?embed=1",
- "totalBytes": 7486239,
+ "totalBytes": 6397326,
  "files": {
   "assets/fonts/Baloo2-Bold.ttf": {
    "bytes": 44808,
@@ -65,44 +65,104 @@
    "sha256": "272cabc477136997952eda76d74f1b6314f0fce6b9e53b9ea08a23c2dace8aed"
   },
   "assets/models/bldg-anglais.glb": {
-   "bytes": 623776,
-   "sha256": "c6e0aee7930d335cf87a80a0c641f9995979d593167469f51716456eee885b10"
+   "bytes": 580124,
+   "sha256": "b9c5af4a57c492091453fdfd9cef9f06fe8e443ac07e57e77f6b99ab5fbc10e3"
+  },
+  "assets/models/bldg-anglais.joints.json": {
+   "bytes": 1834,
+   "sha256": "ba6bb106ed602817412d9eb52949e830f93f097f2d468025880460a6ea7b2027"
   },
   "assets/models/bldg-ccq.glb": {
-   "bytes": 584224,
-   "sha256": "94f936c45331936778606709a51cb6ce09ab35cf1fc7f0c0f85924a15105af52"
+   "bytes": 364008,
+   "sha256": "058a89de4940d122d1cf455935cbfe26a35973ca8540f3e4e9c9535e0eea0d96"
+  },
+  "assets/models/bldg-ccq.joints.json": {
+   "bytes": 875,
+   "sha256": "8f79f9ab86b6cf44735f3623ca3fc992dbea1585b8e91a2640375552d78e14b5"
   },
   "assets/models/bldg-francais.glb": {
-   "bytes": 813208,
-   "sha256": "d808a21161be374f4f8b774b1b2438b726b86588cd381e27238d8c67326741c7"
+   "bytes": 315120,
+   "sha256": "df8adfd428d246d24bfd8fbb8570b56f87b71b8898c3ad8a5de4c4cc95056891"
+  },
+  "assets/models/bldg-francais.joints.json": {
+   "bytes": 1541,
+   "sha256": "98d0b85db76452c1e858bdb9b9d664e62c8a253b10ddda74c2e1863d774098d4"
   },
   "assets/models/bldg-gallery.glb": {
-   "bytes": 470872,
-   "sha256": "5b149da8130d4c1a76ab811a1ce587a34fefffb2d87e49112e78a6a79fea0a00"
+   "bytes": 309120,
+   "sha256": "8666f5016dc8a68ead4387e61a69521c7e09341d52314b450345a8e6395e72af"
+  },
+  "assets/models/bldg-gallery.joints.json": {
+   "bytes": 1820,
+   "sha256": "d037fcecf61ba642dba713b06008acc809ce535718bfa31cae9b0fad6207dca2"
   },
   "assets/models/bldg-math.glb": {
-   "bytes": 503688,
-   "sha256": "de95f09ed79611bae1834c1453dee960a4c399ad5ae649a9484ea37e7a31bfd5"
+   "bytes": 521656,
+   "sha256": "4297bd3caa01b29617e390cac3484ec5b16557c4bfbc215ff04025aaf53dfa2c"
   },
   "assets/models/bldg-math.joints.json": {
-   "bytes": 2461,
-   "sha256": "fb5afc70e63d3bb38bf53177906366a0c7a3c0abf730a2c96d23e74024877eaf"
+   "bytes": 2477,
+   "sha256": "2f94ba3dcdcfeeaac7bca81e7399c06bc5c323584ae8422e7abff2b2d0739499"
   },
   "assets/models/bldg-science.glb": {
-   "bytes": 669760,
-   "sha256": "4a8d7a7b192614a6015ea9c78b22a333964c04a545cad449c43ba0b701d679cd"
+   "bytes": 686000,
+   "sha256": "4f549701f18bfd1714716173b425aa5003e8f065d659872ef1c45da0e8a416d5"
   },
   "assets/models/bldg-science.joints.json": {
-   "bytes": 4053,
-   "sha256": "07938f35a650d655158705ed12345211fd5d9e1f45ad72b5ee117f35feea99f2"
+   "bytes": 4056,
+   "sha256": "98797a86d50f96c98e17a66d7400fad5d85865d4b60f0b8d2fa8b112c6dd6976"
   },
   "assets/models/bldg-univers-social.glb": {
-   "bytes": 762488,
-   "sha256": "b4dd3ae78cd4c75878e3c9d6116debe0b87115d9f40a05fa3385577fdeb08cb4"
+   "bytes": 440300,
+   "sha256": "157d0ac972cb2af0599236d5c63408b4435a69a3e9556293fca0495f4c294fcc"
+  },
+  "assets/models/bldg-univers-social.joints.json": {
+   "bytes": 1789,
+   "sha256": "ded34a9a01a3c5810a0094c66906ee6d152ae2976fd797dbe86734822459e1e5"
   },
   "assets/models/fox.glb": {
    "bytes": 1065748,
    "sha256": "1596351b4cdd89c793a6a250dfd27da2f2ac697c8cfd6d9b36852ff744239e25"
+  },
+  "assets/models/props/prop-bench.glb": {
+   "bytes": 12004,
+   "sha256": "e42893b3e3d4373660342b3ecb2cc7bcc5495b764eabd346ac292de7f5ea19af"
+  },
+  "assets/models/props/prop-bench.joints.json": {
+   "bytes": 238,
+   "sha256": "b2912fa4f41ba997a1a0ab73021111fc2af5644b5761600d63105e62cc2492ed"
+  },
+  "assets/models/props/prop-fence-gate.glb": {
+   "bytes": 30812,
+   "sha256": "a4b3e3c4b22810281663488d6981cf4f3a17b391021e77e68da91844d1c4dd0b"
+  },
+  "assets/models/props/prop-fence-gate.joints.json": {
+   "bytes": 571,
+   "sha256": "4b312acc9a35fd8aeb837a4f42502742933cc7ba75f3db6762728f3f9e7e20b2"
+  },
+  "assets/models/props/prop-lamp-post.glb": {
+   "bytes": 13888,
+   "sha256": "8ccb4eb2047935241f4979ccc7f9124d659798ffb50ce293d19eb3c856070f31"
+  },
+  "assets/models/props/prop-lamp-post.joints.json": {
+   "bytes": 254,
+   "sha256": "a77578c92b7a26091d4f64fc30a3e127bf539a42ad55b4179b05faf8f16ba49c"
+  },
+  "assets/models/props/prop-weathervane.glb": {
+   "bytes": 11112,
+   "sha256": "f59dfda737d7996f274ef6728fb6d6c850601a544eaa580578c14270b6a5367c"
+  },
+  "assets/models/props/prop-weathervane.joints.json": {
+   "bytes": 553,
+   "sha256": "13ce07b9dd986eb5615a53d14a12b1f0c65f8d858a384a2ec4f8bf5ac8b88bff"
+  },
+  "assets/models/props/prop-well.glb": {
+   "bytes": 31396,
+   "sha256": "27cd14b40cdedb6abebd9c1d56b29b052e5e538932722ce69674d0f89c2db52e"
+  },
+  "assets/models/props/prop-well.joints.json": {
+   "bytes": 630,
+   "sha256": "f3ea29bee98c0bca21f8d30e375aa3c9da999834d840563dbec18cd4b285678a"
   },
   "src/atmosphere.js": {
    "bytes": 9571,
@@ -110,15 +170,15 @@
   },
   "src/bridge.js": {
    "bytes": 3171,
-   "sha256": "975da33a67f1f6fbe6a60b01aec784c3a12c8da4bc0f2f11857160ee68abac40"
+   "sha256": "4c512e36f612f9e22474e7a2b2b5b8acea9161ef3a8a023c930f2368ebe58b33"
   },
   "src/buildings.js": {
-   "bytes": 77732,
-   "sha256": "f011e72f6c2c96d1a3021bb1028b21885408fb4a96ed65c1f01abc34f9876551"
+   "bytes": 80078,
+   "sha256": "0ec6b5f0d4c188459c4641792c71d050da8a7f46c9aa61efca29580a56576e9f"
   },
   "src/data.js": {
-   "bytes": 3268,
-   "sha256": "efba764dd9c26c02fdba3820b37e2feef9c8c2df2e6a9f02313c51f4750a00fe"
+   "bytes": 3765,
+   "sha256": "11f972b541d6e666d5f6bd1343a5c4d2660ac3f527798b1b2e54d4cd192f23f8"
   },
   "src/fox.js": {
    "bytes": 22782,
@@ -133,24 +193,28 @@
    "sha256": "07ea292c094ac0ddb1b8bfc2a1866cc87db34ecadcbb24933ca019e3b928ab9a"
   },
   "src/main.js": {
-   "bytes": 31242,
-   "sha256": "0e6ae083550161218bcb555543020d8210a0019a4ae72cc440741f084d5d24fe"
+   "bytes": 34572,
+   "sha256": "68765c31b9e31aa6d0513fd4a2ef4ba444faf39ec0f6b3e4fdf3f11ca0c5978c"
   },
   "src/models.js": {
-   "bytes": 2470,
-   "sha256": "6d0a29883c1ac8787e080434d4a103c8bfbd1b32176fce263da8fabd890ee1f4"
+   "bytes": 2967,
+   "sha256": "32fbaf2308d7b7325b7b1d366e08b7d7836dffbfc9dcb28e1fea217b206396b8"
   },
   "src/palette.js": {
    "bytes": 2202,
    "sha256": "3000a19ecb2c82cff702acaa32c1709aa059cc9329cab3fa2b43dbe6a40cd8cd"
+  },
+  "src/portal.js": {
+   "bytes": 5945,
+   "sha256": "a6140c305d50d3b7c4b38ae57f437ed925ce186f6afb59485a8f5984f0e3115d"
   },
   "src/realweather.js": {
    "bytes": 2445,
    "sha256": "b140039fef39eaa0ea7c2bae0e91d6d0c5a87091fa2cb23cffc73e7c492d6cbe"
   },
   "src/scene.js": {
-   "bytes": 8328,
-   "sha256": "80c5c12dceef91021f43fa5492215799acb97544ee9a4146f613cbbbf628de29"
+   "bytes": 8966,
+   "sha256": "83937942f9c9f42edcec07539dd32653d3cc84b64df9bec2d78b141a7567f99c"
   },
   "src/shapes.js": {
    "bytes": 21886,
@@ -173,8 +237,8 @@
    "sha256": "d9b882bba7ace8fa4d31e4eee5486af5a4f5bcedbe9c2d7cdb7dba938c9e25cf"
   },
   "styles/village.css": {
-   "bytes": 30049,
-   "sha256": "722416ddd3403e89b901497207ced8768339e65e4937a01fb204a56c3d55c860"
+   "bytes": 30235,
+   "sha256": "b4126d0eae9fe4a42f8185223091e6b17212401773461b95b58d808acfba20b5"
   },
   "vendor/three-0.170.0/LICENSE": {
    "bytes": 1081,

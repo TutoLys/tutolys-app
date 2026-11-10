@@ -16,8 +16,12 @@ export const SLOTS = {
   fox: 'fox.glb',
 };
 
+// Small props, placed by data.js PROPS. Optional like everything else: a
+// prop that fails to load is simply not drawn.
+export const PROP_FILES = ['bench', 'lamp-post', 'fence-gate', 'well', 'weathervane'];
+
 export async function loadModels({ enabled = true, timeoutMs = 8000 } = {}) {
-  const out = { buildings: {}, fox: null, report: {} };
+  const out = { buildings: {}, fox: null, props: {}, report: {} };
   if (!enabled) { for (const k of Object.keys(SLOTS)) out.report[k] = 'procedural (models=0)'; return out; }
   const loader = new GLTFLoader();
   const one = (file) => Promise.race([
@@ -33,10 +37,13 @@ export async function loadModels({ enabled = true, timeoutMs = 8000 } = {}) {
   // A model may come with `<name>.joints.json` (sand3d export: drive nodes,
   // axes, limits). Optional: a missing file just means no joints to animate.
   const joints = (file) => fetch(MODEL_DIR + file.replace(/\.glb$/, '.joints.json')).then((r) => (r.ok ? r.json() : null)).catch(() => null);
-  const [results, jointData] = await Promise.all([
+  const [results, jointData, propResults] = await Promise.all([
     Promise.allSettled(entries.map(([, f]) => one(f))),
     Promise.all(entries.map(([k, f]) => (k === 'fox' ? null : joints(f)))),
+    Promise.allSettled(PROP_FILES.map((n) => one(`props/prop-${n}.glb`))),
   ]);
+  propResults.forEach((r, i) => { if (r.status === 'fulfilled') out.props[PROP_FILES[i]] = r.value.scene; });
+  out.report.props = `${Object.keys(out.props).length}/${PROP_FILES.length}`;
   results.forEach((r, i) => {
     const [kind, file] = entries[i];
     if (r.status === 'fulfilled') {

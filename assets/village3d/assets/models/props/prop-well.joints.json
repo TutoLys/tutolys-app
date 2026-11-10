@@ -1,0 +1,47 @@
+{
+ "file": "prop-well.glb",
+ "bytes": 31396,
+ "triangles": 472,
+ "meshes": 12,
+ "nodes": 18,
+ "materials": [
+  "gold",
+  "iron",
+  "liquid",
+  "paper",
+  "slate",
+  "snow",
+  "stone",
+  "stoneShade",
+  "wood",
+  "woodDark"
+ ],
+ "duplicate_node_names": [],
+ "units": "metres, Y up, door faces +Z",
+ "angles": "radians",
+ "joints": [
+  {
+   "name": "crank_spin",
+   "node": "crank_spin",
+   "type": "continuous",
+   "axis_local": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "pivot": [
+    0.0,
+    1.7,
+    0.0
+   ],
+   "axis": [
+    1.0,
+    -0.0,
+    0.0
+   ],
+   "value": 0.0,
+   "spin_node": "spin_crank",
+   "spin_speed": 0.6
+  }
+ ]
+}

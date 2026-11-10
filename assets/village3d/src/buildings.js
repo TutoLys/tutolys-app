@@ -500,6 +500,7 @@ const KEEP_OWN = new Set(['grass', 'bloom', 'window', 'snow', 'bush']);
 const _plain = new Map();
 function plainFinish(m) {
   if (!m.isMeshStandardMaterial || m.map || m.transparent || m.vertexColors || KEEP_OWN.has(m.name)) return null;
+  if (m.isMeshPhysicalMaterial) return null; // a delivered model's clearcoat or transmission stays its own
   if (m.emissive && m.emissive.getHex() !== 0) return null;
   if (m.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile) return null;
   const key = `plain|${m.metalness.toFixed(2)}|${m.roughness.toFixed(2)}|${m.side}`;
@@ -1079,6 +1080,13 @@ const RECIPES = {
  */
 /** The procedural art for one building, baked to one mesh per material. */
 const FLAG_KINDS = new Set(['francais', 'ccq']);
+// Where each worded signpost stands on a delivered model's plot (beside the
+// hall, clear of the model's own props), for models that lack one.
+const SIGNS = {
+  francais: { labels: ['Lire', 'Écrire', 'Créer'], at: [-2.6, 0.38, 1.15], rot: 0.5 },
+  anglais: { labels: ['Hello', 'Read'], at: [2.45, 0.38, 1.45], rot: -0.5 },
+  ccq: { labels: ['Vivre', 'ensemble'], at: [2.05, 0.38, 0.85], rot: -0.4 },
+};
 
 export function buildBuildingArt(spot, index) {
   const art = new THREE.Group();
@@ -1131,20 +1139,47 @@ export function adoptModel(model, spot) {
     if (name && M[name] && name !== 'bloom') o.material = M[name];
     else if (name === 'bush') { o.material = bushMat; o.geometry = softenBush(o.geometry); }
     else if (name === 'bloom') plinthGreen.blooms.push(o.material);
-    if (o.name.startsWith('flag') && !FLAG_KINDS.has(spot.kind)) { o.visible = false; return; }
-    if (o.name.startsWith('flag')) {
+    // `flag*` is the cloth; `flagpole*` is the pole (sand3d names both).
+    const isFlag = /^flag(?!pole)/.test(o.name);
+    if (isFlag && !FLAG_KINDS.has(spot.kind)) { o.visible = false; return; }
+    if (isFlag) {
       o.geometry.computeBoundingBox();
       o.material = addFlagWave(new THREE.MeshStandardMaterial({ map: o.material.map || quebecFlagTexture(), roughness: 0.8 }), o.geometry.boundingBox.max.x || 1);
     }
   });
   // Exporters may suffix duplicate names (snow_1…), so match on the prefix.
   art.traverse((o) => { if (/^snow/.test(o.name)) o.visible = false; });
+  // A room behind the door (an `interior*` node, or Science's `paint_room`
+  // drum), noted before the merge below folds those nodes away.
+  art.traverse((o) => { if (/^interior/i.test(o.name) || o.material?.name === 'paint_room') art.userData.hasInterior = true; });
   const box = new THREE.Box3().setFromObject(art);
   const size = box.getSize(new THREE.Vector3());
   const fit = Math.min(1, (spot.r * 2.1) / Math.max(size.x, size.z, 1e-3));
   art.scale.multiplyScalar(fit);
   art.position.y -= box.min.y * fit;
+  // Delivered models arrive as dozens of small meshes; bake the static ones
+  // into one per material like the procedural build. Whatever moves or
+  // changes keeps its node: joints, spinners, flags, the clock, snow, signs.
+  art.traverse((o) => { if (/^(drive_|spin|flag|clock|snow|signboard|door_hinge)/.test(o.name)) o.userData.noMerge = true; });
+  mergeStatic(art);
   return art;
+}
+
+/**
+ * A small delivered prop (bench, well, lamp post…): the village's shared
+ * materials by name, shadows, winter-only `snow*`, and its `spin_*` nodes.
+ */
+export function adoptProp(model) {
+  const snow = [], spinners = [];
+  model.traverse((o) => {
+    if (/^snow/.test(o.name)) { o.visible = false; snow.push(o); }
+    if (/^spin/.test(o.name)) spinners.push(o);
+    if (!o.isMesh) return;
+    o.castShadow = true; o.receiveShadow = true;
+    const name = o.material?.name;
+    if (name && M[name] && name !== 'bloom') o.material = M[name];
+  });
+  return { root: model, snow, spinners };
 }
 
 /**
@@ -1161,6 +1196,17 @@ export function createBuilding(spot, index, model = null) {
   const holder = new THREE.Group();
   holder.add(art);
   root.add(holder);
+  // The signposts carry words the host translates, which a delivered model
+  // can't paint: when a model has no `signboard_*` of its own, the village
+  // plants the same post the procedural build has, on the plot.
+  if (model && SIGNS[spot.kind]) {
+    let has = false; art.traverse((o) => { if (/^signboard_/.test(o.name)) has = true; });
+    if (!has) {
+      const { labels, at, rot } = SIGNS[spot.kind];
+      const sp = signpost(labels, 1, spot.kind); sp.position.set(...at); sp.rotation.y = rot; sp.name = 'signpost';
+      holder.add(sp);
+    }
+  }
   const r = spot.r;
   const snow = [];
   let clock = null;
@@ -1204,8 +1250,7 @@ export function createBuilding(spot, index, model = null) {
   const joints = [];
   // A door only opens onto a real interior: until the model carries an
   // `interior*` node, door joints stay shut (Hafid, 2026-11-10).
-  let hasInterior = false;
-  art.traverse((o) => { if (/^interior/i.test(o.name)) hasInterior = true; });
+  const hasInterior = !!art.userData.hasInterior;
   for (const j of (model?.userData.joints || [])) {
     if (j.type !== 'revolute' || !j.drive_node) continue;
     const node = art.getObjectByName(j.drive_node);

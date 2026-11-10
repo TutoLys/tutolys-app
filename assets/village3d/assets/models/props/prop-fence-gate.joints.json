@@ -1,0 +1,40 @@
+{
+ "file": "prop-fence-gate.glb",
+ "bytes": 30812,
+ "triangles": 504,
+ "meshes": 3,
+ "nodes": 8,
+ "materials": [
+  "gold",
+  "paint_white"
+ ],
+ "duplicate_node_names": [],
+ "units": "metres, Y up, door faces +Z",
+ "angles": "radians",
+ "joints": [
+  {
+   "name": "gate_hinge",
+   "node": "gate_hinge",
+   "type": "revolute",
+   "axis_local": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "pivot": [
+    -0.54,
+    0.4,
+    0.0
+   ],
+   "axis": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "value": 0.0,
+   "lower": -1.5708,
+   "upper": 1.5708,
+   "drive_node": "drive_gate_hinge"
+  }
+ ]
+}

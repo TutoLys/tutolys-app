@@ -105,6 +105,8 @@ img { display: block; }
 .hud-top, .quest-panel, .info-card, .ambience, .cam-controls, .recommend-bar, .toast { z-index: 20; }
 .hint { z-index: 15; }
 .loading { z-index: 40; }
+/* The tap's golden portal (src/portal.js): over everything, never in the way. */
+.portal { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 60; }
 :root[data-embed="1"] .switch-link { display: none; }
 /* Embedded in the app: the app draws the header, quests, ambience and the
    subject card itself; the scene keeps its pills, the fox's bubble and the

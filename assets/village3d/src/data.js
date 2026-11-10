@@ -66,6 +66,17 @@ export const BUILDINGS = [
 // (left .46, top .56), nudged to the island's centre.
 export const PLAZA = { x: -0.6, z: 1.6, r: 3.4 };
 
+// Delivered props (assets/models/props/, Hafid 2026-11-10): world x/z and a
+// facing. Each spot was picked from a ray-cast clearance map: ≥ 1 m of bare
+// ground all round (no path, plinth, tree, bush, plaza or water).
+export const PROPS = [
+  { name: 'well', x: 7.75, z: 4.5, rot: -1.1 },
+  { name: 'bench', x: -9, z: -5.5, rot: 1.57 },
+  { name: 'lamp-post', x: -4, z: 12.5, rot: 0 },
+  { name: 'fence-gate', x: 5, z: -8.5, rot: 0.4 },
+  { name: 'weathervane', x: -2.5, z: -3, rot: 0 },
+];
+
 // The three real quests of the app's Quêtes board (ADR 0015).
 export const QUESTS = [
   { title: 'Défi du jour : 5 bonnes réponses de suite', done: 3, total: 5, xp: 20, chip: 'c-pink' },

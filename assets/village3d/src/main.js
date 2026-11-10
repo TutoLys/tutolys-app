@@ -7,14 +7,15 @@ import { quebecNow, quebecSeason } from './strings.js';
 import { kindFor, isFresh, calmFor, KINDS } from './realweather.js';
 import { createStage, HOME } from './scene.js';
 import { buildIsland, applySeason, updateIsland, buildingSpots, plazaY, pathCurves, heightAt } from './island.js';
-import { createBuilding, updateBuilding, setWinter, buildingMaterials, plinthGreen, relabelSigns } from './buildings.js';
+import { createBuilding, updateBuilding, setWinter, buildingMaterials, plinthGreen, relabelSigns, adoptProp } from './buildings.js';
 import { createAtmosphere } from './atmosphere.js';
 import { createWeather } from './weather.js';
 import { createFox, createFoxController } from './fox.js';
 import { loadModels } from './models.js';
+import { createPortal, PORTAL_MS, PORTAL_REDUCED_MS } from './portal.js';
 import { createUI, hourLabel, PHASE_FR, SEASON_FR, WEATHER_FR } from './ui.js';
 import { U } from './fx.js';
-import { PLAZA, LEARNER } from './data.js';
+import { PLAZA, LEARNER, PROPS } from './data.js';
 
 const params = new URLSearchParams(location.search);
 const embedded = bridge.embedded;
@@ -129,6 +130,19 @@ function spotsFrom(list) {
 const spots = spotsFrom(init?.buildings);
 const buildings = spots.map((s) => createBuilding(s, buildingSpots.findIndex((b) => b.id === s.id || b.x === s.x), models.buildings[s.kind] || null));
 for (const b of buildings) scene.add(b.root);
+// Props stand on the ground at their spot; on the plaza they sit on its paving.
+const props = [];
+for (const p of PROPS) {
+  const m = models.props?.[p.name];
+  if (!m) continue;
+  const pr = adoptProp(m);
+  const onPlaza = Math.hypot(p.x - PLAZA.x, p.z - PLAZA.z) < PLAZA.r;
+  pr.root.position.set(p.x, onPlaza ? plazaY + 0.1 : heightAt(p.x, p.z), p.z);
+  pr.root.rotation.y = p.rot || 0;
+  pr.root.name = `prop-${p.name}`;
+  scene.add(pr.root);
+  props.push(pr);
+}
 const hitTargets = buildings.map((b) => b.hit);
 const byId = new Map(buildings.map((b) => [b.id, b]));
 // A building the host marks not live is drawn greyed and can't be tapped.
@@ -213,9 +227,9 @@ const ui = createUI({
   onSeason: (s) => setSeason(s),
   onWeather: (w) => setWeather(w),
   onReduced: (on) => { state.reducedPref = on; store.set('reduced', on); },
-  onCta: (spot) => ui.toast(spot.measured === false
+  onCta: (spot) => open(spot.id, { onOpen: () => ui.toast(spot.measured === false
     ? 'Prototype : ici, l’app ouvrirait ta galerie.'
-    : `Prototype : ici, l’app ouvrirait la Carte · ${spot.label}.`),
+    : `Prototype : ici, l’app ouvrirait la Carte · ${spot.label}.`) }),
 });
 
 // The words on the 3D signposts come from the strings too.
@@ -231,15 +245,45 @@ function setHover(id) {
 }
 
 /** Embedded: a tap opens the subject in the app straight away. */
-function open(id) {
+// ---------- the portal: tap → golden whirl on the door → `open` ----------
+// Hafid (2026-11-10): "like going on a portal to another universe … a bit
+// slower". The scene posts `opening{id, ms}` at the tap and `open{id}` only
+// once the gold has filled the screen, so the app can't cut the effect short.
+const portal = createPortal(document.getElementById('app'));
+let portalB = null;
+const doorWorld = (b) => b.root.localToWorld(new THREE.Vector3(0, 1.15, b.spot.r * 0.45));
+function doorScreen(b) {
+  const v = doorWorld(b).project(camera);
+  const r = renderer.domElement.getBoundingClientRect();
+  return { x: (v.x * 0.5 + 0.5) * r.width, y: (-v.y * 0.5 + 0.5) * r.height };
+}
+function open(id, { onOpen } = {}) {
   const b = byId.get(id);
-  if (!b || b.spot.live === false) return;
-  b.state.press = 1;
-  if (!reduced()) foxCtl.wave();
-  bridge.send('open', { id });
+  if (!b || b.spot.live === false || portal.busy) return;
+  const red = reduced();
+  bridge.send('opening', { id, ms: red ? PORTAL_REDUCED_MS : PORTAL_MS });
+  if (portalB && portalB !== b) portalB.state.selT = state.selected === portalB.id ? 1 : 0;
+  portalB = b;
+  b.state.selT = 1; b.state.press = 1; // ring, halo, light column, doors swing open
+  if (!red) {
+    foxCtl.wave();
+    // Push in on the door, still moving when the flash covers the screen.
+    stage.flyTo({ target: doorWorld(b), azimuth: 0, polar: 0.98, distance: b.spot.small ? 9 : 10.5 }, { duration: 2100 });
+  }
+  portal.start({ reduced: red, center: () => doorScreen(b), onDone: () => { bridge.send('open', { id }); onOpen?.(); } });
+}
+// After the gold fades (the app stayed on the village) or on `resume` (it
+// left and came back): back to the village as it was.
+function portalEnded({ instant = false } = {}) {
+  const b = portalB; portalB = null;
+  if (!b) return;
+  if (state.selected !== b.id) b.state.selT = 0;
+  if (state.selected) select(state.selected, { from: 'pill' }); // standalone: back to the card's view
+  else stage.flyTo(HOME, { instant: instant || reduced(), duration: 1400 });
 }
 
 function select(id, { from } = {}) {
+  if (portal.busy) return;
   if (embedded && from !== 'host') { if (id) open(id); return; }
   if (id && state.selected === id && from !== 'pill') return;
   if (state.selected) { byId.get(state.selected).state.selT = 0; ui.setPillState(state.selected, { selected: false }); }
@@ -309,6 +353,7 @@ function setSeason(s, { live = false } = {}) {
   state.season = s; state.seasonLive = live; if (!live) store.set('season', s);
   applySeason(island.seasonal, s);
   setWinter(buildings, s === 'winter');
+  for (const p of props) for (const o of p.snow) o.visible = s === 'winter';
   for (const m of plinthGreen.blooms) m.visible = s !== 'winter' && s !== 'autumn';
   plinthGreen.grass.color.setHex({ spring: 0xa2d894, summer: 0x8fcc82, autumn: 0xc2c983, winter: 0xf4f8ff }[s]);
   plinthGreen.bushMat.color.setHex(s === 'winter' ? 0xe6eef8 : s === 'autumn' ? 0xc9a043 : s === 'spring' ? 0x7cc576 : 0x5fb85a);
@@ -340,8 +385,18 @@ const el = renderer.domElement;
 // What a pointer is over. Buildings have generous invisible hit volumes,
 // and from the default view CCQ's stands in front of the plaza fox, so the
 // fox wins whenever the ray meets it before the building's real art.
+const artOwner = new Map(buildings.map((b) => [b.art, b]));
 function pickAt(x, y) {
   const fh = stage.pick(x, y, [foxHitGeo]);
+  // Drawn art first: the building really under the finger wins, so a tall
+  // neighbour's invisible hit volume can't steal the tap (found with the
+  // sand3d Anglais, whose volume covered Math's door from the home view).
+  const ah = stage.pickAll(x, y, buildings.map((b) => b.art))[0];
+  if (ah) {
+    if (fh && fh.distance < ah.distance) return { fox: true };
+    let o = ah.object; while (o && !artOwner.has(o)) o = o.parent;
+    if (o) return { id: artOwner.get(o).hit.userData.buildingId || null, onBuilding: true };
+  }
   const bh = stage.pick(x, y, hitTargets);
   const bid = bh?.object.userData.buildingId || null;
   if (fh && (!bh || fh.distance < bh.distance)) return { fox: true };
@@ -445,6 +500,8 @@ function frame() {
   document.documentElement.dataset.night = night > 0.5 ? '1' : '0';
 
   for (const b of buildings) updateBuilding(b, dt, t, motion);
+  if (portal.active && !portal.update()) portalEnded();
+  if (motion) for (const p of props) for (const o of p.spinners) o.rotation.y += dt * (o.userData.spinSpeed ?? 0.3);
 
   // Plaza fox: turn toward the selected building, wave now and then, hop on tap.
   const sel = state.selected ? byId.get(state.selected).spot : null;
@@ -529,6 +586,7 @@ function resume() {
   // The greeting's step-aside timer ran on during the pause (say, the app's
   // parent-PIN dialog at first pairing): show it again now the child can see it.
   if (embedded && greeting.text) ui.showBubble();
+  if (portal.active && !portal.busy) { portal.stop(); portalEnded({ instant: true }); } // the app left and came back
   rafId = requestAnimationFrame(frame);
 }
 

@@ -1,9 +1,9 @@
 {
  "file": "bldg-science.glb",
- "bytes": 669760,
- "triangles": 14822,
- "meshes": 74,
- "nodes": 120,
+ "bytes": 686000,
+ "triangles": 14888,
+ "meshes": 77,
+ "nodes": 123,
  "materials": [
   "bloom",
   "bush",
@@ -23,6 +23,7 @@
   "paint_nucleusglow",
   "paint_panel",
   "paint_red",
+  "paint_room",
   "paint_slit",
   "paint_white",
   "slate",
@@ -31,8 +32,7 @@
   "stoneDark",
   "stoneShade",
   "window",
-  "wood",
-  "woodDark"
+  "wood"
  ],
  "duplicate_node_names": [],
  "units": "metres, Y up, door faces +Z",
@@ -49,7 +49,7 @@
    ],
    "pivot": [
     2.05,
-    2.7,
+    2.85,
     -0.35
    ],
    "axis": [
@@ -212,7 +212,7 @@
    ],
    "pivot": [
     -1.55,
-    2.12,
+    2.27,
     1.32
    ],
    "axis": [

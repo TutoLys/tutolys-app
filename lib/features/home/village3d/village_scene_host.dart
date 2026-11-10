@@ -95,6 +95,14 @@ class _VillageSceneHostState extends ConsumerState<VillageSceneHost> {
   var _statsAsked = false;
   Timer? _recheck;
 
+  /// The building whose portal is playing, from `opening` to `open`.
+  String? _opening;
+
+  /// Set when the village was hidden or covered while a portal played: the
+  /// child went elsewhere, so its late `open` must not pull them to the
+  /// Carte once they come back.
+  var _openingAbandoned = false;
+
   void _armRecheck() {
     _recheck?.cancel();
     _statsAsked = false;
@@ -198,7 +206,21 @@ class _VillageSceneHostState extends ConsumerState<VillageSceneHost> {
         _perfInDoubt = false;
         _statsAsked = false;
         if (fps < village3dMinFps) _fail();
+      case SceneOpening(:final id):
+        // Portal frames are no fair measure of the village: a pending
+        // recheck waits until after (the cut pauses and resume re-arms it).
+        _opening = id;
+        _openingAbandoned = _paused;
+        _recheck?.cancel();
+        _statsAsked = false;
       case SceneOpen(:final id):
+        final abandoned = _openingAbandoned && _opening == id;
+        _opening = null;
+        _openingAbandoned = false;
+        if (abandoned) {
+          _armRecheck();
+          break;
+        }
         final known = widget.state.buildings.any(
           (b) => b.subject == id && b.live,
         );
@@ -215,6 +237,7 @@ class _VillageSceneHostState extends ConsumerState<VillageSceneHost> {
     if (channel == null || _phase != _Phase.ready) return;
     if (_sentPaused == _paused) return;
     _sentPaused = _paused;
+    if (_paused && _opening != null) _openingAbandoned = true;
     channel.send(_paused ? HostMessage.pause : HostMessage.resume);
     // A pause breaks the run a recheck needs; a resume starts a new one.
     _armRecheck();

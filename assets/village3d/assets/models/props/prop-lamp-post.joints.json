@@ -1,0 +1,16 @@
+{
+ "file": "prop-lamp-post.glb",
+ "bytes": 13888,
+ "triangles": 232,
+ "meshes": 3,
+ "nodes": 5,
+ "materials": [
+  "gold",
+  "iron",
+  "window"
+ ],
+ "duplicate_node_names": [],
+ "units": "metres, Y up, door faces +Z",
+ "angles": "radians",
+ "joints": []
+}

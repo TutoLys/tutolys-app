@@ -1,0 +1,15 @@
+{
+ "file": "prop-bench.glb",
+ "bytes": 12004,
+ "triangles": 180,
+ "meshes": 2,
+ "nodes": 4,
+ "materials": [
+  "iron",
+  "wood"
+ ],
+ "duplicate_node_names": [],
+ "units": "metres, Y up, door faces +Z",
+ "angles": "radians",
+ "joints": []
+}

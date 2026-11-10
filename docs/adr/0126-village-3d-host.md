@@ -329,3 +329,27 @@ the app keeps per kid, which goes on aging offline or overnight with no
 request in flight. That's why freshness is judged from `observed_at`, not
 `age_seconds`, which is true only at the moment of the response. Change
 one window, change the other.
+
+## The portal (bundle .12, 2026-11-10)
+
+From `village3d-2026.11.10.12` a tap plays a golden portal before `open`:
+the scene posts `opening{id, ms}` on the tap and `open{id}` 2.4 s later
+(0.38 s with reduced motion). The host keeps navigating on `open` and never
+times the gap. Three things changed here:
+
+- **An abandoned portal doesn't open.** If the Village is hidden or covered
+  between `opening` and `open` (the child tapped a nav tab or the header),
+  the paused scene's rAF stops mid-portal and only posts `open` about 2 s
+  after the child comes back, which would pull them to the Carte unasked.
+  The host drops that one `open`. Scene side, a `resume` during a busy
+  portal still lets it finish (reported to village-3d).
+- **No frame-rate verdict from portal frames.** `opening` cancels a pending
+  `getStats` recheck; the cut's pause and the return's resume re-arm it on
+  the calm village.
+- **Nothing else uses `opening`.** Nav isn't blocked (leaving is how a
+  child cancels), and there is no portal sound yet: none exists in the
+  catalogue, and inventing one isn't this ADR's call.
+
+Gold clearing on return needed nothing: the tab switch pauses the scene and
+coming back sends `resume`, which clears a finished portal at once.
+The bundle adds `assets/models/props/`, now in pubspec.

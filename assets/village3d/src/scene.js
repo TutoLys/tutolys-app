@@ -118,6 +118,15 @@ export function createStage(container) {
     const hits = ray.intersectObjects(objects, true);
     return hits[0] || null;
   }
+  // Every hit, nearest first, keeping only what is really drawn (the
+  // raycaster ignores `visible`, so hidden snow or flags would count).
+  const shown = (o) => { for (; o; o = o.parent) if (!o.visible) return false; return true; };
+  function pickAll(clientX, clientY, objects) {
+    const r = renderer.domElement.getBoundingClientRect();
+    ndc.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(ndc, camera);
+    return ray.intersectObjects(objects, true).filter((h) => shown(h.object) && !(h.object.material?.transparent && h.object.material.opacity < 0.5));
+  }
 
   function resize() {
     const w = container.clientWidth, h = container.clientHeight;
@@ -180,5 +189,5 @@ export function createStage(container) {
     } else perf.low = 0;
   }
 
-  return { renderer, scene, camera, controls, placeCamera, flyTo, stepFlight, nudge, pick, resize, perf, trackPerf, applyLevel, touch };
+  return { renderer, scene, camera, controls, placeCamera, flyTo, stepFlight, nudge, pick, pickAll, resize, perf, trackPerf, applyLevel, touch };
 }

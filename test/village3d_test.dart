@@ -153,6 +153,10 @@ void main() {
         SceneEvent.parse(m({'type': 'open', 'id': 'MATH'})),
         isA<SceneOpen>().having((e) => e.id, 'id', 'MATH'),
       );
+      expect(
+        SceneEvent.parse(m({'type': 'opening', 'id': 'MATH', 'ms': 2400})),
+        isA<SceneOpening>().having((e) => e.id, 'id', 'MATH'),
+      );
       expect(SceneEvent.parse(m({'type': 'mascot'})), isA<SceneMascot>());
     });
 
@@ -439,6 +443,63 @@ void main() {
       channel.say({'v': 2, 'type': 'open', 'id': 'MATH'});
       await tester.pump();
       expect(opened, ['SCI']);
+    });
+
+    testWidgets('the portal: opening navigates nothing; open does', (
+      tester,
+    ) async {
+      final opened = <String>[];
+      await tester.pumpWidget(host(onOpen: opened.add));
+      channel.boot();
+      await tester.pump();
+
+      channel.say({'type': 'opening', 'id': 'MATH', 'ms': 2400});
+      await tester.pump(const Duration(seconds: 2));
+      expect(opened, isEmpty, reason: 'no timer: the host waits for open');
+      channel.say({'type': 'open', 'id': 'MATH'});
+      await tester.pump();
+      expect(opened, ['MATH']);
+    });
+
+    testWidgets('a portal the child left mid-way does not open later', (
+      tester,
+    ) async {
+      // The kid tapped a building, then a nav tab before the gold: the
+      // paused scene posts open only after they come back to the Village.
+      final opened = <String>[];
+      await tester.pumpWidget(host(onOpen: opened.add));
+      channel.boot();
+      await tester.pump();
+
+      channel.say({'type': 'opening', 'id': 'MATH', 'ms': 2400});
+      await tester.pumpWidget(host(onOpen: opened.add, visible: false));
+      expect(channel.types.last, 'pause');
+      await tester.pumpWidget(host(onOpen: opened.add));
+      expect(channel.types.last, 'resume');
+      channel.say({'type': 'open', 'id': 'MATH'});
+      await tester.pump();
+      expect(opened, isEmpty);
+
+      // The next tap is a fresh one and opens normally.
+      channel.say({'type': 'opening', 'id': 'SCI', 'ms': 2400});
+      channel.say({'type': 'open', 'id': 'SCI'});
+      await tester.pump();
+      expect(opened, ['SCI']);
+    });
+
+    testWidgets('a portal holds off the frame-rate recheck', (tester) async {
+      await tester.pumpWidget(host());
+      channel.boot();
+      await tester.pump();
+      channel.say({'type': 'perf', 'fps': 30});
+      await tester.pump(const Duration(seconds: 1));
+      channel.say({'type': 'opening', 'id': 'MATH', 'ms': 2400});
+      await tester.pump(village3dPerfRecheck);
+      expect(channel.types, isNot(contains('getStats')));
+      // A late stats reply measured portal frames: it decides nothing.
+      channel.say({'type': 'stats', 'fps': 10});
+      await tester.pump();
+      expect(_view, findsOneWidget);
     });
 
     testWidgets('a building that is not live does not open', (tester) async {

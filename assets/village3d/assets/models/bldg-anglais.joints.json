@@ -1,0 +1,133 @@
+{
+ "file": "bldg-anglais.glb",
+ "bytes": 580124,
+ "triangles": 12972,
+ "meshes": 57,
+ "nodes": 83,
+ "materials": [
+  "bloom",
+  "bush",
+  "door",
+  "globe_blue",
+  "gold",
+  "goldBright",
+  "grass",
+  "iron",
+  "paint_blue",
+  "paint_green",
+  "paint_navy",
+  "paint_orange",
+  "paint_purple",
+  "paint_red",
+  "paint_room",
+  "paint_white",
+  "paint_yellow",
+  "slate",
+  "snow",
+  "stone",
+  "stoneDark",
+  "stoneShade",
+  "window",
+  "wood"
+ ],
+ "duplicate_node_names": [],
+ "units": "metres, Y up, door faces +Z",
+ "angles": "radians",
+ "joints": [
+  {
+   "name": "bubble_pan",
+   "node": "bubble_pan",
+   "type": "revolute",
+   "axis_local": [
+    1.0,
+    0.0,
+    0.0
+   ],
+   "pivot": [
+    3.38,
+    2.35,
+    0.35
+   ],
+   "axis": [
+    1.0,
+    0.0,
+    0.0
+   ],
+   "value": 0.0,
+   "lower": -0.1745,
+   "upper": 0.1745,
+   "drive_node": "drive_bubble_pan"
+  },
+  {
+   "name": "globe_spin",
+   "node": "globe_spin",
+   "type": "continuous",
+   "axis_local": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "pivot": [
+    0.0,
+    5.2,
+    0.0
+   ],
+   "axis": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "value": 0.0,
+   "spin_node": "spin_globe",
+   "spin_speed": 0.35
+  },
+  {
+   "name": "door_hinge",
+   "node": "door_hinge",
+   "type": "revolute",
+   "axis_local": [
+    0.0,
+    -1.0,
+    0.0
+   ],
+   "pivot": [
+    -0.45,
+    0.45,
+    1.435
+   ],
+   "axis": [
+    0.0,
+    -1.0,
+    0.0
+   ],
+   "value": 0.0,
+   "lower": 0.0,
+   "upper": 1.8326,
+   "drive_node": "drive_door_hinge"
+  },
+  {
+   "name": "phone_door_hinge",
+   "node": "phone_door_hinge",
+   "type": "revolute",
+   "axis_local": [
+    0.0,
+    -1.0,
+    0.0
+   ],
+   "pivot": [
+    -1.9627,
+    0.4,
+    2.3922
+   ],
+   "axis": [
+    0.0,
+    -1.0,
+    0.0
+   ],
+   "value": 0.0,
+   "lower": 0.0,
+   "upper": 1.7453,
+   "drive_node": "drive_phone_door_hinge"
+  }
+ ]
+}
