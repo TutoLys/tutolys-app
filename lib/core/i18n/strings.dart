@@ -276,6 +276,8 @@ abstract class Strings {
   String get settingsLanguage;
   String get settingsReduceMotion;
   String get settingsReduceMotionSub;
+  String get settingsVillage3d;
+  String get settingsVillage3dSub;
   String get settingsNotifications;
   String get settingsDailyReminders;
   String get settingsDailyRemindersSub;
@@ -420,6 +422,7 @@ abstract class Strings {
   List<HelpEntry> get helpEntries;
 
   String get villageYourSubjects;
+  String get village3dStageLabel;
 
   // --- quêtes --------------------------------------------------------------
   String get questsEyebrow;
@@ -1197,6 +1200,13 @@ class _FrenchStrings extends Strings {
   String get settingsReduceMotionSub => 'Pour un affichage plus calme';
 
   @override
+  String get settingsVillage3d => 'Village en 3D';
+
+  @override
+  String get settingsVillage3dSub =>
+      'Désactive-le si le village est lent sur cet appareil';
+
+  @override
   String get settingsNotifications => 'Notifications';
 
   @override
@@ -1548,6 +1558,10 @@ class _FrenchStrings extends Strings {
 
   @override
   String get villageYourSubjects => 'Tes matières';
+
+  @override
+  String get village3dStageLabel =>
+      'Le village en 3D. Touche un bâtiment pour ouvrir sa carte.';
 
   @override
   String get questsEyebrow => 'Aujourd\'hui et cette semaine';
@@ -2649,6 +2663,13 @@ class _EnglishStrings extends Strings {
   String get settingsReduceMotionSub => 'For a calmer display';
 
   @override
+  String get settingsVillage3d => '3D village';
+
+  @override
+  String get settingsVillage3dSub =>
+      'Turn it off if the village is slow on this device';
+
+  @override
   String get settingsNotifications => 'Notifications';
 
   @override
@@ -2994,6 +3015,10 @@ class _EnglishStrings extends Strings {
 
   @override
   String get villageYourSubjects => 'Your subjects';
+
+  @override
+  String get village3dStageLabel =>
+      'The village in 3D. Tap a building to open its map.';
 
   @override
   String get questsEyebrow => 'Today and this week';

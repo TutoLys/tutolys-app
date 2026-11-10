@@ -125,6 +125,9 @@ class SettingsController extends Notifier<AppSettings> {
   Future<void> setReduceMotion(bool value) =>
       _apply(state.copyWith(reduceMotion: value));
 
+  Future<void> setVillage3d(bool value) =>
+      _apply(state.copyWith(village3d: value));
+
   /// Turning reminders on restarts the back-off from today (ADR 0053).
   Future<void> setDailyReminders(bool value, {DateTime? today}) => _apply(
     state.copyWith(

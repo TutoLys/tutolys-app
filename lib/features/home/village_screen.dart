@@ -10,6 +10,9 @@ import '../pairing/pairing_controller.dart';
 import 'subject_progress.dart';
 import 'subject_strip.dart';
 import 'village_scene.dart';
+import 'village3d/village_bridge.dart';
+import 'village3d/village_scene_host.dart';
+import 'village3d/village_strings.dart';
 import '../audio/app_sounds.dart' show mascotSongFor;
 import '../audio/music_director.dart';
 import '../quests/quest_board.dart';
@@ -157,18 +160,39 @@ class VillageScreen extends ConsumerWidget {
                   );
                 }
 
+                final signSubtitle = kid?.gradeLevel == null
+                    ? ''
+                    : t.gradeLabel(kid!.gradeLevel);
+                final greeting = _greetingFor(t, kid?.displayName, board);
+                // The 3D village where the device can run it, the 2D one
+                // as its fallback and while it loads (ADR 0126).
                 final scene = LayoutBuilder(
                   builder: (context, box) => SizedBox(
                     height: _sceneHeight(box.maxWidth),
-                    child: VillageScene(
-                      buildings: buildings,
-                      signTitle: t.villageSignTitle,
-                      signSubtitle: kid?.gradeLevel == null
-                          ? ''
-                          : t.gradeLabel(kid!.gradeLevel),
-                      greeting: _greetingFor(t, kid?.displayName, board),
-                      onTapBuilding: (b) => openBuilding(b),
-                      onTapMascot: sing,
+                    child: VillageSceneHost(
+                      state: VillageSceneState(
+                        buildings: buildings,
+                        lang: Localizations.localeOf(context).languageCode,
+                        signTitle: t.villageSignTitle,
+                        signSubtitle: signSubtitle,
+                        greeting: greeting,
+                        reduced: MediaQuery.disableAnimationsOf(context),
+                        strings: village3dStrings(t),
+                      ),
+                      onOpen: (code) {
+                        for (final b in buildings) {
+                          if (b.subject == code) return openBuilding(b);
+                        }
+                      },
+                      onMascot: sing,
+                      fallback: VillageScene(
+                        buildings: buildings,
+                        signTitle: t.villageSignTitle,
+                        signSubtitle: signSubtitle,
+                        greeting: greeting,
+                        onTapBuilding: (b) => openBuilding(b),
+                        onTapMascot: sing,
+                      ),
                     ),
                   ),
                 );

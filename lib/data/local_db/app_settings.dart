@@ -25,6 +25,7 @@ class AppSettings {
     this.reminderMinutes = 17 * 60,
     this.remindersOnSince,
     this.flameReminders = false,
+    this.village3d = true,
     this.chosen = const {},
   });
 
@@ -62,6 +63,10 @@ class AppSettings {
   /// (ADR 0053). Like [dailyReminders], turned on behind the guardian PIN.
   final bool flameReminders;
 
+  /// « Village en 3D »: draw the Village as the 3D scene where the device
+  /// can (ADR 0126). Off, or where it can't, the 2D village shows.
+  final bool village3d;
+
   /// What the family set on this device. Anything else still follows the
   /// guardian's defaults ([applyKidDefaults]).
   final Set<DefaultableSetting> chosen;
@@ -78,6 +83,7 @@ class AppSettings {
     int? reminderMinutes,
     DateTime? remindersOnSince,
     bool? flameReminders,
+    bool? village3d,
     Set<DefaultableSetting>? chosen,
   }) {
     return AppSettings(
@@ -92,6 +98,7 @@ class AppSettings {
       reminderMinutes: reminderMinutes ?? this.reminderMinutes,
       remindersOnSince: remindersOnSince ?? this.remindersOnSince,
       flameReminders: flameReminders ?? this.flameReminders,
+      village3d: village3d ?? this.village3d,
       chosen: chosen ?? this.chosen,
     );
   }
@@ -175,6 +182,7 @@ class AppSettingsStore {
   // Replaces `quest_notifications` ("Nouvelles quêtes"), which defaulted to
   // on and did nothing; Hafid made it "Ma flamme" (2026-10-28).
   static const _flameReminders = '${_prefix}flame_reminders';
+  static const _village3d = '${_prefix}village_3d';
   // Present once a stored key can be trusted to be a choice. Before it,
   // changing the volume saved every setting, so a stored "music on" proved
   // nothing (ADR 0125).
@@ -231,6 +239,7 @@ class AppSettingsStore {
           defaults.reminderMinutes,
       remindersOnSince: DateTime.tryParse(byKey[_remindersOnSince] ?? ''),
       flameReminders: flag(_flameReminders, defaults.flameReminders),
+      village3d: flag(_village3d, defaults.village3d),
       chosen: {
         for (final MapEntry(:key, :value) in _defaultableKeys.entries)
           if (byKey.containsKey(key)) value,
@@ -272,6 +281,7 @@ class AppSettingsStore {
       if (settings.remindersOnSince case final since?)
         _remindersOnSince: since.toIso8601String().substring(0, 10),
       _flameReminders: '${settings.flameReminders}',
+      _village3d: '${settings.village3d}',
     };
   }
 

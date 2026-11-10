@@ -106,6 +106,13 @@ class SettingsScreen extends ConsumerWidget {
                 value: settings.reduceMotion,
                 onChanged: controller.setReduceMotion,
               ),
+              _ToggleRow(
+                key: const ValueKey('settings-village-3d'),
+                label: t.settingsVillage3d,
+                sublabel: t.settingsVillage3dSub,
+                value: settings.village3d,
+                onChanged: controller.setVillage3d,
+              ),
             ],
           ),
           // Was its own tab until 2026-10-29. A link to the old tab lands
