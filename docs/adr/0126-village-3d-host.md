@@ -375,3 +375,40 @@ the header) and then the 3D island with the boy's real avatar and 47 XP.
   and the nav avatar.
 - **XP.** The header pill reads « – XP » while progress is loading, like
   the streak's dash. After a read, a real 0 is still 0.
+
+## Sky controls, and folding the quests and the nav (2026-11-10)
+
+Hafid's two asks, so the 3D village can be played with and get more room.
+
+**« Contrôles du ciel ».** A Réglages › Expérience switch, off by default,
+per kid (`settings.sky_controls`). On, a bar under the running 3D village
+holds an hour slider (half hours, `setTime{hour}`), four seasons
+(`setSeason`), six weathers (`setWeather`, the bridge's own names) and
+« En direct », which sends `null`/`live` for all three. Off, nothing shows
+and nothing is sent, so the village follows Québec's clock, date and
+`/me/weather` as before. Switching it off sends live for all three, so a
+hand pick can't stick. Picks last for the visit only. A reloaded scene
+starts live, and the bar resets with it.
+
+- **A bar under the scene, not a panel over it.** On web the scene's iframe
+  takes every tap inside its box, and on Linux the native view draws above
+  Flutter, so nothing drawn over the scene could be tapped (the same reason
+  the quests button sits under the scene). The bar is inside the scene's
+  rounded box and clear of the scene's own zoom buttons.
+- **Only on a ready 3D village.** The host draws it, so it never shows on
+  the loader or the 2D fallback. The host always returns the same Column,
+  so showing the bar never re-creates (reloads) the view.
+
+**Folds.** Both are per kid on `app_state`, like the other settings.
+- *Quêtes du jour* (wide layout, ≥ 1100 inner): a « » » in its header
+  folds it to a 64px tab with the quest icon and today's count. Tapping it
+  unfolds it. Below that width the quests are already a sheet under the
+  scene, so there's nothing to fold.
+- *The nav* (≥ 768): `navFold` 0 open, 1 rail, 2 hidden. At ≥ 1024 the
+  sidebar's foot has « (to the rail); the rail has » (open) and « (hide).
+  At 768–1023 the open nav is the rail, so it has « (hide) only. Hidden
+  leaves a 30px strip with » at the top, so it's always one tap to reopen.
+  Below 768 the bottom bar never folds.
+- Both animate their column's width (~250 ms) with the content at its final
+  width inside a clip, so nothing reflows mid-way, and the scene re-fits as
+  the width changes. Under reduced motion it's instant.

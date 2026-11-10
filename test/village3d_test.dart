@@ -71,6 +71,9 @@ class _Settings extends SettingsController {
   @override
   Future<void> setVillage3d(bool value) async =>
       state = state.copyWith(village3d: value);
+  @override
+  Future<void> setSkyControls(bool value) async =>
+      state = state.copyWith(skyControls: value);
 }
 
 final _buildings = villageBuildings(Strings.fr);
@@ -106,10 +109,11 @@ void main() {
     ValueChanged<String>? onOpen,
     VoidCallback? onMascot,
     bool visible = true,
+    bool sky = false,
   }) => ProviderScope(
     overrides: [
       settingsControllerProvider.overrideWith(
-        () => _Settings(AppSettings(village3d: setting)),
+        () => _Settings(AppSettings(village3d: setting, skyControls: sky)),
       ),
       villageSceneChannelFactoryProvider.overrideWithValue(({
         required String title,
@@ -276,6 +280,116 @@ void main() {
       expect(village3dStrings(Strings.en)['sign.francais.1'], 'Écrire');
       expect(village3dStrings(Strings.fr)['sign.anglais.0'], 'Hello');
       expect(village3dStrings(Strings.en)['sign.ccq.0'], 'Living');
+    });
+  });
+
+  group('sky controls (« Contrôles du ciel »)', () {
+    final bar = find.byKey(const ValueKey('village-sky-bar'));
+    Map<String, Object?> last(String type) =>
+        channel.sent.lastWhere((m) => m['type'] == type);
+
+    test('off by default, and kept per kid with the folds', () async {
+      expect(const AppSettings().skyControls, isFalse);
+      expect(const AppSettings().questsFolded, isFalse);
+      expect(const AppSettings().navFold, 0);
+
+      final db = LocalDatabase.memory();
+      addTearDown(db.close);
+      final store = AppSettingsStore(db, kidId: 'k');
+      const before = AppSettings();
+      await store.writeChanges(
+        before,
+        before.copyWith(skyControls: true, questsFolded: true, navFold: 2),
+      );
+      final read = await store.read();
+      expect(read.skyControls, isTrue);
+      expect(read.questsFolded, isTrue);
+      expect(read.navFold, 2);
+      expect((await AppSettingsStore(db, kidId: 'other').read()).navFold, 0);
+    });
+
+    testWidgets('off: no bar and nothing sent about the sky', (tester) async {
+      await tester.pumpWidget(host());
+      channel.boot();
+      await tester.pump();
+      expect(bar, findsNothing);
+      expect(channel.types, ['init']);
+    });
+
+    testWidgets('on: only on a ready 3D village, never the loader or 2D', (
+      tester,
+    ) async {
+      await tester.pumpWidget(host(sky: true));
+      expect(bar, findsNothing, reason: 'still loading');
+      channel.boot();
+      await tester.pump();
+      expect(bar, findsOneWidget);
+
+      channel.say({'type': 'unavailable', 'reason': 'webgl'});
+      await tester.pump();
+      expect(_fallback, findsOneWidget);
+      expect(bar, findsNothing);
+    });
+
+    testWidgets('each pick posts its bridge message; En direct posts live', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1400, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(host(sky: true));
+      channel.boot();
+      await tester.pump();
+
+      await tester.tap(find.byKey(const ValueKey('sky-season-winter')));
+      await tester.pump();
+      expect(last('setSeason'), containsPair('season', 'winter'));
+
+      await tester.tap(find.byKey(const ValueKey('sky-weather-snow')));
+      await tester.pump();
+      expect(last('setWeather'), containsPair('weather', 'snow'));
+
+      // The slider's middle is noon.
+      await tester.tap(find.byKey(const ValueKey('sky-hour')));
+      await tester.pump();
+      expect(last('setTime'), containsPair('hour', 12.0));
+
+      await tester.tap(find.byKey(const ValueKey('sky-live')));
+      await tester.pump();
+      expect(channel.sent.sublist(channel.sent.length - 3), [
+        {'v': 1, 'type': 'setTime', 'hour': null, 'animate': false},
+        {'v': 1, 'type': 'setSeason', 'season': 'live'},
+        {'v': 1, 'type': 'setWeather', 'weather': 'live'},
+      ]);
+    });
+
+    testWidgets('switching it off hands the sky back to Québec', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1400, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(host(sky: true));
+      channel.boot();
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('sky-weather-storm')));
+      await tester.pump();
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(VillageSceneHost)),
+      );
+      await container
+          .read(settingsControllerProvider.notifier)
+          .setSkyControls(false);
+      await tester.pump();
+      expect(bar, findsNothing);
+      expect(channel.types.sublist(channel.types.length - 3), [
+        'setTime',
+        'setSeason',
+        'setWeather',
+      ]);
+      expect(last('setWeather'), containsPair('weather', 'live'));
+      expect(last('setTime'), containsPair('hour', null));
     });
   });
 

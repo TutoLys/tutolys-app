@@ -113,6 +113,13 @@ class SettingsScreen extends ConsumerWidget {
                 value: settings.village3d,
                 onChanged: controller.setVillage3d,
               ),
+              _ToggleRow(
+                key: const ValueKey('settings-sky-controls'),
+                label: t.settingsSkyControls,
+                sublabel: t.settingsSkyControlsSub,
+                value: settings.skyControls,
+                onChanged: controller.setSkyControls,
+              ),
             ],
           ),
           // Was its own tab until 2026-10-29. A link to the old tab lands

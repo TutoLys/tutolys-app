@@ -8,6 +8,7 @@ import '../../settings/settings_controller.dart';
 import 'village_bridge.dart';
 import 'village_channel.dart';
 import 'village_scene_loading.dart';
+import 'village_sky_bar.dart';
 
 /// Whether this run of the app may still try the 3D village. Turns false
 /// for good once a scene said it can't draw here (no WebGL), was too slow,
@@ -99,6 +100,27 @@ class _VillageSceneHostState extends ConsumerState<VillageSceneHost> {
   var _statsAsked = false;
   Timer? _recheck;
 
+  /// The child's sky picks for this visit (« Contrôles du ciel »). Null is
+  /// live. Never stored: a new scene starts live.
+  double? _skyHour;
+  VillageSeason? _skySeason;
+  VillageSky? _skySky;
+
+  void _sendSky(Map<String, Object?> message) {
+    if (_phase == _Phase.ready) _channel?.send(message);
+  }
+
+  void _skyLive() {
+    setState(() {
+      _skyHour = null;
+      _skySeason = null;
+      _skySky = null;
+    });
+    _sendSky(HostMessage.setTime(null));
+    _sendSky(HostMessage.setSeason(null));
+    _sendSky(HostMessage.setWeather(null));
+  }
+
   /// The building whose portal is playing, from `opening` to `open`.
   String? _opening;
 
@@ -187,7 +209,10 @@ class _VillageSceneHostState extends ConsumerState<VillageSceneHost> {
   void _onMessage(Object? raw) {
     switch (SceneEvent.parse(raw)) {
       case SceneLoading():
-        // Answered every time: a scene that reloaded starts blank.
+        // Answered every time: a scene that reloaded starts blank, and live.
+        _skyHour = null;
+        _skySeason = null;
+        _skySky = null;
         _channel?.send(HostMessage.init(widget.state));
       case SceneReady():
         // A scene runs from its first frame: only a pause needs sending.
@@ -271,6 +296,17 @@ class _VillageSceneHostState extends ConsumerState<VillageSceneHost> {
       settingsControllerProvider.select((s) => s.village3d),
     );
     final supported = ref.watch(village3dSupportProvider);
+    final skyControls = ref.watch(
+      settingsControllerProvider.select((s) => s.skyControls),
+    );
+    // Turning the controls off hands the sky back to Québec: a hand pick
+    // must not stick once its controls are gone.
+    ref.listen(settingsControllerProvider.select((s) => s.skyControls), (
+      was,
+      now,
+    ) {
+      if (was == true && !now) _skyLive();
+    });
     if (!setting || !supported) {
       if (_channel != null) _stop();
       if (!supported) _phase = _Phase.failed;
@@ -298,16 +334,48 @@ class _VillageSceneHostState extends ConsumerState<VillageSceneHost> {
       channel.setInteractive(interactive);
     }
 
-    return Stack(
-      fit: StackFit.expand,
+    // Always this Column, bar or not: the scene keeps its place in the
+    // tree, so showing the bar never rebuilds (reloads) the view.
+    return Column(
       children: [
-        if (!lifted)
-          KeyedSubtree(
-            key: const ValueKey('village-3d-view'),
-            child: channel.buildView(),
+        Expanded(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (!lifted)
+                KeyedSubtree(
+                  key: const ValueKey('village-3d-view'),
+                  child: channel.buildView(),
+                ),
+              if (_phase != _Phase.ready || lifted)
+                VillageSceneLoading(loading: _phase != _Phase.ready),
+            ],
           ),
-        if (_phase != _Phase.ready || lifted)
-          VillageSceneLoading(loading: _phase != _Phase.ready),
+        ),
+        // Only on a running 3D village: never on the loader or the 2D one.
+        if (skyControls && _phase == _Phase.ready)
+          VillageSkyBar(
+            hour: _skyHour,
+            // Live time is daytime only (BRIDGE.md): 7:00 to 20:00.
+            liveHour: (DateTime.now().hour + DateTime.now().minute / 60)
+                .clamp(7, 20)
+                .toDouble(),
+            season: _skySeason,
+            sky: _skySky,
+            onHour: (h) {
+              setState(() => _skyHour = h);
+              _sendSky(HostMessage.setTime(h));
+            },
+            onSeason: (s) {
+              setState(() => _skySeason = s);
+              _sendSky(HostMessage.setSeason(s));
+            },
+            onSky: (s) {
+              setState(() => _skySky = s);
+              _sendSky(HostMessage.setWeather(s));
+            },
+            onLive: _skyLive,
+          ),
       ],
     );
   }

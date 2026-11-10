@@ -96,6 +96,13 @@ bool _deepEquals(Object? a, Object? b) {
   return a == b;
 }
 
+/// A season the child can pick (`setSeason`, BRIDGE.md v1).
+enum VillageSeason { spring, summer, autumn, winter }
+
+/// A weather the child can pick (`setWeather`, BRIDGE.md v1). The names are
+/// the bridge's own values.
+enum VillageSky { clear, clouds, rain, snow, storm, fog }
+
 /// Messages the app sends.
 abstract final class HostMessage {
   static Map<String, Object?> init(VillageSceneState state) => {
@@ -118,6 +125,28 @@ abstract final class HostMessage {
   static const Map<String, Object?> resume = {
     'v': villageBridgeVersion,
     'type': 'resume',
+  };
+
+  /// The sky's hour, 0–24, or null for Québec's live clock.
+  static Map<String, Object?> setTime(double? hour) => {
+    'v': villageBridgeVersion,
+    'type': 'setTime',
+    'hour': hour,
+    'animate': false,
+  };
+
+  /// A [VillageSeason] name, or `live` for the season of the real date.
+  static Map<String, Object?> setSeason(VillageSeason? season) => {
+    'v': villageBridgeVersion,
+    'type': 'setSeason',
+    'season': season?.name ?? 'live',
+  };
+
+  /// A [VillageSky] name, or `live` for the real weather.
+  static Map<String, Object?> setWeather(VillageSky? sky) => {
+    'v': villageBridgeVersion,
+    'type': 'setWeather',
+    'weather': sky?.name ?? 'live',
   };
 
   /// Asks for a fresh frame rate; the scene answers with `stats`.

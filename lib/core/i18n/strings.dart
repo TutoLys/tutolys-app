@@ -428,6 +428,32 @@ abstract class Strings {
   String get village3dStageLabel;
   String get village3dLabelsAria;
   String get village3dLoading;
+  String get settingsSkyControls;
+  String get settingsSkyControlsSub;
+  String get skyPanelLabel;
+  String get skyTime;
+  String get skySeason;
+  String get skyWeather;
+  String get skySpring;
+  String get skySummer;
+  String get skyAutumn;
+  String get skyWinter;
+  String get skyClear;
+  String get skyClouds;
+  String get skyRain;
+  String get skySnow;
+  String get skyStorm;
+  String get skyFog;
+  String get skyLive;
+  String get skyLiveHint;
+  String get questsFold;
+  String get questsUnfold;
+  String get navShrink;
+  String get navHide;
+  String get navExpand;
+  String get navShow;
+  /// « 14 h 30 », the sky slider's hour (0–24, half hours).
+  String skyHour(double hour);
   String get village3dPillProgress;
   String get village3dPillAriaNew;
   String get village3dPillAriaProgress;
@@ -1594,6 +1620,85 @@ class _FrenchStrings extends Strings {
 
   @override
   String get village3dLoading => 'Le village se prépare…';
+
+  @override
+  String get settingsSkyControls => 'Contrôles du ciel';
+
+  @override
+  String get settingsSkyControlsSub => 'Choisis l’heure, la saison et la météo du village 3D';
+
+  @override
+  String get skyPanelLabel => 'Ciel du village';
+
+  @override
+  String get skyTime => 'Heure';
+
+  @override
+  String get skySeason => 'Saison';
+
+  @override
+  String get skyWeather => 'Météo';
+
+  @override
+  String get skySpring => 'Printemps';
+
+  @override
+  String get skySummer => 'Été';
+
+  @override
+  String get skyAutumn => 'Automne';
+
+  @override
+  String get skyWinter => 'Hiver';
+
+  @override
+  String get skyClear => 'Dégagé';
+
+  @override
+  String get skyClouds => 'Nuageux';
+
+  @override
+  String get skyRain => 'Pluie';
+
+  @override
+  String get skySnow => 'Neige';
+
+  @override
+  String get skyStorm => 'Orage';
+
+  @override
+  String get skyFog => 'Brouillard';
+
+  @override
+  String get skyLive => 'En direct';
+
+  @override
+  String get skyLiveHint => 'Le vrai ciel du Québec, maintenant';
+
+  @override
+  String get questsFold => 'Replier les quêtes';
+
+  @override
+  String get questsUnfold => 'Afficher les quêtes';
+
+  @override
+  String get navShrink => 'Réduire le menu';
+
+  @override
+  String get navHide => 'Masquer le menu';
+
+  @override
+  String get navExpand => 'Agrandir le menu';
+
+  @override
+  String get navShow => 'Afficher le menu';
+
+  @override
+  String skyHour(double hour) {
+    final h = hour.floor() % 24;
+    final m = ((hour - hour.floor()) * 60).round();
+    return m == 0 ? '$h h' : '$h h ${m.toString().padLeft(2, '0')}';
+  }
 
   @override
   String get village3dPillProgress => '{pct}/100';
@@ -3117,6 +3222,85 @@ class _EnglishStrings extends Strings {
 
   @override
   String get village3dLoading => 'The village is getting ready…';
+
+  @override
+  String get settingsSkyControls => 'Sky controls';
+
+  @override
+  String get settingsSkyControlsSub => 'Pick the 3D village’s time, season and weather';
+
+  @override
+  String get skyPanelLabel => 'Village sky';
+
+  @override
+  String get skyTime => 'Time';
+
+  @override
+  String get skySeason => 'Season';
+
+  @override
+  String get skyWeather => 'Weather';
+
+  @override
+  String get skySpring => 'Spring';
+
+  @override
+  String get skySummer => 'Summer';
+
+  @override
+  String get skyAutumn => 'Autumn';
+
+  @override
+  String get skyWinter => 'Winter';
+
+  @override
+  String get skyClear => 'Clear';
+
+  @override
+  String get skyClouds => 'Cloudy';
+
+  @override
+  String get skyRain => 'Rain';
+
+  @override
+  String get skySnow => 'Snow';
+
+  @override
+  String get skyStorm => 'Storm';
+
+  @override
+  String get skyFog => 'Fog';
+
+  @override
+  String get skyLive => 'Live';
+
+  @override
+  String get skyLiveHint => 'Québec’s real sky, right now';
+
+  @override
+  String get questsFold => 'Fold the quests';
+
+  @override
+  String get questsUnfold => 'Show the quests';
+
+  @override
+  String get navShrink => 'Shrink the menu';
+
+  @override
+  String get navHide => 'Hide the menu';
+
+  @override
+  String get navExpand => 'Widen the menu';
+
+  @override
+  String get navShow => 'Show the menu';
+
+  @override
+  String skyHour(double hour) {
+    final h = hour.floor() % 24;
+    final m = ((hour - hour.floor()) * 60).round();
+    return '$h:${m.toString().padLeft(2, '0')}';
+  }
 
   @override
   String get village3dPillProgress => '{pct}/100';

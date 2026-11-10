@@ -19,6 +19,7 @@ import '../quests/quest_board.dart';
 import '../quests/quests_screen.dart' show QuestListPending, questTitle;
 import '../gallery/village_gallery.dart';
 import '../path/programme.dart';
+import '../settings/settings_controller.dart';
 
 /// Village — the learner's home.
 ///
@@ -187,8 +188,15 @@ class VillageScreen extends ConsumerWidget {
           );
           final gap = phone ? Space.md : Space.lg;
 
-          // Wide: the quests beside the village, at its full height.
+          // Wide: the quests beside the village, at its full height. They
+          // fold to a slim tab so the village gets the width (Hafid,
+          // 2026-11-10); the scene re-fits as the column animates.
           if (inner >= _sideBySideMinWidth) {
+            final folded = ref.watch(
+              settingsControllerProvider.select((s) => s.questsFolded),
+            );
+            final settings = ref.read(settingsControllerProvider.notifier);
+            final width = folded ? _foldedTabWidth : _panelWidth;
             return Padding(
               padding: EdgeInsets.all(gap),
               child: Row(
@@ -196,11 +204,36 @@ class VillageScreen extends ConsumerWidget {
                 children: [
                   Expanded(child: scene),
                   SizedBox(width: gap),
-                  SizedBox(
-                    width: _panelWidth,
-                    child: questPanel(
-                      fill: true,
-                      key: const ValueKey('village-quest-panel'),
+                  AnimatedContainer(
+                    key: const ValueKey('village-quest-column'),
+                    duration: MediaQuery.disableAnimationsOf(context)
+                        ? Duration.zero
+                        : const Duration(milliseconds: 260),
+                    curve: Curves.easeOutCubic,
+                    width: width,
+                    // The content takes its final width at once and the
+                    // column reveals it, so nothing reflows mid-animation.
+                    child: ClipRect(
+                      child: OverflowBox(
+                        alignment: Alignment.topLeft,
+                        minWidth: width,
+                        maxWidth: width,
+                        child: folded
+                            ? _QuestTab(
+                                board: board,
+                                onUnfold: () => settings.setQuestsFolded(false),
+                              )
+                            : _QuestPanel(
+                                key: const ValueKey('village-quest-panel'),
+                                quests: board?.quests,
+                                failed: boardFailed,
+                                onRetry: retryBoard,
+                                onOpenPath: onOpenPath,
+                                onOpenQuests: onOpenQuests,
+                                fillHeight: true,
+                                onFold: () => settings.setQuestsFolded(true),
+                              ),
+                      ),
                     ),
                   ),
                 ],
@@ -256,6 +289,9 @@ const double _sceneMinWidth = 900;
 
 /// The design's `grid-template-columns: 1fr 300px`.
 const double _panelWidth = 300;
+
+/// The quest panel folded: a slim tab on the right edge.
+const double _foldedTabWidth = 64;
 
 /// What the fox says. Built from the real open-quest count when there is one,
 /// so it is never a line of flavour text pretending to know something.
@@ -339,9 +375,13 @@ class _QuestPanel extends StatelessWidget {
     this.fillHeight = false,
     this.failed = false,
     this.onRetry,
+    this.onFold,
   });
 
   final List<DailyQuestItem>? quests;
+
+  /// Folds the panel to its tab. Null (in the sheet) shows no control.
+  final VoidCallback? onFold;
 
   /// The board couldn't be read (A3).
   final bool failed;
@@ -433,6 +473,17 @@ class _QuestPanel extends StatelessWidget {
                   ),
                   child: Text(t.villageQuestsSeeAll),
                 ),
+              if (onFold != null)
+                IconButton(
+                  key: const ValueKey('village-quests-fold'),
+                  tooltip: t.questsFold,
+                  onPressed: onFold,
+                  visualDensity: VisualDensity.compact,
+                  icon: Icon(
+                    Icons.keyboard_double_arrow_right_rounded,
+                    color: p.inkMuted,
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: 2),
@@ -441,6 +492,73 @@ class _QuestPanel extends StatelessWidget {
           else
             rows,
         ],
+      ),
+    );
+  }
+}
+
+/// The quest panel folded (Hafid, 2026-11-10): the quest icon and today's
+/// count, top of the right edge. A tap, or Enter, unfolds it.
+class _QuestTab extends StatelessWidget {
+  const _QuestTab({required this.board, required this.onUnfold});
+
+  final QuestBoard? board;
+  final VoidCallback onUnfold;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = VillagePalette.of(context);
+    final quests = board?.quests;
+    final done = quests?.where((q) => q.done).length;
+    return Align(
+      alignment: Alignment.topCenter,
+      child: Tooltip(
+        message: context.s.questsUnfold,
+        child: Material(
+          color: p.surface,
+          borderRadius: BorderRadius.circular(20),
+          elevation: 0,
+          shadowColor: p.shadow,
+          child: InkWell(
+            key: const ValueKey('village-quests-unfold'),
+            borderRadius: BorderRadius.circular(20),
+            onTap: onUnfold,
+            child: Semantics(
+              button: true,
+              label: context.s.questsUnfold,
+              child: SizedBox(
+                width: double.infinity,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.keyboard_double_arrow_left_rounded,
+                        color: p.inkMuted,
+                        size: 20,
+                      ),
+                      const SizedBox(height: 8),
+                      Image.asset('assets/images/asset-target.webp', width: 26),
+                      if (quests != null && done != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          '$done/${quests.length}',
+                          key: const ValueKey('village-quests-tab-count'),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13,
+                            color: p.ink,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

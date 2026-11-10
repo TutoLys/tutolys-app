@@ -9,6 +9,7 @@ import '../../features/notifications/notifications_panel.dart';
 import '../../features/path/path_controller.dart';
 import '../../features/path/path_screen.dart';
 import '../../features/profile/avatars.dart';
+import '../../features/settings/settings_controller.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/about/about_screen.dart';
 import '../../features/progress/progress_controller.dart';
@@ -223,6 +224,13 @@ class _VillageShellState extends ConsumerState<VillageShell> {
         onSecondarySelect: (i) => _open(_primary(t).length + i),
         helpLabel: t.navHelp,
         onHelp: () => _open(_helpIndex),
+        // Folded per kid (Hafid, 2026-11-10: more room for the village).
+        fold: ref.watch(settingsControllerProvider.select((s) => s.navFold)),
+        onFold: ref.read(settingsControllerProvider.notifier).setNavFold,
+        shrinkLabel: t.navShrink,
+        hideLabel: t.navHide,
+        expandLabel: t.navExpand,
+        showLabel: t.navShow,
         child: Column(
           children: [
             // Chrome, not page content: it stays put as the kid moves

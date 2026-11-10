@@ -63,8 +63,29 @@ class VillageNavShell extends StatelessWidget {
     this.onSecondarySelect,
     this.onHelp,
     this.helpLabel = '',
+    this.fold = 0,
+    this.onFold,
+    this.shrinkLabel = '',
+    this.hideLabel = '',
+    this.expandLabel = '',
+    this.showLabel = '',
     super.key,
   });
+
+  /// How far the side nav is folded (Hafid, 2026-11-10: more room for the
+  /// 3D village): 0 open, 1 the icon rail, 2 hidden behind a thin reopen
+  /// strip. Between 768 and 1023 the open nav already is the rail, so 0 and
+  /// 1 look the same there. The bottom bar (< 768) never folds.
+  final int fold;
+
+  /// Asks for another fold level. Null: no fold controls.
+  final ValueChanged<int>? onFold;
+
+  /// Labels of the fold controls, passed in like [helpLabel].
+  final String shrinkLabel;
+  final String hideLabel;
+  final String expandLabel;
+  final String showLabel;
 
   /// The primary destinations: Village, Carte, Quêtes, Progrès, Profil.
   final List<VillageDestination> destinations;
@@ -99,16 +120,48 @@ class VillageNavShell extends StatelessWidget {
     final p = VillagePalette.of(context);
     final width = MediaQuery.sizeOf(context).width;
 
-    if (width >= Breakpoints.medium) {
-      return _withSky(
-        p,
-        Row(children: [_sidebar(p, expanded: true), _content()]),
-      );
-    }
     if (width >= Breakpoints.compact) {
+      final wide = width >= Breakpoints.medium;
+      // What this width shows for the asked fold: 0 sidebar, 1 rail, 2 none.
+      final level = switch (fold.clamp(0, 2)) {
+        2 => 2,
+        1 => 1,
+        _ => wide ? 0 : 1,
+      };
+      final target = switch (level) {
+        0 => VillageMetrics.sidebarWidth,
+        1 => VillageMetrics.railWidth,
+        _ => _stripWidth,
+      };
+      final Widget nav = level == 2
+          ? _reopenStrip(p)
+          : _sidebar(p, expanded: level == 0, wide: wide);
       return _withSky(
         p,
-        Row(children: [_sidebar(p, expanded: false), _content()]),
+        Row(
+          children: [
+            // The nav takes its final shape at once and the column animates
+            // to its width, so nothing reflows mid-way; the page beside it
+            // (the 3D village) re-fits as it goes.
+            AnimatedContainer(
+              key: const ValueKey('village-nav-column'),
+              duration: MediaQuery.disableAnimationsOf(context)
+                  ? Duration.zero
+                  : const Duration(milliseconds: 240),
+              curve: Curves.easeOutCubic,
+              width: target,
+              child: ClipRect(
+                child: OverflowBox(
+                  alignment: Alignment.topLeft,
+                  minWidth: target,
+                  maxWidth: target,
+                  child: nav,
+                ),
+              ),
+            ),
+            _content(),
+          ],
+        ),
       );
     }
     return _withSky(
@@ -139,7 +192,85 @@ class VillageNavShell extends StatelessWidget {
 
   Widget _content() => Expanded(child: child);
 
-  Widget _sidebar(VillagePalette p, {required bool expanded}) {
+  /// The nav hidden: a thin strip with one button, always there to reopen.
+  static const double _stripWidth = 30;
+
+  Widget _reopenStrip(VillagePalette p) {
+    return Container(
+      key: const ValueKey('village-nav-strip'),
+      padding: const EdgeInsets.only(top: 22),
+      alignment: Alignment.topCenter,
+      decoration: BoxDecoration(
+        color: p.surface,
+        border: Border(right: BorderSide(color: p.line)),
+      ),
+      child: _foldButton(
+        p,
+        key: const ValueKey('village-nav-show'),
+        icon: Icons.keyboard_double_arrow_right_rounded,
+        label: showLabel,
+        onTap: () => onFold?.call(0),
+      ),
+    );
+  }
+
+  Widget _foldButton(
+    VillagePalette p, {
+    required Key key,
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return IconButton(
+      key: key,
+      tooltip: label,
+      onPressed: onTap,
+      visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints.tightFor(width: 28, height: 32),
+      iconSize: 20,
+      icon: Icon(icon, color: p.inkMuted),
+    );
+  }
+
+  /// At the sidebar's foot: fold one step, or (on the rail of a wide
+  /// window) open back up.
+  Widget _foldControls(
+    VillagePalette p, {
+    required bool expanded,
+    required bool wide,
+  }) {
+    final shrink = _foldButton(
+      p,
+      key: const ValueKey('village-nav-fold'),
+      icon: Icons.keyboard_double_arrow_left_rounded,
+      label: expanded ? shrinkLabel : hideLabel,
+      onTap: () => onFold?.call(expanded ? 1 : 2),
+    );
+    if (expanded) {
+      return Align(alignment: Alignment.centerRight, child: shrink);
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (wide)
+          _foldButton(
+            p,
+            key: const ValueKey('village-nav-expand'),
+            icon: Icons.keyboard_double_arrow_right_rounded,
+            label: expandLabel,
+            onTap: () => onFold?.call(0),
+          ),
+        shrink,
+      ],
+    );
+  }
+
+  Widget _sidebar(
+    VillagePalette p, {
+    required bool expanded,
+    bool wide = true,
+  }) {
     return Container(
       width: expanded ? VillageMetrics.sidebarWidth : VillageMetrics.railWidth,
       padding: expanded
@@ -185,6 +316,11 @@ class VillageNavShell extends StatelessWidget {
               ),
           ],
           const Spacer(),
+          if (onFold != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _foldControls(p, expanded: expanded, wide: wide),
+            ),
           if (onHelp != null) _helpFooter(p, expanded: expanded),
         ],
       ),

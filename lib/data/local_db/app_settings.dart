@@ -34,6 +34,9 @@ class AppSettings {
     this.remindersOnSince,
     this.flameReminders = false,
     this.village3d = village3dDefaultOn,
+    this.skyControls = false,
+    this.questsFolded = false,
+    this.navFold = 0,
     this.chosen = const {},
   });
 
@@ -76,6 +79,19 @@ class AppSettings {
   /// Defaults to [village3dDefaultOn].
   final bool village3d;
 
+  /// « Contrôles du ciel »: a bar under the 3D village to pick its hour,
+  /// season and weather by hand (ADR 0126). Off by default: the village
+  /// then follows Québec's real clock, date and weather.
+  final bool skyControls;
+
+  /// The Village's « Quêtes du jour » panel folded to a slim tab, so the
+  /// 3D scene gets its width (ADR 0126).
+  final bool questsFolded;
+
+  /// How far the nav sidebar is folded: 0 open, 1 the icon rail, 2 hidden
+  /// behind a reopen strip. Clamped to what the window width offers.
+  final int navFold;
+
   /// What the family set on this device. Anything else still follows the
   /// guardian's defaults ([applyKidDefaults]).
   final Set<DefaultableSetting> chosen;
@@ -93,6 +109,9 @@ class AppSettings {
     DateTime? remindersOnSince,
     bool? flameReminders,
     bool? village3d,
+    bool? skyControls,
+    bool? questsFolded,
+    int? navFold,
     Set<DefaultableSetting>? chosen,
   }) {
     return AppSettings(
@@ -108,6 +127,9 @@ class AppSettings {
       remindersOnSince: remindersOnSince ?? this.remindersOnSince,
       flameReminders: flameReminders ?? this.flameReminders,
       village3d: village3d ?? this.village3d,
+      skyControls: skyControls ?? this.skyControls,
+      questsFolded: questsFolded ?? this.questsFolded,
+      navFold: navFold ?? this.navFold,
       chosen: chosen ?? this.chosen,
     );
   }
@@ -192,6 +214,9 @@ class AppSettingsStore {
   // on and did nothing; Hafid made it "Ma flamme" (2026-10-28).
   static const _flameReminders = '${_prefix}flame_reminders';
   static const _village3d = '${_prefix}village_3d';
+  static const _skyControls = '${_prefix}sky_controls';
+  static const _questsFolded = '${_prefix}quests_folded';
+  static const _navFold = '${_prefix}nav_fold';
   // Present once a stored key can be trusted to be a choice. Before it,
   // changing the volume saved every setting, so a stored "music on" proved
   // nothing (ADR 0125).
@@ -249,6 +274,12 @@ class AppSettingsStore {
       remindersOnSince: DateTime.tryParse(byKey[_remindersOnSince] ?? ''),
       flameReminders: flag(_flameReminders, defaults.flameReminders),
       village3d: flag(_village3d, defaults.village3d),
+      skyControls: flag(_skyControls, defaults.skyControls),
+      questsFolded: flag(_questsFolded, defaults.questsFolded),
+      navFold: (int.tryParse(byKey[_navFold] ?? '') ?? defaults.navFold).clamp(
+        0,
+        2,
+      ),
       chosen: {
         for (final MapEntry(:key, :value) in _defaultableKeys.entries)
           if (byKey.containsKey(key)) value,
@@ -291,6 +322,9 @@ class AppSettingsStore {
         _remindersOnSince: since.toIso8601String().substring(0, 10),
       _flameReminders: '${settings.flameReminders}',
       _village3d: '${settings.village3d}',
+      _skyControls: '${settings.skyControls}',
+      _questsFolded: '${settings.questsFolded}',
+      _navFold: '${settings.navFold}',
     };
   }
 
