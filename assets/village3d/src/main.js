@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { quebecNow, quebecSeason } from './strings.js';
 import { createStage, HOME } from './scene.js';
 import { buildIsland, applySeason, updateIsland, buildingSpots, plazaY, pathCurves, heightAt } from './island.js';
-import { createBuilding, updateBuilding, setWinter, buildingMaterials, plinthGreen } from './buildings.js';
+import { createBuilding, updateBuilding, setWinter, buildingMaterials, plinthGreen, relabelSigns } from './buildings.js';
 import { createAtmosphere } from './atmosphere.js';
 import { createWeather } from './weather.js';
 import { createFox, createFoxController } from './fox.js';
@@ -106,7 +106,7 @@ function spotsFrom(list) {
     if (!base || used.has(base.id)) continue;
     used.add(base.id);
     out.push({ ...base, id: h.id, label: h.label ?? base.label, short: h.label ? undefined : base.short,
-      progress: h.progress === undefined ? base.progress : h.progress, live: h.live !== false });
+      progress: h.progress === undefined ? base.progress : h.progress, live: h.live !== false, soon: h.soon === true });
   }
   return out;
 }
@@ -201,6 +201,10 @@ const ui = createUI({
     ? 'Prototype : ici, l’app ouvrirait ta galerie.'
     : `Prototype : ici, l’app ouvrirait la Carte · ${spot.label}.`),
 });
+
+// The words on the 3D signposts come from the strings too.
+const relabel = () => { for (const b of buildings) relabelSigns(b.root, (kind, i) => ui.strings[`sign.${kind}.${i}`]); };
+relabel();
 
 function setHover(id) {
   if (state.hovered === id) return;
@@ -504,12 +508,13 @@ function statsNow() {
 
 // Host fields shared by `init` and `update`.
 function applyHost(m) {
-  if (m.strings) ui.setStrings(m.strings);
+  if (m.strings) { ui.setStrings(m.strings); relabel(); }
   if (Array.isArray(m.buildings)) {
     for (const h of m.buildings) {
       const b = byId.get(h.id); if (!b) continue; // the set of buildings is fixed at init
       if (h.label !== undefined) { b.spot.label = h.label; b.spot.short = undefined; }
       if (h.progress !== undefined) b.spot.progress = h.progress;
+      if (h.soon !== undefined) b.spot.soon = h.soon === true;
       if (h.live !== undefined && (h.live !== false) !== (b.spot.live !== false)) setLive(b, h.live !== false);
       ui.refreshPill(h.id);
     }

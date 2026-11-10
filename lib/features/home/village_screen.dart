@@ -130,6 +130,66 @@ class VillageScreen extends ConsumerWidget {
                 // AM11: and below 900px too. At 768 the scene drew at 0.62
                 // and its labels read at ~7px; the phone layout is legible
                 // and puts « Continuer » first.
+                final signSubtitle = kid?.gradeLevel == null
+                    ? ''
+                    : t.gradeLabel(kid!.gradeLevel);
+                final greeting = _greetingFor(t, kid?.displayName, board);
+                VillageSceneState sceneState() => VillageSceneState(
+                  buildings: buildings,
+                  lang: Localizations.localeOf(context).languageCode,
+                  signTitle: t.villageSignTitle,
+                  signSubtitle: signSubtitle,
+                  greeting: greeting,
+                  reduced: MediaQuery.disableAnimationsOf(context),
+                  strings: village3dStrings(t),
+                );
+                void openCode(String code) {
+                  for (final b in buildings) {
+                    if (b.subject == code) return openBuilding(b);
+                  }
+                }
+
+                // A phone with the 3D village (ADR 0126): « Continuer »
+                // first (A6), then the scene, whose fox bubble carries the
+                // greeting and whose pills carry each subject's progress,
+                // then the quests. Until the scene is ready a calm
+                // placeholder holds its place; if it fails, the provider
+                // turns false and the 2D phone layout below takes over.
+                if (constraints.maxWidth < _sceneMinWidth &&
+                    ref.watch(village3dActiveProvider)) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      recommend(fullWidth: true),
+                      const SizedBox(height: Space.md),
+                      SizedBox(
+                        key: const ValueKey('village-phone-3d'),
+                        height: _phoneSceneHeight(
+                          constraints.maxWidth,
+                          MediaQuery.sizeOf(context).height,
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: VillageSceneHost(
+                            state: sceneState(),
+                            onOpen: openCode,
+                            onMascot: sing,
+                            fallback: const _PhoneSceneLoading(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: Space.md),
+                      _QuestPanel(
+                        quests: board?.quests,
+                        failed: boardFailed,
+                        onRetry: retryBoard,
+                        onOpenPath: onOpenPath,
+                        onOpenQuests: onOpenQuests,
+                      ),
+                    ],
+                  );
+                }
+
                 if (constraints.maxWidth < _sceneMinWidth) {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -160,30 +220,14 @@ class VillageScreen extends ConsumerWidget {
                   );
                 }
 
-                final signSubtitle = kid?.gradeLevel == null
-                    ? ''
-                    : t.gradeLabel(kid!.gradeLevel);
-                final greeting = _greetingFor(t, kid?.displayName, board);
                 // The 3D village where the device can run it, the 2D one
                 // as its fallback and while it loads (ADR 0126).
                 final scene = LayoutBuilder(
                   builder: (context, box) => SizedBox(
                     height: _sceneHeight(box.maxWidth),
                     child: VillageSceneHost(
-                      state: VillageSceneState(
-                        buildings: buildings,
-                        lang: Localizations.localeOf(context).languageCode,
-                        signTitle: t.villageSignTitle,
-                        signSubtitle: signSubtitle,
-                        greeting: greeting,
-                        reduced: MediaQuery.disableAnimationsOf(context),
-                        strings: village3dStrings(t),
-                      ),
-                      onOpen: (code) {
-                        for (final b in buildings) {
-                          if (b.subject == code) return openBuilding(b);
-                        }
-                      },
+                      state: sceneState(),
+                      onOpen: openCode,
                       onMascot: sing,
                       fallback: VillageScene(
                         buildings: buildings,
@@ -275,6 +319,34 @@ const double _sceneMinWidth = 900;
 
 /// The design's `grid-template-columns: 1fr 300px`.
 const double _panelWidth = 300;
+
+/// The phone scene: tall enough that the island reads, short enough that
+/// the page above and below it can still be scrolled with a thumb, since a
+/// drag on the scene turns the camera.
+double _phoneSceneHeight(double width, double screenHeight) =>
+    (width * 1.1).clamp(320.0, screenHeight * 0.62).clamp(320.0, 520.0);
+
+/// Holds the phone scene's place while it loads: the sky-to-grass ground
+/// of the village, with nothing pretending to be data.
+class _PhoneSceneLoading extends StatelessWidget {
+  const _PhoneSceneLoading();
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    key: const ValueKey('village-phone-3d-loading'),
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFFCFE8FF), Color(0xFFDCEEDD)],
+      ),
+    ),
+    // Reduced motion: a still ground, no spinner.
+    child: MediaQuery.disableAnimationsOf(context)
+        ? null
+        : const Center(child: CircularProgressIndicator()),
+  );
+}
 
 /// Height follows width: the design's 580px at full size, never so short
 /// that the buildings crowd together vertically.

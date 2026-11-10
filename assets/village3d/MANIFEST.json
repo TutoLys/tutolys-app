@@ -1,8 +1,8 @@
 {
- "version": "village3d-2026.11.10",
+ "version": "village3d-2026.11.10.3",
  "bridge": 1,
  "entry": "village.html?embed=1",
- "totalBytes": 7807433,
+ "totalBytes": 7810846,
  "files": {
   "assets/fonts/Baloo2-Bold.ttf": {
    "bytes": 44808,
@@ -65,16 +65,16 @@
    "sha256": "272cabc477136997952eda76d74f1b6314f0fce6b9e53b9ea08a23c2dace8aed"
   },
   "assets/models/bldg-anglais.glb": {
-   "bytes": 623656,
-   "sha256": "b5b6ae9ef3bec2904d3024abd1af1bba7c05dc939978726600d3e072432a3ff2"
+   "bytes": 623776,
+   "sha256": "c6e0aee7930d335cf87a80a0c641f9995979d593167469f51716456eee885b10"
   },
   "assets/models/bldg-ccq.glb": {
-   "bytes": 584112,
-   "sha256": "6dbc0cca2a2f6ce27edd76a9971257683016d6857e88614e59b99fc106ed80c8"
+   "bytes": 584224,
+   "sha256": "94f936c45331936778606709a51cb6ce09ab35cf1fc7f0c0f85924a15105af52"
   },
   "assets/models/bldg-francais.glb": {
-   "bytes": 813028,
-   "sha256": "1ea94f8c3d05ce109b9df9d16a834d9d7a84e93c9f0b197959ee1fee7c2effed"
+   "bytes": 813208,
+   "sha256": "d808a21161be374f4f8b774b1b2438b726b86588cd381e27238d8c67326741c7"
   },
   "assets/models/bldg-gallery.glb": {
    "bytes": 470872,
@@ -89,8 +89,8 @@
    "sha256": "39765606bb0370f97389e932e064f1aea6f9580c0d1d0c3dc02bd51a0a88b3b7"
   },
   "assets/models/bldg-univers-social.glb": {
-   "bytes": 764048,
-   "sha256": "5049329e0eadfa0b5a5cd560e06be86985788f2cf60ee8a8946742996ebaf7b7"
+   "bytes": 762488,
+   "sha256": "b4dd3ae78cd4c75878e3c9d6116debe0b87115d9f40a05fa3385577fdeb08cb4"
   },
   "assets/models/fox.glb": {
    "bytes": 1065748,
@@ -101,12 +101,12 @@
    "sha256": "158f7cef864f98c593d7282c46695e23768a0a6bca1ed5e8487eed26d8bd7a44"
   },
   "src/bridge.js": {
-   "bytes": 3168,
-   "sha256": "335ded9a7fadeea5cd6947d005f9e158349ad6d0ca8ec215ddb0db507ece472c"
+   "bytes": 3170,
+   "sha256": "14bf66f88b0b4ddda0af7901b9d240a9a609cc6ca356ff3b1d2bb5f6c1e89e6d"
   },
   "src/buildings.js": {
-   "bytes": 74352,
-   "sha256": "d4165a76c8dbe71b77a520475533cf873dfda54ceba0be2271a420cd1f3514cb"
+   "bytes": 75978,
+   "sha256": "3789dda01a532f6563a2e5f14669a2277b8ec143dc2bb6077895a67ff97490b3"
   },
   "src/data.js": {
    "bytes": 3268,
@@ -125,8 +125,8 @@
    "sha256": "07ea292c094ac0ddb1b8bfc2a1866cc87db34ecadcbb24933ca019e3b928ab9a"
   },
   "src/main.js": {
-   "bytes": 27837,
-   "sha256": "83700ccc96e0769500172bd2484cb63fa469a7a0228fd1e5194550358a107561"
+   "bytes": 28146,
+   "sha256": "5bf45b4d64ddab6bb464de6211fda372c33e949c5ae67bc9f1c4ae7b9176ea0f"
   },
   "src/models.js": {
    "bytes": 1642,
@@ -137,32 +137,32 @@
    "sha256": "3000a19ecb2c82cff702acaa32c1709aa059cc9329cab3fa2b43dbe6a40cd8cd"
   },
   "src/scene.js": {
-   "bytes": 7674,
-   "sha256": "108752552bb1ed2c954b2dcddde7907b50d6dd2b84a87accef34bed9a6499010"
+   "bytes": 8125,
+   "sha256": "18b083dd04fc77d2e3bf37c8d782f0f4268182b63e8821a5bc677168b31cbfe5"
   },
   "src/shapes.js": {
    "bytes": 21886,
    "sha256": "673f32c68f35876aa70000f7623cc477eff65ea7cc5e898d38e35e021d2db990"
   },
   "src/strings.js": {
-   "bytes": 2403,
-   "sha256": "394ce218e9779ddcfa82f0d23f0aafbdd25019b8ca2b41da6aed6359735a8913"
+   "bytes": 2756,
+   "sha256": "bb010973ca51fb7ab50043dd668869f8c51ba8397f77aaea6bd16245e2d29f8f"
   },
   "src/textures.js": {
    "bytes": 13444,
    "sha256": "d2d97c03a9f7e67724f567e07718cdc5350367359084a2ede8089d3bdfdf159b"
   },
   "src/ui.js": {
-   "bytes": 15724,
-   "sha256": "80185913eb93246f1d9bfe9ae646f74ef1325423d1016b797fcb4da307a9535e"
+   "bytes": 16559,
+   "sha256": "028ed0c4dbdf9c25bf0d5bdbb05e6aadc533392ad8aefe33ab022b10746c94d2"
   },
   "src/weather.js": {
    "bytes": 17526,
    "sha256": "fc5380d94623e640811fae7d8478562c49b7dc2f2870b14ee33a8343e2a58038"
   },
   "styles/village.css": {
-   "bytes": 28575,
-   "sha256": "0d25c5ac531212018d479223ae51d70ca1421077f44988ad3b64b8322b9affde"
+   "bytes": 29560,
+   "sha256": "7acb7891470a68de873595ef2208923568c6b89ba51b65c2ddf6dbcea86e1e7c"
   },
   "vendor/three-0.170.0/LICENSE": {
    "bytes": 1081,

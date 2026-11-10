@@ -435,6 +435,13 @@ abstract class Strings {
   String get village3dCamLeft;
   String get village3dCamRight;
   String get village3dCamHome;
+  String get village3dSignFr0;
+  String get village3dSignFr1;
+  String get village3dSignFr2;
+  String get village3dSignEsl0;
+  String get village3dSignEsl1;
+  String get village3dSignCcq0;
+  String get village3dSignCcq1;
 
   // --- quêtes --------------------------------------------------------------
   String get questsEyebrow;
@@ -1611,6 +1618,30 @@ class _FrenchStrings extends Strings {
 
   @override
   String get village3dCamHome => 'Recentrer le village';
+
+  // The signposts on the language buildings stay in their own language,
+  // like their lessons (ADR 0023); CCQ's follows the app.
+
+  @override
+  String get village3dSignFr0 => 'Lire';
+
+  @override
+  String get village3dSignFr1 => 'Écrire';
+
+  @override
+  String get village3dSignFr2 => 'Créer';
+
+  @override
+  String get village3dSignEsl0 => 'Hello';
+
+  @override
+  String get village3dSignEsl1 => 'Read';
+
+  @override
+  String get village3dSignCcq0 => 'Vivre';
+
+  @override
+  String get village3dSignCcq1 => 'ensemble';
 
   @override
   String get questsEyebrow => 'Aujourd\'hui et cette semaine';
@@ -3105,6 +3136,30 @@ class _EnglishStrings extends Strings {
 
   @override
   String get village3dCamHome => 'Re-centre the village';
+
+  // The signposts on the language buildings stay in their own language,
+  // like their lessons (ADR 0023); CCQ's follows the app.
+
+  @override
+  String get village3dSignFr0 => 'Lire';
+
+  @override
+  String get village3dSignFr1 => 'Écrire';
+
+  @override
+  String get village3dSignFr2 => 'Créer';
+
+  @override
+  String get village3dSignEsl0 => 'Hello';
+
+  @override
+  String get village3dSignEsl1 => 'Read';
+
+  @override
+  String get village3dSignCcq0 => 'Living';
+
+  @override
+  String get village3dSignCcq1 => 'together';
 
   @override
   String get questsEyebrow => 'Today and this week';

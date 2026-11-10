@@ -9,6 +9,7 @@ import 'package:tutolys_app/core/i18n/strings.dart';
 import 'package:tutolys_app/data/local_db/app_settings.dart';
 import 'package:tutolys_app/data/local_db/database.dart';
 import 'package:tutolys_app/features/home/subject_progress.dart';
+import 'package:tutolys_app/features/home/subject_strip.dart';
 import 'package:tutolys_app/features/home/village3d/village_bridge.dart';
 import 'package:tutolys_app/features/home/village3d/village_channel.dart';
 import 'package:tutolys_app/features/home/village3d/village_scene_host.dart';
@@ -50,6 +51,9 @@ class FakeChannel implements VillageSceneChannel {
 
   @override
   void dispose() => disposed = true;
+
+  @override
+  var drawsAboveFlutter = false;
 }
 
 class _Settings extends SettingsController {
@@ -193,7 +197,7 @@ void main() {
       expect((sent[0] as Map).keys, {'id', 'label', 'progress', 'live'});
     });
 
-    test('all 16 scene strings are sent, in each language', () {
+    test('all 23 scene strings are sent, in each language', () {
       for (final t in [Strings.fr, Strings.en]) {
         final strings = village3dStrings(t);
         expect(strings.keys.toSet(), village3dStringKeys);
@@ -201,19 +205,23 @@ void main() {
       }
       expect(village3dStrings(Strings.en)['cam.in'], 'Zoom in');
       expect(village3dStrings(Strings.fr)['pill.new'], 'À découvrir');
+      // Language buildings keep their language; CCQ follows the app.
+      expect(village3dStrings(Strings.en)['sign.francais.1'], 'Écrire');
+      expect(village3dStrings(Strings.fr)['sign.anglais.0'], 'Hello');
+      expect(village3dStrings(Strings.en)['sign.ccq.0'], 'Living');
     });
   });
 
   group('which village shows', () {
-    testWidgets('by default the 2D village: no scene is started', (
-      tester,
-    ) async {
-      // Hafid, 2026-11-10: "everything keeps the 2d for now".
-      expect(village3dDefaultOn, isFalse);
-      expect(const AppSettings().village3d, village3dDefaultOn);
-      await tester.pumpWidget(host(setting: const AppSettings().village3d));
-      expect(_fallback, findsOneWidget);
-      expect(made, 0);
+    test('3D is the default; the platform still decides', () {
+      // Hafid, 2026-11-10: "implement the 3d village everywhere".
+      expect(village3dDefaultOn, isTrue);
+      expect(const AppSettings().village3d, isTrue);
+      // The VM test runner hosts no scene, so nothing here turns 3D on by
+      // accident: every other village test keeps the 2D village.
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      expect(container.read(villageScenePlatformProvider), isFalse);
     });
 
     test('an untouched toggle is not stored, so the swap reaches the kid',
@@ -415,6 +423,47 @@ void main() {
       expect(channel.types.last, 'resume');
     });
 
+    testWidgets('a dialog over the Village pauses the scene', (tester) async {
+      await tester.pumpWidget(host());
+      channel.boot();
+      await tester.pump();
+
+      final context = tester.element(find.byType(VillageSceneHost));
+      showDialog<void>(context: context, builder: (_) => const Text('NIP'));
+      await tester.pumpAndSettle();
+      expect(channel.types.last, 'pause');
+      expect(_view, findsOneWidget, reason: 'web draws dialogs above it');
+
+      Navigator.of(context).pop();
+      await tester.pumpAndSettle();
+      expect(channel.types.last, 'resume');
+    });
+
+    testWidgets('a native view is taken off screen under a dialog', (
+      tester,
+    ) async {
+      channel.drawsAboveFlutter = true;
+      await tester.pumpWidget(host());
+      channel.boot();
+      await tester.pump();
+      expect(_view, findsOneWidget);
+
+      final context = tester.element(find.byType(VillageSceneHost));
+      showModalBottomSheet<void>(
+        context: context,
+        builder: (_) => const Text('sheet'),
+      );
+      await tester.pumpAndSettle();
+      expect(_view, findsNothing);
+      expect(_fallback, findsOneWidget);
+      expect(channel.disposed, isFalse, reason: 'lifted, not torn down');
+
+      Navigator.of(context).pop();
+      await tester.pumpAndSettle();
+      expect(_view, findsOneWidget);
+      expect(_fallback, findsNothing);
+    });
+
     testWidgets('the app in the background pauses the scene', (tester) async {
       await tester.pumpWidget(host());
       channel.boot();
@@ -502,5 +551,100 @@ void main() {
     await tester.pump();
     expect(opened, ['MATH']);
     expect(find.byType(VillageScene), findsNothing);
+  });
+
+  group('a phone', () {
+    Widget phone({required bool platform}) => ProviderScope(
+      overrides: [
+        localDatabaseProvider.overrideWithValue(LocalDatabase.memory()),
+        questBoardProvider.overrideWith(
+          (ref) async => QuestBoard(
+            quests: const [],
+            weekCompleted: 0,
+            unlocked: const {},
+            today: DateTime(2026, 11, 10),
+          ),
+        ),
+        subjectProgressProvider.overrideWith(
+          (ref) async => const {'MATH': 0.62},
+        ),
+        villageScenePlatformProvider.overrideWithValue(platform),
+        villageSceneChannelFactoryProvider.overrideWithValue(
+          ({required String title}) => platform ? channel : null,
+        ),
+        settingsControllerProvider.overrideWith(
+          () => _Settings(const AppSettings()),
+        ),
+      ],
+      child: MaterialApp(
+        theme: TutolysTheme.village(),
+        locale: const Locale('fr', 'CA'),
+        supportedLocales: const [Locale('fr', 'CA'), Locale('en', 'CA')],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: MediaQuery(
+          data: const MediaQueryData(
+            size: Size(390, 844),
+            disableAnimations: true,
+          ),
+          child: Scaffold(body: VillageScreen(onOpenSubject: (_) {})),
+        ),
+      ),
+    );
+
+    void phoneSize(WidgetTester tester) {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+    }
+
+    final scene = find.byKey(const ValueKey('village-phone-3d'));
+    final loading = find.byKey(const ValueKey('village-phone-3d-loading'));
+
+    testWidgets('gets the 3D scene in place of the subject strip', (
+      tester,
+    ) async {
+      phoneSize(tester);
+      await tester.pumpWidget(phone(platform: true));
+      await tester.pump();
+      expect(scene, findsOneWidget);
+      expect(find.byType(SubjectStrip), findsNothing);
+      expect(loading, findsOneWidget);
+
+      channel.boot();
+      await tester.pump();
+      expect(loading, findsNothing);
+      expect(_view, findsOneWidget);
+      // Continuer comes first, above the scene.
+      expect(
+        tester.getTopLeft(find.byKey(const ValueKey('recommend-title'))).dy,
+        lessThan(tester.getTopLeft(scene).dy),
+      );
+    });
+
+    testWidgets('falls back to the 2D phone layout when the scene fails', (
+      tester,
+    ) async {
+      phoneSize(tester);
+      await tester.pumpWidget(phone(platform: true));
+      await tester.pump();
+      channel.say({'type': 'unavailable', 'reason': 'webgl'});
+      await tester.pump();
+      expect(scene, findsNothing);
+      expect(find.byType(SubjectStrip), findsOneWidget);
+    });
+
+    testWidgets('keeps the 2D phone layout where no scene can run', (
+      tester,
+    ) async {
+      phoneSize(tester);
+      await tester.pumpWidget(phone(platform: false));
+      await tester.pump();
+      expect(scene, findsNothing);
+      expect(find.byType(SubjectStrip), findsOneWidget);
+    });
   });
 }

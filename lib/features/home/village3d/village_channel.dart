@@ -17,6 +17,11 @@ abstract class VillageSceneChannel {
 
   Widget buildView();
 
+  /// True where the view is a native layer drawn above Flutter (Linux's
+  /// GTK WebView): a dialog opened over it would sit underneath, so the
+  /// host takes the view off screen while anything covers the Village.
+  bool get drawsAboveFlutter;
+
   void dispose();
 }
 
@@ -35,6 +40,12 @@ final villageSceneChannelFactoryProvider = Provider<VillageSceneChannelFactory>(
 /// False until `assets/village3d/` holds a bundle that speaks the bridge:
 /// an iframe on a missing page would only ever time out.
 const village3dBundled = true;
+
+/// Whether this platform can host the scene at all. Layouts read it to
+/// decide where the scene goes before any scene has started.
+final villageScenePlatformProvider = Provider<bool>(
+  (ref) => village3dBundled && platform.villageScenePlatform,
+);
 
 /// The bundled scene, under the app's own assets: no CDN (offline-first).
 const village3dEntry = 'assets/village3d/village.html';

@@ -7,6 +7,8 @@ import 'package:web/web.dart' as web;
 
 import 'village_channel.dart';
 
+const villageScenePlatform = true;
+
 VillageSceneChannel? createVillageSceneChannel({required String title}) =>
     _WebVillageChannel(title: title);
 
@@ -61,6 +63,10 @@ class _WebVillageChannel implements VillageSceneChannel {
 
   @override
   Widget buildView() => HtmlElementView(viewType: _viewType);
+
+  /// Flutter web composites its own layers above the iframe.
+  @override
+  bool get drawsAboveFlutter => false;
 
   @override
   void dispose() {

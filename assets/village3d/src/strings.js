@@ -12,6 +12,8 @@ export const DEFAULT_STRINGS = {
   'pill.aria.new': '{label}, à découvrir',
   'pill.aria.progress': '{label}, {pct} sur 100',
   'pill.aria.locked': '{label}, bientôt disponible',
+  'pill.soon': 'Bientôt',
+  'pill.aria.soon': '{label}, leçons bientôt',
   'pill.aria.place': '{label}',
   'cam.aria': 'Caméra',
   'cam.in': 'Zoomer',
@@ -19,6 +21,14 @@ export const DEFAULT_STRINGS = {
   'cam.left': 'Tourner à gauche',
   'cam.right': 'Tourner à droite',
   'cam.home': 'Recentrer le village',
+  // Words painted on the 3D signposts, one key per board (top to bottom).
+  'sign.francais.0': 'Lire',
+  'sign.francais.1': 'Écrire',
+  'sign.francais.2': 'Créer',
+  'sign.anglais.0': 'Hello',
+  'sign.anglais.1': 'Read',
+  'sign.ccq.0': 'Vivre',
+  'sign.ccq.1': 'ensemble',
 };
 
 export function makeStrings(over = {}) {

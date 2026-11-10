@@ -113,6 +113,20 @@ img { display: block; }
 :root[data-embed="1"] .ambience, :root[data-embed="1"] .recommend-bar, :root[data-embed="1"] .hint,
 :root[data-embed="1"] .toast, :root[data-embed="1"] .debug { display: none !important; }
 :root[data-embed="1"] .fox-bubble:empty { visibility: hidden; }
+/* Embedded, the pills always keep their progress figure and « À découvrir »
+   / « Bientôt » (the app's 2D village shows them at every size); small
+   screens get them compact, a narrower fox bubble, and no recommend bar under
+   the camera buttons. */
+:root[data-embed="1"] .scene-pill .sp-num, :root[data-embed="1"] .scene-pill .sp-new { display: inline; }
+@media (max-width: 720px), (max-height: 560px) {
+  :root[data-embed="1"] .cam-controls { bottom: calc(14px + env(safe-area-inset-bottom)); }
+  :root[data-embed="1"] .scene-pill { padding: 4px 10px 4px 9px; gap: 6px; }
+  :root[data-embed="1"] .scene-pill .sp-track { display: none; }
+  :root[data-embed="1"] .scene-pill .sp-name { font-size: 12px; }
+  :root[data-embed="1"] .scene-pill .sp-num, :root[data-embed="1"] .scene-pill .sp-new { font-size: 10.5px; }
+  :root[data-embed="1"] .fox-bubble { max-width: 150px; font-size: 12px; padding: 6px 10px; }
+}
+@media (pointer: coarse) { .scene-pill { min-height: 40px; } }
 .scene-pill.is-locked { opacity: 0.62; cursor: default; filter: grayscale(0.85); }
 [hidden] { display: none !important; }
 .scene-pill {

@@ -127,13 +127,19 @@ export function createStage(container) {
     camera.fov = w / h < 0.8 ? 50 : w / h < 1.25 ? 36 : 30;
     // Lift the island a little: the bottom of the screen holds the
     // ambience and recommendation cards, the top only the sign.
-    const lift = w > 720 ? Math.round(h * 0.06) : -Math.round(h * 0.02);
     const a = w / h;
+    // Embedded, the app's own bars sit outside the scene, so phones centre it.
+    const embedded = document.documentElement.dataset.embed === '1';
+    const lift = w > 720 ? Math.round(h * 0.06) : embedded ? 0 : -Math.round(h * 0.02);
+    // Phones in portrait are width-bound (the island is 50 wide, 38 deep):
+    // frame the buildings, not the rim, and look a little more from above
+    // so the island fills more of the tall screen.
+    const phone = a < 0.62;
     // Fit the island to the screen, whatever its shape: the distance at which
     // the island's width (and its height, seen at this tilt) fits the view.
-    HOME.polar = a < 0.8 ? 0.78 : a < 1.25 ? 0.9 : 1.0;
+    HOME.polar = phone ? (a < 0.5 ? 0.6 : 0.68) : a < 0.8 ? 0.78 : a < 1.25 ? 0.9 : 1.0;
     const tv = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), th = tv * a;
-    const halfW = a < 0.8 ? 21.5 : 27.5;                     // phones crop a sliver of rim
+    const halfW = phone ? 18 : a < 0.8 ? 21.5 : 27.5;        // phones: the outer buildings (centres ±13.8) whole
     const halfH = 19 * Math.cos(HOME.polar) + 6.5 * Math.sin(HOME.polar) + 4;
     HOME.distance = THREE.MathUtils.clamp(Math.max(halfW / th, halfH / tv) * 1.02, 55, 150);
     controls.maxDistance = Math.max(125, HOME.distance * 1.3);

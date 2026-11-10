@@ -78,6 +78,7 @@ export function createUI({ buildings, strings = DEFAULT_STRINGS, onHover, onSele
     let aria;
     const label = s.short || s.label;
     if (s.live === false) { extra = `<span class="sp-new">${esc(S['pill.locked'])}</span>`; aria = fill(S['pill.aria.locked'], { label: s.label }); }
+    else if (s.soon) { extra = `<span class="sp-new">${esc(S['pill.soon'])}</span>`; aria = fill(S['pill.aria.soon'], { label: s.label }); }
     else if (s.measured === false) { extra = '<span class="sp-dot" aria-hidden="true"></span>'; aria = fill(S['pill.aria.place'], { label: s.label }); }
     else if (s.progress == null) { extra = `<span class="sp-new">${esc(S['pill.new'])}</span>`; aria = fill(S['pill.aria.new'], { label: s.label }); }
     else {
@@ -165,6 +166,20 @@ export function createUI({ buildings, strings = DEFAULT_STRINGS, onHover, onSele
         const ox = (a.pw + o.pw) / 2 + 6 - Math.abs(a.x - o.x);
         const oyv = (a.ph + o.ph) / 2 + 4 - ((a.y + a.dy) - (o.y + o.dy));
         if (ox > 0 && oyv > 0) a.dy += oyv;
+      }
+    }
+    // The cascade never moves the fixed bubble, so a pill can end up under
+    // it: lift such a pill above the bubble, or drop it below if there's no
+    // room above.
+    const fixedIt = items.find((it) => it.fixed);
+    if (fixedIt) {
+      for (const it of vis) {
+        if (it.fixed) continue;
+        const ox = (it.pw + fixedIt.pw) / 2 + 4 - Math.abs(it.x - fixedIt.x);
+        const yy = it.y + it.dy;
+        if (ox <= 0 || Math.abs(yy - fixedIt.y) >= (it.ph + fixedIt.ph) / 2 + 4) continue;
+        const above = fixedIt.y - fixedIt.ph / 2 - 4 - it.ph / 2;
+        it.dy = (above - it.ph / 2 >= topLimit ? above : fixedIt.y + fixedIt.ph / 2 + 4 + it.ph / 2) - it.y;
       }
     }
     items.filter((it) => !it.fixed).forEach((it, i) => {

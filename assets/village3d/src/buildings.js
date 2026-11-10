@@ -375,17 +375,31 @@ function globe(r = 0.8) {
   const footRing = mesh(new THREE.TorusGeometry(0.31, 0.025, 6, 24).rotateX(Math.PI / 2), M.gold); footRing.position.y = -r * 1.1 - 0.35; g.add(footRing);
   return g;
 }
-function signpost(labels, seed = 1) {
+/** One painted signboard face: white Baloo 2 on wood, shrunk to fit. */
+function signTexture(t) {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 64;
+  const x = c.getContext('2d');
+  x.fillStyle = '#C9904F'; x.fillRect(0, 0, 256, 64);
+  x.strokeStyle = '#8B5A2B'; x.lineWidth = 6; x.strokeRect(3, 3, 250, 58);
+  x.fillStyle = '#ffffff'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  let px = 34;
+  do { x.font = `700 ${px}px "Baloo 2", sans-serif`; } while (x.measureText(t).width > 226 && --px > 14);
+  x.fillText(t, 128, 35);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+  return tex;
+}
+/**
+ * Signposts carry words, so each board is named `signboard_<kind>_<i>` and
+ * the host's strings (`sign.<kind>.<i>`) repaint it at runtime, on the
+ * procedural build and on a baked .glb alike (BRIDGE.md).
+ */
+function signpost(labels, seed = 1, key = 'sign') {
   const g = new THREE.Group();
   const post = mesh(new THREE.CylinderGeometry(0.06, 0.07, 1.8, 6), M.woodDark); post.position.y = 0.9; g.add(post);
   labels.forEach((t, i) => {
-    const c = document.createElement('canvas'); c.width = 256; c.height = 64;
-    const x = c.getContext('2d');
-    x.fillStyle = '#C9904F'; x.fillRect(0, 0, 256, 64);
-    x.strokeStyle = '#8B5A2B'; x.lineWidth = 6; x.strokeRect(3, 3, 250, 58);
-    x.fillStyle = '#ffffff'; x.font = '700 34px "Baloo 2", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(t, 128, 35);
-    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+    const tex = signTexture(t);
     const board = mesh(new THREE.BoxGeometry(0.85, 0.22, 0.05), [M.wood, M.wood, M.wood, M.wood, std(0xffffff, { map: tex }), std(0xffffff, { map: tex })]);
+    board.name = `signboard_${key}_${i}`; board.userData.signText = t;
     board.position.set(i % 2 ? -0.3 : 0.3, 1.55 - i * 0.28, 0); board.rotation.y = (i % 2 ? -1 : 1) * (0.15 + seed * 0.05);
     g.add(board);
   });
@@ -495,6 +509,33 @@ function plainFinish(m) {
   }
   return _plain.get(key);
 }
+/**
+ * Repaint every signboard under `root` from `text(kind, i)`; a board whose
+ * text is unchanged (or null) is left alone. Works on the baked .glb too:
+ * the loader turns a two-material board into a group of primitives, and
+ * any textured primitive is the painted face.
+ */
+export function relabelSigns(root, text) {
+  root.traverse((o) => {
+    const m = /^signboard_(\w+?)_(\d+)$/.exec(o.name);
+    if (!m) return;
+    const t = text(m[1], +m[2]);
+    if (t == null || t === o.userData.signShown) return;
+    o.userData.signShown = t;
+    const tex = signTexture(t);
+    o.traverse((c) => {
+      if (!c.isMesh) return;
+      const mats = Array.isArray(c.material) ? c.material : [c.material];
+      const next = mats.map((mt) => {
+        if (!mt.map) return mt;
+        if (mt.userData.signOwn) { mt.map.dispose(); mt.map = tex; mt.needsUpdate = true; return mt; }
+        const own = mt.clone(); own.userData.signOwn = true; own.map = tex; return own;
+      });
+      c.material = Array.isArray(c.material) ? next : next[0];
+    });
+  });
+}
+
 export function mergeStatic(root) {
   root.updateMatrixWorld(true);
   const inv = new THREE.Matrix4().copy(root.matrixWorld).invert();
@@ -927,7 +968,7 @@ const RECIPES = {
     // A big quill dipped in an inkwell, and a tall stack of books.
     const ink = inkwell(); ink.position.set(2.15, 0.2, 1.65); g.add(ink);
     const q = quill(); q.scale.setScalar(1.6); q.position.set(2.3, 2.2, 1.6); q.rotation.z = -0.32; g.add(q);
-    const sp = signpost(['Lire', 'Écrire', 'Créer']); sp.position.set(-2.25, 0.2, 1.75); sp.rotation.y = 0.5; g.add(sp);
+    const sp = signpost(['Lire', 'Écrire', 'Créer'], 1, 'francais'); sp.position.set(-2.25, 0.2, 1.75); sp.rotation.y = 0.5; g.add(sp);
     const books = bookStack(5); books.position.set(-1.45, 0.2, 2.15); g.add(books);
     return { h: h + 2.4 };
   },
@@ -967,7 +1008,7 @@ const RECIPES = {
     // A speech-bubble shop sign on a wrought-iron bracket, and a red phone box.
     const sign = bubbleSign(); sign.position.set(w / 2 + 0.98, 2.05, 0.35); g.add(sign);
     const pb = phoneBox(); pb.position.set(-1.75, 0.2, 2.05); pb.rotation.y = 0.35; g.add(pb);
-    const sp = signpost(['Hello', 'Read']); sp.position.set(1.85, 0.2, 2.2); sp.rotation.y = -0.5; g.add(sp);
+    const sp = signpost(['Hello', 'Read'], 1, 'anglais'); sp.position.set(1.85, 0.2, 2.2); sp.rotation.y = -0.5; g.add(sp);
     return { h: h + 3.0 };
   },
   science(g, snow) {
@@ -1010,7 +1051,7 @@ const RECIPES = {
     const dr = door(0.85, 1.35); dr.position.set(0.15, 0.35, d / 2 + 0.01); g.add(dr);
     addWindows(g, [1.05], 1.0, d / 2 + 0.01, 0.36, 0.6);
     const st = statue(); st.scale.setScalar(1.35); st.position.set(-1.85, 0.2, 1.35); g.add(st);
-    const sp = signpost(['Vivre', 'ensemble']); sp.position.set(1.8, 0.2, 1.5); sp.rotation.y = -0.4; g.add(sp);
+    const sp = signpost(['Vivre', 'ensemble'], 1, 'ccq'); sp.position.set(1.8, 0.2, 1.5); sp.rotation.y = -0.4; g.add(sp);
     return { h: h + 3.4 };
   },
   gallery(g, snow) {

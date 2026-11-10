@@ -22,6 +22,17 @@ final village3dSupportProvider = NotifierProvider<Village3dSupport, bool>(
   Village3dSupport.new,
 );
 
+/// Whether the Village should place the 3D scene: the kid's setting, a
+/// platform that can host it, and no failure yet this run. A layout that
+/// differs between 3D and 2D (the phone one) reads this; the host itself
+/// still falls back on its own if the scene then fails.
+final village3dActiveProvider = Provider<bool>(
+  (ref) =>
+      ref.watch(settingsControllerProvider.select((s) => s.village3d)) &&
+      ref.watch(villageScenePlatformProvider) &&
+      ref.watch(village3dSupportProvider),
+);
+
 /// How long a scene has to say it's ready before the 2D village stays.
 const village3dReadyTimeout = Duration(seconds: 20);
 
@@ -62,10 +73,13 @@ class _VillageSceneHostState extends ConsumerState<VillageSceneHost> {
   var _foreground = true;
   var _visible = true;
 
+  /// A dialog, sheet or page is over the Village.
+  var _covered = false;
+
   /// What the scene was last told, so a pause or resume is sent once.
   bool? _sentPaused;
 
-  bool get _paused => !_foreground || !_visible;
+  bool get _paused => !_foreground || !_visible || _covered;
 
   @override
   void initState() {
@@ -187,18 +201,25 @@ class _VillageSceneHostState extends ConsumerState<VillageSceneHost> {
     final channel = _channel;
     if (channel == null) return widget.fallback;
 
-    // Hidden behind another tab of the shell's IndexedStack: pause.
+    // Hidden behind another tab of the shell's IndexedStack, or under a
+    // dialog, sheet or pushed page: pause. Both lookups rebuild this widget
+    // when they change.
     _visible = Visibility.of(context);
+    _covered = !(ModalRoute.of(context)?.isCurrent ?? true);
     _syncPaused();
+    // A native layer would draw over the dialog: take it off screen and let
+    // the 2D village stand in until the dialog closes.
+    final lifted = _covered && channel.drawsAboveFlutter;
 
     return Stack(
       fit: StackFit.expand,
       children: [
-        KeyedSubtree(
-          key: const ValueKey('village-3d-view'),
-          child: channel.buildView(),
-        ),
-        if (_phase != _Phase.ready)
+        if (!lifted)
+          KeyedSubtree(
+            key: const ValueKey('village-3d-view'),
+            child: channel.buildView(),
+          ),
+        if (_phase != _Phase.ready || lifted)
           KeyedSubtree(
             key: const ValueKey('village-3d-loading'),
             child: widget.fallback,

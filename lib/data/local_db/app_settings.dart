@@ -13,12 +13,12 @@ enum DefaultableSetting { music, soundEffects, reduceMotion }
 /// question — see ADR 0021), French, animations not reduced. Learning
 /// reminders are **off** until a guardian turns them on (ADR 0053).
 /// THE SWAP (ADR 0126). Whether the 3D village is on for a kid who hasn't
-/// touched « Village en 3D ». False until Hafid says the 3D is ready
-/// (2026-11-10: "everything keeps the 2d for now"). Flipping it reaches
-/// every kid who never chose, because only a changed setting is stored
-/// (`writeChanges`, ADR 0125). Linux has no 3D channel, so it stays 2D
-/// whatever this says.
-const village3dDefaultOn = false;
+/// touched « Village en 3D ». On since Hafid's "implement the 3d village
+/// everywhere" (2026-11-10). It reaches every kid who never chose, because
+/// only a changed setting is stored (`writeChanges`, ADR 0125). Where the
+/// device can't run it (no WebGL, too slow, no channel on this platform)
+/// the 2D village still shows.
+const village3dDefaultOn = true;
 
 class AppSettings {
   const AppSettings({
