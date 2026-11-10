@@ -182,6 +182,31 @@ void main() {
   });
 
   group('which village shows', () {
+    testWidgets('by default the 2D village: no scene is started', (
+      tester,
+    ) async {
+      // Hafid, 2026-11-10: "everything keeps the 2d for now".
+      expect(village3dDefaultOn, isFalse);
+      expect(const AppSettings().village3d, village3dDefaultOn);
+      await tester.pumpWidget(host(setting: const AppSettings().village3d));
+      expect(_fallback, findsOneWidget);
+      expect(made, 0);
+    });
+
+    test('an untouched toggle is not stored, so the swap reaches the kid',
+        () async {
+      final db = LocalDatabase.memory();
+      addTearDown(db.close);
+      final store = AppSettingsStore(db, kidId: 'k');
+      const before = AppSettings();
+      await store.writeChanges(before, before.copyWith(volume: 40));
+      final rows = await db.select(db.appStateTable).get();
+      expect(rows.map((r) => r.key), isNot(contains('settings.village_3d')));
+
+      await store.writeChanges(before, before.copyWith(village3d: true));
+      expect((await store.read()).village3d, isTrue);
+    });
+
     testWidgets('no scene on this platform: the 2D village', (tester) async {
       await tester.pumpWidget(host(platform: false));
       expect(_fallback, findsOneWidget);
@@ -404,6 +429,9 @@ void main() {
           ),
           villageSceneChannelFactoryProvider.overrideWithValue(
             ({required String title}) => channel,
+          ),
+          settingsControllerProvider.overrideWith(
+            () => _Settings(const AppSettings(village3d: true)),
           ),
         ],
         child: MaterialApp(

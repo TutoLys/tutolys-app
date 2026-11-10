@@ -12,6 +12,14 @@ enum DefaultableSetting { music, soundEffects, reduceMotion }
 /// sound and music on, read-aloud **on** (a grade-1 reader cannot read the
 /// question — see ADR 0021), French, animations not reduced. Learning
 /// reminders are **off** until a guardian turns them on (ADR 0053).
+/// THE SWAP (ADR 0126). Whether the 3D village is on for a kid who hasn't
+/// touched « Village en 3D ». False until Hafid says the 3D is ready
+/// (2026-11-10: "everything keeps the 2d for now"). Flipping it reaches
+/// every kid who never chose, because only a changed setting is stored
+/// (`writeChanges`, ADR 0125). Linux has no 3D channel, so it stays 2D
+/// whatever this says.
+const village3dDefaultOn = false;
+
 class AppSettings {
   const AppSettings({
     this.darkTheme = false,
@@ -25,7 +33,7 @@ class AppSettings {
     this.reminderMinutes = 17 * 60,
     this.remindersOnSince,
     this.flameReminders = false,
-    this.village3d = true,
+    this.village3d = village3dDefaultOn,
     this.chosen = const {},
   });
 
@@ -65,6 +73,7 @@ class AppSettings {
 
   /// « Village en 3D »: draw the Village as the 3D scene where the device
   /// can (ADR 0126). Off, or where it can't, the 2D village shows.
+  /// Defaults to [village3dDefaultOn].
   final bool village3d;
 
   /// What the family set on this device. Anything else still follows the

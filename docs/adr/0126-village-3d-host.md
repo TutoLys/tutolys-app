@@ -34,7 +34,8 @@ Linux desktop next through a WebView, the 2D village as the fallback.
    `_sceneMinWidth` (900 px) nothing changes: the phone layout has no scene,
    2D or 3D.
 
-4. **A Réglages toggle, « Village en 3D »**, on by default, under
+4. **A Réglages toggle, « Village en 3D »**, off by default (see the
+   ruling below), under
    Expérience next to « Réduire les animations ». Per kid, like every other
    setting (ADR 0014). Turning it off drops a running scene at once.
 
@@ -52,12 +53,29 @@ Linux desktop next through a WebView, the 2D village as the fallback.
    `tool/sync_village3d.sh`, which refuses any file that loads from another
    origin. No CDN, nothing fetched at runtime.
 
-8. **Linux.** Not in this change. The only WebKitGTK embedder on pub.dev
-   (`webview_all_linux`) has an unverified uploader and a small user base,
-   needs `libwebkit2gtk-4.1-dev` on the build machine, and draws as a GTK
-   overlay above the Flutter view, so Flutter dialogs and sheets would sit
-   under it. That's Hafid's call. Until then Linux keeps the 2D village (the
-   io channel factory returns null).
+8. **Linux is 2D only.** It has no 3D path at all: the io channel factory
+   returns null, so the host always shows the 2D village there, whatever
+   the toggle says. The only WebKitGTK embedder on pub.dev
+   (`webview_all_linux`) was not taken. Its uploader is unverified and
+   its user base is small. It needs `libwebkit2gtk-4.1-dev` and
+   `libsoup-3.0-dev` installed on the build machine with sudo. It also
+   draws as a GTK overlay above the Flutter view, so a Flutter dialog or
+   sheet opened over the Village would sit underneath the scene.
+
+## Ruling (Hafid, 2026-11-10)
+
+"Everything keeps the 2d for now, but get ready to swap and improve in the
+app when the 3D is ready!!"
+
+- **The 2D village is the default on every platform, web included.**
+- **The swap is one line:** `village3dDefaultOn` in
+  `lib/data/local_db/app_settings.dart`, false today. It is the toggle's
+  default. Set it to true when Hafid says the 3D is ready. Only a setting a
+  kid changed is stored (`writeChanges`, ADR 0125), so the new default
+  reaches every kid who never touched the toggle. A kid who turned it on
+  already sees 3D on web today.
+- `village3dBundled` (in `village_channel.dart`) only says the bundle is in
+  the assets. It is not the swap.
 
 ## Consequences
 
