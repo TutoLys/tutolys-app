@@ -37,6 +37,11 @@ final village3dActiveProvider = Provider<bool>(
 /// How long a scene has to say it's ready before the 2D village stays.
 const village3dReadyTimeout = Duration(seconds: 20);
 
+/// After a low `perf`, how long the scene runs uninterrupted before the app
+/// asks again. A first figure can straddle a pause (seen live: `fps: 0`
+/// after the scene loaded under a dialog), so it alone never decides.
+const village3dPerfRecheck = Duration(seconds: 3);
+
 /// The Village's scene: the 3D village where it can run, the 2D one
 /// ([fallback]) everywhere else (ADR 0126).
 ///
@@ -84,6 +89,23 @@ class _VillageSceneHostState extends ConsumerState<VillageSceneHost> {
 
   /// What the scene was last told about input.
   bool? _sentInteractive;
+
+  /// A low frame rate waits on a second reading (`getStats`).
+  var _perfInDoubt = false;
+  var _statsAsked = false;
+  Timer? _recheck;
+
+  void _armRecheck() {
+    _recheck?.cancel();
+    _statsAsked = false;
+    if (!_perfInDoubt || _paused) return;
+    _recheck = Timer(village3dPerfRecheck, () {
+      if (_perfInDoubt && !_paused) {
+        _statsAsked = true;
+        _channel?.send(HostMessage.getStats);
+      }
+    });
+  }
 
   void _onRootCover() {
     if (mounted) setState(() {});
@@ -133,6 +155,8 @@ class _VillageSceneHostState extends ConsumerState<VillageSceneHost> {
 
   void _stop() {
     _sentInteractive = null;
+    _recheck?.cancel();
+    _perfInDoubt = false;
     _channel?.send(HostMessage.dispose);
     _timeout?.cancel();
     _timeout = null;
@@ -164,8 +188,16 @@ class _VillageSceneHostState extends ConsumerState<VillageSceneHost> {
       case SceneUnavailable():
         _fail();
       case ScenePerf(:final fps):
-        // A figure measured while paused says nothing about the device.
-        if (!_paused && fps < village3dMinFps) _fail();
+        if (fps < village3dMinFps) {
+          _perfInDoubt = true;
+          _armRecheck();
+        }
+      case SceneStats(:final fps):
+        // Only the reading this host asked for, after an unbroken run.
+        if (!_perfInDoubt || !_statsAsked) break;
+        _perfInDoubt = false;
+        _statsAsked = false;
+        if (fps < village3dMinFps) _fail();
       case SceneOpen(:final id):
         final known = widget.state.buildings.any(
           (b) => b.subject == id && b.live,
@@ -184,6 +216,8 @@ class _VillageSceneHostState extends ConsumerState<VillageSceneHost> {
     if (_sentPaused == _paused) return;
     _sentPaused = _paused;
     channel.send(_paused ? HostMessage.pause : HostMessage.resume);
+    // A pause breaks the run a recheck needs; a resume starts a new one.
+    _armRecheck();
   }
 
   @override

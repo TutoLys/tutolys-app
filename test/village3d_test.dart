@@ -296,14 +296,42 @@ void main() {
       expect(made, 1);
     });
 
-    testWidgets('too slow: back to 2D', (tester) async {
+    testWidgets('too slow twice: back to 2D', (tester) async {
       await tester.pumpWidget(host());
       channel.boot();
       await tester.pump();
       channel.say({'type': 'perf', 'fps': 24});
       await tester.pump();
+      expect(_view, findsOneWidget, reason: 'one low figure never decides');
+
+      await tester.pump(village3dPerfRecheck);
+      expect(channel.types.last, 'getStats');
+      channel.say({'type': 'stats', 'fps': 22});
+      await tester.pump();
       expect(_fallback, findsOneWidget);
       expect(channel.disposed, isTrue);
+    });
+
+    testWidgets('a low first figure that recovers stays 3D', (tester) async {
+      // Seen live: `perf` said 0 fps after the scene loaded under a dialog.
+      await tester.pumpWidget(host());
+      channel.boot();
+      await tester.pump();
+      channel.say({'type': 'perf', 'fps': 0});
+      await tester.pump(village3dPerfRecheck);
+      channel.say({'type': 'stats', 'fps': 60});
+      await tester.pump();
+      expect(_view, findsOneWidget);
+      expect(channel.disposed, isFalse);
+    });
+
+    testWidgets('stats nobody asked for decide nothing', (tester) async {
+      await tester.pumpWidget(host());
+      channel.boot();
+      await tester.pump();
+      channel.say({'type': 'stats', 'fps': 5});
+      await tester.pump();
+      expect(_view, findsOneWidget);
     });
 
     testWidgets('fast enough: stays 3D', (tester) async {
@@ -557,17 +585,19 @@ void main() {
       expect(channel.types.last, 'resume');
     });
 
-    testWidgets('a slow figure measured while paused is not held against it',
-        (tester) async {
+    testWidgets('a recheck waits for an unbroken run', (tester) async {
       await tester.pumpWidget(host());
       channel.boot();
       await tester.pump();
-      await tester.pumpWidget(host(visible: false));
       channel.say({'type': 'perf', 'fps': 3});
-      await tester.pump();
+      await tester.pumpWidget(host(visible: false));
+      await tester.pump(village3dPerfRecheck * 2);
+      expect(channel.types, isNot(contains('getStats')));
+
       await tester.pumpWidget(host());
+      await tester.pump(village3dPerfRecheck);
+      expect(channel.types.last, 'getStats');
       expect(_view, findsOneWidget);
-      expect(channel.disposed, isFalse);
     });
   });
 

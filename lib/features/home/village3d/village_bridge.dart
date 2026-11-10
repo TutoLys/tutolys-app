@@ -109,6 +109,12 @@ abstract final class HostMessage {
     'type': 'resume',
   };
 
+  /// Asks for a fresh frame rate; the scene answers with `stats`.
+  static const Map<String, Object?> getStats = {
+    'v': villageBridgeVersion,
+    'type': 'getStats',
+  };
+
   /// Final: stops the loop and frees the GPU before the frame goes.
   static const Map<String, Object?> dispose = {
     'v': villageBridgeVersion,
@@ -131,6 +137,10 @@ sealed class SceneEvent {
       'unavailable' => SceneUnavailable('${raw['reason'] ?? 'unknown'}'),
       'perf' => switch (raw['fps']) {
         final num fps => ScenePerf(fps.toDouble()),
+        _ => const SceneIgnored(),
+      },
+      'stats' => switch (raw['fps']) {
+        final num fps => SceneStats(fps.toDouble()),
         _ => const SceneIgnored(),
       },
       'open' => switch (raw['id']) {
@@ -169,6 +179,12 @@ final class SceneUnavailable extends SceneEvent {
 /// The frame rate the scene measured once it settled.
 final class ScenePerf extends SceneEvent {
   const ScenePerf(this.fps);
+  final double fps;
+}
+
+/// The frame rate now, in reply to `getStats`.
+final class SceneStats extends SceneEvent {
+  const SceneStats(this.fps);
   final double fps;
 }
 
