@@ -34,7 +34,7 @@ final villageSceneChannelFactoryProvider = Provider<VillageSceneChannelFactory>(
 
 /// False until `assets/village3d/` holds a bundle that speaks the bridge:
 /// an iframe on a missing page would only ever time out.
-const village3dBundled = false;
+const village3dBundled = true;
 
 /// The bundled scene, under the app's own assets: no CDN (offline-first).
 const village3dEntry = 'assets/village3d/village.html';

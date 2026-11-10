@@ -73,6 +73,31 @@ flutter:
     - assets/sounds/music/
     - assets/sounds/sfx/
     - assets/sounds/songs/
+    # The 3D village's bundle (ADR 0126), copied by tool/sync_village3d.sh
+    # from codex/village-3d/dist. Web only: Linux has no 3D path, so it
+    # doesn't carry the 7.45 MB. Folders aren't recursive; keep in step.
+    - path: assets/village3d/
+      platforms: [web]
+    - path: assets/village3d/assets/fonts/
+      platforms: [web]
+    - path: assets/village3d/assets/img/
+      platforms: [web]
+    - path: assets/village3d/assets/models/
+      platforms: [web]
+    - path: assets/village3d/src/
+      platforms: [web]
+    - path: assets/village3d/styles/
+      platforms: [web]
+    - path: assets/village3d/vendor/three-0.170.0/
+      platforms: [web]
+    - path: assets/village3d/vendor/three-0.170.0/addons/
+      platforms: [web]
+    - path: assets/village3d/vendor/three-0.170.0/addons/controls/
+      platforms: [web]
+    - path: assets/village3d/vendor/three-0.170.0/addons/loaders/
+      platforms: [web]
+    - path: assets/village3d/vendor/three-0.170.0/addons/utils/
+      platforms: [web]
 
 # `dart run flutter_launcher_icons` regenerates web/icons/*.png from these.
 # Scoped to web only: Linux desktop has no Flutter-tooling icon pipeline (its

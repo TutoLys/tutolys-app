@@ -423,6 +423,18 @@ abstract class Strings {
 
   String get villageYourSubjects;
   String get village3dStageLabel;
+  String get village3dLabelsAria;
+  String get village3dLoading;
+  String get village3dPillProgress;
+  String get village3dPillAriaNew;
+  String get village3dPillAriaProgress;
+  String get village3dPillAriaLocked;
+  String get village3dCamAria;
+  String get village3dCamIn;
+  String get village3dCamOut;
+  String get village3dCamLeft;
+  String get village3dCamRight;
+  String get village3dCamHome;
 
   // --- quêtes --------------------------------------------------------------
   String get questsEyebrow;
@@ -1561,7 +1573,44 @@ class _FrenchStrings extends Strings {
 
   @override
   String get village3dStageLabel =>
-      'Le village en 3D. Touche un bâtiment pour ouvrir sa carte.';
+      'Village des Lys en 3D. Flèches : tourner et incliner. Plus et moins : '
+      'zoomer. Zéro : recentrer. Tab : passer d’un bâtiment à l’autre.';
+
+  @override
+  String get village3dLabelsAria => 'Bâtiments du village';
+
+  @override
+  String get village3dLoading => 'Le village se prépare…';
+
+  @override
+  String get village3dPillProgress => '{pct}/100';
+
+  @override
+  String get village3dPillAriaNew => '{label}, à découvrir';
+
+  @override
+  String get village3dPillAriaProgress => '{label}, {pct} sur 100';
+
+  @override
+  String get village3dPillAriaLocked => '{label}, bientôt disponible';
+
+  @override
+  String get village3dCamAria => 'Caméra';
+
+  @override
+  String get village3dCamIn => 'Zoomer';
+
+  @override
+  String get village3dCamOut => 'Dézoomer';
+
+  @override
+  String get village3dCamLeft => 'Tourner à gauche';
+
+  @override
+  String get village3dCamRight => 'Tourner à droite';
+
+  @override
+  String get village3dCamHome => 'Recentrer le village';
 
   @override
   String get questsEyebrow => 'Aujourd\'hui et cette semaine';
@@ -3018,7 +3067,44 @@ class _EnglishStrings extends Strings {
 
   @override
   String get village3dStageLabel =>
-      'The village in 3D. Tap a building to open its map.';
+      'Lys Village in 3D. Arrows: turn and tilt. Plus and minus: zoom. '
+      'Zero: re-centre. Tab: move from one building to the next.';
+
+  @override
+  String get village3dLabelsAria => 'Village buildings';
+
+  @override
+  String get village3dLoading => 'The village is getting ready…';
+
+  @override
+  String get village3dPillProgress => '{pct}/100';
+
+  @override
+  String get village3dPillAriaNew => '{label}, up next';
+
+  @override
+  String get village3dPillAriaProgress => '{label}, {pct} out of 100';
+
+  @override
+  String get village3dPillAriaLocked => '{label}, coming soon';
+
+  @override
+  String get village3dCamAria => 'Camera';
+
+  @override
+  String get village3dCamIn => 'Zoom in';
+
+  @override
+  String get village3dCamOut => 'Zoom out';
+
+  @override
+  String get village3dCamLeft => 'Turn left';
+
+  @override
+  String get village3dCamRight => 'Turn right';
+
+  @override
+  String get village3dCamHome => 'Re-centre the village';
 
   @override
   String get questsEyebrow => 'Today and this week';

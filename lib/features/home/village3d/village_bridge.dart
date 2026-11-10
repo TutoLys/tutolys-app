@@ -47,14 +47,14 @@ class VillageSceneState {
           'label': b.label,
           // null is « À découvrir », never 0 (the 2D pill's own rule).
           'progress': b.measured ? b.progress : null,
-          'measured': b.measured,
           'live': b.live,
-          'hasLessons': b.hasLessons,
         },
     ],
     'lang': lang,
     'sign': {'title': signTitle, 'subtitle': signSubtitle},
     'greeting': greeting,
+    // The app draws its header outside the scene's box.
+    'insets': {'top': 0},
     'reduced': reduced,
     'strings': strings,
   };
@@ -108,6 +108,12 @@ abstract final class HostMessage {
     'v': villageBridgeVersion,
     'type': 'resume',
   };
+
+  /// Final: stops the loop and frees the GPU before the frame goes.
+  static const Map<String, Object?> dispose = {
+    'v': villageBridgeVersion,
+    'type': 'dispose',
+  };
 }
 
 /// What the scene can say. Anything else, or another version, is
@@ -119,7 +125,9 @@ sealed class SceneEvent {
     if (raw is! Map) return const SceneIgnored();
     if (raw['v'] != villageBridgeVersion) return const SceneIgnored();
     return switch (raw['type']) {
+      'loading' => const SceneLoading(),
       'ready' => const SceneReady(),
+      'error' => const SceneError(),
       'unavailable' => SceneUnavailable('${raw['reason'] ?? 'unknown'}'),
       'perf' => switch (raw['fps']) {
         final num fps => ScenePerf(fps.toDouble()),
@@ -135,7 +143,19 @@ sealed class SceneEvent {
   }
 }
 
-/// The scene is listening and has drawn its first frame.
+/// The scene is listening: the app answers with `init`. Sent again by a
+/// scene that reloaded.
+final class SceneLoading extends SceneEvent {
+  const SceneLoading();
+}
+
+/// An uncaught error after start-up. The scene may still be running, so it
+/// is not a fallback; its message is not kept (it can carry anything).
+final class SceneError extends SceneEvent {
+  const SceneError();
+}
+
+/// The scene has drawn its first frame.
 final class SceneReady extends SceneEvent {
   const SceneReady();
 }

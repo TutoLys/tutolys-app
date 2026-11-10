@@ -101,6 +101,7 @@ class _VillageSceneHostState extends ConsumerState<VillageSceneHost> {
   }
 
   void _stop() {
+    _channel?.send(HostMessage.dispose);
     _timeout?.cancel();
     _timeout = null;
     _sub?.cancel();
@@ -117,13 +118,17 @@ class _VillageSceneHostState extends ConsumerState<VillageSceneHost> {
 
   void _onMessage(Object? raw) {
     switch (SceneEvent.parse(raw)) {
-      case SceneReady():
-        // Sent again on every ready: a scene that reloaded starts blank.
+      case SceneLoading():
+        // Answered every time: a scene that reloaded starts blank.
         _channel?.send(HostMessage.init(widget.state));
-        _sentPaused = null;
-        _syncPaused();
+      case SceneReady():
+        // A scene runs from its first frame: only a pause needs sending.
+        _sentPaused = false;
         _timeout?.cancel();
         if (_phase != _Phase.ready) setState(() => _phase = _Phase.ready);
+        _syncPaused();
+      case SceneError():
+        break;
       case SceneUnavailable():
         _fail();
       case ScenePerf(:final fps):

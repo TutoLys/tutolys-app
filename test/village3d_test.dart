@@ -33,6 +33,12 @@ class FakeChannel implements VillageSceneChannel {
   void say(Map<String, Object?> message) =>
       inbound.add({'v': villageBridgeVersion, ...message});
 
+  /// BRIDGE.md's start-up: `loading`, the app's `init`, then `ready`.
+  void boot() {
+    say({'type': 'loading', 'version': 'test', 'bridge': 1});
+    say({'type': 'ready', 'version': 'test', 'bridge': 1});
+  }
+
   @override
   Stream<Object?> get messages => inbound.stream;
 
@@ -119,7 +125,12 @@ void main() {
   group('the bridge contract', () {
     test('each scene message parses to its event', () {
       Object? m(Map<String, Object?> x) => {'v': 1, ...x};
+      expect(SceneEvent.parse(m({'type': 'loading'})), isA<SceneLoading>());
       expect(SceneEvent.parse(m({'type': 'ready'})), isA<SceneReady>());
+      expect(
+        SceneEvent.parse(m({'type': 'error', 'message': 'x'})),
+        isA<SceneError>(),
+      );
       expect(
         SceneEvent.parse(m({'type': 'unavailable', 'reason': 'no webgl'})),
         isA<SceneUnavailable>().having((e) => e.reason, 'reason', 'no webgl'),
@@ -175,9 +186,21 @@ void main() {
       expect((sent[1] as Map)['progress'], isNull);
       expect(
         init['strings'],
-        containsPair('notStarted', Strings.en.pathNotStarted),
+        containsPair('pill.new', Strings.en.pathNotStarted),
       );
       expect((init['sign']! as Map)['title'], 'Lys Village');
+      expect(init['insets'], {'top': 0});
+      expect((sent[0] as Map).keys, {'id', 'label', 'progress', 'live'});
+    });
+
+    test('all 16 scene strings are sent, in each language', () {
+      for (final t in [Strings.fr, Strings.en]) {
+        final strings = village3dStrings(t);
+        expect(strings.keys.toSet(), village3dStringKeys);
+        expect(strings.values.every((v) => v.isNotEmpty), isTrue);
+      }
+      expect(village3dStrings(Strings.en)['cam.in'], 'Zoom in');
+      expect(village3dStrings(Strings.fr)['pill.new'], 'À découvrir');
     });
   });
 
@@ -228,6 +251,11 @@ void main() {
       expect(_view, findsOneWidget);
       expect(_fallback, findsOneWidget);
 
+      channel.say({'type': 'loading'});
+      await tester.pump();
+      expect(channel.types, ['init']);
+      expect(_fallback, findsOneWidget, reason: 'not drawn yet');
+
       channel.say({'type': 'ready'});
       await tester.pump();
       expect(_fallback, findsNothing);
@@ -244,6 +272,7 @@ void main() {
       expect(_fallback, findsOneWidget);
       expect(_view, findsNothing);
       expect(channel.disposed, isTrue);
+      expect(channel.types.last, 'dispose');
 
       // Coming back to Village does not start another scene.
       final container = ProviderScope.containerOf(
@@ -255,7 +284,7 @@ void main() {
 
     testWidgets('too slow: back to 2D', (tester) async {
       await tester.pumpWidget(host());
-      channel.say({'type': 'ready'});
+      channel.boot();
       await tester.pump();
       channel.say({'type': 'perf', 'fps': 24});
       await tester.pump();
@@ -265,7 +294,7 @@ void main() {
 
     testWidgets('fast enough: stays 3D', (tester) async {
       await tester.pumpWidget(host());
-      channel.say({'type': 'ready'});
+      channel.boot();
       await tester.pump();
       channel.say({'type': 'perf', 'fps': 58});
       await tester.pump();
@@ -284,7 +313,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(host());
-      channel.say({'type': 'ready'});
+      channel.boot();
       await tester.pump();
       final element = tester.element(find.byType(VillageSceneHost));
       await ProviderScope.containerOf(
@@ -302,7 +331,7 @@ void main() {
     ) async {
       final opened = <String>[];
       await tester.pumpWidget(host(onOpen: opened.add));
-      channel.say({'type': 'ready'});
+      channel.boot();
       await tester.pump();
 
       channel.say({'type': 'open', 'id': 'SCI'});
@@ -328,7 +357,7 @@ void main() {
         strings: const {},
       );
       await tester.pumpWidget(host(state: state, onOpen: opened.add));
-      channel.say({'type': 'ready'});
+      channel.boot();
       await tester.pump();
       channel.say({'type': 'open', 'id': 'FR'});
       channel.say({'type': 'open', 'id': 'MATH'});
@@ -336,10 +365,20 @@ void main() {
       expect(opened, ['MATH']);
     });
 
+    testWidgets('an error after start-up keeps the scene', (tester) async {
+      await tester.pumpWidget(host());
+      channel.boot();
+      await tester.pump();
+      channel.say({'type': 'error', 'message': 'boom'});
+      await tester.pump();
+      expect(_view, findsOneWidget);
+      expect(channel.disposed, isFalse);
+    });
+
     testWidgets('the fox sings', (tester) async {
       var sang = 0;
       await tester.pumpWidget(host(onMascot: () => sang++));
-      channel.say({'type': 'ready'});
+      channel.boot();
       await tester.pump();
       channel.say({'type': 'mascot'});
       await tester.pump();
@@ -348,7 +387,7 @@ void main() {
 
     testWidgets('new data reaches the scene as an update', (tester) async {
       await tester.pumpWidget(host());
-      channel.say({'type': 'ready'});
+      channel.boot();
       await tester.pump();
       await tester.pumpWidget(host(state: _state(greeting: 'Encore ?')));
       expect(channel.types.last, 'update');
@@ -366,9 +405,9 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(host());
-      channel.say({'type': 'ready'});
+      channel.boot();
       await tester.pump();
-      expect(channel.types, ['init', 'resume']);
+      expect(channel.types, ['init']);
 
       await tester.pumpWidget(host(visible: false));
       expect(channel.types.last, 'pause');
@@ -378,7 +417,7 @@ void main() {
 
     testWidgets('the app in the background pauses the scene', (tester) async {
       await tester.pumpWidget(host());
-      channel.say({'type': 'ready'});
+      channel.boot();
       await tester.pump();
 
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
@@ -394,7 +433,7 @@ void main() {
     testWidgets('a slow figure measured while paused is not held against it',
         (tester) async {
       await tester.pumpWidget(host());
-      channel.say({'type': 'ready'});
+      channel.boot();
       await tester.pump();
       await tester.pumpWidget(host(visible: false));
       channel.say({'type': 'perf', 'fps': 3});
@@ -448,7 +487,7 @@ void main() {
       ),
     );
     await tester.pump();
-    channel.say({'type': 'ready'});
+    channel.boot();
     await tester.pump();
     await tester.pump();
 
