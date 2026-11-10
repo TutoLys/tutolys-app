@@ -526,6 +526,9 @@ function resume() {
   if (running || disposed) return;
   running = true; clock.getDelta();
   perfSeg = { t: 0, n: 0, last: null }; frames = 0; fpsAcc = 0; // no stale reading across a pause
+  // The greeting's step-aside timer ran on during the pause (say, the app's
+  // parent-PIN dialog at first pairing): show it again now the child can see it.
+  if (embedded && greeting.text) ui.showBubble();
   rafId = requestAnimationFrame(frame);
 }
 

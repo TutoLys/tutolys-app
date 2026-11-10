@@ -236,16 +236,16 @@ export function createUI({ buildings, strings = DEFAULT_STRINGS, onHover, onSele
 
   // --- fox bubble ---
   const bubble = $('#fox-bubble');
-  // Embedded in a small box, the bubble covers the middle buildings and
-  // pushes their pills away, so it says its line, then steps aside after a
-  // few seconds (pills return to their buildings). Tapping the fox brings it
-  // back.
-  const shyMq = window.matchMedia('(max-width: 480px), (max-height: 560px)');
+  // Embedded in a narrow (phone) box, the bubble covers the middle buildings
+  // and pushes their pills away, so it says its line, then steps aside after
+  // a few seconds (pills return to their buildings). Tapping the fox, a new
+  // line, or the scene resuming brings it back. Wider boxes keep it up.
+  const shyMq = window.matchMedia('(max-width: 480px)');
   let shyTimer;
   function showBubble() {
     clearTimeout(shyTimer);
     bubble.classList.remove('is-hidden');
-    if (document.documentElement.dataset.embed === '1' && shyMq.matches) shyTimer = setTimeout(() => bubble.classList.add('is-hidden'), 6000);
+    if (document.documentElement.dataset.embed === '1' && shyMq.matches) shyTimer = setTimeout(() => bubble.classList.add('is-hidden'), 8000);
   }
   function say(text) {
     if (bubble.textContent === text) return;
