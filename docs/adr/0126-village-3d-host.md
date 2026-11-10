@@ -319,3 +319,13 @@ Flutter's gestures can't reach inside a native WebView, so the click and
 the frame counter go through `LinuxVillageView.evaluate`, which is
 `@visibleForTesting`. A screenshot of the real app needs Hafid's Print
 Screen, because this desktop blocks programmatic grabs.
+
+**Two freshness windows, kept in step.** The server stops serving an
+observation after 180 min (`WEATHER_STALE_AFTER_MINUTES`; it answers 204,
+backend ADR 0228). The scene drops one older than 3 h by its
+`observed_at`. They agree today, and they do different jobs. The server's
+window covers a response being served. The scene's covers the observation
+the app keeps per kid, which goes on aging offline or overnight with no
+request in flight. That's why freshness is judged from `observed_at`, not
+`age_seconds`, which is true only at the moment of the response. Change
+one window, change the other.
