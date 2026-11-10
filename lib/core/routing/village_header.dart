@@ -161,55 +161,63 @@ class VillageHeader extends StatelessWidget {
                 ),
                 const SizedBox(width: 4),
               ],
+              // Expanded for layout (the name gives way to the pills), but
+              // the tap target hugs the avatar, name and chevron: filling
+              // the Expanded made every click in the header's empty middle
+              // open the profile menu (Hafid, 2026-11-10).
               Expanded(
-                child: _Identity(
-                  onTap: onIdentity,
-                  label: identityLabel,
-                  child: Row(
-                    key: identityKey,
-                    children: [
-                      KidAvatar(avatarKey: avatarKey, size: avatar),
-                      const SizedBox(width: Space.sm),
-                      Flexible(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontFamily: VillageType.display,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 16,
-                                color: p.ink,
-                              ),
-                            ),
-                            // The design hides this line on tablet rather than letting
-                            // it squeeze the stats.
-                            if (!compact && subtitle.isNotEmpty)
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: _Identity(
+                    onTap: onIdentity,
+                    label: identityLabel,
+                    child: Row(
+                      key: identityKey,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        KidAvatar(avatarKey: avatarKey, size: avatar),
+                        const SizedBox(width: Space.sm),
+                        Flexible(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
                               Text(
-                                subtitle,
+                                name,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  fontSize: 12,
-                                  color: p.inkMuted,
+                                  fontFamily: VillageType.display,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16,
+                                  color: p.ink,
                                 ),
                               ),
-                          ],
+                              // The design hides this line on tablet rather than letting
+                              // it squeeze the stats.
+                              if (!compact && subtitle.isNotEmpty)
+                                Text(
+                                  subtitle,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: p.inkMuted,
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
-                      ),
-                      // A phone's header has no room to spare for it.
-                      if (onIdentity != null &&
-                          box.maxWidth >= Breakpoints.compact)
-                        Icon(
-                          Icons.expand_more_rounded,
-                          size: 20,
-                          color: p.inkMuted,
-                        ),
-                    ],
+                        // A phone's header has no room to spare for it.
+                        if (onIdentity != null &&
+                            box.maxWidth >= Breakpoints.compact)
+                          Icon(
+                            Icons.expand_more_rounded,
+                            size: 20,
+                            color: p.inkMuted,
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),

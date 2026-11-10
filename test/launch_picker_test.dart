@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tutolys_app/core/i18n/strings.dart';
 import 'package:tutolys_app/core/net/recovery.dart';
 import 'package:tutolys_app/core/routing/app_shell.dart';
+import 'package:tutolys_app/core/routing/village_header.dart';
 import 'package:tutolys_app/core/routing/village_shell.dart';
 import 'package:tutolys_app/data/api/content_api.dart';
 import 'package:tutolys_app/data/api/curriculum_api.dart';
@@ -462,6 +463,52 @@ void main() {
       final anchor = tester.getBottomLeft(identity);
       expect(card.dy, greaterThanOrEqualTo(anchor.dy - 8));
       expect((card.dx - anchor.dx).abs(), lessThan(24));
+    });
+
+    testWidgets('only the avatar, name and chevron open it', (tester) async {
+      // Hafid, 2026-11-10: "anywhere I click it opens the switch". The tap
+      // target filled the header's whole Expanded middle.
+      await inTheVillage(tester, size: const Size(1440, 900));
+      final target = tester.getRect(identity);
+      final header = tester.getRect(find.byType(VillageHeader));
+      expect(target.width, lessThan(header.width / 3));
+
+      // The header's empty middle, just past the chevron, the page, the
+      // sidebar and the quest panel.
+      for (final point in [
+        header.center,
+        Offset(target.right + 12, target.center.dy),
+        const Offset(700, 500),
+        const Offset(40, 700),
+        const Offset(1300, 600),
+      ]) {
+        await tester.tapAt(point);
+        await tester.pumpAndSettle();
+        expect(menu, findsNothing, reason: 'tapped at $point');
+      }
+
+      await tester.tap(find.text('Yelhan').first);
+      await tester.pumpAndSettle();
+      expect(menu, findsOneWidget);
+    });
+
+    testWidgets('a tap outside closes it, and it stays closed', (
+      tester,
+    ) async {
+      await inTheVillage(tester, size: const Size(1440, 900));
+      await tester.tap(identity);
+      await tester.pumpAndSettle();
+      expect(menu, findsOneWidget);
+
+      await tester.tapAt(const Offset(700, 500));
+      await tester.pumpAndSettle();
+      expect(menu, findsNothing);
+      // And in the header's empty middle, where it used to reopen.
+      await tester.tap(identity);
+      await tester.pumpAndSettle();
+      await tester.tapAt(tester.getRect(find.byType(VillageHeader)).center);
+      await tester.pumpAndSettle();
+      expect(menu, findsNothing);
     });
 
     testWidgets('a screen reader can pick a row', (tester) async {
