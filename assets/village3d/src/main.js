@@ -586,7 +586,9 @@ function resume() {
   // The greeting's step-aside timer ran on during the pause (say, the app's
   // parent-PIN dialog at first pairing): show it again now the child can see it.
   if (embedded && greeting.text) ui.showBubble();
-  if (portal.active && !portal.busy) { portal.stop(); portalEnded({ instant: true }); } // the app left and came back
+  // The app left and came back: clear the portal, finished or not. A portal
+  // still running is cancelled and never posts its `open` (the child left).
+  if (portal.active) { portal.stop(); portalEnded({ instant: true }); }
   rafId = requestAnimationFrame(frame);
 }
 
