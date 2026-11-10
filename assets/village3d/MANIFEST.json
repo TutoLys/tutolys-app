@@ -1,5 +1,5 @@
 {
- "version": "village3d-2026.11.10.6",
+ "version": "village3d-2026.11.10.7",
  "bridge": 1,
  "entry": "village.html?embed=1",
  "totalBytes": 7818376,
@@ -102,7 +102,7 @@
   },
   "src/bridge.js": {
    "bytes": 3170,
-   "sha256": "c69ceb301fe8f5bf4113996db8bf37a049734f3c8a9283276f7f31a0b48f655c"
+   "sha256": "f25bdaac89396626e24e175d4b66b080a1fd6f6da20012e17a5a386308349f26"
   },
   "src/buildings.js": {
    "bytes": 75978,
