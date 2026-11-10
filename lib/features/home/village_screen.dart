@@ -10,6 +10,7 @@ import 'subject_strip.dart';
 import 'village_scene.dart';
 import 'village3d/village_bridge.dart';
 import 'village3d/village_scene_host.dart';
+import 'village3d/village_scene_loading.dart';
 import 'village3d/village_strings.dart';
 import 'village3d/village_weather.dart';
 import '../audio/app_sounds.dart' show mascotSongFor;
@@ -167,12 +168,12 @@ class VillageScreen extends ConsumerWidget {
                 ),
                 onOpen: openCode,
                 onMascot: sing,
-                // The 2D village stands in while the 3D one loads, and for
-                // good where it can't run: it fills the same box. On a
-                // phone it doesn't fit, so a calm placeholder holds the
-                // place until the scene is ready.
+                // The 2D village, for good, where the 3D one can't run; the
+                // host shows its own loader while the 3D one loads. On a
+                // phone the 2D village doesn't fit, and a failure switches
+                // to the phone layout anyway, so the loader holds the box.
                 fallback: phone
-                    ? const _PhoneSceneLoading()
+                    ? const VillageSceneLoading()
                     : VillageScene(
                         buildings: buildings,
                         signTitle: t.villageSignTitle,
@@ -255,28 +256,6 @@ const double _sceneMinWidth = 900;
 
 /// The design's `grid-template-columns: 1fr 300px`.
 const double _panelWidth = 300;
-
-/// Holds the phone scene's place while it loads: the sky-to-grass ground
-/// of the village, with nothing pretending to be data.
-class _PhoneSceneLoading extends StatelessWidget {
-  const _PhoneSceneLoading();
-
-  @override
-  Widget build(BuildContext context) => DecoratedBox(
-    key: const ValueKey('village-phone-3d-loading'),
-    decoration: const BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0xFFCFE8FF), Color(0xFFDCEEDD)],
-      ),
-    ),
-    // Reduced motion: a still ground, no spinner.
-    child: MediaQuery.disableAnimationsOf(context)
-        ? null
-        : const Center(child: CircularProgressIndicator()),
-  );
-}
 
 /// What the fox says. Built from the real open-quest count when there is one,
 /// so it is never a line of flavour text pretending to know something.

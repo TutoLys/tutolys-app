@@ -13,7 +13,9 @@ import '../../features/profile/avatars.dart';
 /// delivered. For the picker, [locked] draws it blurred under a dim veil
 /// in the theme's surface colour, so a kid can tell roughly what they're
 /// playing towards without seeing it clearly, and [hidden] draws a "?"
-/// instead, for a rare avatar not found yet.
+/// instead, for a rare avatar not found yet. A null [avatarKey] (not read
+/// yet) draws the plain circle with no face, never a default face that may
+/// be someone else's.
 class KidAvatar extends StatelessWidget {
   const KidAvatar({
     required this.avatarKey,
@@ -23,7 +25,7 @@ class KidAvatar extends StatelessWidget {
     super.key,
   });
 
-  final String avatarKey;
+  final String? avatarKey;
   final double size;
   final bool locked;
   final bool hidden;
@@ -31,7 +33,8 @@ class KidAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = VillagePalette.of(context);
-    final asset = avatarFor(avatarKey).asset;
+    final key = avatarKey;
+    final asset = key == null ? null : avatarFor(key).asset;
     final ring = size >= 60 ? 3.0 : 2.0;
     final Widget art = hidden
         ? Center(
@@ -45,6 +48,8 @@ class KidAvatar extends StatelessWidget {
               ),
             ),
           )
+        : key == null
+        ? const SizedBox.shrink(key: ValueKey('avatar-pending'))
         : asset == null
         ? Icon(Icons.face_rounded, size: size * 0.62, color: p.quebecBlue)
         : Image.asset('assets/images/$asset', fit: BoxFit.cover);

@@ -88,6 +88,7 @@ VillageSceneState _state({String? greeting = 'Bonjour !'}) => VillageSceneState(
 const _fallbackKey = ValueKey('fallback-2d');
 final _fallback = find.byKey(_fallbackKey);
 final _view = find.byKey(const ValueKey('fake-3d'));
+final _pending = find.byKey(const ValueKey('village-3d-pending'));
 
 void main() {
   late FakeChannel channel;
@@ -320,20 +321,27 @@ void main() {
       expect(made, 0);
     });
 
-    testWidgets('while it loads the 2D village covers it; ready reveals it', (
+    testWidgets('while it loads a sky loader covers it, never the 2D village', (
       tester,
     ) async {
+      // Hafid, 2026-11-10: the 2D village flashing before the 3D one read
+      // as a bug. The 2D one isn't even built while the 3D one is pending.
       await tester.pumpWidget(host());
       expect(_view, findsOneWidget);
-      expect(_fallback, findsOneWidget);
+      expect(_pending, findsOneWidget);
+      expect(_fallback, findsNothing);
 
       channel.say({'type': 'loading'});
       await tester.pump();
       expect(channel.types, ['init']);
-      expect(_fallback, findsOneWidget, reason: 'not drawn yet');
+      expect(_pending, findsOneWidget, reason: 'not drawn yet');
+      expect(_fallback, findsNothing);
+      await tester.pump(const Duration(seconds: 10));
+      expect(_fallback, findsNothing, reason: 'still within the 20 s wait');
 
       channel.say({'type': 'ready'});
       await tester.pump();
+      expect(_pending, findsNothing);
       expect(_fallback, findsNothing);
       expect(channel.types.first, 'init');
       expect(channel.sent.first['strings'], village3dStrings(Strings.fr));
@@ -679,13 +687,15 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(_view, findsNothing);
-      expect(_fallback, findsOneWidget);
+      // The sky stands in, not the 2D village: the same village comes back.
+      expect(_pending, findsOneWidget);
+      expect(_fallback, findsNothing);
       expect(channel.disposed, isFalse, reason: 'lifted, not torn down');
 
       Navigator.of(context).pop();
       await tester.pumpAndSettle();
       expect(_view, findsOneWidget);
-      expect(_fallback, findsNothing);
+      expect(_pending, findsNothing);
     });
 
     testWidgets('the app in the background pauses the scene', (tester) async {
@@ -826,7 +836,7 @@ void main() {
     }
 
     final scene = find.byKey(const ValueKey('village-scene-box'));
-    final loading = find.byKey(const ValueKey('village-phone-3d-loading'));
+    final loading = find.byKey(const ValueKey('village-3d-pending'));
 
     testWidgets('the 3D scene fills the screen; quests open in a sheet', (
       tester,

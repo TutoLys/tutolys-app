@@ -870,8 +870,10 @@ class AvatarController extends AsyncNotifier<AvatarState> {
 final avatarControllerProvider =
     AsyncNotifierProvider<AvatarController, AvatarState>(AvatarController.new);
 
-/// The active kid's avatar key, the default until it's read.
-final selectedAvatarKeyProvider = Provider<String>(
-  (ref) =>
-      ref.watch(avatarControllerProvider).value?.selected ?? defaultAvatarKey,
+/// The active kid's avatar key, or null until it's read. Never the default
+/// in the meantime: that showed a boy the girl's face for the first
+/// seconds of every launch (Hafid, 2026-11-10). [KidAvatar] draws null as
+/// a plain circle.
+final selectedAvatarKeyProvider = Provider<String?>(
+  (ref) => ref.watch(avatarControllerProvider).value?.selected,
 );

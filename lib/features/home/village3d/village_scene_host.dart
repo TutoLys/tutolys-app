@@ -7,6 +7,7 @@ import '../../../core/routing/root_cover_observer.dart';
 import '../../settings/settings_controller.dart';
 import 'village_bridge.dart';
 import 'village_channel.dart';
+import 'village_scene_loading.dart';
 
 /// Whether this run of the app may still try the 3D village. Turns false
 /// for good once a scene said it can't draw here (no WebGL), was too slow,
@@ -45,8 +46,11 @@ const village3dPerfRecheck = Duration(seconds: 3);
 /// The Village's scene: the 3D village where it can run, the 2D one
 /// ([fallback]) everywhere else (ADR 0126).
 ///
-/// The 2D village is shown while the 3D one loads, so a device that can't
-/// run it never sees an empty box: it just keeps the village it had.
+/// Until the 3D village is `ready` the box shows [VillageSceneLoading], the
+/// sky and a loader, never the 2D village: showing 2D first and then
+/// switching read as a bug (Hafid, 2026-11-10). [fallback] shows only when
+/// the 3D one is off or can't run (no channel, `unavailable`, too slow, the
+/// ready timeout).
 class VillageSceneHost extends ConsumerStatefulWidget {
   const VillageSceneHost({
     required this.state,
@@ -285,8 +289,8 @@ class _VillageSceneHostState extends ConsumerState<VillageSceneHost> {
         !(ModalRoute.of(context)?.isCurrent ?? true) ||
         rootCoverObserver.covered.value;
     _syncPaused();
-    // A native layer would draw over the dialog: take it off screen and let
-    // the 2D village stand in until the dialog closes.
+    // A native layer would draw over the dialog: take it off screen, with
+    // the loader's sky in its place until the dialog closes.
     final lifted = _covered && channel.drawsAboveFlutter;
     final interactive = _phase == _Phase.ready && !_covered;
     if (_sentInteractive != interactive) {
@@ -303,10 +307,7 @@ class _VillageSceneHostState extends ConsumerState<VillageSceneHost> {
             child: channel.buildView(),
           ),
         if (_phase != _Phase.ready || lifted)
-          KeyedSubtree(
-            key: const ValueKey('village-3d-loading'),
-            child: widget.fallback,
-          ),
+          VillageSceneLoading(loading: _phase != _Phase.ready),
       ],
     );
   }

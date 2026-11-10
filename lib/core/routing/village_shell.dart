@@ -215,7 +215,7 @@ class _VillageShellState extends ConsumerState<VillageShell> {
         destinations: _primary(
           t,
           openQuests: board?.openCount ?? 0,
-          avatarKey: ref.watch(avatarControllerProvider).value?.selected,
+          avatarKey: ref.watch(selectedAvatarKeyProvider),
         ),
         secondary: _secondary(t),
         currentIndex: _index,
@@ -278,10 +278,14 @@ class _VillageShellState extends ConsumerState<VillageShell> {
                 // XP beside the level, always: the level counts skills, so
                 // without this the points a kid just earned show nowhere
                 // up here (Hafid: "Why is the XP not showing?").
+                // A dash until progress is read, like the streak: never a
+                // 0 the kid didn't earn (Hafid, 2026-11-10).
                 HeaderStat(
                   asset: 'asset-xpstar.webp',
                   priority: 0,
-                  label: t.headerXp(progress.totalXp),
+                  label: progress.loading
+                      ? t.headerXpPending
+                      : t.headerXp(progress.totalXp),
                 ),
                 HeaderStat(
                   asset: 'asset-flame.webp',
@@ -295,7 +299,8 @@ class _VillageShellState extends ConsumerState<VillageShell> {
                   HeaderStat(
                     asset: 'asset-target.webp',
                     priority: 2,
-                    label: '${board.doneCount}/${board.quests.length} '
+                    label:
+                        '${board.doneCount}/${board.quests.length} '
                         '${t.headerQuestsLabel}',
                   ),
               ],
@@ -308,5 +313,4 @@ class _VillageShellState extends ConsumerState<VillageShell> {
       ),
     );
   }
-
 }

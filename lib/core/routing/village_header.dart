@@ -42,7 +42,7 @@ class VillageHeader extends StatelessWidget {
     required this.name,
     required this.subtitle,
     required this.stats,
-    this.avatarKey = '',
+    this.avatarKey,
     this.onIdentity,
     this.identityKey,
     this.identityLabel = '',
@@ -64,7 +64,7 @@ class VillageHeader extends StatelessWidget {
 
   /// The kid's avatar (`avatars.dart`). The design's `.student-avatar` is
   /// the kid, never the mascot.
-  final String avatarKey;
+  final String? avatarKey;
 
   /// Tapping the avatar and name: the profile menu. Null makes them inert.
   final VoidCallback? onIdentity;

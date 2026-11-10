@@ -353,3 +353,25 @@ times the gap. Three things changed here:
 Gold clearing on return needed nothing: the tab switch pauses the scene and
 coming back sends `resume`, which clears a finished portal at once.
 The bundle adds `assets/models/props/`, now in pubspec.
+
+## No 2D flash while 3D loads; no stand-in face or zero (2026-11-10)
+
+Hafid saw, on one load, the 2D village (with a girl's avatar and "0 XP" in
+the header) and then the 3D island with the boy's real avatar and 47 XP.
+
+- **The scene box.** While the 3D village is pending, the host draws
+  `VillageSceneLoading` (the palette's sky, a small spinner and
+  « Le village se prépare… », no spinner under reduced motion), and the 2D
+  village isn't built at all. The 2D village shows only when 3D is off or
+  fails: no channel, `unavailable`, under 40 fps twice, or the 20 s ready
+  timeout. Those paths are unchanged. On Linux, a view lifted under a
+  dialog now leaves the plain sky behind, not the 2D village: it's the same
+  3D village that comes back. The scene sends no load progress, so the
+  loader has none. The phone's own placeholder is gone; it shares this one.
+- **The avatar.** `selectedAvatarKeyProvider` gave `defaultAvatarKey` (a
+  girl) until `AvatarController` resolved, which waits on the quest board
+  and the skill counts. It's null now until then, and `KidAvatar` draws null
+  as the plain circle with no face. That covers the header, the Profil hero
+  and the nav avatar.
+- **XP.** The header pill reads « – XP » while progress is loading, like
+  the streak's dash. After a read, a real 0 is still 0.

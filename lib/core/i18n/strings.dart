@@ -144,6 +144,9 @@ abstract class Strings {
   /// The header's XP pill: points earned, beside the level.
   String headerXp(int xp);
 
+  /// The XP pill before progress is read.
+  String get headerXpPending;
+
   /// The card over the strand rows, e.g. "Mathématique — par compétence".
   String progressBySkill(String subject);
   String get progressStatusMastered;
@@ -895,6 +898,8 @@ class _FrenchStrings extends Strings {
 
   @override
   String headerXp(int xp) => '$xp XP';
+  @override
+  String get headerXpPending => '– XP';
 
   @override
   String progressBySkill(String subject) => '$subject — par compétence';
@@ -2430,6 +2435,8 @@ class _EnglishStrings extends Strings {
 
   @override
   String headerXp(int xp) => '$xp XP';
+  @override
+  String get headerXpPending => '– XP';
 
   @override
   String progressBySkill(String subject) => '$subject — by skill';

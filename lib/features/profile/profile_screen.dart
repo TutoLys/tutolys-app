@@ -221,7 +221,7 @@ class _HeroCard extends StatelessWidget {
 
   final String name;
   final int? grade;
-  final String avatarKey;
+  final String? avatarKey;
   final VoidCallback onEditAvatar;
   final List<_HeroStat> stats;
   final VillagePalette palette;
