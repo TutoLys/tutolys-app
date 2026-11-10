@@ -1,0 +1,25 @@
+name: village_webview_linux
+description: >
+  The 3D village on Linux desktop (ADR 0126): a WebKitGTK WebView over a
+  loopback HTTP server for the bundled scene. Not in the app's pubspec until
+  libwebkit2gtk-4.1-dev is installed on the build machine, because the
+  plugin's CMake requires it.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.13.3
+  flutter: ">=3.35.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Reviewed 2026-11-10 (ADR 0126): MIT; no process spawning, no outside
+  # hosts, no telemetry; its own resource server binds loopback only.
+  webview_all_linux: 1.5.0
+  webview_platform_interface: ^1.5.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
