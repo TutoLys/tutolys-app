@@ -110,6 +110,7 @@ class VillageSkyBar extends StatelessWidget {
                         activeColor: hour == null
                             ? p.inkMuted
                             : p.quebecBlueBright,
+                        inactiveColor: p.line,
                         onChanged: onHour,
                       ),
                     ),

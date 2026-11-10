@@ -130,6 +130,19 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('the rail centres a short label in its column', (
+      tester,
+    ) async {
+      size(tester, const Size(1400, 900));
+      await tester.pumpWidget(nav(fold: 1));
+      await tester.pump();
+      // « Carte » is narrower than the 76px row: it used to hug the left.
+      expect(
+        tester.getCenter(find.text('Carte')).dx,
+        closeTo(VillageMetrics.railWidth / 2, 1),
+      );
+    });
+
     testWidgets('tablet: the rail folds to hidden; no wider step', (
       tester,
     ) async {

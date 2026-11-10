@@ -437,7 +437,9 @@ class VillageNavShell extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          row,
+          // In the rail the row spans the 76px, so a short label and its
+          // icon centre instead of hugging the left edge.
+          if (expanded) row else SizedBox(width: double.infinity, child: row),
           if (active && expanded)
             Positioned(
               left: -14,
