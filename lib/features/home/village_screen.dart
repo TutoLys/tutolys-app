@@ -1,3 +1,5 @@
+import 'dart:math' show max;
+
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -320,11 +322,13 @@ const double _sceneMinWidth = 900;
 /// The design's `grid-template-columns: 1fr 300px`.
 const double _panelWidth = 300;
 
-/// The phone scene: tall enough that the island reads, short enough that
-/// the page above and below it can still be scrolled with a thumb, since a
-/// drag on the scene turns the camera.
+/// The phone scene: portrait, as the scene's phone camera is framed for
+/// (village-3d, 360–430 px portrait), so the buildings and their pills have
+/// room. Never more than two thirds of the screen, so the page above and
+/// below it can still be scrolled with a thumb, since a drag on the scene
+/// turns the camera.
 double _phoneSceneHeight(double width, double screenHeight) =>
-    (width * 1.1).clamp(320.0, screenHeight * 0.62).clamp(320.0, 520.0);
+    (width * 1.45).clamp(360.0, max(360.0, screenHeight * 0.66));
 
 /// Holds the phone scene's place while it loads: the sky-to-grass ground
 /// of the village, with nothing pretending to be data.
