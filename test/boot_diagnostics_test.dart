@@ -58,6 +58,16 @@ void main() {
       expect(out, contains('<code>'));
     });
 
+    test('removes a prefixed device token, wherever it appears', () {
+      final out = DiagLog.scrub(
+        'refresh failed {device_token: tld_Q3x-9_aZ.k~} retrying',
+      );
+      expect(out, isNot(contains('tld_')));
+      expect(out, isNot(contains('Q3x')));
+      expect(out, contains('<device-token>'));
+      expect(out, contains('retrying'));
+    });
+
     test('keeps ordinary words and error names', () {
       const text = 'TimeoutException after 0:00:10 in SESSION RESTORE';
       expect(DiagLog.scrub(text), text);

@@ -170,6 +170,9 @@ class DiagLog extends ChangeNotifier {
   static final _jwt = RegExp(
     r'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*',
   );
+  // Device tokens issued from 2026-11-10 carry this prefix (backend), so
+  // one that slips into a message is recognisable. Older ones are opaque.
+  static final _deviceToken = RegExp(r'\btld_[A-Za-z0-9_\-.~]+');
   static final _email = RegExp(r'[\w.+-]+@[\w-]+(\.[\w-]+)+');
   static final _bearer = RegExp(r'(Bearer\s+)\S+', caseSensitive: false);
   // The backend's pairing alphabet (no 0/O/1/I/L), six or more symbols,
@@ -181,6 +184,7 @@ class DiagLog extends ChangeNotifier {
   /// Removes anything that looks like a token, an email or a pairing code.
   static String scrub(String text) => text
       .replaceAll(_jwt, '<jwt>')
+      .replaceAll(_deviceToken, '<device-token>')
       .replaceAllMapped(_bearer, (m) => '${m[1]}<token>')
       .replaceAll(_email, '<email>')
       .replaceAll(_pairingCode, '<code>');
