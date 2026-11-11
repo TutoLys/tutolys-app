@@ -15,6 +15,7 @@ import '../../data/local_db/app_settings.dart';
 import '../reminders/reminder_coordinator.dart';
 import '../reminders/reminder_policy.dart';
 import '../reminders/reminder_scheduler.dart';
+import 'portal_link.dart';
 import 'settings_controller.dart';
 
 /// Réglages, as `docs/design/01-design-system-gallery.html` draws it.
@@ -770,15 +771,22 @@ class _ParentZone extends ConsumerWidget {
                   fontSize: 13,
                 ),
               ),
+              key: const ValueKey('parent-zone-open-site'),
               // Account, subscription and privacy live on the website, not
-              // in here — the app is for playing (Hafid, 2026-10-24). The
-              // site is Track F and unbuilt, so this says where it will go
-              // rather than opening nothing.
-              onPressed: () => VillageToast.show(
-                context,
-                t.settingsParentZoneSoon,
-                icon: Icons.schedule_rounded,
-              ),
+              // in here — the app is for playing (Hafid, 2026-10-24). Opens
+              // the portal in the device's browser.
+              onPressed: () async {
+                final opened = await ref.read(externalUrlOpenerProvider)(
+                  Uri.parse(portalUrl),
+                );
+                if (!opened && context.mounted) {
+                  VillageToast.show(
+                    context,
+                    t.settingsParentZoneFailed,
+                    icon: Icons.public_off_rounded,
+                  );
+                }
+              },
               child: Text(t.settingsParentZoneCta),
             ),
           ],

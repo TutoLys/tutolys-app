@@ -290,7 +290,7 @@ abstract class Strings {
   String get settingsParentZone;
   String get settingsParentZoneBody;
   String get settingsParentZoneCta;
-  String get settingsParentZoneSoon;
+  String get settingsParentZoneFailed;
 
   /// Zone parent, for an adult only, while the school's language is unset
   /// (ADR 0101). Never shown to the child.
@@ -1283,8 +1283,8 @@ class _FrenchStrings extends Strings {
   String get settingsParentZoneCta => 'Ouvrir le site';
 
   @override
-  String get settingsParentZoneSoon =>
-      'Le site des parents arrive bientôt !';
+  String get settingsParentZoneFailed =>
+      'Le site ne s’ouvre pas sur cet appareil. Demande à un adulte.';
 
   @override
   String get settingsSchoolLanguageNeeded =>
@@ -2891,7 +2891,8 @@ class _EnglishStrings extends Strings {
   String get settingsParentZoneCta => 'Open the website';
 
   @override
-  String get settingsParentZoneSoon => 'The parents’ website is coming soon!';
+  String get settingsParentZoneFailed =>
+      'The website won’t open on this device. Ask an adult.';
 
   @override
   String get settingsSchoolLanguageNeeded =>

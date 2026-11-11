@@ -13,6 +13,10 @@ on:
       telemetry_base:
         description: Telemetry URL (http://HOST:8001 for a LAN demo)
         required: true
+      portal_url:
+        description: Parents' portal, opened by Zone parent (http://HOST:4321/portail/)
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -39,10 +43,11 @@ jobs:
         env:
           API_BASE: ${{ inputs.api_base }}
           TELEMETRY_BASE: ${{ inputs.telemetry_base }}
+          PORTAL_URL: ${{ inputs.portal_url }}
         run: >
           flutter build windows --release
           --dart-define=TUTOLYS_API_BASE="$API_BASE"
-          --dart-define=TUTOLYS_TELEMETRY_BASE="$TELEMETRY_BASE"
+          --dart-define=TUTOLYS_TELEMETRY_BASE="$TELEMETRY_BASE" ${PORTAL_URL:+--dart-define=TUTOLYS_PORTAL_URL="$PORTAL_URL"}
           --dart-define=TUTOLYS_GIT_SHA="${GITHUB_SHA::7}"
       - uses: actions/upload-artifact@v4
         with:

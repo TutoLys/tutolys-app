@@ -18,6 +18,10 @@ on:
       telemetry_base:
         description: Telemetry URL (http://HOST:8001 for a LAN demo)
         required: true
+      portal_url:
+        description: Parents' portal, opened by Zone parent (http://HOST:4321/portail/)
+        required: false
+        default: ''
       macos:
         description: Build the macOS app
         type: boolean
@@ -38,6 +42,7 @@ concurrency:
 env:
   API_BASE: ${{ inputs.api_base }}
   TELEMETRY_BASE: ${{ inputs.telemetry_base }}
+  PORTAL_URL: ${{ inputs.portal_url }}
 
 jobs:
   macos:
@@ -53,7 +58,7 @@ jobs:
           cache: true
       - run: flutter pub get
       - name: Build
-        run: flutter build macos --release --dart-define=TUTOLYS_API_BASE="$API_BASE" --dart-define=TUTOLYS_TELEMETRY_BASE="$TELEMETRY_BASE" --dart-define=TUTOLYS_GIT_SHA=${GITHUB_SHA::7}
+        run: flutter build macos --release --dart-define=TUTOLYS_API_BASE="$API_BASE" --dart-define=TUTOLYS_TELEMETRY_BASE="$TELEMETRY_BASE" ${PORTAL_URL:+--dart-define=TUTOLYS_PORTAL_URL="$PORTAL_URL"} --dart-define=TUTOLYS_GIT_SHA=${GITHUB_SHA::7}
       - name: Zip (keeps the bundle's symlinks)
         run: ditto -c -k --keepParent build/macos/Build/Products/Release/TutoLys.app tutolys-macos.zip
       - uses: actions/upload-artifact@v4
@@ -77,9 +82,9 @@ jobs:
       # Flutter builds for the simulator in debug mode only; it runs on its
       # own in the Simulator (JIT is allowed there), just slower.
       - name: Simulator app
-        run: flutter build ios --simulator --debug --dart-define=TUTOLYS_API_BASE="$API_BASE" --dart-define=TUTOLYS_TELEMETRY_BASE="$TELEMETRY_BASE" --dart-define=TUTOLYS_GIT_SHA=${GITHUB_SHA::7}
+        run: flutter build ios --simulator --debug --dart-define=TUTOLYS_API_BASE="$API_BASE" --dart-define=TUTOLYS_TELEMETRY_BASE="$TELEMETRY_BASE" ${PORTAL_URL:+--dart-define=TUTOLYS_PORTAL_URL="$PORTAL_URL"} --dart-define=TUTOLYS_GIT_SHA=${GITHUB_SHA::7}
       - name: Device build, unsigned
-        run: flutter build ios --release --no-codesign --dart-define=TUTOLYS_API_BASE="$API_BASE" --dart-define=TUTOLYS_TELEMETRY_BASE="$TELEMETRY_BASE" --dart-define=TUTOLYS_GIT_SHA=${GITHUB_SHA::7}
+        run: flutter build ios --release --no-codesign --dart-define=TUTOLYS_API_BASE="$API_BASE" --dart-define=TUTOLYS_TELEMETRY_BASE="$TELEMETRY_BASE" ${PORTAL_URL:+--dart-define=TUTOLYS_PORTAL_URL="$PORTAL_URL"} --dart-define=TUTOLYS_GIT_SHA=${GITHUB_SHA::7}
       - name: Zip
         run: |
           ditto -c -k --keepParent build/ios/iphonesimulator/Runner.app tutolys-ios-simulator.zip

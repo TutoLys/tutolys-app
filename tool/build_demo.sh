@@ -40,6 +40,7 @@ flutter pub get >/dev/null
 DEFINES=(
   --dart-define=TUTOLYS_API_BASE="http://$HOST:8000"
   --dart-define=TUTOLYS_TELEMETRY_BASE="http://$HOST:8001"
+  --dart-define=TUTOLYS_PORTAL_URL="http://$HOST:4321/portail/"
   --dart-define=TUTOLYS_GIT_SHA="$SHA"
 )
 mkdir -p "$OUT"
