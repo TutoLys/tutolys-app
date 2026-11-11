@@ -1,0 +1,51 @@
+# Investor-demo build for Windows (ADR 0127, docs/INVESTOR_DEMO.md).
+# Manual only: nothing runs on push, so nothing is billed until someone
+# presses "Run workflow". Windows minutes count double on a private repo.
+# Unsigned, no installer, no updater: #9 (Windows distribution) is open.
+name: demo-windows
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_base:
+        description: Backend URL (http://HOST:8000 for a LAN demo)
+        required: true
+      telemetry_base:
+        description: Telemetry URL (http://HOST:8001 for a LAN demo)
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: demo-windows
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.4
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Build
+        shell: bash
+        # Inputs reach the shell as variables, never pasted into the script.
+        env:
+          API_BASE: ${{ inputs.api_base }}
+          TELEMETRY_BASE: ${{ inputs.telemetry_base }}
+        run: >
+          flutter build windows --release
+          --dart-define=TUTOLYS_API_BASE="$API_BASE"
+          --dart-define=TUTOLYS_TELEMETRY_BASE="$TELEMETRY_BASE"
+          --dart-define=TUTOLYS_GIT_SHA="${GITHUB_SHA::7}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tutolys-windows-x64
+          path: build/windows/x64/runner/Release/
+          retention-days: 14

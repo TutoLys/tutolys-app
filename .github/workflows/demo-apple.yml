@@ -1,0 +1,93 @@
+# Investor-demo builds for macOS and iOS (ADR 0127, docs/INVESTOR_DEMO.md).
+# Manual only: nothing runs on push. macOS minutes count ten times on a
+# private repo, so each job is opt-in through its own input.
+#
+# Unsigned until Hafid has an Apple Developer account:
+# - macOS: ad-hoc signed ("Sign to Run Locally"); on another Mac it opens
+#   with right-click > Open the first time.
+# - iOS: a debug simulator app (runs in Xcode's Simulator on any Mac), plus a
+#   --no-codesign device build that only proves the device build compiles.
+name: demo-apple
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_base:
+        description: Backend URL (http://HOST:8000 for a LAN demo)
+        required: true
+      telemetry_base:
+        description: Telemetry URL (http://HOST:8001 for a LAN demo)
+        required: true
+      macos:
+        description: Build the macOS app
+        type: boolean
+        default: true
+      ios:
+        description: Build iOS (simulator app + unsigned device build)
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: demo-apple
+  cancel-in-progress: true
+
+# Inputs reach the shell as variables, never pasted into a script.
+env:
+  API_BASE: ${{ inputs.api_base }}
+  TELEMETRY_BASE: ${{ inputs.telemetry_base }}
+
+jobs:
+  macos:
+    if: ${{ inputs.macos }}
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.4
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Build
+        run: flutter build macos --release --dart-define=TUTOLYS_API_BASE="$API_BASE" --dart-define=TUTOLYS_TELEMETRY_BASE="$TELEMETRY_BASE" --dart-define=TUTOLYS_GIT_SHA=${GITHUB_SHA::7}
+      - name: Zip (keeps the bundle's symlinks)
+        run: ditto -c -k --keepParent build/macos/Build/Products/Release/TutoLys.app tutolys-macos.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tutolys-macos
+          path: tutolys-macos.zip
+          retention-days: 14
+
+  ios:
+    if: ${{ inputs.ios }}
+    runs-on: macos-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.4
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      # Flutter builds for the simulator in debug mode only; it runs on its
+      # own in the Simulator (JIT is allowed there), just slower.
+      - name: Simulator app
+        run: flutter build ios --simulator --debug --dart-define=TUTOLYS_API_BASE="$API_BASE" --dart-define=TUTOLYS_TELEMETRY_BASE="$TELEMETRY_BASE" --dart-define=TUTOLYS_GIT_SHA=${GITHUB_SHA::7}
+      - name: Device build, unsigned
+        run: flutter build ios --release --no-codesign --dart-define=TUTOLYS_API_BASE="$API_BASE" --dart-define=TUTOLYS_TELEMETRY_BASE="$TELEMETRY_BASE" --dart-define=TUTOLYS_GIT_SHA=${GITHUB_SHA::7}
+      - name: Zip
+        run: |
+          ditto -c -k --keepParent build/ios/iphonesimulator/Runner.app tutolys-ios-simulator.zip
+          ditto -c -k --keepParent build/ios/iphoneos/Runner.app tutolys-ios-unsigned.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tutolys-ios
+          path: |
+            tutolys-ios-simulator.zip
+            tutolys-ios-unsigned.zip
+          retention-days: 14
