@@ -179,6 +179,15 @@ const reminderDetails = NotificationDetails(
   iOS: DarwinNotificationDetails(),
   macOS: DarwinNotificationDetails(),
   linux: LinuxNotificationDetails(),
+  windows: WindowsNotificationDetails(),
+);
+
+/// The plugin refuses to start on Windows without these (ADR 0127). The
+/// GUID is fixed: Windows keys the toast's activator on it.
+const windowsReminderInit = WindowsInitializationSettings(
+  appName: 'TutoLys',
+  appUserModelId: 'Ca.Tutolys.App',
+  guid: '14db7fd5-ddec-4e73-8214-26b244ecad7e',
 );
 
 const _darwinInit = DarwinInitializationSettings(
@@ -201,6 +210,8 @@ Future<ReminderSink> createReminderSink({
       iOS: _darwinInit,
       macOS: _darwinInit,
       linux: LinuxInitializationSettings(defaultActionName: 'Ouvrir'),
+      // Required on Windows: without it `initialize` throws (ADR 0127).
+      windows: windowsReminderInit,
     ),
     onDidReceiveNotificationResponse: (response) {
       if (response.payload == reminderPayload) onTap();
