@@ -3,7 +3,9 @@ import 'dart:io';
 import 'dart:math';
 
 /// Serves the bundled 3D village to the WebView over loopback HTTP, because
-/// WebKit won't load ES modules from `file://` (ADR 0126).
+/// WebKit won't load ES modules from `file://` (ADR 0126). From a directory
+/// on disk (Linux, Windows) or, through [startWith], from any loader: on
+/// Android the assets live inside the APK, not on disk (ADR 0127).
 ///
 /// Hardened for a server any local process could reach:
 /// - bound to 127.0.0.1 on a random port;
@@ -13,27 +15,42 @@ import 'dart:math';
 ///   an empty segment is refused before it touches the disk, and the
 ///   resolved file must stay inside [root];
 /// - `nosniff`, no caching, and a content type from a fixed list.
-class VillageAssetServer {
-  VillageAssetServer._(this._server, this.root, this.token);
+/// Reads one bundle file by its path segments (already checked: no `..`,
+/// no empty segment). Null when there is no such file.
+typedef VillageAssetLoader = Future<List<int>?> Function(List<String> path);
 
-  static Future<VillageAssetServer> start(Directory root) async {
+class VillageAssetServer {
+  VillageAssetServer._(this._server, this.root, this._load, this.token);
+
+  /// Serves [root] from disk; the resolved file must stay inside it.
+  static Future<VillageAssetServer> start(Directory root) =>
+      _start(Directory(root.resolveSymbolicLinksSync()), null);
+
+  /// Serves whatever [load] returns: the app's asset bundle on Android,
+  /// iOS and macOS, where the scene isn't a directory the app can name.
+  static Future<VillageAssetServer> startWith(VillageAssetLoader load) =>
+      _start(null, load);
+
+  static Future<VillageAssetServer> _start(
+    Directory? root,
+    VillageAssetLoader? load,
+  ) async {
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     final rng = Random.secure();
     final token = List.generate(
       16,
       (_) => rng.nextInt(256).toRadixString(16).padLeft(2, '0'),
     ).join();
-    final s = VillageAssetServer._(
-      server,
-      Directory(root.resolveSymbolicLinksSync()),
-      token,
-    );
+    final s = VillageAssetServer._(server, root, load, token);
     server.listen(s._serve);
     return s;
   }
 
   final HttpServer _server;
-  final Directory root;
+
+  /// The bundle on disk, or null when served through a loader.
+  final Directory? root;
+  final VillageAssetLoader? _load;
   final String token;
 
   /// The scene's own origin: what its `postMessage` checks against.
@@ -65,35 +82,52 @@ class VillageAssetServer {
     response.headers
       ..set('X-Content-Type-Options', 'nosniff')
       ..set('Cache-Control', 'no-store');
-    final file = _resolve(request);
-    if (file == null) {
-      response.statusCode = request.method == 'GET' || request.method == 'HEAD'
+    final readable = request.method == 'GET' || request.method == 'HEAD';
+    final rest = readable ? _segments(request) : null;
+    final bytes = rest == null ? null : await _read(rest);
+    if (bytes == null) {
+      response.statusCode = readable
           ? HttpStatus.notFound
           : HttpStatus.methodNotAllowed;
       await response.close();
       return;
     }
-    final ext = file.path.split('.').last.toLowerCase();
+    final ext = rest!.last.split('.').last.toLowerCase();
     response.headers.contentType = ContentType.parse(
       _types[ext] ?? 'application/octet-stream',
     );
-    response.contentLength = await file.length();
-    if (request.method == 'HEAD') {
-      await response.close();
-      return;
-    }
-    await response.addStream(file.openRead());
+    response.contentLength = bytes.length;
+    if (request.method != 'HEAD') response.add(bytes);
     await response.close();
   }
 
-  File? _resolve(HttpRequest request) {
-    if (request.method != 'GET' && request.method != 'HEAD') return null;
+  /// The checked path under the token, or null.
+  List<String>? _segments(HttpRequest request) {
     final segments = request.uri.pathSegments;
     if (segments.length < 2 || segments.first != token) return null;
     final rest = segments.sublist(1);
     final raw = request.uri.path;
     if (raw.contains(r'\') || raw.contains('//')) return null;
     if (rest.any((s) => s.isEmpty || s == '.' || s == '..')) return null;
+    if (rest.any((s) => s.contains('/') || s.contains(r'\'))) return null;
+    return rest;
+  }
+
+  Future<List<int>?> _read(List<String> rest) async {
+    final load = _load;
+    if (load != null) {
+      try {
+        return await load(rest);
+      } catch (_) {
+        return null;
+      }
+    }
+    final file = _resolve(rest);
+    return file?.readAsBytes();
+  }
+
+  File? _resolve(List<String> rest) {
+    final root = this.root!;
     final file = File([root.path, ...rest].join(Platform.pathSeparator));
     if (!file.existsSync()) return null;
     final real = file.resolveSymbolicLinksSync();

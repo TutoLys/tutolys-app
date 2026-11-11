@@ -28,6 +28,13 @@ dependencies:
   # libsoup-3.0-dev on the build machine.
   village_webview_linux:
     path: packages/village_webview_linux
+  # The 3D village on Android, iOS and macOS (ADR 0127): the official
+  # plugin, over the same loopback server as Linux.
+  webview_flutter: ^4.14.1
+  # ... and on Windows, through WebView2. Same author and API as the Linux
+  # plugin reviewed in ADR 0126; pinned exactly for the same reason.
+  webview_all_windows: 1.5.0
+  webview_platform_interface: ^1.5.0
 
   flutter_riverpod: ^3.0.3      # state
   go_router: ^17.2.1            # routing
@@ -82,51 +89,68 @@ flutter:
     - assets/sounds/sfx/
     - assets/sounds/songs/
     # The 3D village's bundle (ADR 0126), copied by tool/sync_village3d.sh
-    # from codex/village-3d/dist. Web and Linux (served to its WebView over
-    # loopback); not mobile yet. Folders aren't recursive; keep in step.
+    # from codex/village-3d/dist. Web, and every native platform's WebView
+    # over loopback (ADR 0127). Folders aren't recursive; keep in step.
     - path: assets/village3d/
-      platforms: [web, linux]
+      platforms: [web, linux, android, ios, macos, windows]
     - path: assets/village3d/assets/fonts/
-      platforms: [web, linux]
+      platforms: [web, linux, android, ios, macos, windows]
     - path: assets/village3d/assets/img/
-      platforms: [web, linux]
+      platforms: [web, linux, android, ios, macos, windows]
     - path: assets/village3d/assets/models/
-      platforms: [web, linux]
+      platforms: [web, linux, android, ios, macos, windows]
     - path: assets/village3d/assets/models/props/
-      platforms: [web, linux]
+      platforms: [web, linux, android, ios, macos, windows]
     - path: assets/village3d/src/
-      platforms: [web, linux]
+      platforms: [web, linux, android, ios, macos, windows]
     - path: assets/village3d/styles/
-      platforms: [web, linux]
+      platforms: [web, linux, android, ios, macos, windows]
     - path: assets/village3d/vendor/three-0.170.0/
-      platforms: [web, linux]
+      platforms: [web, linux, android, ios, macos, windows]
     - path: assets/village3d/vendor/three-0.170.0/addons/
-      platforms: [web, linux]
+      platforms: [web, linux, android, ios, macos, windows]
     - path: assets/village3d/vendor/three-0.170.0/addons/controls/
-      platforms: [web, linux]
+      platforms: [web, linux, android, ios, macos, windows]
     - path: assets/village3d/vendor/three-0.170.0/addons/loaders/
-      platforms: [web, linux]
+      platforms: [web, linux, android, ios, macos, windows]
     - path: assets/village3d/vendor/three-0.170.0/addons/utils/
-      platforms: [web, linux]
+      platforms: [web, linux, android, ios, macos, windows]
 
-# `dart run flutter_launcher_icons` regenerates web/icons/*.png from these.
-# Scoped to web only: Linux desktop has no Flutter-tooling icon pipeline (its
-# window icon is set directly in linux/runner/my_application.cc), and mobile
-# isn't a build target yet (open item — Hafid's call to defer, not this
-# config's to assume either way).
+# `dart run flutter_launcher_icons` regenerates every platform's icon from
+# these. Linux has no Flutter-tooling icon pipeline (its window icon is set
+# directly in linux/runner/my_application.cc). Android, iOS, macOS and
+# Windows were added for the investor demo builds (ADR 0127).
 flutter_launcher_icons:
   image_path: "assets/icon/icon.png"
+  android: "ic_launcher"
+  adaptive_icon_background: "#1F3C88"
+  adaptive_icon_foreground: "assets/icon/icon_maskable.png"
+  min_sdk_android: 24
+  ios: true
+  remove_alpha_ios: true
+  background_color_ios: "#1F3C88"
+  macos:
+    generate: true
+    image_path: "assets/icon/icon.png"
+  windows:
+    generate: true
+    image_path: "assets/icon/icon.png"
+    icon_size: 256
   web:
     generate: true
     image_path: "assets/icon/icon.png"
     background_color: "#1F3C88"
     theme_color: "#1F3C88"
 
-# `dart run flutter_native_splash:create` regenerates the web loading splash
-# from these. Same web-only scope as flutter_launcher_icons above.
+# `dart run flutter_native_splash:create` regenerates the loading splash
+# from these: web, Android and iOS (the desktops show the app's own first
+# frame).
 flutter_native_splash:
   color: "#1F3C88"
   image: "assets/icon/icon_maskable.png"
   web: true
-  android: false
-  ios: false
+  android: true
+  ios: true
+  android_12:
+    color: "#1F3C88"
+    image: "assets/icon/icon_maskable.png"

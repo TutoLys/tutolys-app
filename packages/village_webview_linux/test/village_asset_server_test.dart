@@ -76,4 +76,55 @@ void main() {
     expect((await get('/${server.token}/village.html', method: 'POST')).$1, 405);
     expect((await get('/${server.token}/village.html', method: 'PUT')).$1, 405);
   });
+
+  group('from a loader (Android, iOS, macOS: ADR 0127)', () {
+    late VillageAssetServer bundled;
+    final asked = <String>[];
+
+    setUp(() async {
+      asked.clear();
+      bundled = await VillageAssetServer.startWith((path) async {
+        asked.add(path.join('/'));
+        return switch (path.join('/')) {
+          'village.html' => '<p>bundle</p>'.codeUnits,
+          'models/a.glb' => [1, 2, 3],
+          _ => null,
+        };
+      });
+    });
+
+    tearDown(() => bundled.close());
+
+    Future<(int, String, String?)> fetch(String path, {String method = 'GET'}) async {
+      final req = await client.openUrl(method, bundled.origin.replace(path: path));
+      final res = await req.close();
+      final body = await res.transform(const SystemEncoding().decoder).join();
+      return (res.statusCode, body, res.headers.contentType?.mimeType);
+    }
+
+    test('serves what the loader returns, with its type', () async {
+      final t = bundled.token;
+      final (code, body, type) = await fetch('/$t/village.html');
+      expect((code, body, type), (200, '<p>bundle</p>', 'text/html'));
+      final (glb, _, glbType) = await fetch('/$t/models/a.glb');
+      expect((glb, glbType), (200, 'model/gltf-binary'));
+      expect((await fetch('/$t/missing.js')).$1, 404);
+    });
+
+    test('a bad path never reaches the loader', () async {
+      final t = bundled.token;
+      for (final path in [
+        '/village.html',
+        '/$t/../village.html',
+        '/$t/%2e%2e/village.html',
+        '/$t/a%2F..%2Fvillage.html',
+        '/$t//village.html',
+      ]) {
+        expect((await fetch(path)).$1, 404, reason: path);
+      }
+      expect(asked, isEmpty);
+      expect((await fetch('/$t/village.html', method: 'POST')).$1, 405);
+      expect(asked, isEmpty);
+    });
+  });
 }

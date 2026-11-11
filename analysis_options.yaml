@@ -5,3 +5,7 @@ analyzer:
     - build/**
     - web/**
     - linux/**
+    - android/**
+    - ios/**
+    - windows/**
+    - macos/**
