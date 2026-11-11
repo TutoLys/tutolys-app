@@ -43,6 +43,11 @@ function(APPLY_STANDARD_SETTINGS TARGET)
   target_compile_options(${TARGET} PRIVATE /EHsc)
   target_compile_definitions(${TARGET} PRIVATE "_HAS_EXCEPTIONS=0")
   target_compile_definitions(${TARGET} PRIVATE "$<$<CONFIG:Debug>:_DEBUG>")
+  # webview_all_windows (ADR 0127) builds C++/WinRT under C++17, which uses
+  # <experimental/coroutine>; MSVC 14.51 (windows-latest, VS 18) turns that
+  # into error STL1011 unless this is defined. Every plugin target calls
+  # this function, so it reaches the plugin without touching the pub cache.
+  target_compile_definitions(${TARGET} PRIVATE "_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS")
 endfunction()
 
 # Flutter library and tool build rules.

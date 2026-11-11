@@ -50,7 +50,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: 3.47.4
@@ -61,7 +61,7 @@ jobs:
         run: flutter build macos --release --dart-define=TUTOLYS_API_BASE="$API_BASE" --dart-define=TUTOLYS_TELEMETRY_BASE="$TELEMETRY_BASE" ${PORTAL_URL:+--dart-define=TUTOLYS_PORTAL_URL="$PORTAL_URL"} --dart-define=TUTOLYS_GIT_SHA=${GITHUB_SHA::7}
       - name: Zip (keeps the bundle's symlinks)
         run: ditto -c -k --keepParent build/macos/Build/Products/Release/TutoLys.app tutolys-macos.zip
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: tutolys-macos
           path: tutolys-macos.zip
@@ -72,7 +72,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 50
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: 3.47.4
@@ -89,7 +89,7 @@ jobs:
         run: |
           ditto -c -k --keepParent build/ios/iphonesimulator/Runner.app tutolys-ios-simulator.zip
           ditto -c -k --keepParent build/ios/iphoneos/Runner.app tutolys-ios-unsigned.zip
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: tutolys-ios
           path: |
