@@ -4,7 +4,7 @@ The checklist for showing TutoLys to investors: what runs where, which
 backend it talks to, which accounts to use, a five-minute script, and every
 rough edge someone will hit. Decisions behind it: ADR 0127.
 
-Written 2026-11-10 against `tutolys-app` at `cd40f69`. Re-check the rough
+Written 2026-11-10 against `tutolys-app` at `b94bf90`. Re-check the rough
 edges before each demo; several are being worked on.
 
 ## 1. Which device runs what
@@ -18,7 +18,8 @@ edges before each demo; several are being worked on.
 | **Mac** | Ad-hoc-signed `TutoLys.app` | GitHub Actions `demo-apple` | Same. |
 | **iPhone / iPad** | Simulator app only | GitHub Actions `demo-apple` | Needs a Mac with Xcode to show. A real iPad needs an Apple Developer account. |
 
-Recommendation: **the laptop plus one Android tablet.** Two devices show
+Decided: **the laptop plus one Android tablet** (Windows if a PC is at
+hand; no Apple device). Two devices show
 that a kid's progress follows them, without depending on CI or Apple.
 
 ## 2. Which backend the demo points at
@@ -28,42 +29,84 @@ backend address **baked in at build time** (`--dart-define`), and a release
 build refuses `127.0.0.1` (the release guard). So the address must be one
 the tablet can reach.
 
-### Option A — the laptop's dev-stack over the LAN (works now)
+### Option A — the laptop's dev-stack over its own hotspot (chosen)
 
-1. **Make the laptop's address fixed.** A venue's Wi-Fi gives a different
-   address every time, and every build would need rebuilding. Instead,
-   turn the laptop into a hotspot (NetworkManager: *Wi-Fi → Turn On
-   Wi-Fi Hotspot*). The laptop is then always **10.42.0.1**, and the
-   tablet joins that hotspot. Build once with that address:
+Hafid's choice (2026-11-10). The laptop runs a Wi-Fi hotspot, so its
+address is always **10.42.0.1** and the builds never need redoing at a
+venue. The tablet joins that hotspot.
+
+**Once, before the demo** (already done for the 2026-11-10 builds):
+
+```bash
+tool/build_demo.sh 10.42.0.1
+```
+
+**On the day, in this order:**
+
+1. **Start the hotspot.** Find the Wi-Fi device (`nmcli -t -f DEVICE,TYPE
+   device`, the one marked `wifi`, `wlp4s0` on this laptop), then:
 
    ```bash
-   tool/build_demo.sh 10.42.0.1
+   nmcli device wifi hotspot ifname wlp4s0 ssid TutoLys-Demo password "<a private password>"
    ```
 
-   (The builds made on 2026-11-10 used 192.168.0.16, this laptop's
-   address on the home network. They work at home only.)
+   Check the laptop has 10.42.0.1:
 
-2. **Expose the dev-stack on that address.** Today `backend` and
-   `telemetry` publish on `127.0.0.1` only. That is a `dev-stack`
-   compose change (ports `10.42.0.1:8000` and `:8001`), owned by the
-   dev-stack, not the app. Use a compose override for the demo day and
-   remove it after: the dev-stack holds real data and sends real mail.
-   `DJANGO_ALLOWED_HOSTS` is already `*`.
+   ```bash
+   ip -4 addr show wlp4s0
+   ```
 
-3. **For the web build**, add its origin to telemetry's and the backend's
-   `CORS_ALLOWED_ORIGINS` (for example `http://10.42.0.1:8080`).
+   While the hotspot is on, the laptop's Wi-Fi card is not on the
+   venue's Wi-Fi: no internet unless the laptop also has a cable. The
+   demo needs none, except that the village's real weather goes stale
+   (calm sky after 3 h) and mail doesn't leave.
 
-4. **Cleartext HTTP.** The dev-stack has no TLS, so each platform needs
-   an exception:
-   - Android: done. `tool/build_demo.sh` builds the APK with
-     `TUTOLYS_DEMO_LAN=1`, which allows cleartext to any host. **Never
-     publish that APK.** A normal build allows cleartext only to
-     the 3D village's own loopback server.
-   - iOS: `NSAllowsLocalNetworking` is set, and iOS will ask the child's
-     device for local-network permission on first launch: say yes. If a
-     bare IP is still refused, the demo build needs
-     `NSAllowsArbitraryLoads` (not done: it would be a store rejection).
-   - macOS, Windows, Linux, web: no exception needed.
+2. **Expose the dev-stack on the hotspot** (`dev-stack/compose.demo-lan.yml`,
+   opt-in; it touches backend and telemetry only, never the databases).
+   The hotspot must be up first, or Docker can't bind 10.42.0.1:
+
+   ```bash
+   cd Platforms/dev-stack && docker compose -f docker-compose.yml -f compose.demo-lan.yml up -d --no-deps backend telemetry
+   ```
+
+   Check from the tablet's browser that `http://10.42.0.1:8000/api/v1/schema/docs/`
+   answers.
+
+3. **Web build**, if shown: serve it on the laptop itself, which keeps
+   the browser on a secure origin (localhost). The web token store needs
+   one, and a plain-http LAN address isn't:
+
+   ```bash
+   cd Platforms/tutolys-app/build/demo/web && python3 -m http.server 8090 --bind 127.0.0.1
+   ```
+
+   Then open `http://127.0.0.1:8090/` on the laptop. The override already
+   allows that origin. For a browser on the tablet, use
+   `dev-stack/lan-preview/` (HTTPS, self-signed) instead.
+
+4. **Parents' portal** (Zone parent → « Ouvrir le site » opens
+   `http://10.42.0.1:4321/portail/`). The website's dev server binds
+   127.0.0.1 only, so on the tablet that link won't load unless the
+   website session runs it on the hotspot address too. On the laptop,
+   the portal is at `http://127.0.0.1:4321/portail/`.
+
+**After the demo**, back to loopback only, then stop the hotspot:
+
+```bash
+cd Platforms/dev-stack && docker compose up -d --no-deps backend telemetry
+```
+
+```bash
+nmcli connection down Hotspot
+```
+
+**Cleartext HTTP.** The dev-stack has no TLS:
+- Android: done. `tool/build_demo.sh` builds the APK with
+  `TUTOLYS_DEMO_LAN=1`, which allows cleartext to any host. **Never
+  publish that APK.** A normal build allows cleartext only to the 3D
+  village's own loopback server.
+- Windows, Linux: nothing needed.
+- iOS (simulator only, no device demo): `NSAllowsLocalNetworking` is set.
 
 ### Option B — a hosted demo backend (later)
 
@@ -84,8 +127,8 @@ as inputs. This is the right answer for anything beyond one meeting.
 
 A grade 3–6 kid sees an almost empty village. **Use grades 1 and 2 only.**
 
-Accounts to make before the demo (in the parent portal, `:4321`). No
-credentials go in this file, in a repo or in chat:
+Requested from Backend in `Platforms/BACKEND_WORKORDER_DEMO_FAMILY.md`.
+No credentials go in this file, in a repo or in chat:
 
 - one guardian account, *Famille Démo*, on the Family plan (three seats);
 - **two kids**: one in grade 1, one in grade 2, with different avatars,
@@ -138,8 +181,9 @@ and recreate. Don't demo with them.
   village within 20 s, or after two slow frame-rate readings. Try it on
   the actual tablet the day before; a low-end tablet will likely show 2D.
 - The 3D village takes a few seconds to load (sky-coloured loader).
-- Zone parent → « Ouvrir le site » shows « bientôt » instead of opening
-  the portal, although the portal now exists.
+- Zone parent → « Ouvrir le site » opens the portal in the browser. On
+  the tablet it loads only if the website is served on the hotspot (§2,
+  step 4).
 - Read-aloud voices are France-French (Piper has no Québec voice).
 - *Entre amis* in the Série modal is a greyed « bientôt » tab, on
   purpose. The Boutique says « bientôt ».
@@ -167,10 +211,12 @@ and recreate. Don't demo with them.
 
 ## 6. What's waiting on Hafid
 
-- **An Apple Developer account** (99 USD/year) for a real iPhone/iPad
-  build, and for a signed macOS app.
-- **A Mac** to run the iOS simulator build, or to show the macOS app.
-- **CI spend**: pushing the workflows and pressing Run. See section 7.
+- **An Apple Developer account** (99 USD/year) and **a Mac**: Hafid has
+  neither yet (2026-11-10). So the demo is Android, Linux, web and
+  Windows; the iOS artifact only shows the app compiles.
+- ~~CI spend~~: decided 2026-11-10, Windows + Apple. The Manager pushes
+  and dispatches with `http://10.42.0.1:8000`, `:8001` and the portal
+  URL `http://10.42.0.1:4321/portail/` (`portal_url` input).
 - **A decision on #5 (hosting)** for anything beyond a single meeting.
 
 ## 7. CI cost per run (estimates)
