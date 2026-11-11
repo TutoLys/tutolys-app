@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Demo builds only (TUTOLYS_DEMO_LAN=1, ADR 0127): the app talks to a
+     laptop's dev-stack over the LAN in plain HTTP, whatever its address.
+     Never ship this to a store. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
