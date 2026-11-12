@@ -85,10 +85,32 @@ tool/build_demo.sh 10.42.0.1
    `dev-stack/lan-preview/` (HTTPS, self-signed) instead.
 
 4. **Parents' portal** (Zone parent → « Ouvrir le site » opens
-   `http://10.42.0.1:4321/portail/`). The website's dev server binds
-   127.0.0.1 only, so on the tablet that link won't load unless the
-   website session runs it on the hotspot address too. On the laptop,
-   the portal is at `http://127.0.0.1:4321/portail/`.
+   `http://10.42.0.1:4321/portail/`). Serve the website on the hotspot
+   address; the hotspot must be up first:
+
+   ```bash
+   cd Platforms/tutolys-web && npm run demo
+   ```
+
+   It builds the site into `dist-demo/` (about a minute) and serves it
+   on `10.42.0.1:4321` only. The page calls `/api` on that same origin
+   and the server forwards it to the backend on `127.0.0.1:8000`, so it
+   needs no CORS or CSRF change. Step 2 isn't needed for the portal,
+   only for the app. To serve again without rebuilding, run
+   `npm run demo:serve`. Check from the tablet's browser that
+   `http://10.42.0.1:4321/portail/` shows « Bon retour ! ».
+
+   The demo server binds the hotspot address only, so it runs beside a
+   normal `npm run dev` on 127.0.0.1:4321. Nothing else changes.
+   - **Without a hotspot**, to rehearse: `DEMO_HOST=<the laptop's LAN
+     address> npm run demo`.
+   - **Over plain HTTP**, the « Copier » button for a pairing code does
+     nothing (the browser keeps the clipboard for HTTPS). The code is
+     on screen; read it out.
+
+   **Revert:** stop it with Ctrl-C. Nothing else was changed. On the
+   laptop, the portal is still at `http://127.0.0.1:4321/portail/` from
+   `npm run dev`.
 
 **After the demo**, back to loopback only, then stop the hotspot:
 
