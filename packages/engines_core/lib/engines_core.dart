@@ -52,4 +52,5 @@ export 'src/phrase_lab/phrase_lab_engine.dart';
 export 'src/proofread/proofread_engine.dart';
 export 'src/column_calc/column_calc_engine.dart';
 export 'src/base_ten/base_ten_engine.dart';
+export 'src/calculator/calculator_engine.dart';
 export 'src/widgets/creations.dart';

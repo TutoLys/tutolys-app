@@ -50,6 +50,10 @@ class ShellStrings {
       'Touche une forme pour remplir la case.',
       'Tap a shape to fill the box.',
     ),
+    'calculator' => _t(
+      'Touche les chiffres et les opérations, puis = pour voir le résultat.',
+      'Tap the numbers and the operations, then = to see the result.',
+    ),
     _ => null,
   };
   String get answerFirst =>
@@ -103,6 +107,18 @@ class ShellStrings {
     'math.place_value.not_exchanged' => _t(
       'Le nombre est juste ! Fais les échanges : 10 blocs font 1 bloc de plus.',
       'The number is right! Now trade: 10 blocks make 1 bigger block.',
+    ),
+    'math.calculator.key_misread' => _t(
+      'Regarde la ligne du haut : une touche n’est pas la bonne. Corrige-la avec ⌫.',
+      'Look at the top line: one key is wrong. Fix it with ⌫.',
+    ),
+    'math.calculator.key_order' => _t(
+      'Ce sont les bonnes touches, mais pas dans le bon ordre.',
+      'These are the right keys, but not in the right order.',
+    ),
+    'math.calculator.memory_not_used' => _t(
+      'Bonne réponse ! Refais-le en gardant un résultat avec M+, puis en le rappelant avec MR.',
+      'Right answer! Now do it again: keep a result with M+, then bring it back with MR.',
     ),
     'math.div.remainder_too_big' => _t(
       'Ton reste est trop grand : il doit être plus petit que le diviseur.',

@@ -47,6 +47,7 @@ final learningEngineRegistryProvider = Provider<LearningEngineRegistry>(
     eraseEngine(const ProofreadEngine()),
     eraseEngine(const ColumnCalcEngine()),
     eraseEngine(const BaseTenEngine()),
+    eraseEngine(const CalculatorEngine()),
   ]),
 );
 
@@ -81,6 +82,7 @@ final evaluatorRegistryProvider = Provider<EvaluatorRegistry>(
     ProofreadEvaluator(),
     ColumnCalcEvaluator(),
     BaseTenEvaluator(),
+    CalculatorEvaluator(),
   ]),
 );
 
