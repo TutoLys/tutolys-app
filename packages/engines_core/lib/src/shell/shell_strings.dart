@@ -42,9 +42,11 @@ class ShellStrings {
       'Touche les clous pour tendre l’élastique.',
       'Tap the pegs to stretch the band.',
     ),
+    // Both modes: a slot in order mode, a year on the axis (« dans le bon
+    // ordre » misled on an axis, found playing grade-2 univers social 110).
     'timeline_calendar' => _t(
-      'Touche les cartes dans le bon ordre.',
-      'Tap the cards in the right order.',
+      'Touche une carte, puis sa place.',
+      'Tap a card, then its place.',
     ),
     'pattern_machine' => _t(
       'Touche une forme pour remplir la case.',
@@ -104,9 +106,12 @@ class ShellStrings {
       'La deuxième ligne compte des dizaines : écris d’abord un 0.',
       'The second line counts tens: write a 0 first.',
     ),
+    // Either way round: grouping ten into one, or breaking one into ten
+    // (« 10 blocs font 1 bloc » pointed the wrong way on a break, found
+    // playing grade-2 math 8, question 7).
     'math.place_value.not_exchanged' => _t(
-      'Le nombre est juste ! Fais les échanges : 10 blocs font 1 bloc de plus.',
-      'The number is right! Now trade: 10 blocks make 1 bigger block.',
+      'Le nombre est juste ! Regarde combien de blocs il faut dans chaque colonne, et fais les échanges.',
+      'The number is right! Check how many blocks each column needs, and trade.',
     ),
     'math.calculator.key_misread' => _t(
       'Regarde la ligne du haut : une touche n’est pas la bonne. Corrige-la avec ⌫.',

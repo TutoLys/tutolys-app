@@ -446,7 +446,7 @@ void main() {
       final (c, _) = controllerFor(morningConfig);
       await tester.runAsync(c.start);
       await tester.pumpWidget(app(c));
-      expect(find.text('Touche les cartes dans le bon ordre.'), findsOneWidget);
+      expect(find.text('Touche une carte, puis sa place.'), findsOneWidget);
       final hand = find.byKey(const ValueKey('idle-hand'));
       expect(hand, findsNothing);
       await tester.pump(IdleHandHint.wait + const Duration(seconds: 3));

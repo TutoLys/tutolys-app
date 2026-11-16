@@ -294,6 +294,8 @@ void main() {
       final b = tester.getTopLeft(find.byKey(const ValueKey('axis-tick-v20')));
       expect(b.dy, a.dy, reason: 'horizontal');
       expect(find.text('Placés : 0 sur 4'), findsOneWidget);
+      // The instruction fits an axis: a year, not « le bon ordre ».
+      expect(find.text('Touche une carte, puis sa place.'), findsOneWidget);
       await place(tester, 'n17', 'v17');
       expect(tester.takeException(), isNull, reason: 'a placed 17 fits');
       expect(find.text('Placés : 1 sur 4'), findsOneWidget);

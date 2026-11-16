@@ -239,4 +239,12 @@ void main() {
       await tester.pumpWidget(const SizedBox());
     }
   });
+
+  test('the not-exchanged hint works for a break as well as a group', () {
+    // Math 8 question 7 needs a break; « 10 blocs font 1 bloc de plus »
+    // pointed the other way.
+    final hint = ShellStrings.of(fr).missFor('math.place_value.not_exchanged')!;
+    expect(hint, contains('chaque colonne'));
+    expect(hint, isNot(contains('1 bloc de plus')));
+  });
 }
