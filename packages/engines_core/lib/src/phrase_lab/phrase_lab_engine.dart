@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../widgets/answer_tile.dart';
 import '../widgets/swatch_text.dart';
+import '../widgets/token_flow.dart';
 
 /// What a `phrase_lab` question asks (plan PLAN_GRADES_2_6_ENGINES §2.2).
 enum PhraseTask {
@@ -870,12 +871,14 @@ class _GroupBoard extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Wrap(
-                  spacing: 6,
-                  alignment: WrapAlignment.center,
-                  children: [
+                TokenFlow(
+                  runSpacing: 0,
+                  pieces: [
                     for (var i = span.from; i <= span.to; i++)
-                      SwatchText(c.tokens[i].text, style: style),
+                      TokenPiece.single(
+                        c.tokens[i].text,
+                        SwatchText(c.tokens[i].text, style: style),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 2),
@@ -895,14 +898,20 @@ class _GroupBoard extends StatelessWidget {
       );
     }
 
-    final pieces = <Widget>[];
+    final pieces = <TokenPiece>[];
     for (var i = 0; i < c.tokens.length; i++) {
       final span = s.spans.where((x) => x.from == i).firstOrNull;
       if (span != null) {
-        pieces.add(bracket(span));
+        pieces.add(
+          TokenPiece(
+            first: c.tokens[span.from].text,
+            last: c.tokens[span.to].text,
+            child: bracket(span),
+          ),
+        );
         i = span.to;
       } else {
-        pieces.add(word(i));
+        pieces.add(TokenPiece.single(c.tokens[i].text, word(i)));
       }
     }
 
@@ -915,14 +924,7 @@ class _GroupBoard extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Wrap(
-                key: const ValueKey('phrase-sentence'),
-                spacing: 6,
-                runSpacing: 10,
-                alignment: WrapAlignment.center,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: pieces,
-              ),
+              TokenFlow(key: const ValueKey('phrase-sentence'), pieces: pieces),
               const SizedBox(height: 12),
               Text(
                 fr
@@ -994,27 +996,33 @@ class _TestBoard extends StatelessWidget {
     final style = _wordStyle(p);
     final focus = c.focus!;
 
-    final sentence = Wrap(
+    final sentence = TokenFlow(
       key: const ValueKey('phrase-sentence'),
-      spacing: 6,
-      runSpacing: 10,
-      alignment: WrapAlignment.center,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
+      pieces: [
         for (var i = 0; i < c.tokens.length; i++)
           if (i == focus.from)
-            Container(
-              key: const ValueKey('phrase-focus'),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                borderRadius: Radii.cardMd,
-                color: p.quebecBlue.withValues(alpha: 0.10),
-                border: Border.all(color: p.quebecBlue, width: 3),
+            TokenPiece(
+              first: c.tokens[focus.from].text,
+              last: c.tokens[focus.to].text,
+              child: Container(
+                key: const ValueKey('phrase-focus'),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  borderRadius: Radii.cardMd,
+                  color: p.quebecBlue.withValues(alpha: 0.10),
+                  border: Border.all(color: p.quebecBlue, width: 3),
+                ),
+                child: SwatchText(c.text(focus), style: style),
               ),
-              child: SwatchText(c.text(focus), style: style),
             )
           else if (!focus.contains(i))
-            SwatchText(c.tokens[i].text, style: style),
+            TokenPiece.single(
+              c.tokens[i].text,
+              SwatchText(c.tokens[i].text, style: style),
+            ),
       ],
     );
 

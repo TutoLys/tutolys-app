@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../widgets/answer_tile.dart';
 import '../widgets/swatch_text.dart';
+import '../widgets/token_flow.dart';
 import '../widgets/village_characters.dart';
 
 /// One word of the draft. With [fix], it's misspelled and [fix] is how it's
@@ -570,14 +571,14 @@ class _ProofBoard extends StatelessWidget {
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
-                  child: Wrap(
+                  child: TokenFlow(
                     key: const ValueKey('proof-draft'),
-                    spacing: 6,
                     runSpacing: 6,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
+                    alignment: WrapAlignment.start,
+                    pieces: [
                       for (final sentence in c.sentences)
-                        for (final t in sentence) word(t),
+                        for (final t in sentence)
+                          TokenPiece.single(shown(t), word(t)),
                     ],
                   ),
                 ),
