@@ -477,6 +477,9 @@ void main() {
       final add = find.byKey(const ValueKey('counters-add--1'));
       expect(tester.getSize(take), const Size(56, 56));
       expect(tester.getSize(add), const Size(56, 56));
+      // Each button names its box, so six alike can be told apart.
+      expect(find.byTooltip('Ajouter un jeton : Tapis'), findsOne);
+      expect(find.byTooltip('Enlever un jeton : Tapis'), findsOne);
       expect(
         tester.getTopLeft(add).dx - tester.getTopRight(take).dx,
         greaterThanOrEqualTo(16),

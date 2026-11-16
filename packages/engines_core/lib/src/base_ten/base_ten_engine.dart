@@ -434,17 +434,21 @@ class _BaseTenBoard extends StatelessWidget {
       );
     }
 
-    Widget step(String label, VoidCallback? onTap, String id) => SizedBox(
-      width: 52,
-      height: 48,
-      child: AnswerTile(
-        key: ValueKey(id),
-        label: label,
-        dense: true,
-        state: AnswerTileState.idle,
-        onTap: onTap,
-      ),
-    );
+    // Named with their column: a bare « + » left a screen reader guessing
+    // (2026-11-16 play-test, grade-2 math 8).
+    Widget step(String label, VoidCallback? onTap, String id, String spoken) =>
+        SizedBox(
+          width: 52,
+          height: 48,
+          child: AnswerTile(
+            key: ValueKey(id),
+            label: label,
+            semanticsLabel: spoken,
+            dense: true,
+            state: AnswerTileState.idle,
+            onTap: onTap,
+          ),
+        );
 
     Widget column(BaseTenPlace place) {
       final n = s.count(place);
@@ -467,22 +471,28 @@ class _BaseTenBoard extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                name,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  color: p.inkMuted,
+              // The column's own Semantics says « name : n »; these two
+              // would say it again.
+              ExcludeSemantics(
+                child: Text(
+                  name,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: p.inkMuted,
+                  ),
                 ),
               ),
-              Text(
-                '$n',
-                key: ValueKey('base-ten-count-${place.id}'),
-                style: TextStyle(
-                  fontFamily: VillageType.display,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 30,
-                  color: p.ink,
+              ExcludeSemantics(
+                child: Text(
+                  '$n',
+                  key: ValueKey('base-ten-count-${place.id}'),
+                  style: TextStyle(
+                    fontFamily: VillageType.display,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 30,
+                    color: p.ink,
+                  ),
                 ),
               ),
               const SizedBox(height: 6),
@@ -508,6 +518,7 @@ class _BaseTenBoard extends StatelessWidget {
                           ? () => view.dispatch(TakeBlock(place))
                           : null,
                       'base-ten-take-${place.id}',
+                      fr ? 'Enlever un bloc : $name' : 'Take a block: $name',
                     ),
                     const SizedBox(width: 6),
                     step(
@@ -516,6 +527,7 @@ class _BaseTenBoard extends StatelessWidget {
                           ? () => view.dispatch(AddBlock(place))
                           : null,
                       'base-ten-add-${place.id}',
+                      fr ? 'Ajouter un bloc : $name' : 'Add a block: $name',
                     ),
                   ],
                 ),

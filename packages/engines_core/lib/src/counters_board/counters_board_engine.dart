@@ -949,7 +949,12 @@ class _CountersView extends StatelessWidget {
                   children: [
                     _StepButton(
                       key: ValueKey('counters-take-$id'),
-                      tooltip: fr ? 'Enlever un jeton' : 'Take one away',
+                      // Named with its box: six « Ajouter un jeton » alike
+                      // left a screen reader guessing which plate
+                      // (2026-11-16 play-test, grade-2 math 5).
+                      tooltip: fr
+                          ? 'Enlever un jeton : $title'
+                          : 'Take one away: $title',
                       onPressed: canTake
                           ? () => view.dispatch(TakeCounter(id))
                           : null,
@@ -958,7 +963,9 @@ class _CountersView extends StatelessWidget {
                     const SizedBox(width: 16),
                     _StepButton(
                       key: ValueKey('counters-add-$id'),
-                      tooltip: fr ? 'Ajouter un jeton' : 'Add one',
+                      tooltip: fr
+                          ? 'Ajouter un jeton : $title'
+                          : 'Add one: $title',
                       onPressed: canAdd
                           ? () => view.dispatch(AddCounter(id))
                           : null,

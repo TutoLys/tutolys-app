@@ -247,4 +247,38 @@ void main() {
     expect(hint, contains('chaque colonne'));
     expect(hint, isNot(contains('1 bloc de plus')));
   });
+
+  testWidgets('a screen reader hears which column + and − change', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    final c = parsed({
+      'places': ['d', 'u'],
+      'target': {'value': '23'},
+    });
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: TutolysTheme.village(),
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => engine.buildView(
+              context,
+              EngineView(
+                content: c,
+                state: engine.initialize(c, const EngineSeed(1)),
+                dispatch: (_) {},
+                locale: fr,
+                enabled: true,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(find.bySemanticsLabel('Ajouter un bloc : dizaines'), findsOne);
+    expect(find.bySemanticsLabel('Enlever un bloc : unités'), findsOne);
+    // The column is named once, not « dizaines : 0 dizaines 0 ».
+    expect(find.bySemanticsLabel('dizaines : 0'), findsOne);
+    handle.dispose();
+  });
 }

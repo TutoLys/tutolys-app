@@ -45,6 +45,7 @@ class AnswerTile extends StatelessWidget {
     this.suggested = false,
     this.audioRef,
     this.labelSize,
+    this.semanticsLabel,
     super.key,
   });
 
@@ -103,6 +104,10 @@ class AnswerTile extends StatelessWidget {
   /// aloud by default (Hafid's rule). Nothing is drawn when the host has no
   /// [ContentSpeakerScope].
   final String? audioRef;
+
+  /// What a screen reader says instead of [label], for a tile whose label
+  /// is only a sign: base_ten's « + » says which column it adds to.
+  final String? semanticsLabel;
 
   /// One label size for every tile of a set, from [sharedLabelSize]. Without
   /// it each tile sizes its own label by length, so the longest answer (often
@@ -233,7 +238,7 @@ class AnswerTile extends StatelessWidget {
       button: true,
       selected: state == AnswerTileState.picked,
       enabled: onTap != null,
-      label: label,
+      label: semanticsLabel ?? label,
       hint: dimmed
           ? (en ? 'set aside' : 'écartée')
           : suggested
