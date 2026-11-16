@@ -523,4 +523,72 @@ void main() {
       c.dispose();
     });
   });
+
+  group('seamless grid (2026-11-16 play-test, univers social 19)', () {
+    // A side view: sky (blank), land (🟫), a letter on the hilltop.
+    final relief = <String, Object?>{
+      'layout': 'grid',
+      'columns': 3,
+      'seamless': true,
+      'scene_items': [
+        {'id': 'a1', 'label': ''},
+        {'id': 'b1', 'label': 'A'},
+        {'id': 'c1', 'label': ''},
+        {'id': 'a2', 'label': '🟫'},
+        {'id': 'b2', 'label': '🟫'},
+        {'id': 'c2', 'label': '🟫'},
+      ],
+      'correct_ids': ['b1'],
+    };
+
+    test('parse: seamless is an optional bool, off by default', () {
+      const engine = FindItEngine();
+      expect(engine.parse(relief).valueOrNull!.seamless, isTrue);
+      expect(engine.parse(planConfig).valueOrNull!.seamless, isFalse);
+      expect(engine.parse({...relief, 'seamless': 'yes'}).valueOrNull, isNull);
+    });
+
+    testWidgets('cells touch, and 🟫 paints the whole cell', (tester) async {
+      tallView(tester);
+      final (c, _) = controllerFor(relief);
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(app(c));
+      final a2 = tester.getRect(find.byKey(const ValueKey('find-cell-a2')));
+      final b2 = tester.getRect(find.byKey(const ValueKey('find-cell-b2')));
+      final b1 = tester.getRect(find.byKey(const ValueKey('find-cell-b1')));
+      expect(b2.left, a2.right, reason: 'no gap across');
+      expect(b2.top, b1.bottom, reason: 'no gap down');
+      // The land is painted, not drawn as a small emoji.
+      expect(find.text('🟫'), findsNothing);
+      final land = tester.widget<Material>(
+        find.descendant(
+          of: find.byKey(const ValueKey('find-cell-b2')),
+          matching: find.byType(Material),
+        ),
+      );
+      expect(land.color, const Color(0xFF8B5A2B));
+      // Still named for a screen reader.
+      expect(find.bySemanticsLabel('🟫, colonne 2, rangée 2'), findsOneWidget);
+      c.dispose();
+    });
+
+    testWidgets('a picked cell still shows it is picked', (tester) async {
+      tallView(tester);
+      final (c, _) = controllerFor(relief);
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(app(c));
+      await tester.tap(find.byKey(const ValueKey('find-cell-b1')));
+      await settle(tester);
+      final box = tester.widget<Container>(
+        find
+            .descendant(
+              of: find.byKey(const ValueKey('find-cell-b1')),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      expect(box.decoration, isA<BoxDecoration>());
+      c.dispose();
+    });
+  });
 }

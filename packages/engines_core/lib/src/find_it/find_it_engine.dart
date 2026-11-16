@@ -78,6 +78,7 @@ class FindItContent {
     this.edges = const EdgeLabels(),
     this.bottomOrigin = false,
     this.shuffle = true,
+    this.seamless = false,
   });
 
   final FindItLayout layout;
@@ -107,6 +108,12 @@ class FindItContent {
 
   /// `items` layout only.
   final bool shuffle;
+
+  /// Grid only: cells drawn edge to edge, and a cell whose label is one
+  /// coloured square (🟫 🟩 🟦 …) painted that colour across the whole cell.
+  /// A column of 🟫 then reads as one landform, not a row of dots (grade-2
+  /// univers social 19, 2026-11-16 play-test).
+  final bool seamless;
 
   bool get multiple => correct.length > 1;
   int get rows => columns == 0 ? 0 : cells.length ~/ columns;
@@ -186,7 +193,7 @@ class FindItEngine
   @override
   EngineDescriptor get descriptor => const EngineDescriptor(
     key: key,
-    version: 1,
+    version: 2,
     submitMode: SubmitMode.explicit,
     capabilities: EngineCapabilities(keyboard: true, screenReader: true),
   );
@@ -276,6 +283,7 @@ class FindItEngine
     var columnLabels = const <String>[];
     var edges = const EdgeLabels();
     var bottomOrigin = false;
+    var seamless = false;
     var displayCells = cells;
     if (layout == FindItLayout.grid) {
       final c = config['columns'];
@@ -297,6 +305,11 @@ class FindItEngine
       if (cl == null || (cl.isNotEmpty && cl.length != c)) {
         return const ParseResult.invalid('column_labels needs one per column.');
       }
+      final rawSeamless = config['seamless'];
+      if (rawSeamless != null && rawSeamless is! bool) {
+        return const ParseResult.invalid('seamless is true or false.');
+      }
+      seamless = rawSeamless == true;
       final origin = config['origin'];
       if (origin != null && origin != 'top_left' && origin != 'bottom_left') {
         return const ParseResult.invalid('origin is top_left or bottom_left.');
@@ -367,6 +380,7 @@ class FindItEngine
         columnLabels: List.unmodifiable(columnLabels),
         legend: List.unmodifiable(legend),
         shuffle: shuffle is bool ? shuffle : true,
+        seamless: seamless,
       ),
     );
   }
@@ -589,6 +603,7 @@ class FindItEngine
             shape: _CellShape.square,
             size: size,
             imageRef: content.cell(id).imageRef,
+            seamless: content.seamless,
           );
         },
       ),
@@ -687,6 +702,7 @@ class _Grid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final n = content.columns;
+        final cellGap = content.seamless ? 0.0 : _gap;
         final edges = content.edges;
         final sides =
             (edges.left != null ? _edge + _gap : 0) +
@@ -695,7 +711,7 @@ class _Grid extends StatelessWidget {
             constraints.maxWidth -
             sides -
             (hasRows ? _axis + _gap : 0) -
-            _gap * (n - 1);
+            cellGap * (n - 1);
         // Never so big a 2×2 fills the screen. As big as fits otherwise: a
         // full 8×8 plan on a phone gets ~34px squares, below the 48px
         // target, which content keeps to big screens or fewer columns.
@@ -725,7 +741,7 @@ class _Grid extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             for (var r = 0; r < content.rows; r++) ...[
-              if (r > 0) const SizedBox(height: _gap),
+              if (r > 0) SizedBox(height: cellGap),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -734,7 +750,7 @@ class _Grid extends StatelessWidget {
                     const SizedBox(width: _gap),
                   ],
                   for (var c = 0; c < n; c++) ...[
-                    if (c > 0) const SizedBox(width: _gap),
+                    if (c > 0) SizedBox(width: cellGap),
                     cellBuilder(content.cells[r * n + c].id, r, c, size),
                   ],
                 ],
@@ -748,7 +764,7 @@ class _Grid extends StatelessWidget {
                 children: [
                   if (hasRows) const SizedBox(width: _axis + _gap),
                   for (var c = 0; c < n; c++) ...[
-                    if (c > 0) const SizedBox(width: _gap),
+                    if (c > 0) SizedBox(width: cellGap),
                     axisLabel(
                       content.columnLabels[c],
                       width: size,
@@ -812,6 +828,7 @@ class _FindCell extends StatelessWidget {
     required this.shape,
     this.size = 0,
     this.imageRef,
+    this.seamless = false,
     super.key,
   });
 
@@ -827,9 +844,29 @@ class _FindCell extends StatelessWidget {
   /// shows until it has synced.
   final String? imageRef;
 
+  /// See [FindItContent.seamless].
+  final bool seamless;
+
+  /// The colour a lone coloured-square emoji paints a seamless cell.
+  static const _squares = {
+    '🟥': Color(0xFFD64545),
+    '🟧': Color(0xFFE8873A),
+    '🟨': Color(0xFFF2C94C),
+    '🟩': Color(0xFF4CAF50),
+    '🟦': Color(0xFF3A7BD5),
+    '🟪': Color(0xFF8E5CC4),
+    '🟫': Color(0xFF8B5A2B),
+    '⬛': Color(0xFF2B2B2B),
+    '⬜': Color(0xFFF4F4F4),
+  };
+
   @override
   Widget build(BuildContext context) {
     final p = VillagePalette.of(context);
+    final paint = seamless ? _squares[label.trim()] : null;
+    if (seamless) {
+      return _seamless(p, paint);
+    }
     final (border, fill, icon) = switch (state) {
       AnswerTileState.idle => (p.line, p.surface, null),
       AnswerTileState.picked => (p.quebecBlueBright, p.navHoverFill, null),
@@ -918,6 +955,69 @@ class _FindCell extends StatelessWidget {
       ),
     );
   }
+
+  /// A seamless grid cell: square corners, no border while idle, and a
+  /// coloured-square label painted across the whole cell. A picked, found or
+  /// tried cell still draws its border and icon, so its state reads.
+  Widget _seamless(VillagePalette p, Color? paint) {
+    final (Color? border, IconData? icon) = switch (state) {
+      AnswerTileState.idle => (null, null),
+      AnswerTileState.picked => (p.quebecBlueBright, null),
+      AnswerTileState.retry => (p.retry, Icons.track_changes_rounded),
+      AnswerTileState.correct => (p.success, Icons.check_rounded),
+    };
+    final content = paint != null
+        ? const SizedBox.shrink()
+        : imageRef != null
+        ? Padding(
+            padding: EdgeInsets.all(size * 0.1),
+            child: ContentImage(ref: imageRef!, fallback: _label(p)),
+          )
+        : _label(p);
+    return Semantics(
+      button: true,
+      selected: state == AnswerTileState.picked,
+      enabled: onTap != null,
+      label: semanticsLabel,
+      hint: hint,
+      excludeSemantics: true,
+      child: Material(
+        color: paint ?? p.surface,
+        child: InkWell(
+          onTap: onTap,
+          child: Container(
+            width: size,
+            height: size,
+            decoration: border == null
+                ? null
+                : BoxDecoration(border: Border.all(color: border, width: 3)),
+            child: Stack(
+              children: [
+                Positioned.fill(child: Center(child: content)),
+                if (icon != null && border != null)
+                  Positioned(
+                    right: 3,
+                    top: 3,
+                    child: Icon(icon, size: 14, color: border),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _label(VillagePalette p) => SwatchText(
+    label,
+    textAlign: TextAlign.center,
+    style: TextStyle(
+      fontFamily: VillageType.display,
+      fontWeight: FontWeight.w700,
+      fontSize: size * 0.42,
+      color: p.ink,
+    ),
+  );
 }
 
 /// Grades the picks of a `find_it` scene.
