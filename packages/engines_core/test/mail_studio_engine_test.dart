@@ -152,6 +152,12 @@ void main() {
   }
 
   group('parse', () {
+    test('the school wall is a recipient', () {
+      final c = parsed(letter('babillard', 'public'));
+      expect(c.recipient.name(fr), 'le babillard de l’école');
+      expect(c.recipient.name(const Locale('en')), 'the school wall');
+    });
+
     test('reads the recipient, slots and tiles', () {
       final c = parsed(paper);
       expect(c.recipient.key, 'journal');
@@ -309,6 +315,36 @@ void main() {
   });
 
   group('in the shell', () {
+    for (final (who, header, not) in [
+      ('journal', 'LE JOURNAL DU VILLAGE', 'BABILLARD'),
+      ('babillard', 'LE BABILLARD DE L’ÉCOLE', 'JOURNAL'),
+    ]) {
+      testWidgets('an article for $who is headed $header', (tester) async {
+        // Grade-1 ELA 122 reports for the school wall, but every article
+        // used to say newspaper (2026-11-16 play-test).
+        tallView(tester);
+        final (c, _) = controllerFor(letter(who, 'public'));
+        await tester.runAsync(c.start);
+        await tester.pumpWidget(app(c));
+        await tester.tap(find.byKey(const ValueKey('mail-tile-article')));
+        await settle(tester);
+        expect(find.text(header), findsOneWidget);
+        expect(find.textContaining(not), findsNothing);
+        c.dispose();
+      });
+    }
+
+    testWidgets('a letter for a person has no newspaper header', (
+      tester,
+    ) async {
+      tallView(tester);
+      final (c, _) = controllerFor(grandma);
+      await tester.runAsync(c.start);
+      await tester.pumpWidget(app(c));
+      expect(find.textContaining('JOURNAL'), findsNothing);
+      c.dispose();
+    });
+
     testWidgets('write for the paper: confused, then delighted', (
       tester,
     ) async {

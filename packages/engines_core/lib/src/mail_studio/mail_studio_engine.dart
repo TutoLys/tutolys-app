@@ -180,7 +180,7 @@ class MailStudioEngine
   @override
   EngineDescriptor get descriptor => const EngineDescriptor(
     key: key,
-    version: 1,
+    version: 2,
     submitMode: SubmitMode.explicit,
     capabilities: EngineCapabilities(keyboard: true, screenReader: true),
   );
@@ -625,6 +625,7 @@ class _MailView extends StatelessWidget {
                     if (t.template == null) t.label,
                 ],
                 fr: fr,
+                masthead: _Preview.mastheadFor(c.recipient.key, fr: fr),
               ),
               if (c.creation && s.solved)
                 KeepCreationButton(
@@ -654,12 +655,27 @@ class _Preview extends StatelessWidget {
     required this.template,
     required this.lines,
     required this.fr,
+    this.masthead,
     super.key,
   });
 
   final MailTemplate template;
   final List<String> lines;
   final bool fr;
+
+  /// The article's header: where it will be read. Null draws none.
+  final String? masthead;
+
+  /// An article's header follows its recipient: the village paper prints
+  /// « LE JOURNAL DU VILLAGE », a report pinned on the school wall says so.
+  /// Before this, every article said newspaper, even one for the school
+  /// wall (grade-1 ELA 122, found in the 2026-11-16 play-test).
+  static String? mastheadFor(String recipient, {required bool fr}) =>
+      switch (recipient) {
+        'journal' => fr ? 'LE JOURNAL DU VILLAGE' : 'THE VILLAGE PAPER',
+        'babillard' => fr ? 'LE BABILLARD DE L’ÉCOLE' : 'THE SCHOOL WALL',
+        _ => null,
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -719,7 +735,7 @@ class _Preview extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (template == MailTemplate.article)
+            if (template == MailTemplate.article && masthead != null)
               Container(
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.only(bottom: 4),
@@ -727,7 +743,7 @@ class _Preview extends StatelessWidget {
                   border: Border(bottom: BorderSide(color: p.ink, width: 2)),
                 ),
                 child: Text(
-                  fr ? 'LE JOURNAL DU VILLAGE' : 'THE VILLAGE PAPER',
+                  masthead!,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: VillageType.display,

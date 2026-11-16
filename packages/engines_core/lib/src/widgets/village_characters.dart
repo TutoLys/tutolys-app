@@ -51,6 +51,14 @@ class VillageCharacter {
       'the village paper',
       Color(0xFF555B6E),
     ),
+    // A notice board, not a person: what a class pins its report on
+    // (grade-1 ELA 122, « the school wall »).
+    VillageCharacter(
+      'babillard',
+      'le babillard de l’école',
+      'the school wall',
+      Color(0xFF2A8C8C),
+    ),
     VillageCharacter(
       'petits',
       'les petits',
