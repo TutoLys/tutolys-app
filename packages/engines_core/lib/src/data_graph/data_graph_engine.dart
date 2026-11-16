@@ -526,6 +526,10 @@ class DataGraphEngine
                       key: ValueKey('graph-option-$id'),
                       label: content.option(id)!.label,
                       prominent: true,
+                      labelSize: AnswerTile.sharedLabelSize(
+                        content.options.map((o) => o.label),
+                        prominent: true,
+                      ),
                       square: square,
                       // Three misses: one wrong answer is set aside (G8).
                       dimmed:

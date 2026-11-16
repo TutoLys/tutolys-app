@@ -574,6 +574,10 @@ class PassageReaderEngine
                           .label,
                       // Big and centred (UX review AM3).
                       prominent: true,
+                      labelSize: AnswerTile.sharedLabelSize(
+                        content.options.map((o) => o.label),
+                        prominent: true,
+                      ),
                       // Three misses: one wrong answer set aside (G8).
                       dimmed:
                           ActivityAssist.narrowOf(context) &&

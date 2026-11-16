@@ -271,6 +271,10 @@ class TimedChoiceEngine
                 imageRef: view.content.choice.option(id)!.imageRef,
                 audioRef: view.content.choice.option(id)!.audioRef,
                 prominent: true,
+                labelSize: AnswerTile.sharedLabelSize(
+                  view.content.choice.options.map((o) => o.label),
+                  prominent: true,
+                ),
                 square: square,
                 dimmed: id == dim,
                 state: switch (id) {

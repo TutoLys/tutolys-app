@@ -338,6 +338,11 @@ class ComposeSlotsEngine
   ) {
     final fr = view.locale.languageCode == 'fr';
     final s = view.state;
+    // One size for the tray and the slots, so no tile stands out.
+    final shared = AnswerTile.sharedLabelSize(
+      view.content.tiles.map((t) => t.label),
+      large: true,
+    );
     // The idle hand (G3) on the first tray tile, until a tile is placed.
     final handOn =
         view.enabled && s.locked.isEmpty && s.slots.every((t) => t == null)
@@ -382,6 +387,7 @@ class ComposeSlotsEngine
                       child: AnswerSlot(
                         key: ValueKey('compose-slot-$i'),
                         large: true,
+                        labelSize: shared,
                         index: i + 1,
                         label: s.slots[i] == null
                             ? null
@@ -421,6 +427,7 @@ class ComposeSlotsEngine
                           child: AnswerTile(
                             key: ValueKey('compose-tile-$id'),
                             large: true,
+                            labelSize: shared,
                             label: view.content.tile(id).label,
                             audioRef: view.content.tile(id).audioRef,
                             suggested: id == hintTile,

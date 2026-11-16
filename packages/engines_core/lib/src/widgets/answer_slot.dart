@@ -20,12 +20,16 @@ class AnswerSlot extends StatelessWidget {
     this.imageRef,
     this.audioRef,
     this.large = false,
+    this.labelSize,
     super.key,
   });
 
   /// As [AnswerTile.large], so a slot matches the big tiles that fill it
   /// (UX review G14).
   final bool large;
+
+  /// As [AnswerTile.labelSize]: the size the slot's set shares.
+  final double? labelSize;
 
   /// 1-based position; spoken (via [emptyLabel]), never drawn.
   final int index;
@@ -52,6 +56,7 @@ class AnswerSlot extends StatelessWidget {
       return AnswerTile(
         label: text,
         large: large,
+        labelSize: labelSize,
         state: state,
         onTap: onTap,
         semanticsState: semanticsState,

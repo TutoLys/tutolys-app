@@ -44,6 +44,7 @@ class AnswerTile extends StatelessWidget {
     this.dimmed = false,
     this.suggested = false,
     this.audioRef,
+    this.labelSize,
     super.key,
   });
 
@@ -103,6 +104,40 @@ class AnswerTile extends StatelessWidget {
   /// [ContentSpeakerScope].
   final String? audioRef;
 
+  /// One label size for every tile of a set, from [sharedLabelSize]. Without
+  /// it each tile sizes its own label by length, so the longest answer (often
+  /// the key) draws smaller than the decoys and stands out. A picture answer
+  /// keeps its own size: the picture is the content.
+  final double? labelSize;
+
+  /// The size a set of [labels] shares: the smallest any of them would take
+  /// on its own. Null when none of them is text.
+  static double? sharedLabelSize(
+    Iterable<String> labels, {
+    bool prominent = false,
+    bool large = false,
+  }) {
+    double? least;
+    for (final l in labels) {
+      if (_pictureOnly(l)) continue;
+      final size = _sizeFor(l, prominent: prominent, large: large);
+      if (least == null || size < least) least = size;
+    }
+    return least;
+  }
+
+  static double _sizeFor(
+    String label, {
+    required bool prominent,
+    required bool large,
+  }) {
+    if (prominent) return label.length <= 24 && !label.contains('\n') ? 24 : 19;
+    // A big card's short label (« 4 », « chat ») is the card: 28 px, so it
+    // reads across a 120 px tile (UX review AM34). Longer ones stay 20.
+    if (large) return label.trim().length <= 6 ? 28 : 20;
+    return 15;
+  }
+
   Widget _dense(Color text, IconData? icon, Color border) => Padding(
     padding: square
         ? const EdgeInsets.all(8)
@@ -147,11 +182,7 @@ class AnswerTile extends StatelessWidget {
     // A picture answer is the content: 56 px in an answer list (UX review
     // N19), 40 elsewhere, where slots are narrower.
     if (_pictureOnly(label)) return prominent ? 56 : 40;
-    if (prominent) return label.length <= 24 && !label.contains('\n') ? 24 : 19;
-    // A big card's short label (« 4 », « chat ») is the card: 28 px, so it
-    // reads across a 120 px tile (UX review AM34). Longer ones stay 20.
-    if (large) return label.trim().length <= 6 ? 28 : 20;
-    return 15;
+    return labelSize ?? _sizeFor(label, prominent: prominent, large: large);
   }
 
   @override
@@ -291,21 +322,34 @@ class AnswerTile extends StatelessWidget {
                               ),
                             ),
                           Expanded(
-                            child: SwatchText(
-                              label,
-                              // A picture answer (emoji only) draws big:
-                              // the child reads the picture, not the word.
-                              textAlign:
-                                  prominent || large || _pictureOnly(label)
-                                  ? TextAlign.center
-                                  : null,
-                              style: TextStyle(
-                                fontFamily: VillageType.display,
-                                fontWeight: FontWeight.w700,
-                                fontSize: _fontSize,
-                                color: text,
-                              ),
-                            ),
+                            child: large && !_pictureOnly(label)
+                                ? _WordWrap(
+                                    label,
+                                    style: TextStyle(
+                                      fontFamily: VillageType.display,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: _fontSize,
+                                      color: text,
+                                    ),
+                                  )
+                                : SwatchText(
+                                    label,
+                                    // A picture answer (emoji only) draws
+                                    // big: the child reads the picture, not
+                                    // the word.
+                                    textAlign:
+                                        prominent ||
+                                            large ||
+                                            _pictureOnly(label)
+                                        ? TextAlign.center
+                                        : null,
+                                    style: TextStyle(
+                                      fontFamily: VillageType.display,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: _fontSize,
+                                      color: text,
+                                    ),
+                                  ),
                           ),
                           if (badge != null)
                             Container(
@@ -394,3 +438,36 @@ class _FocusOutlineState extends State<_FocusOutline> {
 }
 
 bool _pictureOnly(String label) => isPictureOnly(label);
+
+/// A big card's label, word by word: a word never breaks in the middle,
+/// and one too wide for the card shrinks alone (« pompier / s », found
+/// playing grade-2 univers social 93). The tile's own Semantics names it.
+class _WordWrap extends StatelessWidget {
+  const _WordWrap(this.label, {required this.style});
+  final String label;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: Wrap(
+      alignment: WrapAlignment.center,
+      runAlignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: (style.fontSize ?? 20) * 0.28,
+      children: [
+        for (final word in label.split(RegExp(r'\s+')))
+          if (word.isNotEmpty)
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: SwatchText(
+                word,
+                style: style,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                softWrap: false,
+              ),
+            ),
+      ],
+    ),
+  );
+}

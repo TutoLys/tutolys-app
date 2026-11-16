@@ -307,6 +307,10 @@ class SingleChoiceEngine
                 audioRef: option.audioRef,
                 state: state,
                 prominent: true,
+                labelSize: AnswerTile.sharedLabelSize(
+                  view.content.options.map((o) => o.label),
+                  prominent: true,
+                ),
                 square: square,
                 dimmed: id == dim,
                 semanticsState: switch (state) {

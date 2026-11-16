@@ -448,6 +448,10 @@ class DiscussView extends StatelessWidget {
           key: ValueKey('discuss-${forFinal ? 'final' : 'first'}-$id'),
           label: options[id]!,
           prominent: true,
+          labelSize: AnswerTile.sharedLabelSize(
+            options.values,
+            prominent: true,
+          ),
           state: tileState,
           semanticsState: tileState == AnswerTileState.retry
               ? (fr ? 'déjà essayé' : 'already tried')

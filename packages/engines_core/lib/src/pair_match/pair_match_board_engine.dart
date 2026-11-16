@@ -384,6 +384,15 @@ class PairMatchBoardEngine
   ) {
     final fr = view.locale.languageCode == 'fr';
     final s = view.state;
+    // One size per column, so no card stands out from its neighbours.
+    final leftSize = AnswerTile.sharedLabelSize(
+      view.content.lefts.map((i) => i.label),
+      large: true,
+    );
+    final rightSize = AnswerTile.sharedLabelSize(
+      view.content.rights.map((i) => i.label),
+      large: true,
+    );
     // Number the pairs in left-column order, so a pair's two tiles share a
     // badge the child can match by eye.
     final badgeOf = <String, int>{};
@@ -455,6 +464,7 @@ class PairMatchBoardEngine
                     child: AnswerTile(
                       key: ValueKey('pair-left-$l'),
                       large: true,
+                      labelSize: leftSize,
                       label: view.content.left(l).label,
                       imageRef: view.content.left(l).imageRef,
                       audioRef: view.content.left(l).audioRef,
@@ -493,6 +503,7 @@ class PairMatchBoardEngine
                         child: AnswerTile(
                           key: ValueKey('pair-right-$r'),
                           large: true,
+                          labelSize: rightSize,
                           label: view.content.right(r).label,
                           imageRef: view.content.right(r).imageRef,
                           audioRef: view.content.right(r).audioRef,
