@@ -147,7 +147,7 @@ class PhraseContent {
 
   /// What the child sees inside [span].
   String text(PhraseSpan span) =>
-      [for (var i = span.from; i <= span.to; i++) tokens[i].text].join(' ');
+      joinTokens([for (var i = span.from; i <= span.to; i++) tokens[i].text]);
 }
 
 class PhraseState {

@@ -13,6 +13,21 @@ bool gluesToPrevious(String token) => _closing.hasMatch(token.trim());
 /// Whether the token after [token] attaches to it.
 bool gluesToNext(String token) => _opening.hasMatch(token.trim());
 
+/// [tokens] as one string, spaced as [TokenFlow] draws them: « Hier, »,
+/// « J'ai », not « Hier , » or « J' ai ».
+String joinTokens(Iterable<String> tokens) {
+  final out = StringBuffer();
+  String? previous;
+  for (final t in tokens) {
+    if (previous != null && !gluesToPrevious(t) && !gluesToNext(previous)) {
+      out.write(' ');
+    }
+    out.write(t);
+    previous = t;
+  }
+  return out.toString();
+}
+
 /// One laid-out piece of a sentence: a word, or several words drawn as one
 /// (a framed group), known by the text of its first and last token.
 class TokenPiece {

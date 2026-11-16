@@ -60,4 +60,10 @@ void main() {
     final max = tester.getRect(find.text('Max'));
     expect(joue.left - max.right, 6);
   });
+
+  test('joinTokens spaces a framed group the same way', () {
+    expect(joinTokens(['Hier', ',']), 'Hier,');
+    expect(joinTokens(["J'", 'ai', 'soif', '.']), "J'ai soif.");
+    expect(joinTokens(['Ce', 'soir', ',']), 'Ce soir,');
+  });
 }
