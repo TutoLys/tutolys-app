@@ -57,18 +57,44 @@ class _Curriculum extends CurriculumApi {
   }
 }
 
+/// The real backend after an adult changed the school's language: a
+/// subject outside [programme] is refused with a 400 that doesn't name the
+/// new subjects (curriculum/views.py); an allowed one is served with them.
+class _Refusing extends CurriculumApi {
+  _Refusing(this.programme) : super(dio: Dio());
+  Programme programme;
+  final asked = <String>[];
+
+  @override
+  Future<CurriculumTreeResult> fetchTree({
+    required String accessToken,
+    required String subject,
+  }) async {
+    asked.add(subject);
+    if (!programme.subjects.contains(subject)) {
+      return const CurriculumTreeNotInProgramme();
+    }
+    return CurriculumTreeFetched(const [], programme: programme);
+  }
+}
+
 class _NoContent extends ContentApi {
   _NoContent() : super(dio: Dio());
+  final manifests = <String?>[];
 
   @override
   Future<ManifestResult> fetchManifest({
     required String accessToken,
     String? subject,
     String? locale,
-  }) async => const ManifestFetched(
-    ContentManifest(grade: 1, manifestHash: 'm', entries: []),
-  );
+  }) async {
+    manifests.add(subject);
+    return const ManifestFetched(
+      ContentManifest(grade: 1, manifestHash: 'm', entries: []),
+    );
+  }
 }
+
 
 Widget _app(Widget child, {Locale locale = const Locale('fr', 'CA')}) =>
     MediaQuery(
@@ -192,6 +218,66 @@ void main() {
       await path.selectSubject('FR');
       await pumpEventQueue(times: 50);
       expect(c.read(pathControllerProvider).subject, 'MATH');
+    });
+
+    test('the school\'s language changed under the subject on screen: the '
+        'Carte learns the new programme and moves, and never says offline '
+        '(play-test A1)', () async {
+      final refusing = _Refusing(const Programme(subjects: _englishSet));
+      final content = _NoContent();
+      c = ProviderContainer(
+        overrides: [
+          localDatabaseProvider.overrideWithValue(LocalDatabase.memory()),
+          curriculumApiProvider.overrideWithValue(refusing),
+          contentApiProvider.overrideWithValue(content),
+          offlinePrefetchProvider.overrideWithValue(false),
+          sessionControllerProvider.overrideWith(_Session.new),
+        ],
+      );
+      // The device still holds the French programme, the kid on ESL.
+      await c
+          .read(programmeProvider.notifier)
+          .adopt('lea', const Programme(subjects: _frenchSet));
+      final seen = <PathState>[];
+      c.listen(pathControllerProvider, (_, next) => seen.add(next));
+      await c.read(pathControllerProvider.notifier).selectSubject('ESL');
+      await pumpEventQueue(times: 300);
+
+      final state = c.read(pathControllerProvider);
+      expect(state.subject, 'MATH');
+      expect(c.read(programmeSubjectsProvider), _englishSet);
+      expect(state.offline, isFalse);
+      expect(state.error, isNull);
+      expect(
+        seen.where((s) => s.subject == 'ESL').map(carteGapOf),
+        isNot(contains(CarteGap.offline)),
+      );
+      // ESL was asked once, never its lessons, and never again.
+      expect(refusing.asked.where((s) => s == 'ESL'), hasLength(1));
+      expect(content.manifests, isNot(contains('ESL')));
+    });
+
+    test('the background sync stops at a refused subject and adopts the '
+        'new programme', () async {
+      final refusing = _Refusing(const Programme(subjects: _englishSet));
+      c = ProviderContainer(
+        overrides: [
+          localDatabaseProvider.overrideWithValue(LocalDatabase.memory()),
+          curriculumApiProvider.overrideWithValue(refusing),
+          contentApiProvider.overrideWithValue(_NoContent()),
+          offlinePrefetchProvider.overrideWithValue(true),
+          sessionControllerProvider.overrideWith(_Session.new),
+        ],
+      );
+      // MATH loads fine and serves the new set at once: the stale French
+      // list is never walked.
+      await c
+          .read(programmeProvider.notifier)
+          .adopt('lea', const Programme(subjects: _frenchSet));
+      await c.read(pathControllerProvider.notifier).refresh();
+      await pumpEventQueue(times: 300);
+      expect(c.read(programmeSubjectsProvider), _englishSet);
+      expect(refusing.asked, isNot(contains('FR')));
     });
 
     test('a synced subject with no lesson is known to be empty; one never '

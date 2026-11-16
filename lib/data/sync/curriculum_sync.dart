@@ -12,7 +12,12 @@ class CurriculumSyncReport {
     this.unauthorized = false,
     this.error,
     this.programme,
+    this.notInProgramme = false,
   });
+
+  /// The subject left the kid's programme (the school's language changed):
+  /// nothing to sync, nothing wrong with the network. The cache is kept.
+  final bool notInProgramme;
 
   /// The kid's subjects, when the backend sent them (ADR 0101).
   final Programme? programme;
@@ -26,7 +31,8 @@ class CurriculumSyncReport {
   final bool unauthorized;
   final String? error;
 
-  bool get isOk => !offline && !unauthorized && error == null;
+  bool get isOk =>
+      !offline && !unauthorized && !notInProgramme && error == null;
 }
 
 /// Keeps the local curriculum-leaf cache in step with the server.
@@ -78,6 +84,11 @@ class CurriculumSync {
       CurriculumTreeUnauthorized() => const CurriculumSyncReport(
         count: 0,
         unauthorized: true,
+      ),
+      CurriculumTreeNotInProgramme(:final programme) => CurriculumSyncReport(
+        count: 0,
+        notInProgramme: true,
+        programme: programme,
       ),
       CurriculumTreeFailed(:final detail) => CurriculumSyncReport(
         count: 0,

@@ -296,6 +296,18 @@ class PathController extends Notifier<PathState> {
           onTimeout: () =>
               const CurriculumSyncReport(count: 0, error: 'timeout'),
         );
+    if (curriculumReport.notInProgramme) {
+      // The school's language changed under this subject: move to the new
+      // programme instead of syncing a subject the kid no longer studies,
+      // and say nothing about the network (play-test A1, 2026-11-16).
+      await _leaveRefusedSubject(
+        kid.id,
+        kid.gradeLevel,
+        subject,
+        curriculumReport,
+      );
+      return;
+    }
     _adoptProgramme(kid.id, curriculumReport.programme);
     // The map is drawn from here on (A1): the lessons download in the
     // background and land on it as they come. Before, the Carte waited for
@@ -456,6 +468,13 @@ class PathController extends Notifier<PathState> {
           grade: kid.gradeLevel,
         );
         if (curriculum.offline) return;
+        if (curriculum.notInProgramme) {
+          // The list this loop walks is stale: learn the new programme and
+          // stop; the next load prefetches from it.
+          _prefetched.remove(kid.id);
+          await _learnProgramme(kid.id, kid.gradeLevel, curriculum);
+          return;
+        }
         _adoptProgramme(kid.id, curriculum.programme);
         final content = await contentSync.sync(
           subject: subject,
@@ -469,6 +488,65 @@ class PathController extends Notifier<PathState> {
         }
       }
     }).catchError((Object _) {});
+  }
+
+  /// The backend refused [subject]: it left the kid's programme. Learns the
+  /// new programme and shows its first subject; until a new programme is
+  /// known, the Carte drops [subject] from the list it has, so nothing asks
+  /// for it again.
+  Future<void> _leaveRefusedSubject(
+    String kidId,
+    int grade,
+    String subject,
+    CurriculumSyncReport refused,
+  ) async {
+    final learned = await _learnProgramme(kidId, grade, refused);
+    if (!ref.mounted || state.subject != subject) return;
+    if (ref.read(sessionControllerProvider).kid?.id != kidId) return;
+    if (learned) return; // _adoptProgramme moved the Carte.
+    final known = ref.read(programmeProvider);
+    final rest = [
+      for (final s in known.subjects)
+        if (s != subject) s,
+    ];
+    if (rest.isEmpty) rest.add(defaultPathSubject);
+    await ref
+        .read(programmeProvider.notifier)
+        .adopt(
+          kidId,
+          Programme(
+            subjects: rest,
+            schoolLanguageRequired: known.schoolLanguageRequired,
+          ),
+        );
+    if (!ref.mounted || state.subject != subject) return;
+    await _show(
+      rest.contains(defaultPathSubject) ? defaultPathSubject : rest.first,
+    );
+  }
+
+  /// The programme from a refusal, or else from a tree every programme has
+  /// ([defaultPathSubject]). True once adopted.
+  Future<bool> _learnProgramme(
+    String kidId,
+    int grade,
+    CurriculumSyncReport refused,
+  ) async {
+    var programme = refused.programme;
+    if (programme == null) {
+      final probe = await ref
+          .read(curriculumSyncProvider)
+          .sync(subject: defaultPathSubject, grade: grade)
+          .timeout(
+            curriculumTimeout,
+            onTimeout: () =>
+                const CurriculumSyncReport(count: 0, error: 'timeout'),
+          );
+      programme = probe.programme;
+    }
+    if (programme == null || !ref.mounted) return false;
+    _adoptProgramme(kidId, programme);
+    return true;
   }
 
   /// Records what the backend says [kidId] studies (ADR 0101). If the

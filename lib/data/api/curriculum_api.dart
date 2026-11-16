@@ -95,6 +95,15 @@ class CurriculumTreeUnauthorized extends CurriculumTreeResult {
   const CurriculumTreeUnauthorized();
 }
 
+/// The subject isn't in this kid's programme any more (400): an adult
+/// changed the school's language, so FR/ESL and EN/FLS swapped (ADR 0101).
+/// A stale question, not a failure and never "offline". [programme] is
+/// the new one when the backend sends it with the refusal.
+class CurriculumTreeNotInProgramme extends CurriculumTreeResult {
+  const CurriculumTreeNotInProgramme({this.programme});
+  final Programme? programme;
+}
+
 class CurriculumTreeFailed extends CurriculumTreeResult {
   const CurriculumTreeFailed(this.detail);
   final String detail;
@@ -134,10 +143,26 @@ class CurriculumApi {
       if (error.response?.statusCode == 401) {
         return const CurriculumTreeUnauthorized();
       }
+      if (_notInProgramme(error.response)) {
+        final body = error.response?.data;
+        return CurriculumTreeNotInProgramme(
+          programme: body is Map
+              ? Programme.fromJson(body.cast<String, Object?>())
+              : null,
+        );
+      }
       return CurriculumTreeFailed(
         error.message ?? 'curriculum tree fetch failed',
       );
     }
+  }
+
+  /// The backend's refusal of a subject outside the kid's programme: a 400
+  /// carrying `school_language_required` (curriculum/views.py).
+  static bool _notInProgramme(Response<Object?>? response) {
+    if (response?.statusCode != 400) return false;
+    final body = response?.data;
+    return body is Map && body.containsKey('school_language_required');
   }
 
   /// `dart:io` is unavailable on web, so this reads the Dio type rather than
